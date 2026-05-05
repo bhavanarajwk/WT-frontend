@@ -32,6 +32,16 @@ export const hrmsService = {
     });
   },
 
+  /** GET /user?email= or empId= — contract: fetch user profile */
+  getUser(params: { email?: string; empId?: string }) {
+    const query: Record<string, string> = {};
+    const email = params.email?.trim();
+    const empId = params.empId?.trim();
+    if (email) query.email = email;
+    if (empId) query.empId = empId;
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.user.lookup, { query });
+  },
+
   createOnboard(payload: Record<string, unknown>) {
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.user.onboard, {
       contentType: "application/json",
@@ -113,18 +123,28 @@ export const hrmsService = {
     });
   },
 
-  updateProject(projectCode: string, payload: Record<string, unknown>) {
-    return apiClient.put<ApiEnvelope<unknown>>(endpoints.project.createOne, {
+  /** GET /project?projectCode= — HR */
+  getProjectByCode(projectCode: string) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.project.getOne, {
       query: { projectCode },
+    });
+  },
+
+  /** POST /projects — body: CreateProjectRequest[] — ROLE_ADMIN per contract */
+  createProjectsBulk(payload: Array<Record<string, unknown>>) {
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.project.createBulk, {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
   },
 
-  deleteProject(projectCode: string) {
-    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.project.createOne, {
-      query: { projectCode },
-    });
+  /** ROLE_MANAGER */
+  getManagerProjects() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.project.managerProjects);
+  },
+
+  getManagerProjectsWithRoles() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.project.managerProjectsWithRoles);
   },
 
   getTimelogs(params: Record<string, string>) {

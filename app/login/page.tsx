@@ -7,6 +7,10 @@ import {
   oauthErrorMessages,
 } from "@/app/lib/auth";
 import { useAuth } from "@/app/context/AuthContext";
+import { WebTrakBrand } from "@/app/components/WebTrakBrand";
+
+const TAGLINE =
+  "Workforce visibility and project allocation—aligned in one secure workspace.";
 
 /* ------------------------------------------------------------------ */
 /* Google G SVG icon                                                     */
@@ -35,47 +39,47 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Animated mesh gradient background                                     */
+/* Background                                                           */
 /* ------------------------------------------------------------------ */
 function MeshBackground() {
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-      {/* Base dark */}
-      <div className="absolute inset-0 bg-[#0a0918]" />
-
-      {/* Glow orbs */}
+    <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+      <div className="absolute inset-0 bg-[#070612]" />
       <div
-        className="absolute -top-40 -left-32 w-[600px] h-[600px] rounded-full opacity-30"
+        className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle, rgba(79,70,229,0.7) 0%, transparent 70%)",
-          filter: "blur(60px)",
+            "radial-gradient(ellipse 80% 60% at 50% 20%, rgba(99,102,241,0.18), transparent 55%)",
         }}
       />
       <div
-        className="absolute top-1/3 -right-24 w-[500px] h-[500px] rounded-full opacity-20"
+        className="absolute -top-40 -left-32 h-[620px] w-[620px] rounded-full opacity-[0.38]"
         style={{
           background:
-            "radial-gradient(circle, rgba(139,92,246,0.8) 0%, transparent 70%)",
-          filter: "blur(80px)",
+            "radial-gradient(circle, rgba(99,102,241,0.85) 0%, transparent 68%)",
+          filter: "blur(58px)",
         }}
       />
       <div
-        className="absolute bottom-0 left-1/3 w-[400px] h-[400px] rounded-full opacity-15"
+        className="absolute top-[28%] -right-28 h-[540px] w-[540px] rounded-full opacity-[0.28]"
         style={{
           background:
-            "radial-gradient(circle, rgba(99,102,241,0.6) 0%, transparent 70%)",
-          filter: "blur(100px)",
+            "radial-gradient(circle, rgba(167,139,250,0.9) 0%, transparent 70%)",
+          filter: "blur(72px)",
         }}
       />
-
-      {/* Grid overlay */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.045]"
         style={{
           backgroundImage:
             "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
+          backgroundSize: "52px 52px",
+        }}
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 h-2/5"
+        style={{
+          background: "linear-gradient(to top, rgba(7,6,18,0.92), transparent)",
         }}
       />
     </div>
@@ -83,92 +87,29 @@ function MeshBackground() {
 }
 
 /* ------------------------------------------------------------------ */
-/* WebTrak logo mark                                                     */
-/* ------------------------------------------------------------------ */
-function LogoMark() {
-  return (
-    <div className="flex items-center gap-3">
-      <div
-        className="relative flex items-center justify-center w-10 h-10 rounded-xl"
-        style={{
-          background: "linear-gradient(135deg, #4f46e5, #8b5cf6)",
-          boxShadow: "0 4px 20px rgba(99,102,241,0.45)",
-        }}
-      >
-        {/* W letterform */}
-        <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
-          <path
-            d="M1 1L5.5 14L11 5L16.5 14L21 1"
-            stroke="white"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
-      <span
-        className="text-xl font-bold tracking-tight"
-        style={{
-          background: "linear-gradient(135deg, #e0e7ff, #a78bfa)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-        }}
-      >
-        WebTrak
-      </span>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Error banner                                                          */
-/* ------------------------------------------------------------------ */
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <div
+    <p
       role="alert"
-      className="flex items-start gap-3 rounded-xl border px-4 py-3 text-sm fade-up"
-      style={{
-        background: "rgba(239,68,68,0.1)",
-        borderColor: "rgba(239,68,68,0.3)",
-        color: "#fca5a5",
-      }}
+      className="fade-up border-l-2 border-red-400/90 pl-4 text-left text-sm leading-relaxed text-red-200/95"
     >
-      <svg
-        className="mt-0.5 shrink-0"
-        width="16"
-        height="16"
-        viewBox="0 0 16 16"
-        fill="currentColor"
-      >
-        <path
-          fillRule="evenodd"
-          d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-3a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 5Zm0 6.5a.875.875 0 1 0 0-1.75.875.875 0 0 0 0 1.75Z"
-          clipRule="evenodd"
-        />
-      </svg>
-      <span>{message}</span>
-    </div>
+      {message}
+    </p>
   );
 }
-
-
 
 /* ------------------------------------------------------------------ */
 /* Main page                                                             */
 /* ------------------------------------------------------------------ */
 
-
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status, refresh } = useAuth();
+  const { status } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const didRedirect = useRef(false);
 
-  /* Pick up OAuth callback errors */
   useEffect(() => {
     const rawError = searchParams.get("error");
     if (rawError) {
@@ -176,7 +117,6 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  /* If already authenticated, go to dashboard */
   useEffect(() => {
     if (status === "authenticated" && !didRedirect.current) {
       didRedirect.current = true;
@@ -190,103 +130,78 @@ export default function LoginPage() {
     window.location.href = getGoogleSignInUrl();
   }
 
-
-
-  /* While checking session, show a subtle loader */
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="relative flex min-h-screen items-center justify-center px-6">
         <MeshBackground />
-        <div className="flex flex-col items-center gap-4">
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          <WebTrakBrand variant="login" />
           <div
-            className="w-10 h-10 rounded-full border-2 border-t-transparent"
+            className="h-10 w-10 rounded-full border-2 border-t-transparent"
             style={{
               borderColor: "var(--wt-indigo-400)",
               borderTopColor: "transparent",
               animation: "spin 0.8s linear infinite",
             }}
           />
-          <p className="text-sm" style={{ color: "var(--wt-text-muted)" }}>
-            Checking session…
-          </p>
+          <p className="text-sm text-slate-400">Checking session…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center px-4 py-16">
+    <main className="relative flex min-h-screen flex-col px-6 pb-8 sm:px-8 sm:pb-10">
       <MeshBackground />
 
-      <div className="relative w-full max-w-md fade-up">
-        {/* Card */}
-        <div
-          className="glass noise relative flex flex-col gap-8 px-8 py-10"
-          style={{ boxShadow: "0 24px 80px rgba(0,0,0,0.55)" }}
-        >
-          {/* Logo */}
-          <div className="flex flex-col items-center gap-6 text-center">
-            <LogoMark />
-            <div className="flex flex-col gap-1.5">
-              <h1
-                className="text-2xl font-bold tracking-tight"
-                style={{ color: "var(--wt-text)" }}
-              >
-                Welcome back
-              </h1>
-              <p className="text-sm" style={{ color: "var(--wt-text-muted)" }}>
-                Sign in with your company Google account to continue.
-              </p>
-            </div>
-          </div>
-
-          {/* Error */}
-          {error && <ErrorBanner message={error} />}
-
-          {/* Google Sign-in */}
-          <div className="flex flex-col gap-4">
-            <button
-              id="google-signin-btn"
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="btn-primary w-full py-3.5"
-              style={{ fontSize: "0.9375rem" }}
-            >
-              {googleLoading ? (
-                <>
-                  <span className="spinner" />
-                  Redirecting to Google…
-                </>
-              ) : (
-                <>
-                  <GoogleIcon size={20} />
-                  Continue with Google
-                </>
-              )}
-            </button>
-
-            <p
-              className="text-center text-xs leading-relaxed"
-              style={{ color: "var(--wt-text-faint)" }}
-            >
-              Only registered company accounts can sign in.
-              <br />
-              Contact your administrator if you need access.
+      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col justify-center fade-up">
+        <section className="flex flex-col items-center gap-5 text-center sm:gap-6">
+          <h1 className="sr-only">WebTrak</h1>
+          <WebTrakBrand variant="login" />
+          <div className="flex max-w-md flex-col gap-2 px-1">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-indigo-200/90">
+              Workforce Tracker
+            </p>
+            <p className="text-[15px] leading-relaxed text-slate-400 sm:text-base">
+              {TAGLINE}
             </p>
           </div>
+        </section>
 
+        <div className="mt-12 flex w-full flex-col gap-5 sm:mt-14 sm:gap-6">
+          {error ? <ErrorBanner message={error} /> : null}
 
+          <button
+            id="google-signin-btn"
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading}
+            className="btn-primary w-full max-w-[380px] self-center rounded-lg py-3.5 text-base sm:py-4"
+          >
+            {googleLoading ? (
+              <>
+                <span className="spinner" />
+                Redirecting to Google…
+              </>
+            ) : (
+              <>
+                <GoogleIcon size={22} />
+                Continue with Google
+              </>
+            )}
+          </button>
+
+          <p className="max-w-md self-center text-center text-xs leading-relaxed text-slate-400">
+            Only registered company accounts can sign in.
+            <br />
+            Contact your administrator if you need access.
+          </p>
         </div>
-
-        {/* Footer */}
-        <p
-          className="mt-6 text-center text-xs"
-          style={{ color: "var(--wt-text-faint)" }}
-        >
-          © {new Date().getFullYear()} WebTrak. All rights reserved.
-        </p>
       </div>
+
+      <p className="relative z-10 shrink-0 pt-6 text-center text-[11px] tracking-wide text-slate-500">
+        © {new Date().getFullYear()} WebTrak. All rights reserved.
+      </p>
     </main>
   );
 }

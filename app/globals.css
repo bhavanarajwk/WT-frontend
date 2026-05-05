@@ -100,6 +100,12 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 body {
@@ -109,11 +115,42 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body::-webkit-scrollbar {
+  display: none;
 }
 
 /* ------------------------------------------------------------------ */
 /* Reusable utility classes                                              */
 /* ------------------------------------------------------------------ */
+
+/* Scroll container: wheel/trackpad still scrolls; scrollbar hidden */
+.wt-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.wt-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Horizontal + vertical scroll (e.g. wide tables), scrollbar hidden */
+.wt-scroll-both {
+  overflow: auto;
+  overscroll-behavior: contain;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.wt-scroll-both::-webkit-scrollbar {
+  display: none;
+}
 
 /* Glass card */
 .glass {
@@ -138,40 +175,37 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, var(--wt-indigo-600), var(--wt-violet-500));
-  color: #fff;
+  background: #334155;
+  color: #f8fafc;
   font-weight: 600;
   font-size: 0.9375rem;
   letter-spacing: 0.01em;
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: filter 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
   position: relative;
-  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
 }
 
 .btn-primary::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.15) 0%,
-    transparent 60%
-  );
-  pointer-events: none;
+  content: none;
 }
 
 .btn-primary:hover:not(:disabled) {
-  filter: brightness(1.12);
+  background: #1e293b;
   transform: translateY(-1px);
-  box-shadow: var(--wt-glow-indigo);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16);
 }
 
 .btn-primary:active:not(:disabled) {
   transform: translateY(0);
-  filter: brightness(0.96);
+  background: #0f172a;
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
 }
 
 .btn-primary:disabled {
