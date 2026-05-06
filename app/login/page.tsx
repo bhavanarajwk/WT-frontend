@@ -105,10 +105,11 @@ function ErrorBanner({ message }: { message: string }) {
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status } = useAuth();
+  const { status, refresh } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const didRedirect = useRef(false);
+  const didPostLoginRefresh = useRef(false);
 
   useEffect(() => {
     const rawError = searchParams.get("error");
@@ -123,6 +124,20 @@ export default function LoginPage() {
       router.replace("/dashboard");
     }
   }, [status, router]);
+
+  // On login page, if session becomes valid right after OAuth callback/cookie set,
+  // re-check once so roles are populated immediately from /auth/refresh.
+  useEffect(() => {
+    if (status !== "unauthenticated" || didPostLoginRefresh.current) return;
+    didPostLoginRefresh.current = true;
+    void (async () => {
+      const fresh = await refresh();
+      if (fresh && !didRedirect.current) {
+        didRedirect.current = true;
+        router.replace("/dashboard");
+      }
+    })();
+  }, [status, refresh, router]);
 
   function handleGoogleSignIn() {
     setGoogleLoading(true);
