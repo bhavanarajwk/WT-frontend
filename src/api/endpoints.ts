@@ -13,6 +13,7 @@ export const endpoints = {
 
   user: {
     onboard: `${api}/user/onboard`,
+    offboard: (empId: string) => `${api}/user/offboard/${encodeURIComponent(empId)}`,
     lookup: `${api}/user`,
     batch: `${api}/user/batch`,
   },
@@ -73,6 +74,34 @@ export const endpoints = {
     leaveSummary: `${api}/leave-summary`,
   },
 
+  learning: {
+    trainings: `${api}/trainings`,
+    trainingById: (trainingId: string | number) => `${api}/trainings/${encodeURIComponent(String(trainingId))}`,
+    trainers: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/trainers`,
+    trainerById: (trainingId: string | number, trainerUserId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/trainers/${encodeURIComponent(String(trainerUserId))}`,
+    sessions: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/sessions`,
+    participants: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/participants`,
+    participantByUserId: (trainingId: string | number, userId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/participants/${encodeURIComponent(String(userId))}`,
+    enroll: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/enroll`,
+    open: `${api}/trainings/open`,
+    materials: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/materials`,
+    attendance: (trainingId: string | number, sessionId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/sessions/${encodeURIComponent(String(sessionId))}/attendance`,
+    assessments: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/assessments`,
+    scores: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/scores`,
+    analytics: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/analytics`,
+  },
+
   notifications: {
     root: `${api}/notifications`,
     readById: (notificationId: string) =>
@@ -85,6 +114,7 @@ export const endpoints = {
 
   masters: {
     bands: `${api}/masters/bands`,
+    departments: `${api}/masters/departments`,
     designations: `${api}/masters/designations`,
     kpiDefinitions: `${api}/masters/kpi-definitions`,
     kpiDefinitionById: (kpiId: string) =>
@@ -102,6 +132,26 @@ export const endpoints = {
     assignRole: `${api}/roles/assign`,
     assignRoleLegacy: `${api}/assign-role`,
     schedulerRunAll: `${api}/scheduler/run-all`,
+  },
+
+  hrReports: {
+    headcountDistribution: `${api}/reports/workforce/headcount-distribution`,
+    roleBilling: `${api}/reports/workforce/role-wise-billed`,
+    experienceBands: `${api}/reports/workforce/experience`,
+    utilizationByDepartment: `${api}/reports/utilization/utilization-by-department`,
+    benchAging: `${api}/reports/utilization/bench-aging`,
+    attritionOverallPercent: `${api}/reports/attrition/overall-percent`,
+    attritionVoluntaryInvoluntary: `${api}/reports/attrition/voluntary-involuntary`,
+    attritionRoleWise: `${api}/reports/attrition/role-wise`,
+    attritionManagerWise: `${api}/reports/attrition/manager-wise`,
+    attritionCriticalSkill: `${api}/reports/attrition/critical-skill`,
+    attritionRegretted: `${api}/reports/attrition/regretted`,
+    attritionAverageTenure: `${api}/reports/attrition/average-tenure`,
+    attritionUpsert: (empId: string) => `${api}/reports/attrition/${encodeURIComponent(empId)}`,
+    skillInventory: `${api}/reports/skill-capacity/skill-inventory`,
+    contractDistribution: `${api}/reports/compliance/contract-distribution`,
+    bgvDashboard: `${api}/reports/bgv`,
+    bgvByEmployee: (empId: string) => `${api}/reports/bgv/${encodeURIComponent(empId)}`,
   },
 } as const;
 
