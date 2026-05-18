@@ -17,9 +17,10 @@ async function fetchOnboardRows(): Promise<Array<Record<string, unknown>>> {
 }
 
 /** Employees from GET /api/v1/user/onboard for trainer/trainee pickers. */
-export function useLearningTrainerDirectory() {
+export function useLearningTrainerDirectory(enabled = true) {
   return useQuery({
     queryKey: ["learning", "onboardEmployees"],
+    enabled,
     queryFn: async (): Promise<TrainerOption[]> => {
       const options = onboardRowsToEmployeeOptions(await fetchOnboardRows());
       return options.map(({ id, label }) => ({ id, label }));

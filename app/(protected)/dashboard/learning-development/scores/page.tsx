@@ -1,5 +1,5 @@
-import { ScoresPageClient } from "@/components/learning-development/ScoresPageClient";
+import { LearningHubRedirect } from "@/components/learning-development/LearningHubRedirect";
 
 export default function LearningScoresPage() {
-  return <ScoresPageClient />;
+  return <LearningHubRedirect feature="Scores & completion" />;
 }

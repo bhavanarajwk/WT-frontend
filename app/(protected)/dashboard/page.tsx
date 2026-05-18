@@ -13,6 +13,8 @@ import { dashboardNavigation, filterVisibleNavigation } from "@/config/dashboard
 import { toRows, toPagedRows } from "@/src/lib/apiRows";
 import { AllocationExtensionPanel } from "@/app/(protected)/dashboard/AllocationExtensionPanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
+import { normalizePickerEmail } from "@/src/lib/learning/onboardOptions";
+import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 
 const HARDCODED_DEPARTMENT_OPTIONS = [
   "Developer",
@@ -105,36 +107,63 @@ function employeeRowStatusUpper(row: Record<string, unknown>): string {
   return String(row.status ?? row.user_status ?? row.userStatus ?? "").trim().toUpperCase();
 }
 
+function parseRowTimestampMs(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 1e12 ? value : value * 1000;
+  }
+  const s = String(value).trim();
+  if (!s) return null;
+  if (/^\d{10,}$/.test(s)) {
+    const n = Number(s);
+    return Number.isFinite(n) ? (n > 1e12 ? n : n * 1000) : null;
+  }
+  const t = Date.parse(s);
+  return Number.isNaN(t) ? null : t;
+}
+
 function employeeRowRecencyMs(row: Record<string, unknown>): number {
-  const candidates: unknown[] = [
+  const dateCandidates: unknown[] = [
     row.updated_at,
     row.updatedAt,
     row.created_at,
     row.createdAt,
+    row.invited_at,
+    row.invitedAt,
+    row.onboarded_at,
+    row.onboardedAt,
     row.doj,
     row.doi,
     row.joining_date,
     row.joiningDate,
-    row.id,
   ];
-  for (const v of candidates) {
-    if (v == null) continue;
-    if (typeof v === "number" && Number.isFinite(v)) {
-      return v > 1e12 ? v : v * 1000;
-    }
-    const s = String(v).trim();
-    if (/^\d+$/.test(s)) {
-      const n = Number(s);
-      if (Number.isFinite(n)) {
-        return n > 1e12 ? n : n * 1000;
-      }
-    }
-    const t = Date.parse(s);
-    if (!Number.isNaN(t)) {
-      return t;
-    }
+  for (const v of dateCandidates) {
+    const ms = parseRowTimestampMs(v);
+    if (ms != null) return ms;
   }
   return 0;
+}
+
+function employeeRowNumericRank(row: Record<string, unknown>): number {
+  const empRaw = row.emp_id ?? row.empId;
+  if (empRaw != null && String(empRaw).trim() !== "") {
+    const empNum = Number(String(empRaw).trim());
+    if (Number.isFinite(empNum) && empNum > 0) return empNum;
+  }
+  const userId = Number(row.user_id ?? row.userId ?? NaN);
+  if (Number.isFinite(userId) && userId > 0) return userId;
+  const id = Number(row.id ?? NaN);
+  if (Number.isFinite(id) && id > 0) return id;
+  return 0;
+}
+
+function compareInviteEmployeesRecent(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>
+): number {
+  const timeDiff = employeeRowRecencyMs(b) - employeeRowRecencyMs(a);
+  if (timeDiff !== 0) return timeDiff;
+  return employeeRowNumericRank(b) - employeeRowNumericRank(a);
 }
 
 function pickRecentInviteEmployees(
@@ -145,7 +174,7 @@ function pickRecentInviteEmployees(
     const s = employeeRowStatusUpper(row);
     return s === "INVITE" || s === "INVITED";
   });
-  inviteOnly.sort((a, b) => employeeRowRecencyMs(b) - employeeRowRecencyMs(a));
+  inviteOnly.sort(compareInviteEmployeesRecent);
   return inviteOnly.slice(0, limit);
 }
 
@@ -169,6 +198,26 @@ function isValidPersonName(name: string): boolean {
 }
 
 /** India mobile: optional +91, then 10 digits starting 6–9 */
+/** Collapse spaces/dashes so "B8 - Intern", "B8-intern", and "B8 Intern" all match B8INTERN. */
+function bandNameMatchKey(name: string): string {
+  return name.trim().toUpperCase().replace(/[\s\-_–—]+/g, "");
+}
+
+function resolveInternBandId(bands: Array<Record<string, unknown>>): number {
+  const internHit = bands.find((row) => {
+    const name = String(row.name ?? row.band_name ?? "").trim();
+    return name.length > 0 && bandNameMatchKey(name) === "B8INTERN";
+  });
+  const internId = internHit?.id != null ? Number(internHit.id) : NaN;
+  if (Number.isFinite(internId) && internId > 0) return internId;
+
+  const genericB8 = bands.find(
+    (row) => bandNameMatchKey(String(row.name ?? row.band_name ?? "")) === "B8"
+  );
+  const genericId = genericB8?.id != null ? Number(genericB8.id) : NaN;
+  return Number.isFinite(genericId) && genericId > 0 ? genericId : 8;
+}
+
 function isValidIndiaMobile(phone: string): boolean {
   const d = phone.replace(/[\s-]/g, "");
   if (!d) return false;
@@ -450,7 +499,7 @@ function DashboardPageContent() {
     project_name: "",
     project_type: "IN_HOUSE" as "IN_HOUSE" | "STAFFING" | "PRODUCT",
     client_name: "",
-    account_manager: "",
+    account_manager_email: "",
   });
   const [editingProjectCode, setEditingProjectCode] = useState<string>("");
   const [projectFilters, setProjectFilters] = useState({
@@ -486,6 +535,9 @@ function DashboardPageContent() {
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
+  /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
+  const timelogHrNoSelfProject =
+    userRoles.includes("ROLE_HR") && !hasManagerAccess;
   const canExportTimelog = hasHrAccess || hasManagerAccess;
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
   const restrictForPendingOnboarding =
@@ -918,14 +970,18 @@ function DashboardPageContent() {
       void (async () => {
         try {
           if (timelogSubTab === "my") {
-            const [_, assignedRes, allocationRes] = await Promise.all([
-              loadTimelogsForCurrentRole(),
+            await loadTimelogsForCurrentRole();
+            if (timelogHrNoSelfProject) {
+              setTimelogProjects([]);
+              return;
+            }
+            const [assignedRes, allocationRes] = await Promise.all([
               hrmsService.getAssignedProjects(),
               hrmsService.getMyAllocations(),
             ]);
             const assignedRows = toPagedRows(assignedRes.data ?? assignedRes);
             const allocationRows = toPagedRows(allocationRes.data ?? allocationRes);
-            let projects = Array.from(
+            const projects = Array.from(
               new Map(
                 [...assignedRows, ...allocationRows]
                   .map((row) => {
@@ -939,21 +995,6 @@ function DashboardPageContent() {
                   .filter((entry): entry is readonly [string, { code: string; name: string }] => Boolean(entry))
               ).values()
             ).sort((a, b) => a.name.localeCompare(b.name));
-            if (hasHrAccess && !projects.length) {
-              const all = await loadAllProjectsForHr();
-              projects = Array.from(
-                new Map(
-                  all
-                    .map((row) => {
-                      const code = String(row.project_code ?? row.projectCode ?? "").trim();
-                      const name = String(row.project_name ?? row.projectName ?? code).trim();
-                      if (!code) return null;
-                      return [code.toLowerCase(), { code, name }] as const;
-                    })
-                    .filter((entry): entry is readonly [string, { code: string; name: string }] => Boolean(entry))
-                ).values()
-              ).sort((a, b) => a.name.localeCompare(b.name));
-            }
             setTimelogProjects(projects);
             return;
           }
@@ -966,7 +1007,13 @@ function DashboardPageContent() {
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [activeTab, timelogSubTab, hasHrAccess, requiresSelfOnboarding, loadTimelogsForCurrentRole, loadAllProjectsForHr]);
+  }, [
+    activeTab,
+    timelogSubTab,
+    timelogHrNoSelfProject,
+    requiresSelfOnboarding,
+    loadTimelogsForCurrentRole,
+  ]);
 
   useEffect(() => {
     if (activeTab !== "timelog" || timelogSubTab !== "team" || !hasManagerAccess) return;
@@ -1482,14 +1529,14 @@ function DashboardPageContent() {
   }
 
   const availableOnboardRoles = bandDeptRoleMap[onboardForm.department] ?? [];
-  const internBandId = useMemo(() => {
-    const hit = onboardBands.find((row) => {
-      const n = String(row.name ?? row.id ?? "").trim().toUpperCase();
-      return n === "B8" || n.startsWith("B8") || n.includes("B8");
-    });
-    const id = hit?.id != null ? Number(hit.id) : NaN;
-    return Number.isFinite(id) && id > 0 ? id : 8;
-  }, [onboardBands]);
+  const internBandId = useMemo(() => resolveInternBandId(onboardBands), [onboardBands]);
+
+  useEffect(() => {
+    if (onboardForm.user_type !== "INTERN") return;
+    setOnboardForm((prev) =>
+      prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }
+    );
+  }, [onboardForm.user_type, internBandId]);
   const defaultConsultantBandId = useMemo(() => {
     const first = onboardBands[0];
     const id = first?.id != null ? Number(first.id) : NaN;
@@ -2403,7 +2450,7 @@ function DashboardPageContent() {
   }
   const loadInviteOnboardingPreview = useCallback(async () => {
     const res = await hrmsService.getOnboardList({ page: "0", size: "200" });
-    const rows = toRows((res as { data?: unknown }).data ?? res);
+    const rows = toPagedRows((res as { data?: unknown }).data ?? res);
     setInviteOnboardingRows(pickRecentInviteEmployees(rows, ONBOARDING_INVITE_PREVIEW_LIMIT));
   }, []);
 
@@ -2597,11 +2644,6 @@ function DashboardPageContent() {
       /* ignore focused refresh errors */
     });
   }, [activeTab, timelogSubTab, teamTimelogEmailFilter]);
-  const hrVisibleTimelogs = useMemo(() => {
-    if (!hasHrAccess) return timelogs;
-    return timelogs;
-  }, [hasHrAccess, timelogs]);
-
   // (learning loaders moved above useEffects to avoid TDZ)
   const loadWorkforceOverviewReports = useCallback(async () => {
     const params = {
@@ -3429,51 +3471,6 @@ function DashboardPageContent() {
                 <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   <MetricCard label="Total Onboarded" value={metrics.totalOnboarded} loading={loading} />
                 </div>
-                {!hasManagerAccess ? (
-                  <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold">My Allocated Projects</h3>
-                      <button
-                        type="button"
-                        className="btn-primary px-3 py-2"
-                        onClick={() =>
-                          runAction("Load assigned projects", async () => {
-                            const [assignedRes, myAllocationsRes] = await Promise.all([
-                              hrmsService.getAssignedProjects(),
-                              hrmsService.getMyAllocations(),
-                            ]);
-                            const normalizedProjects = normalizeAssignedProjects(
-                              toPagedRows(assignedRes.data ?? assignedRes)
-                            );
-                            const myAllocations = toPagedRows(myAllocationsRes.data ?? myAllocationsRes);
-                            setAssignedProjects(
-                              mergeProjectAndAllocationData(normalizedProjects, myAllocations)
-                            );
-                          })
-                        }
-                        disabled={actionLoading}
-                      >
-                        Refresh
-                      </button>
-                    </div>
-                    <DataTable
-                      title="Allocations show percent of an 8-hour day (100% = 8h)."
-                      columns={[
-                        "project_code",
-                        "project_name",
-                        "project_type",
-                        "role",
-                        "allocated_hours",
-                        "billing_status",
-                        "is_manager",
-                        "start_date",
-                        "end_date",
-                      ]}
-                      rows={assignedProjectsWithAllocationPct}
-                      emptyLabel="No projects are allocated to you yet."
-                    />
-                  </section>
-                ) : null}
               </div>
             ) : null}
 
@@ -3573,15 +3570,8 @@ function DashboardPageContent() {
                                 <option value="1">B1</option>
                               )}
                             </select>
-                            {onboardForm.user_type === "INTERN" ? (
-                              <span className="text-[11px] text-wt-text-muted mt-0.5">Interns are assigned band B8.</span>
-                            ) : null}
                           </label>
-                        ) : (
-                          <p className="text-xs text-wt-text-muted self-end">
-                            Consultant: band is not shown; a default band id is sent for system compatibility.
-                          </p>
-                        )}
+                        ) : null}
                         {onboardForm.user_type === "CONSULTANT" ? (
                           <InputField
                             label="Designation"
@@ -3804,8 +3794,10 @@ function DashboardPageContent() {
                           onChange={(v) => setProjectForm((p) => ({ ...p, client_name: v }))}
                         />
                         <AccountManagerSelect
-                          value={projectForm.account_manager}
-                          onChange={(v) => setProjectForm((p) => ({ ...p, account_manager: v }))}
+                          value={projectForm.account_manager_email}
+                          onChange={(v) =>
+                            setProjectForm((p) => ({ ...p, account_manager_email: v }))
+                          }
                         />
                         <SelectField
                           label="Project Type"
@@ -3831,9 +3823,14 @@ function DashboardPageContent() {
                                 if (!name) {
                                   throw new Error("Project name is required.");
                                 }
-                                const am = projectForm.account_manager.trim();
-                                if (!am) {
+                                const accountManagerEmail = normalizePickerEmail(
+                                  projectForm.account_manager_email
+                                );
+                                if (!accountManagerEmail) {
                                   throw new Error("Account manager is required.");
+                                }
+                                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail)) {
+                                  throw new Error("Select a valid account manager email.");
                                 }
                                 const project_code = generateAutomaticProjectCode();
                                 await hrmsService.createProject({
@@ -3841,14 +3838,14 @@ function DashboardPageContent() {
                                   project_name: name,
                                   project_type: projectForm.project_type,
                                   client_name: projectForm.client_name.trim() || null,
-                                  account_manager: am,
+                                  account_manager_email: accountManagerEmail,
                                 });
                                 setEditingProjectCode("");
                                 setProjectForm((p) => ({
                                   ...p,
                                   project_name: "",
                                   client_name: "",
-                                  account_manager: "",
+                                  account_manager_email: "",
                                 }));
                                 const rows = await loadAllProjectsForHr();
                                 setProjects(rows);
@@ -4485,31 +4482,34 @@ function DashboardPageContent() {
                     <div>
                       <p className="text-sm font-medium text-wt-text">Log time</p>
                       <p className="text-xs text-wt-text-muted mt-1">
-                        Submit hours against a project. HR and Admin can optionally attribute the entry to another
-                        employee when the service accepts <code className="text-[11px]">employee_email</code> on create.
+                        {timelogHrNoSelfProject
+                          ? "Submit hours for the selected date."
+                          : "Submit hours against an allocated project."}
                       </p>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-3">
-                      <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                        Project
-                        <select
-                          className="input-field px-3 py-2 text-sm"
-                          value={timelogForm.project_code}
-                          onChange={(e) =>
-                            setTimelogForm((prev) => ({
-                              ...prev,
-                              project_code: e.target.value,
-                            }))
-                          }
-                        >
-                          <option value="">Select project</option>
-                          {timelogProjects.map((project) => (
-                            <option key={project.code} value={project.code}>
-                              {project.name} ({project.code})
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                      {!timelogHrNoSelfProject ? (
+                        <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+                          Project
+                          <select
+                            className="input-field px-3 py-2 text-sm"
+                            value={timelogForm.project_code}
+                            onChange={(e) =>
+                              setTimelogForm((prev) => ({
+                                ...prev,
+                                project_code: e.target.value,
+                              }))
+                            }
+                          >
+                            <option value="">Select project</option>
+                            {timelogProjects.map((project) => (
+                              <option key={project.code} value={project.code}>
+                                {project.name} ({project.code})
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
                       <InputField
                         label="Log Date"
                         value={timelogForm.log_date}
@@ -4527,30 +4527,6 @@ function DashboardPageContent() {
                         value={timelogForm.description}
                         onChange={(v) => setTimelogForm((prev) => ({ ...prev, description: v }))}
                       />
-                      {hasHrAccess ? (
-                        <div className="sm:col-span-2">
-                          <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                            Employee (optional)
-                            <select
-                              className="input-field px-3 py-2 text-sm"
-                              value={timelogForm.subject_employee_email}
-                              onChange={(e) =>
-                                setTimelogForm((prev) => ({
-                                  ...prev,
-                                  subject_employee_email: e.target.value,
-                                }))
-                              }
-                            >
-                              <option value="">Myself (current login)</option>
-                              {hrTimelogDirectoryEmails.map((email) => (
-                                <option key={email} value={email}>
-                                  {email}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </div>
-                      ) : null}
                     </div>
                     <div>
                       <button
@@ -4560,19 +4536,19 @@ function DashboardPageContent() {
                           runAction("Submit timelog", async () => {
                             const projectCode = timelogForm.project_code.trim();
                             const logDate = timelogForm.log_date.trim();
-                            if (!projectCode || !logDate) {
+                            if (!logDate) {
+                              throw new Error("Log Date is required.");
+                            }
+                            if (!timelogHrNoSelfProject && !projectCode) {
                               throw new Error("Project and Log Date are required.");
                             }
-                            const subject = timelogForm.subject_employee_email.trim().toLowerCase();
                             const body: Record<string, unknown> = {
-                              project_code: projectCode,
                               log_date: logDate,
                               hours: Number(timelogForm.hours),
                               description: timelogForm.description.trim() || null,
                             };
-                            if (hasHrAccess && subject) {
-                              body.employee_email = subject;
-                              body.employeeEmail = subject;
+                            if (!timelogHrNoSelfProject) {
+                              body.project_code = projectCode;
                             }
                             await apiClient.post(endpoints.timelog.root, {
                               contentType: "application/json",
@@ -4586,9 +4562,7 @@ function DashboardPageContent() {
                               subject_employee_email: "",
                             });
                             try {
-                              await loadTimelogsForCurrentRole(
-                                hasHrAccess && subject ? subject : undefined
-                              );
+                              await loadTimelogsForCurrentRole();
                             } catch {
                               /* submission succeeded; ignore refresh issue */
                             }
@@ -4601,19 +4575,7 @@ function DashboardPageContent() {
                     </div>
                   </div>
 
-                  {hasHrAccess ? (
-                    <p className="text-xs text-wt-text-muted">
-                      Table below shows organization-wide entries after refresh. Use the{" "}
-                      <strong>Team timelogs</strong> tab to filter by employee email.
-                    </p>
-                  ) : null}
-                  {hasHrAccess ? (
-                    <DataTable
-                      columns={["project_code", "employee_name", "log_date", "hours", "description"]}
-                      rows={hrVisibleTimelogs}
-                      emptyLabel="No timelogs loaded."
-                    />
-                  ) : (
+                  {timelogHrNoSelfProject ? null : (
                     <DataTable
                       columns={["project_code", "log_date", "hours", "description"]}
                       rows={timelogs}
@@ -5440,187 +5402,18 @@ function DashboardPageContent() {
                       />
                     </div>
                   ) : activeTab === "reports-section-3" ? (
-                    <div className="space-y-4">
-                      <div className="grid md:grid-cols-3 gap-3">
-                        <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                          FY Start Year (required)
-                          <select
-                            className="input-field px-3 py-2 text-sm"
-                            value={attritionFyStartYear}
-                            onChange={(e) => setAttritionFyStartYear(e.target.value)}
-                          >
-                            {Array.from(
-                              { length: Math.max(new Date().getFullYear() - 2019 + 1, 1) },
-                              (_, idx) => String(2019 + idx)
-                            ).map((year) => (
-                              <option key={year} value={year}>
-                                {year}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                      <DataTable
-                        title="Overall Attrition %"
-                        columns={["fy_start_year", "fy_april_start", "fy_march_end", "number_of_exits", "attrition_percent"]}
-                        rows={attritionOverallRows}
-                        emptyLabel="No overall attrition data."
-                        compact
-                      />
-                      <DataTable
-                        title="Voluntary vs Involuntary"
-                        columns={["voluntary_count", "involuntary_count", "total_count"]}
-                        rows={attritionVoluntaryRows}
-                        emptyLabel="No voluntary/involuntary data."
-                        compact
-                      />
-                      <DataTable
-                        title="Role-wise Attrition"
-                        columns={["role_or_designation", "exit_count"]}
-                        rows={attritionRoleWiseRows}
-                        emptyLabel="No role-wise attrition rows."
-                        compact
-                      />
-                      <DataTable
-                        title="Manager-wise Attrition"
-                        columns={["reporting_manager", "exit_count"]}
-                        rows={attritionManagerWiseRows}
-                        emptyLabel="No manager-wise attrition rows."
-                        compact
-                      />
-                      <DataTable
-                        title="Critical Skill Attrition"
-                        columns={["critical_skill", "exit_count"]}
-                        rows={attritionCriticalSkillRows}
-                        emptyLabel="No critical skill attrition rows."
-                        compact
-                      />
-                      <DataTable
-                        title="Regretted Attrition"
-                        columns={["total_regretted_exits", "percent_of_total_attrition"]}
-                        rows={attritionRegrettedRows}
-                        emptyLabel="No regretted attrition data."
-                        compact
-                      />
-                      <DataTable
-                        title="Average Tenure Buckets"
-                        columns={["tenure_bucket", "range_days", "number_of_employees"]}
-                        rows={attritionAverageTenureBuckets}
-                        emptyLabel="No average tenure bucket data."
-                        compact
-                      />
-                      <DataTable
-                        title="Average Tenure Summary"
-                        columns={["average_tenure_days", "tenure_unknown_employees"]}
-                        rows={attritionAverageTenureSummaryRows}
-                        emptyLabel="No average tenure summary."
-                        compact
-                      />
-                      <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-4 space-y-3">
-                        <h4 className="font-medium">Upsert Attrition Record</h4>
-                        <div className="grid md:grid-cols-2 gap-3">
-                          <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                            Employee ID
-                            <select
-                              className="input-field px-3 py-2 text-sm"
-                              value={attritionForm.emp_id}
-                              onChange={(e) => setAttritionForm((p) => ({ ...p, emp_id: e.target.value }))}
-                            >
-                              {!offboardingUsers.length ? <option value="">No employees found</option> : null}
-                              {offboardingUsers.map((emp) => (
-                                <option key={emp.emp_id} value={emp.emp_id}>
-                                  {emp.emp_id} - {emp.name} ({emp.email})
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <InputField
-                            label="Last Working Day"
-                            type="date"
-                            value={attritionForm.last_working_day}
-                            onChange={(v) => setAttritionForm((p) => ({ ...p, last_working_day: v }))}
-                          />
-                          <SelectField
-                            label="Separation Type"
-                            value={attritionForm.separation_type}
-                            options={["VOLUNTARY", "INVOLUNTARY"]}
-                            onChange={(v) =>
-                              setAttritionForm((p) => ({
-                                ...p,
-                                separation_type: v === "INVOLUNTARY" ? "INVOLUNTARY" : "VOLUNTARY",
-                              }))
-                            }
-                          />
-                          <InputField
-                            label="Reason"
-                            value={attritionForm.reason}
-                            onChange={(v) => setAttritionForm((p) => ({ ...p, reason: v }))}
-                          />
-                          <InputField
-                            label="Critical Skill"
-                            value={attritionForm.critical_skill}
-                            onChange={(v) => setAttritionForm((p) => ({ ...p, critical_skill: v }))}
-                          />
-                          <label className="text-xs text-wt-text-muted flex items-center gap-2 mt-5">
-                            <input
-                              type="checkbox"
-                              checked={attritionForm.is_regretted}
-                              onChange={(e) => setAttritionForm((p) => ({ ...p, is_regretted: e.target.checked }))}
-                            />
-                            Is Regretted
-                          </label>
-                        </div>
-                        <button
-                          type="button"
-                          className="btn-primary px-3 py-2"
-                          disabled={actionLoading}
-                          onClick={() =>
-                            runAction("Upsert attrition record", async () => {
-                              const parsedFy = Number.parseInt(attritionFyStartYear, 10);
-                              if (!Number.isFinite(parsedFy) || parsedFy < 2000 || parsedFy > 2100) {
-                                throw new Error("FY start year must be between 2000 and 2100.");
-                              }
-                              const empId = attritionForm.emp_id.trim();
-                              if (!empId) throw new Error("Please select emp_id.");
-                              const lastWorkingDay = attritionForm.last_working_day.trim();
-                              if (!lastWorkingDay) throw new Error("Please select last working day.");
-                              const result = await hrmsService.upsertAttritionRecord(empId, {
-                                separation_type: attritionForm.separation_type,
-                                reason: attritionForm.reason.trim() || undefined,
-                                critical_skill: attritionForm.critical_skill.trim() || undefined,
-                                is_regretted: attritionForm.is_regretted,
-                                last_working_day: lastWorkingDay,
-                              });
-                              const payload = ((result as { data?: unknown }).data ?? {}) as Record<string, unknown>;
-                              const row = (payload.data ?? payload) as Record<string, unknown>;
-                              setAttritionUpsertResultRows(row && typeof row === "object" ? [row] : []);
-                              await loadAttritionReports();
-                            })
-                          }
-                        >
-                          Save Attrition Record
-                        </button>
-                        <DataTable
-                          title="Latest Upserted Attrition Record"
-                          columns={[
-                            "emp_id",
-                            "employee_name",
-                            "separation_type",
-                            "reason",
-                            "critical_skill",
-                            "is_regretted",
-                            "last_working_day",
-                            "designation",
-                            "band_name",
-                            "band_role",
-                            "project_manager",
-                          ]}
-                          rows={attritionUpsertResultRows}
-                          emptyLabel="No attrition upsert record submitted yet."
-                          compact
-                        />
-                      </div>
-                    </div>
+                    <AttritionRetentionReports
+                      fyStartYear={attritionFyStartYear}
+                      onFyStartYearChange={setAttritionFyStartYear}
+                      overallRows={attritionOverallRows}
+                      voluntaryRows={attritionVoluntaryRows}
+                      roleWiseRows={attritionRoleWiseRows}
+                      managerWiseRows={attritionManagerWiseRows}
+                      criticalSkillRows={attritionCriticalSkillRows}
+                      regrettedRows={attritionRegrettedRows}
+                      tenureBucketRows={attritionAverageTenureBuckets}
+                      tenureSummaryRows={attritionAverageTenureSummaryRows}
+                    />
                   ) : activeTab === "reports-section-4" ? (
                     <div className="space-y-4">
                       <DataTable

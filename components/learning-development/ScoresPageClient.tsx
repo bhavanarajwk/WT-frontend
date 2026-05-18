@@ -14,8 +14,10 @@ import { hrmsService } from "@/src/services/hrms.service";
 
 type ScoreDraft = { scorePct: string; markCompleted: boolean };
 
-export function ScoresPageClient() {
-  const [trainingId, setTrainingId] = useState("");
+export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string }) {
+  const [pickedTrainingId, setPickedTrainingId] = useState("");
+  const trainingId = fixedTrainingId?.trim() || pickedTrainingId;
+  const embedded = Boolean(fixedTrainingId?.trim());
   const [assessmentId, setAssessmentId] = useState("");
   const [viewEmployeeId, setViewEmployeeId] = useState("");
   const [scoresByUser, setScoresByUser] = useState<Record<string, ScoreDraft>>({});
@@ -80,21 +82,24 @@ export function ScoresPageClient() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Scores &amp; completion</h1>
-        <p className="text-sm text-wt-text-muted mt-1">
-          Select a training and assessment, enter scores for each trainee, then save.
-        </p>
-      </div>
-
-      <TrainingScopePicker
-        trainingId={trainingId}
-        onTrainingIdChange={(id) => {
-          setTrainingId(id);
-          setAssessmentId("");
-          setViewEmployeeId("");
-        }}
-      />
+      {!embedded ? (
+        <>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Scores &amp; completion</h1>
+            <p className="text-sm text-wt-text-muted mt-1">
+              Select a training and assessment, enter scores for each trainee, then save.
+            </p>
+          </div>
+          <TrainingScopePicker
+            trainingId={pickedTrainingId}
+            onTrainingIdChange={(id) => {
+              setPickedTrainingId(id);
+              setAssessmentId("");
+              setViewEmployeeId("");
+            }}
+          />
+        </>
+      ) : null}
 
       <label className="text-xs text-wt-text-muted flex flex-col gap-1 max-w-md">
         Assessment

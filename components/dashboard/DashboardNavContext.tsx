@@ -37,6 +37,7 @@ export function DashboardNavProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (pathname.startsWith("/dashboard/learning-development")) {
       setLearningExpanded(true);
+      setActiveTab("learning");
     }
   }, [pathname]);
 
