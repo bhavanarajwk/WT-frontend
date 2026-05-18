@@ -1,5 +1,5 @@
-import { TrainersPageClient } from "@/components/learning-development/TrainersPageClient";
+import { LearningHubRedirect } from "@/components/learning-development/LearningHubRedirect";
 
 export default function LearningTrainersPage() {
-  return <TrainersPageClient />;
+  return <LearningHubRedirect feature="Trainers" />;
 }

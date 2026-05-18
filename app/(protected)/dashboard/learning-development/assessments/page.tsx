@@ -1,5 +1,5 @@
-import { AssessmentsPageClient } from "@/components/learning-development/AssessmentsPageClient";
+import { LearningHubRedirect } from "@/components/learning-development/LearningHubRedirect";
 
 export default function LearningAssessmentsPage() {
-  return <AssessmentsPageClient />;
+  return <LearningHubRedirect feature="Assessments" />;
 }

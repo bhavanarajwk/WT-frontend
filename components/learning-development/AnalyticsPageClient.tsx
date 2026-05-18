@@ -12,8 +12,10 @@ const METRIC_LABELS: Record<string, string> = {
   average_attendance_percent: "Average attendance (%)",
 };
 
-export function AnalyticsPageClient() {
-  const [trainingId, setTrainingId] = useState("");
+export function AnalyticsPageClient({ fixedTrainingId }: { fixedTrainingId?: string }) {
+  const [pickedTrainingId, setPickedTrainingId] = useState("");
+  const trainingId = fixedTrainingId?.trim() || pickedTrainingId;
+  const embedded = Boolean(fixedTrainingId?.trim());
   const analyticsQ = useTrainingAnalytics(trainingId, Boolean(trainingId.trim()));
 
   const entries = useMemo(() => {
@@ -23,19 +25,22 @@ export function AnalyticsPageClient() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-        <p className="text-sm text-wt-text-muted mt-1 max-w-2xl">
-          Metrics load from{" "}
-          <code className="text-[11px] bg-wt-surface-2 px-1 py-0.5 rounded">
-            GET /api/v1/trainings/&#123;training_id&#125;/analytics
-          </code>{" "}
-          after you pick a training. The backend aggregates enrollment, completion, scores, and
-          attendance for that training only.
-        </p>
-      </div>
-
-      <TrainingScopePicker trainingId={trainingId} onTrainingIdChange={setTrainingId} />
+      {!embedded ? (
+        <>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+            <p className="text-sm text-wt-text-muted mt-1 max-w-2xl">
+              Metrics load from{" "}
+              <code className="text-[11px] bg-wt-surface-2 px-1 py-0.5 rounded">
+                GET /api/v1/trainings/&#123;training_id&#125;/analytics
+              </code>{" "}
+              after you pick a training. The backend aggregates enrollment, completion, scores, and
+              attendance for that training only.
+            </p>
+          </div>
+          <TrainingScopePicker trainingId={pickedTrainingId} onTrainingIdChange={setPickedTrainingId} />
+        </>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {analyticsQ.isLoading ? (

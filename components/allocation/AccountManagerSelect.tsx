@@ -1,6 +1,7 @@
 "use client";
 
 import { useOnboardAccountManagers } from "@/components/learning-development/hooks/useLearningTrainerDirectory";
+import { onboardOptionEmail } from "@/src/lib/learning/onboardOptions";
 
 export function AccountManagerSelect({
   value,
@@ -29,11 +30,15 @@ export function AccountManagerSelect({
                 ? "Select account manager"
                 : "No account managers found"}
         </option>
-        {options.map((opt) => (
-          <option key={opt.id} value={opt.name}>
-            {opt.label}
-          </option>
-        ))}
+        {options.map((opt) => {
+          const email = onboardOptionEmail(opt);
+          if (!email) return null;
+          return (
+            <option key={opt.id} value={email}>
+              {opt.label}
+            </option>
+          );
+        })}
       </select>
     </label>
   );

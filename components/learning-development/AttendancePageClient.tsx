@@ -44,8 +44,10 @@ function AttendanceToggle({
   );
 }
 
-export function AttendancePageClient() {
-  const [trainingId, setTrainingId] = useState("");
+export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: string }) {
+  const [pickedTrainingId, setPickedTrainingId] = useState("");
+  const trainingId = fixedTrainingId?.trim() || pickedTrainingId;
+  const embedded = Boolean(fixedTrainingId?.trim());
   const [sessionId, setSessionId] = useState("");
   const [attendanceByUser, setAttendanceByUser] = useState<Record<string, AttendanceStatus>>({});
   const [viewEmployeeId, setViewEmployeeId] = useState("");
@@ -108,21 +110,24 @@ export function AttendancePageClient() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Attendance</h1>
-        <p className="text-sm text-wt-text-muted mt-1">
-          Select a training and session, then mark each trainee present or absent.
-        </p>
-      </div>
-
-      <TrainingScopePicker
-        trainingId={trainingId}
-        onTrainingIdChange={(id) => {
-          setTrainingId(id);
-          setSessionId("");
-          setViewEmployeeId("");
-        }}
-      />
+      {!embedded ? (
+        <>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Attendance</h1>
+            <p className="text-sm text-wt-text-muted mt-1">
+              Select a training and session, then mark each trainee present or absent.
+            </p>
+          </div>
+          <TrainingScopePicker
+            trainingId={pickedTrainingId}
+            onTrainingIdChange={(id) => {
+              setPickedTrainingId(id);
+              setSessionId("");
+              setViewEmployeeId("");
+            }}
+          />
+        </>
+      ) : null}
 
       <div className="grid md:grid-cols-2 gap-4 max-w-xl">
         <label className="text-xs text-wt-text-muted flex flex-col gap-1">
