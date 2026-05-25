@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { hrmsService } from "@/src/services/hrms.service";
+import { hrmsService } from "@/services/hrms.service";
 
 export interface OverviewMetrics {
   totalOnboarded: number;

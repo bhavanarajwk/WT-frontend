@@ -1,6 +1,6 @@
-import { endpoints } from "@/src/api/endpoints";
-import { apiClient, type ApiEnvelope } from "@/src/api/httpClient";
-import { toPagedRows } from "@/src/lib/apiRows";
+import { endpoints } from "@/api/endpoints";
+import { apiClient, type ApiEnvelope } from "@/api/httpClient";
+import { toPagedRows } from "@/utils/apiRows";
 
 export interface PagedData<T> {
   items: T[];

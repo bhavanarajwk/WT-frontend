@@ -1,4 +1,4 @@
-import { ApiError, parseApiErrorMessage } from "@/src/api/error";
+import { ApiError, parseApiErrorMessage } from "@/api/error";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type ResponseType = "json" | "text" | "blob" | "raw";
