@@ -11,8 +11,16 @@ import { ApiError } from "@/src/api/error";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 import { dashboardNavigation, filterVisibleNavigation } from "@/config/dashboardNavigation";
 import { toRows, toPagedRows } from "@/src/lib/apiRows";
+import {
+  formatActionErrorMessage,
+  formatActionSuccessMessage,
+  userRequestActionLabel,
+} from "@/src/lib/actionToast";
 import { AllocationExtensionPanel } from "@/app/(protected)/dashboard/AllocationExtensionPanel";
+import { EmployeeAttendancePanel } from "@/app/(protected)/dashboard/EmployeeAttendancePanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
+import { normalizePickerEmail } from "@/src/lib/learning/onboardOptions";
+import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 
 const HARDCODED_DEPARTMENT_OPTIONS = [
   "Developer",
@@ -99,54 +107,53 @@ function IconRefresh({ className = "" }: { className?: string }) {
   );
 }
 
-const ONBOARDING_INVITE_PREVIEW_LIMIT = 6;
+const INVITED_LIST_DEFAULT_DAYS = 7;
 
-function employeeRowStatusUpper(row: Record<string, unknown>): string {
-  return String(row.status ?? row.user_status ?? row.userStatus ?? "").trim().toUpperCase();
+function formatDateInputYmd(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
-function employeeRowRecencyMs(row: Record<string, unknown>): number {
-  const candidates: unknown[] = [
-    row.updated_at,
-    row.updatedAt,
-    row.created_at,
-    row.createdAt,
-    row.doj,
-    row.doi,
-    row.joining_date,
-    row.joiningDate,
-    row.id,
-  ];
-  for (const v of candidates) {
-    if (v == null) continue;
-    if (typeof v === "number" && Number.isFinite(v)) {
-      return v > 1e12 ? v : v * 1000;
-    }
-    const s = String(v).trim();
-    if (/^\d+$/.test(s)) {
-      const n = Number(s);
-      if (Number.isFinite(n)) {
-        return n > 1e12 ? n : n * 1000;
-      }
-    }
-    const t = Date.parse(s);
-    if (!Number.isNaN(t)) {
-      return t;
-    }
-  }
-  return 0;
+function defaultInvitedEmployeesDateRange(): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - INVITED_LIST_DEFAULT_DAYS);
+  return { from: formatDateInputYmd(from), to: formatDateInputYmd(to) };
 }
 
-function pickRecentInviteEmployees(
+function invitedRowCreatedAtYmd(row: Record<string, unknown>): string | null {
+  const raw = String(row.created_at ?? row.createdAt ?? "").trim();
+  if (!raw) return null;
+  return raw.includes("T") ? raw.slice(0, 10) : raw.slice(0, 10);
+}
+
+/** Client-side guard when API returns rows outside the selected created_at range. */
+function filterInvitedRowsByCreatedAtRange(
   rows: Array<Record<string, unknown>>,
-  limit: number
+  from: string,
+  to: string
 ): Array<Record<string, unknown>> {
-  const inviteOnly = rows.filter((row) => {
-    const s = employeeRowStatusUpper(row);
-    return s === "INVITE" || s === "INVITED";
+  return rows.filter((row) => {
+    const day = invitedRowCreatedAtYmd(row);
+    if (!day) return false;
+    return day >= from && day <= to;
   });
-  inviteOnly.sort((a, b) => employeeRowRecencyMs(b) - employeeRowRecencyMs(a));
-  return inviteOnly.slice(0, limit);
+}
+
+function formatInvitedEmployeeTableRows(
+  rows: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  return rows.map((row) => {
+    const createdRaw = String(row.created_at ?? row.createdAt ?? "").trim();
+    const createdDisplay = createdRaw
+      ? createdRaw.includes("T")
+        ? createdRaw.slice(0, 10)
+        : createdRaw.slice(0, 19)
+      : "—";
+    return { ...row, created_at: createdDisplay };
+  });
 }
 
 function allocationAccManagerCell(row: Record<string, unknown>): string {
@@ -169,6 +176,26 @@ function isValidPersonName(name: string): boolean {
 }
 
 /** India mobile: optional +91, then 10 digits starting 6–9 */
+/** Collapse spaces/dashes so "B8 - Intern", "B8-intern", and "B8 Intern" all match B8INTERN. */
+function bandNameMatchKey(name: string): string {
+  return name.trim().toUpperCase().replace(/[\s\-_–—]+/g, "");
+}
+
+function resolveInternBandId(bands: Array<Record<string, unknown>>): number {
+  const internHit = bands.find((row) => {
+    const name = String(row.name ?? row.band_name ?? "").trim();
+    return name.length > 0 && bandNameMatchKey(name) === "B8INTERN";
+  });
+  const internId = internHit?.id != null ? Number(internHit.id) : NaN;
+  if (Number.isFinite(internId) && internId > 0) return internId;
+
+  const genericB8 = bands.find(
+    (row) => bandNameMatchKey(String(row.name ?? row.band_name ?? "")) === "B8"
+  );
+  const genericId = genericB8?.id != null ? Number(genericB8.id) : NaN;
+  return Number.isFinite(genericId) && genericId > 0 ? genericId : 8;
+}
+
 function isValidIndiaMobile(phone: string): boolean {
   const d = phone.replace(/[\s-]/g, "");
   if (!d) return false;
@@ -252,6 +279,20 @@ function DashboardPageContent() {
   const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
+  const [invitedListFromDate, setInvitedListFromDate] = useState(
+    () => defaultInvitedEmployeesDateRange().from
+  );
+  const [invitedListToDate, setInvitedListToDate] = useState(
+    () => defaultInvitedEmployeesDateRange().to
+  );
+  const [invitedApiServerRange, setInvitedApiServerRange] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
+  const invitedListFromDateRef = useRef(invitedListFromDate);
+  const invitedListToDateRef = useRef(invitedListToDate);
+  invitedListFromDateRef.current = invitedListFromDate;
+  invitedListToDateRef.current = invitedListToDate;
   const [allocations, setAllocations] = useState<Array<Record<string, unknown>>>([]);
   const [allocationForecastRows, setAllocationForecastRows] = useState<Array<Record<string, unknown>>>([]);
   const allocationRecordsRef = useRef<HTMLDivElement>(null);
@@ -267,9 +308,12 @@ function DashboardPageContent() {
   const [allocationEmployeePickerOpen, setAllocationEmployeePickerOpen] = useState(false);
   const [allocationEmployeePickerQuery, setAllocationEmployeePickerQuery] = useState("");
   const allocationEmployeeComboboxRef = useRef<HTMLDivElement>(null);
-  const [allocationListMissingEndDateOnly, setAllocationListMissingEndDateOnly] = useState(false);
   const [projects, setProjects] = useState<Array<Record<string, unknown>>>([]);
   const [assignedProjects, setAssignedProjects] = useState<Array<Record<string, unknown>>>([]);
+  const [profileAssignedProjects, setProfileAssignedProjects] = useState<
+    Array<Record<string, unknown>>
+  >([]);
+  const [profileAssignedProjectsLoading, setProfileAssignedProjectsLoading] = useState(false);
   const [timelogs, setTimelogs] = useState<Array<Record<string, unknown>>>([]);
   const [managerEmailsForHr, setManagerEmailsForHr] = useState<string[]>([]);
   const [timelogProjects, setTimelogProjects] = useState<Array<{ code: string; name: string }>>([]);
@@ -450,7 +494,7 @@ function DashboardPageContent() {
     project_name: "",
     project_type: "IN_HOUSE" as "IN_HOUSE" | "STAFFING" | "PRODUCT",
     client_name: "",
-    account_manager: "",
+    account_manager_email: "",
   });
   const [editingProjectCode, setEditingProjectCode] = useState<string>("");
   const [projectFilters, setProjectFilters] = useState({
@@ -463,6 +507,7 @@ function DashboardPageContent() {
   const [teamTimelogEmailFilter, setTeamTimelogEmailFilter] = useState("ALL");
   const managerDataLoadedRef = useRef(false);
   const managerDataLoadingRef = useRef(false);
+  const timelogLoadInFlightRef = useRef(false);
   const [managerProjectAllocations, setManagerProjectAllocations] = useState<Array<Record<string, unknown>>>([]);
   const managerAllocationsCacheRef = useRef<Record<string, Array<Record<string, unknown>>>>({});
   const [allocationForm, setAllocationForm] = useState({
@@ -486,6 +531,9 @@ function DashboardPageContent() {
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
+  /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
+  const timelogHrNoSelfProject =
+    userRoles.includes("ROLE_HR") && !hasManagerAccess;
   const canExportTimelog = hasHrAccess || hasManagerAccess;
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
   const restrictForPendingOnboarding =
@@ -609,6 +657,34 @@ function DashboardPageContent() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [user, loadMyProfile, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "profile" || !canAccessProfile) return;
+    if (requiresSelfOnboarding) return;
+    const id = window.setTimeout(() => {
+      void (async () => {
+        setProfileAssignedProjectsLoading(true);
+        try {
+          const [assignedRes, myAllocationsRes] = await Promise.all([
+            hrmsService.getAssignedProjects(),
+            hrmsService.getMyAllocations(),
+          ]);
+          const normalizedProjects = normalizeAssignedProjects(
+            toPagedRows(assignedRes.data ?? assignedRes)
+          );
+          const myAllocations = toPagedRows(myAllocationsRes.data ?? myAllocationsRes);
+          setProfileAssignedProjects(
+            mergeProjectAndAllocationData(normalizedProjects, myAllocations)
+          );
+        } catch {
+          setProfileAssignedProjects([]);
+        } finally {
+          setProfileAssignedProjectsLoading(false);
+        }
+      })();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [activeTab, canAccessProfile, requiresSelfOnboarding]);
 
   useEffect(() => {
     if (activeTab !== "employee") return;
@@ -754,7 +830,11 @@ function DashboardPageContent() {
         try {
           const [response, onboardRes, projectRes] = await Promise.all([
             hrmsService.getAllocationRoles({}),
-            hrmsService.getOnboardList({ page: "0", size: "10" }),
+            hrmsService.getOnboardList({
+              page: "0",
+              size: "500",
+              onboardingStatus: "ACTIVE",
+            }),
             hrmsService.getProjects({ page: "0", size: "10" }),
           ]);
           const rows = toRows(response.data ?? response);
@@ -766,7 +846,13 @@ function DashboardPageContent() {
             )
           ).sort();
           setAllocationRoles(roles);
-          const userRows = toPagedRows(onboardRes.data ?? onboardRes);
+          const isActiveOnboardRow = (row: Record<string, unknown>) =>
+            String(row.status ?? "").trim().toUpperCase() === "ACTIVE";
+          let userRows = toPagedRows(onboardRes.data ?? onboardRes).filter(isActiveOnboardRow);
+          if (!userRows.length) {
+            const fallbackOnboard = await hrmsService.getOnboardList({ page: "0", size: "500" });
+            userRows = toPagedRows(fallbackOnboard.data ?? fallbackOnboard).filter(isActiveOnboardRow);
+          }
           const users = Array.from(
             new Map(
               userRows
@@ -913,62 +999,6 @@ function DashboardPageContent() {
   }, [activeTab, hasHrAccess, requiresSelfOnboarding]);
 
   useEffect(() => {
-    if (activeTab !== "timelog" || requiresSelfOnboarding) return;
-    const id = window.setTimeout(() => {
-      void (async () => {
-        try {
-          if (timelogSubTab === "my") {
-            const [_, assignedRes, allocationRes] = await Promise.all([
-              loadTimelogsForCurrentRole(),
-              hrmsService.getAssignedProjects(),
-              hrmsService.getMyAllocations(),
-            ]);
-            const assignedRows = toPagedRows(assignedRes.data ?? assignedRes);
-            const allocationRows = toPagedRows(allocationRes.data ?? allocationRes);
-            let projects = Array.from(
-              new Map(
-                [...assignedRows, ...allocationRows]
-                  .map((row) => {
-                    const code = String(
-                      row.project_code ?? row.projectCode ?? row.code ?? row.project_id ?? row.projectId ?? ""
-                    ).trim();
-                    if (!code) return null;
-                    const name = String(row.project_name ?? row.projectName ?? row.name ?? code).trim();
-                    return [code.toLowerCase(), { code, name }] as const;
-                  })
-                  .filter((entry): entry is readonly [string, { code: string; name: string }] => Boolean(entry))
-              ).values()
-            ).sort((a, b) => a.name.localeCompare(b.name));
-            if (hasHrAccess && !projects.length) {
-              const all = await loadAllProjectsForHr();
-              projects = Array.from(
-                new Map(
-                  all
-                    .map((row) => {
-                      const code = String(row.project_code ?? row.projectCode ?? "").trim();
-                      const name = String(row.project_name ?? row.projectName ?? code).trim();
-                      if (!code) return null;
-                      return [code.toLowerCase(), { code, name }] as const;
-                    })
-                    .filter((entry): entry is readonly [string, { code: string; name: string }] => Boolean(entry))
-                ).values()
-              ).sort((a, b) => a.name.localeCompare(b.name));
-            }
-            setTimelogProjects(projects);
-            return;
-          }
-          await loadTimelogsForCurrentRole();
-        } catch {
-          setTimelogs([]);
-          setManagerEmailsForHr([]);
-          if (timelogSubTab === "my") setTimelogProjects([]);
-        }
-      })();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [activeTab, timelogSubTab, hasHrAccess, requiresSelfOnboarding, loadTimelogsForCurrentRole, loadAllProjectsForHr]);
-
-  useEffect(() => {
     if (activeTab !== "timelog" || timelogSubTab !== "team" || !hasManagerAccess) return;
     const id = window.setTimeout(() => {
       void (async () => {
@@ -1057,7 +1087,7 @@ function DashboardPageContent() {
     setActionLoading(true);
     try {
       await fn();
-      setToast({ type: "success", message: `${label} completed.` });
+      setToast({ type: "success", message: formatActionSuccessMessage(label) });
       if (activeTab === "overview") refresh();
     } catch (error) {
       const backendMessage =
@@ -1068,7 +1098,7 @@ function DashboardPageContent() {
             : "";
       setToast({
         type: "error",
-        message: backendMessage || `Unable to ${label.toLowerCase()}. Please try again.`,
+        message: formatActionErrorMessage(label, backendMessage),
       });
     } finally {
       setActionLoading(false);
@@ -1482,14 +1512,14 @@ function DashboardPageContent() {
   }
 
   const availableOnboardRoles = bandDeptRoleMap[onboardForm.department] ?? [];
-  const internBandId = useMemo(() => {
-    const hit = onboardBands.find((row) => {
-      const n = String(row.name ?? row.id ?? "").trim().toUpperCase();
-      return n === "B8" || n.startsWith("B8") || n.includes("B8");
-    });
-    const id = hit?.id != null ? Number(hit.id) : NaN;
-    return Number.isFinite(id) && id > 0 ? id : 8;
-  }, [onboardBands]);
+  const internBandId = useMemo(() => resolveInternBandId(onboardBands), [onboardBands]);
+
+  useEffect(() => {
+    if (onboardForm.user_type !== "INTERN") return;
+    setOnboardForm((prev) =>
+      prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }
+    );
+  }, [onboardForm.user_type, internBandId]);
   const defaultConsultantBandId = useMemo(() => {
     const first = onboardBands[0];
     const id = first?.id != null ? Number(first.id) : NaN;
@@ -1514,10 +1544,6 @@ function DashboardPageContent() {
       ? `${hit.name} | ${hit.role} (${hit.email})`
       : `${hit.name} (${hit.email})`;
   }, [allocationUsers, allocationForm.employee_email]);
-  const allocationsForListView = useMemo(() => {
-    if (!allocationListMissingEndDateOnly) return allocations;
-    return allocations.filter((row) => !String(row.end_date ?? row.endDate ?? "").trim());
-  }, [allocations, allocationListMissingEndDateOnly]);
   const assignedProjectsWithAllocationPct = useMemo(
     () =>
       assignedProjects.map((row) => ({
@@ -1528,25 +1554,16 @@ function DashboardPageContent() {
       })),
     [assignedProjects]
   );
-  const investmentBenchRows = useMemo(() => {
-    const fromAlloc = allocations
-      .filter(
-        (r) => String(r.billing_status ?? r.billingStatus ?? "").toUpperCase() === "INVESTMENT"
-      )
-      .map((r) => ({
-        source: "Investment allocation",
-        name: String(r.employee_name ?? "—"),
-        email: String(r.employee_email ?? r.email ?? r.user_email ?? "—"),
-        bench_days: "Investment allocation",
-      }));
-    const fromBench = benchAgingRows.map((r) => ({
-      source: String(r.talent_pool ?? r.source ?? "Bench / talent pool"),
-      name: String(r.name ?? "—"),
-      email: String(r.email ?? "—"),
-      bench_days: String(r.bench_days ?? r.benchDays ?? "—"),
-    }));
-    return [...fromBench, ...fromAlloc];
-  }, [allocations, benchAgingRows]);
+  const profileAssignedProjectsForTable = useMemo(
+    () =>
+      profileAssignedProjects.map((row) => ({
+        ...row,
+        allocated_hours: formatAllocatedHoursPercentLabel(
+          row.allocated_hours ?? row.allocatedHours ?? row.hours
+        ),
+      })),
+    [profileAssignedProjects]
+  );
   const utilizationBenchRowsWithInvestment = useMemo(() => {
     const seen = new Set(
       benchAgingRows.map((r) => String(r.email ?? "").trim().toLowerCase()).filter(Boolean)
@@ -1746,7 +1763,9 @@ function DashboardPageContent() {
       return Boolean(bandMatches && designationMatches && roleMatches);
     });
   }, [kpis, canViewAllKpis, userBandId, userDesignation, userRoleTokens]);
-  async function loadTimelogsForCurrentRole(targetEmployeeEmail?: string) {
+  const loadTimelogsForCurrentRole = useCallback(async function loadTimelogsForCurrentRole(
+    targetEmployeeEmail?: string
+  ) {
     const parseManagerFlag = (value: unknown): boolean => {
       if (typeof value === "boolean") return value;
       if (typeof value === "number") return value === 1;
@@ -2097,7 +2116,63 @@ function DashboardPageContent() {
     });
     setTimelogs(normalizedRows);
     return normalizedRows;
-  }
+  }, [hasHrAccess, hasManagerAccess, loadManagerData]);
+
+  useEffect(() => {
+    if (activeTab !== "timelog" || requiresSelfOnboarding) return;
+    const id = window.setTimeout(() => {
+      void (async () => {
+        if (timelogLoadInFlightRef.current) return;
+        timelogLoadInFlightRef.current = true;
+        try {
+          if (timelogSubTab === "my") {
+            await loadTimelogsForCurrentRole();
+            if (timelogHrNoSelfProject) {
+              setTimelogProjects([]);
+              return;
+            }
+            const [assignedRes, allocationRes] = await Promise.all([
+              hrmsService.getAssignedProjects(),
+              hrmsService.getMyAllocations(),
+            ]);
+            const assignedRows = toPagedRows(assignedRes.data ?? assignedRes);
+            const allocationRows = toPagedRows(allocationRes.data ?? allocationRes);
+            const projects = Array.from(
+              new Map(
+                [...assignedRows, ...allocationRows]
+                  .map((row) => {
+                    const code = String(
+                      row.project_code ?? row.projectCode ?? row.code ?? row.project_id ?? row.projectId ?? ""
+                    ).trim();
+                    if (!code) return null;
+                    const name = String(row.project_name ?? row.projectName ?? row.name ?? code).trim();
+                    return [code.toLowerCase(), { code, name }] as const;
+                  })
+                  .filter((entry): entry is readonly [string, { code: string; name: string }] => Boolean(entry))
+              ).values()
+            ).sort((a, b) => a.name.localeCompare(b.name));
+            setTimelogProjects(projects);
+            return;
+          }
+          await loadTimelogsForCurrentRole();
+        } catch {
+          setTimelogs([]);
+          setManagerEmailsForHr([]);
+          if (timelogSubTab === "my") setTimelogProjects([]);
+        } finally {
+          timelogLoadInFlightRef.current = false;
+        }
+      })();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [
+    activeTab,
+    timelogSubTab,
+    timelogHrNoSelfProject,
+    requiresSelfOnboarding,
+    loadTimelogsForCurrentRole,
+  ]);
+
   async function loadMyLeaveRequests() {
     const email = String((user as { email?: string } | null)?.email ?? "").trim();
     if (!email) {
@@ -2401,20 +2476,54 @@ function DashboardPageContent() {
       });
     }
   }
-  const loadInviteOnboardingPreview = useCallback(async () => {
-    const res = await hrmsService.getOnboardList({ page: "0", size: "200" });
-    const rows = toRows((res as { data?: unknown }).data ?? res);
-    setInviteOnboardingRows(pickRecentInviteEmployees(rows, ONBOARDING_INVITE_PREVIEW_LIMIT));
-  }, []);
+  const loadInviteOnboardingPreview = useCallback(
+    async (range?: { from?: string; to?: string }) => {
+      const from = (range?.from ?? invitedListFromDateRef.current).trim();
+      const to = (range?.to ?? invitedListToDateRef.current).trim();
+      if (!from || !to) {
+        throw new Error("From date and To date are required.");
+      }
+      if (from > to) {
+        throw new Error("From date must be on or before To date.");
+      }
+
+      const res = await hrmsService.getInvitedUsers({
+        fromDate: from,
+        toDate: to,
+        page: "0",
+        size: "200",
+      });
+      const payload = ((res as { data?: unknown }).data ?? res) as Record<string, unknown>;
+      const respFrom = String(payload.from_date ?? "").trim().slice(0, 10);
+      const respTo = String(payload.to_date ?? "").trim().slice(0, 10);
+      const rawRows = toPagedRows(payload.items ?? payload);
+      const filteredRows = filterInvitedRowsByCreatedAtRange(rawRows, from, to);
+      const serverRangeMismatch =
+        Boolean(respFrom && respTo) && (respFrom !== from || respTo !== to);
+      setInvitedApiServerRange(
+        serverRangeMismatch ? { from: respFrom, to: respTo } : null
+      );
+      setInviteOnboardingRows(formatInvitedEmployeeTableRows(filteredRows));
+    },
+    []
+  );
 
   const loadAllocationsForHr = useCallback(async () => {
-    const res = await hrmsService.getAllocations({ page: "0", size: "200", view: "ALL" });
-    const primary = (res as { data?: unknown }).data ?? res;
-    let rows = toPagedRows(primary);
+    let rows: Array<Record<string, unknown>> = [];
+    try {
+      rows = await hrmsService.fetchAllActiveNonBenchAllocations(200);
+    } catch {
+      rows = [];
+    }
     if (!rows.length) {
-      const fallback = await hrmsService.getAllocations({ page: "0", size: "200" });
-      const fbPayload = (fallback as { data?: unknown }).data ?? fallback;
-      rows = toPagedRows(fbPayload);
+      const res = await hrmsService.getAllocations({ page: "0", size: "200", view: "ALL" });
+      const primary = (res as { data?: unknown }).data ?? res;
+      rows = toPagedRows(primary);
+      if (!rows.length) {
+        const fallback = await hrmsService.getAllocations({ page: "0", size: "200" });
+        const fbPayload = (fallback as { data?: unknown }).data ?? fallback;
+        rows = toPagedRows(fbPayload);
+      }
     }
 
     let onboardUsers: Array<Record<string, unknown>> = [];
@@ -2422,7 +2531,7 @@ function DashboardPageContent() {
     await Promise.all([
       (async () => {
         try {
-          const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "10" });
+          const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "500" });
           const onboardPayload = (onboardRes as { data?: unknown }).data ?? onboardRes;
           onboardUsers = toRows(onboardPayload);
         } catch {
@@ -2596,12 +2705,7 @@ function DashboardPageContent() {
     void loadTimelogsForCurrentRole(selected).catch(() => {
       /* ignore focused refresh errors */
     });
-  }, [activeTab, timelogSubTab, teamTimelogEmailFilter]);
-  const hrVisibleTimelogs = useMemo(() => {
-    if (!hasHrAccess) return timelogs;
-    return timelogs;
-  }, [hasHrAccess, timelogs]);
-
+  }, [activeTab, timelogSubTab, teamTimelogEmailFilter, loadTimelogsForCurrentRole]);
   // (learning loaders moved above useEffects to avoid TDZ)
   const loadWorkforceOverviewReports = useCallback(async () => {
     const params = {
@@ -2974,6 +3078,10 @@ function DashboardPageContent() {
     () => filterVisibleNavigation(dashboardNavigation, userRoles, { hasHrAccess }),
     [userRoles, hasHrAccess]
   );
+  const canAccessOverview = useMemo(
+    () => visibleNavigation.some((item) => item.id === "overview"),
+    [visibleNavigation]
+  );
   useEffect(() => {
     if (!hasHrAccess) return;
     if (activeTab.startsWith("reports-")) setReportsExpanded(true);
@@ -2990,8 +3098,8 @@ function DashboardPageContent() {
     if (activeTab === "profile") return;
     if (allowed.has(activeTab)) return;
     const fallbackTab = visibleNavigation[0]?.id ?? "profile";
-    setActiveTab(fallbackTab);
-  }, [activeTab, visibleNavigation]);
+    goToTab(fallbackTab);
+  }, [activeTab, visibleNavigation, goToTab]);
 
   const renderSelfOnboardingPanel = () => (
     <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
@@ -3222,42 +3330,83 @@ function DashboardPageContent() {
     setIsEditingOwnProfile(true);
   };
 
+  const profileAssignedProjectColumns = employeeSelfServeProfile
+    ? ["project_name", "project_code", "role", "allocated_hours", "start_date"]
+    : [
+        "project_name",
+        "project_code",
+        "role",
+        "allocated_hours",
+        "billing_status",
+        "start_date",
+        "end_date",
+      ];
+
+  const renderProfileAssignedProjectsSection = () => (
+    <div className="mt-8 border-t border-wt-border pt-6">
+      <h4 className="text-sm font-semibold mb-3">Assigned projects</h4>
+      {profileAssignedProjectsLoading ? (
+        <p className="text-sm text-wt-text-muted">Loading assigned projects…</p>
+      ) : (
+        <DataTable
+          columns={profileAssignedProjectColumns}
+          rows={profileAssignedProjectsForTable}
+          emptyLabel="No projects assigned."
+          compact
+        />
+      )}
+    </div>
+  );
+
+  const renderProfileDetailsGrid = () => (
+    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
+      <ProfileField label="Name" value={employeeProfile?.name ?? user?.name} />
+      <ProfileField label="Email" value={employeeProfile?.email ?? user?.email} />
+      <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
+      <ProfileField label="Phone Number" value={employeeProfile?.phone_number ?? employeeProfile?.phoneNumber} />
+      <ProfileField
+        label="Primary Skills"
+        value={
+          Array.isArray(employeeProfile?.primary_skills)
+            ? (employeeProfile?.primary_skills as Array<unknown>).map((s) => String(s)).join(", ")
+            : employeeProfile?.primary_skills
+        }
+      />
+      <ProfileField
+        label="Secondary Skills"
+        value={formatSecondarySkillsForProfile(employeeProfile)}
+        fullWidth
+      />
+      <ProfileField label="Years of Experience" value={employeeProfile?.yoe} />
+    </dl>
+  );
+
   const renderMyProfileViewPanel = () => (
-    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold mb-1">My Profile</h3>
-          <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
+    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-7 md:p-8">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-5">
+          <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold mb-1">My Profile</h3>
+            <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
+          </div>
         </div>
         <button
           type="button"
-          className="btn-primary px-3 py-2"
+          className="btn-primary px-4 py-2.5"
           onClick={openOwnProfileEditor}
           disabled={actionLoading}
         >
           Edit Profile
         </button>
       </div>
-      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
-        <ProfileField label="Name" value={employeeProfile?.name ?? user?.name} />
-        <ProfileField label="Email" value={employeeProfile?.email ?? user?.email} />
-        <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
-        <ProfileField label="Phone Number" value={employeeProfile?.phone_number ?? employeeProfile?.phoneNumber} />
-        <ProfileField
-          label="Primary Skills"
-          value={
-            Array.isArray(employeeProfile?.primary_skills)
-              ? (employeeProfile?.primary_skills as Array<unknown>).map((s) => String(s)).join(", ")
-              : employeeProfile?.primary_skills
-          }
-        />
-        <ProfileField label="Years of Experience" value={employeeProfile?.yoe} />
-      </dl>
+      {renderProfileDetailsGrid()}
+      {renderProfileAssignedProjectsSection()}
     </div>
   );
 
   const renderEditMyProfilePanel = () => (
-    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
+    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-7 md:p-8">
       <h3 className="font-semibold mb-1">Edit My Profile</h3>
       <p className="text-sm text-wt-text-muted mb-4">You are onboarded. Update your profile details anytime.</p>
       <div className="grid sm:grid-cols-2 gap-3">
@@ -3424,61 +3573,16 @@ function DashboardPageContent() {
                 </p>
               </section>
             ) : null}
-            {activeTab === "overview" && !requiresSelfOnboarding ? (
+            {activeTab === "overview" && canAccessOverview && !requiresSelfOnboarding ? (
               <div className="space-y-4">
                 <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   <MetricCard label="Total Onboarded" value={metrics.totalOnboarded} loading={loading} />
                 </div>
-                {!hasManagerAccess ? (
-                  <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold">My Allocated Projects</h3>
-                      <button
-                        type="button"
-                        className="btn-primary px-3 py-2"
-                        onClick={() =>
-                          runAction("Load assigned projects", async () => {
-                            const [assignedRes, myAllocationsRes] = await Promise.all([
-                              hrmsService.getAssignedProjects(),
-                              hrmsService.getMyAllocations(),
-                            ]);
-                            const normalizedProjects = normalizeAssignedProjects(
-                              toPagedRows(assignedRes.data ?? assignedRes)
-                            );
-                            const myAllocations = toPagedRows(myAllocationsRes.data ?? myAllocationsRes);
-                            setAssignedProjects(
-                              mergeProjectAndAllocationData(normalizedProjects, myAllocations)
-                            );
-                          })
-                        }
-                        disabled={actionLoading}
-                      >
-                        Refresh
-                      </button>
-                    </div>
-                    <DataTable
-                      title="Allocations show percent of an 8-hour day (100% = 8h)."
-                      columns={[
-                        "project_code",
-                        "project_name",
-                        "project_type",
-                        "role",
-                        "allocated_hours",
-                        "billing_status",
-                        "is_manager",
-                        "start_date",
-                        "end_date",
-                      ]}
-                      rows={assignedProjectsWithAllocationPct}
-                      emptyLabel="No projects are allocated to you yet."
-                    />
-                  </section>
-                ) : null}
               </div>
             ) : null}
 
             {activeTab === "profile" && canAccessProfile ? (
-              <section className="max-w-3xl">
+              <section className="max-w-5xl">
                 {employeeSelfServeProfile ? (
                   requiresSelfOnboarding ? (
                     renderSelfOnboardingPanel()
@@ -3486,12 +3590,17 @@ function DashboardPageContent() {
                     isEditingOwnProfile ? renderEditMyProfilePanel() : renderMyProfileViewPanel()
                   )
                 ) : (
-                  <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                    <h3 className="font-semibold mb-1">My Profile</h3>
-                    <p className="text-sm text-wt-text-muted mb-4">
-                      Your account details and current role information.
-                    </p>
-                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                  <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-7 md:p-8">
+                    <div className="mb-6 flex items-start gap-5">
+                      <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
+                      <div className="min-w-0">
+                        <h3 className="text-lg font-semibold mb-1">My Profile</h3>
+                        <p className="text-sm text-wt-text-muted">
+                          Your account details and current role information.
+                        </p>
+                      </div>
+                    </div>
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
                       <ProfileField label="Name" value={employeeProfile?.name ?? user?.name} />
                       <ProfileField label="Email" value={employeeProfile?.email ?? user?.email} />
                       <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
@@ -3504,7 +3613,23 @@ function DashboardPageContent() {
                         label="User Type"
                         value={employeeProfile?.user_type ?? user?.user_type}
                       />
+                      <ProfileField label="Phone Number" value={employeeProfile?.phone_number ?? employeeProfile?.phoneNumber} />
+                      <ProfileField
+                        label="Primary Skills"
+                        value={
+                          Array.isArray(employeeProfile?.primary_skills)
+                            ? (employeeProfile?.primary_skills as Array<unknown>).map((s) => String(s)).join(", ")
+                            : employeeProfile?.primary_skills
+                        }
+                      />
+                      <ProfileField
+                        label="Secondary Skills"
+                        value={formatSecondarySkillsForProfile(employeeProfile)}
+                        fullWidth
+                      />
+                      <ProfileField label="Years of Experience" value={employeeProfile?.yoe} />
                     </dl>
+                    {!requiresSelfOnboarding ? renderProfileAssignedProjectsSection() : null}
                   </div>
                 )}
               </section>
@@ -3573,15 +3698,8 @@ function DashboardPageContent() {
                                 <option value="1">B1</option>
                               )}
                             </select>
-                            {onboardForm.user_type === "INTERN" ? (
-                              <span className="text-[11px] text-wt-text-muted mt-0.5">Interns are assigned band B8.</span>
-                            ) : null}
                           </label>
-                        ) : (
-                          <p className="text-xs text-wt-text-muted self-end">
-                            Consultant: band is not shown; a default band id is sent for system compatibility.
-                          </p>
-                        )}
+                        ) : null}
                         {onboardForm.user_type === "CONSULTANT" ? (
                           <InputField
                             label="Designation"
@@ -3734,16 +3852,82 @@ function DashboardPageContent() {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                      <h3 className="font-semibold mb-1">Employee onboarding</h3>
-                      <p className="text-sm text-wt-text-muted mb-3">
-                        Up to six most recent employees with status <strong>INVITE</strong> (active and
-                        offboarded records are hidden).
-                      </p>
+                    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+                      <div className="flex flex-wrap items-end justify-between gap-3">
+                        <h3 className="font-semibold">Employee onboarding</h3>
+                        <p className="text-xs text-wt-text-muted">
+                          Invited employees for {invitedListFromDate} — {invitedListToDate}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-end gap-3">
+                        <InputField
+                          label="From date"
+                          type="date"
+                          value={invitedListFromDate}
+                          onChange={setInvitedListFromDate}
+                        />
+                        <InputField
+                          label="To date"
+                          type="date"
+                          value={invitedListToDate}
+                          onChange={setInvitedListToDate}
+                        />
+                        <button
+                          type="button"
+                          className="btn-primary px-3 py-2 text-sm"
+                          onClick={() =>
+                            runAction("Load invited employees", async () => {
+                              await loadInviteOnboardingPreview({
+                                from: invitedListFromDateRef.current,
+                                to: invitedListToDateRef.current,
+                              });
+                            })
+                          }
+                          disabled={actionLoading}
+                        >
+                          Apply dates
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg"
+                          onClick={() =>
+                            runAction("Reset invited date range", async () => {
+                              const { from, to } = defaultInvitedEmployeesDateRange();
+                              setInvitedListFromDate(from);
+                              setInvitedListToDate(to);
+                              await loadInviteOnboardingPreview({ from, to });
+                            })
+                          }
+                          disabled={actionLoading}
+                        >
+                          Last 7 days
+                        </button>
+                      </div>
+                      {invitedApiServerRange ? (
+                        <p
+                          className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
+                          role="status"
+                        >
+                          The server returned data for {invitedApiServerRange.from} —{" "}
+                          {invitedApiServerRange.to} (fixed window). Rows shown are filtered to
+                          your selected range ({invitedListFromDate} — {invitedListToDate}). Older
+                          invites may be missing until the API honors{" "}
+                          <code className="text-[11px]">fromDate</code> /{" "}
+                          <code className="text-[11px]">toDate</code>.
+                        </p>
+                      ) : null}
                       <DataTable
-                        columns={["emp_id", "name", "email", "status", "user_type", "department"]}
+                        columns={[
+                          "emp_id",
+                          "name",
+                          "email",
+                          "status",
+                          "user_type",
+                          "department",
+                          "created_at",
+                        ]}
                         rows={inviteOnboardingRows}
-                        emptyLabel="No invite-stage employees found."
+                        emptyLabel="No invited employees in this date range."
                       />
                     </div>
                   </section>
@@ -3804,8 +3988,10 @@ function DashboardPageContent() {
                           onChange={(v) => setProjectForm((p) => ({ ...p, client_name: v }))}
                         />
                         <AccountManagerSelect
-                          value={projectForm.account_manager}
-                          onChange={(v) => setProjectForm((p) => ({ ...p, account_manager: v }))}
+                          value={projectForm.account_manager_email}
+                          onChange={(v) =>
+                            setProjectForm((p) => ({ ...p, account_manager_email: v }))
+                          }
                         />
                         <SelectField
                           label="Project Type"
@@ -3831,9 +4017,14 @@ function DashboardPageContent() {
                                 if (!name) {
                                   throw new Error("Project name is required.");
                                 }
-                                const am = projectForm.account_manager.trim();
-                                if (!am) {
+                                const accountManagerEmail = normalizePickerEmail(
+                                  projectForm.account_manager_email
+                                );
+                                if (!accountManagerEmail) {
                                   throw new Error("Account manager is required.");
+                                }
+                                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail)) {
+                                  throw new Error("Select a valid account manager email.");
                                 }
                                 const project_code = generateAutomaticProjectCode();
                                 await hrmsService.createProject({
@@ -3841,14 +4032,14 @@ function DashboardPageContent() {
                                   project_name: name,
                                   project_type: projectForm.project_type,
                                   client_name: projectForm.client_name.trim() || null,
-                                  account_manager: am,
+                                  account_manager_email: accountManagerEmail,
                                 });
                                 setEditingProjectCode("");
                                 setProjectForm((p) => ({
                                   ...p,
                                   project_name: "",
                                   client_name: "",
-                                  account_manager: "",
+                                  account_manager_email: "",
                                 }));
                                 const rows = await loadAllProjectsForHr();
                                 setProjects(rows);
@@ -4210,26 +4401,17 @@ function DashboardPageContent() {
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-sm font-medium">Allocation Records</p>
-                          <label className="flex items-center gap-2 text-xs text-wt-text-muted">
-                            <input
-                              type="checkbox"
-                              checked={allocationListMissingEndDateOnly}
-                              onChange={(e) => setAllocationListMissingEndDateOnly(e.target.checked)}
-                            />
-                            Only without end date
-                          </label>
                           <span className="text-xs text-wt-text-muted">
-                            {allocationsForListView.length} row(s)
+                            {allocations.length} row(s)
                           </span>
                         </div>
-                        {allocationsForListView.length ? (
+                        {allocations.length ? (
                           <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
                             <table className="min-w-full text-sm">
                               <thead className="bg-wt-surface-2 text-wt-text-muted">
                                 <tr>
                                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">ALLOCATED PROJECT</th>
                                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">EMPLOYEE NAME</th>
-                                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">ACC MANAGER</th>
                                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">DESIGNATION</th>
                                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                     ALLOCATION (% of 8h)
@@ -4238,13 +4420,11 @@ function DashboardPageContent() {
                                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">BILLING STATUS</th>
                                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">START DATE</th>
                                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">END DATE</th>
-                                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">IS ACTIVE</th>
-                                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">WORK LOCATION TYPE</th>
                                   <th className="text-right px-3 py-2 font-medium whitespace-nowrap">ACTIONS</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {allocationsForListView.map((row, idx) => {
+                                {allocations.map((row, idx) => {
                                   const allocationId = String(
                                     row.id ?? row.allocation_id ?? row.allocationId ?? ""
                                   ).trim();
@@ -4279,7 +4459,6 @@ function DashboardPageContent() {
                                     <tr key={`${allocationId || "alloc"}-${idx}`} className="border-t border-wt-border">
                                       <td className="px-3 py-2 whitespace-nowrap">{String(row.allocated_project ?? "—")}</td>
                                       <td className="px-3 py-2 whitespace-nowrap">{String(row.employee_name ?? "—")}</td>
-                                      <td className="px-3 py-2 whitespace-nowrap">{allocationAccManagerCell(row)}</td>
                                       <td className="px-3 py-2 whitespace-nowrap">{String(row.role ?? "—")}</td>
                                       <td className="px-3 py-2 whitespace-nowrap">
                                         {formatAllocatedHoursPercentLabel(
@@ -4290,8 +4469,6 @@ function DashboardPageContent() {
                                       <td className="px-3 py-2 whitespace-nowrap">{String(row.billing_status ?? row.billingStatus ?? "—")}</td>
                                       <td className="px-3 py-2 whitespace-nowrap">{String(row.start_date ?? "—")}</td>
                                       <td className="px-3 py-2 whitespace-nowrap">{String(row.end_date ?? "—")}</td>
-                                      <td className="px-3 py-2 whitespace-nowrap">{String(row.is_active ?? "—")}</td>
-                                      <td className="px-3 py-2 whitespace-nowrap">{String(row.work_location_type ?? "—")}</td>
                                       <td className="px-3 py-2 text-right">
                                         <div className="inline-flex items-center justify-end gap-1">
                                           <button
@@ -4367,19 +4544,6 @@ function DashboardPageContent() {
                       </div>
 
                       <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2">
-                        <p className="text-sm font-medium">Bench &amp; investment snapshot</p>
-                        <p className="text-xs text-wt-text-muted mb-2">
-                          Merges bench/talent-pool rows with employees marked <strong>INVESTMENT</strong> on an allocation.
-                          Extend backend APIs for full day-wise bench forecasting and talent-pool coverage.
-                        </p>
-                        <DataTable
-                          columns={["source", "name", "email", "bench_days"]}
-                          rows={investmentBenchRows}
-                          emptyLabel="No bench or investment rows loaded (refresh bench reports and allocations)."
-                        />
-                      </div>
-
-                      <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium">Allocation Forecasting (ending in 2 weeks)</p>
                           <button
@@ -4412,7 +4576,7 @@ function DashboardPageContent() {
                           </button>
                         </div>
                         <DataTable
-                          columns={["project_code", "project_name", "employee_name", "billing_status", "role"]}
+                          columns={["project_name", "employee_name", "billing_status", "role"]}
                           rows={allocationForecastRows}
                           emptyLabel="No employees with allocations ending in the next 2 weeks."
                         />
@@ -4432,6 +4596,10 @@ function DashboardPageContent() {
 
             {activeTab === "allocation-extension" && !requiresSelfOnboarding ? (
               <AllocationExtensionPanel />
+            ) : null}
+
+            {activeTab === "employee-attendance" && hasHrAccess && !requiresSelfOnboarding ? (
+              <EmployeeAttendancePanel />
             ) : null}
 
             {activeTab === "timelog" && !requiresSelfOnboarding ? (
@@ -4485,31 +4653,34 @@ function DashboardPageContent() {
                     <div>
                       <p className="text-sm font-medium text-wt-text">Log time</p>
                       <p className="text-xs text-wt-text-muted mt-1">
-                        Submit hours against a project. HR and Admin can optionally attribute the entry to another
-                        employee when the service accepts <code className="text-[11px]">employee_email</code> on create.
+                        {timelogHrNoSelfProject
+                          ? "Submit hours for the selected date."
+                          : "Submit hours against an allocated project."}
                       </p>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-3">
-                      <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                        Project
-                        <select
-                          className="input-field px-3 py-2 text-sm"
-                          value={timelogForm.project_code}
-                          onChange={(e) =>
-                            setTimelogForm((prev) => ({
-                              ...prev,
-                              project_code: e.target.value,
-                            }))
-                          }
-                        >
-                          <option value="">Select project</option>
-                          {timelogProjects.map((project) => (
-                            <option key={project.code} value={project.code}>
-                              {project.name} ({project.code})
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                      {!timelogHrNoSelfProject ? (
+                        <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+                          Project
+                          <select
+                            className="input-field px-3 py-2 text-sm"
+                            value={timelogForm.project_code}
+                            onChange={(e) =>
+                              setTimelogForm((prev) => ({
+                                ...prev,
+                                project_code: e.target.value,
+                              }))
+                            }
+                          >
+                            <option value="">Select project</option>
+                            {timelogProjects.map((project) => (
+                              <option key={project.code} value={project.code}>
+                                {project.name} ({project.code})
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
                       <InputField
                         label="Log Date"
                         value={timelogForm.log_date}
@@ -4527,30 +4698,6 @@ function DashboardPageContent() {
                         value={timelogForm.description}
                         onChange={(v) => setTimelogForm((prev) => ({ ...prev, description: v }))}
                       />
-                      {hasHrAccess ? (
-                        <div className="sm:col-span-2">
-                          <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                            Employee (optional)
-                            <select
-                              className="input-field px-3 py-2 text-sm"
-                              value={timelogForm.subject_employee_email}
-                              onChange={(e) =>
-                                setTimelogForm((prev) => ({
-                                  ...prev,
-                                  subject_employee_email: e.target.value,
-                                }))
-                              }
-                            >
-                              <option value="">Myself (current login)</option>
-                              {hrTimelogDirectoryEmails.map((email) => (
-                                <option key={email} value={email}>
-                                  {email}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </div>
-                      ) : null}
                     </div>
                     <div>
                       <button
@@ -4560,19 +4707,19 @@ function DashboardPageContent() {
                           runAction("Submit timelog", async () => {
                             const projectCode = timelogForm.project_code.trim();
                             const logDate = timelogForm.log_date.trim();
-                            if (!projectCode || !logDate) {
+                            if (!logDate) {
+                              throw new Error("Log Date is required.");
+                            }
+                            if (!timelogHrNoSelfProject && !projectCode) {
                               throw new Error("Project and Log Date are required.");
                             }
-                            const subject = timelogForm.subject_employee_email.trim().toLowerCase();
                             const body: Record<string, unknown> = {
-                              project_code: projectCode,
                               log_date: logDate,
                               hours: Number(timelogForm.hours),
                               description: timelogForm.description.trim() || null,
                             };
-                            if (hasHrAccess && subject) {
-                              body.employee_email = subject;
-                              body.employeeEmail = subject;
+                            if (!timelogHrNoSelfProject) {
+                              body.project_code = projectCode;
                             }
                             await apiClient.post(endpoints.timelog.root, {
                               contentType: "application/json",
@@ -4586,9 +4733,7 @@ function DashboardPageContent() {
                               subject_employee_email: "",
                             });
                             try {
-                              await loadTimelogsForCurrentRole(
-                                hasHrAccess && subject ? subject : undefined
-                              );
+                              await loadTimelogsForCurrentRole();
                             } catch {
                               /* submission succeeded; ignore refresh issue */
                             }
@@ -4601,19 +4746,7 @@ function DashboardPageContent() {
                     </div>
                   </div>
 
-                  {hasHrAccess ? (
-                    <p className="text-xs text-wt-text-muted">
-                      Table below shows organization-wide entries after refresh. Use the{" "}
-                      <strong>Team timelogs</strong> tab to filter by employee email.
-                    </p>
-                  ) : null}
-                  {hasHrAccess ? (
-                    <DataTable
-                      columns={["project_code", "employee_name", "log_date", "hours", "description"]}
-                      rows={hrVisibleTimelogs}
-                      emptyLabel="No timelogs loaded."
-                    />
-                  ) : (
+                  {timelogHrNoSelfProject ? null : (
                     <DataTable
                       columns={["project_code", "log_date", "hours", "description"]}
                       rows={timelogs}
@@ -4758,8 +4891,10 @@ function DashboardPageContent() {
               <section className="grid gap-4 xl:grid-cols-1">
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                    <h3 className="font-semibold mb-1">Create Leave Request</h3>
-                    <p className="text-sm text-wt-text-muted mb-3">Submit leave or work-from-home request.</p>
+                    <h3 className="font-semibold mb-1">Create Request</h3>
+                    <p className="text-sm text-wt-text-muted mb-3">
+                      Submit leave, work-from-home, or comp-off request.
+                    </p>
                     <div className="space-y-2">
                       <InputField label="From Date" value={leaveRequestForm.request_from_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_from_date: v }))} type="date" />
                       <InputField label="To Date" value={leaveRequestForm.request_to_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_to_date: v }))} type="date" />
@@ -4771,7 +4906,12 @@ function DashboardPageContent() {
                         type="button"
                         className="btn-primary px-3 py-2"
                         onClick={() =>
-                          runAction(editingLeaveRequestId ? "Update leave request" : "Create leave request", async () => {
+                          runAction(
+                            userRequestActionLabel(
+                              leaveRequestForm.request_type,
+                              editingLeaveRequestId ? "update" : "submit"
+                            ),
+                            async () => {
                             const fromDate = leaveRequestForm.request_from_date.trim();
                             const toDate = leaveRequestForm.request_to_date.trim();
                             if (!fromDate || !toDate) {
@@ -4857,7 +4997,7 @@ function DashboardPageContent() {
                       <button
                         type="button"
                         className="btn-primary px-3 py-2"
-                        onClick={() => runAction("Load my leave requests", loadMyLeaveRequests)}
+                        onClick={() => runAction("Refresh my requests", loadMyLeaveRequests)}
                         disabled={actionLoading}
                       >
                         Refresh
@@ -4921,7 +5061,12 @@ function DashboardPageContent() {
                                         className="rounded-lg px-2.5 py-1.5 text-xs border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50"
                                         disabled={actionLoading || !requestId || !isPending}
                                         onClick={() =>
-                                          runAction("Revoke leave request", async () => {
+                                          runAction(
+                                            userRequestActionLabel(
+                                              row.request_type ?? row.requestType,
+                                              "revoke"
+                                            ),
+                                            async () => {
                                             await apiClient.delete(endpoints.userRequest.root, {
                                               contentType: "application/json",
                                               body: JSON.stringify({
@@ -4982,7 +5127,7 @@ function DashboardPageContent() {
                   <button
                     type="button"
                     className="btn-primary px-3 py-2 h-10"
-                    onClick={() => runAction("Load employee requests", loadEmployeeRequestsForApprover)}
+                    onClick={() => runAction("Refresh team requests", loadEmployeeRequestsForApprover)}
                     disabled={actionLoading}
                   >
                     Fetch Requests
@@ -5040,7 +5185,12 @@ function DashboardPageContent() {
                                     className="rounded-lg px-2.5 py-1.5 text-xs border border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10 disabled:opacity-50"
                                     disabled={actionLoading || !requestId || status !== "PENDING"}
                                     onClick={() =>
-                                      runAction("Approve request", async () => {
+                                      runAction(
+                                        userRequestActionLabel(
+                                          row.request_type ?? row.requestType,
+                                          "approve"
+                                        ),
+                                        async () => {
                                         await updateEmployeeRequestStatus(requestId, "APPROVED");
                                         await loadEmployeeRequestsForApprover();
                                       })
@@ -5053,7 +5203,12 @@ function DashboardPageContent() {
                                     className="rounded-lg px-2.5 py-1.5 text-xs border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50"
                                     disabled={actionLoading || !requestId || status !== "PENDING"}
                                     onClick={() =>
-                                      runAction("Reject request", async () => {
+                                      runAction(
+                                        userRequestActionLabel(
+                                          row.request_type ?? row.requestType,
+                                          "reject"
+                                        ),
+                                        async () => {
                                         await updateEmployeeRequestStatus(requestId, "REJECTED");
                                         await loadEmployeeRequestsForApprover();
                                       })
@@ -5440,187 +5595,18 @@ function DashboardPageContent() {
                       />
                     </div>
                   ) : activeTab === "reports-section-3" ? (
-                    <div className="space-y-4">
-                      <div className="grid md:grid-cols-3 gap-3">
-                        <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                          FY Start Year (required)
-                          <select
-                            className="input-field px-3 py-2 text-sm"
-                            value={attritionFyStartYear}
-                            onChange={(e) => setAttritionFyStartYear(e.target.value)}
-                          >
-                            {Array.from(
-                              { length: Math.max(new Date().getFullYear() - 2019 + 1, 1) },
-                              (_, idx) => String(2019 + idx)
-                            ).map((year) => (
-                              <option key={year} value={year}>
-                                {year}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                      <DataTable
-                        title="Overall Attrition %"
-                        columns={["fy_start_year", "fy_april_start", "fy_march_end", "number_of_exits", "attrition_percent"]}
-                        rows={attritionOverallRows}
-                        emptyLabel="No overall attrition data."
-                        compact
-                      />
-                      <DataTable
-                        title="Voluntary vs Involuntary"
-                        columns={["voluntary_count", "involuntary_count", "total_count"]}
-                        rows={attritionVoluntaryRows}
-                        emptyLabel="No voluntary/involuntary data."
-                        compact
-                      />
-                      <DataTable
-                        title="Role-wise Attrition"
-                        columns={["role_or_designation", "exit_count"]}
-                        rows={attritionRoleWiseRows}
-                        emptyLabel="No role-wise attrition rows."
-                        compact
-                      />
-                      <DataTable
-                        title="Manager-wise Attrition"
-                        columns={["reporting_manager", "exit_count"]}
-                        rows={attritionManagerWiseRows}
-                        emptyLabel="No manager-wise attrition rows."
-                        compact
-                      />
-                      <DataTable
-                        title="Critical Skill Attrition"
-                        columns={["critical_skill", "exit_count"]}
-                        rows={attritionCriticalSkillRows}
-                        emptyLabel="No critical skill attrition rows."
-                        compact
-                      />
-                      <DataTable
-                        title="Regretted Attrition"
-                        columns={["total_regretted_exits", "percent_of_total_attrition"]}
-                        rows={attritionRegrettedRows}
-                        emptyLabel="No regretted attrition data."
-                        compact
-                      />
-                      <DataTable
-                        title="Average Tenure Buckets"
-                        columns={["tenure_bucket", "range_days", "number_of_employees"]}
-                        rows={attritionAverageTenureBuckets}
-                        emptyLabel="No average tenure bucket data."
-                        compact
-                      />
-                      <DataTable
-                        title="Average Tenure Summary"
-                        columns={["average_tenure_days", "tenure_unknown_employees"]}
-                        rows={attritionAverageTenureSummaryRows}
-                        emptyLabel="No average tenure summary."
-                        compact
-                      />
-                      <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-4 space-y-3">
-                        <h4 className="font-medium">Upsert Attrition Record</h4>
-                        <div className="grid md:grid-cols-2 gap-3">
-                          <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                            Employee ID
-                            <select
-                              className="input-field px-3 py-2 text-sm"
-                              value={attritionForm.emp_id}
-                              onChange={(e) => setAttritionForm((p) => ({ ...p, emp_id: e.target.value }))}
-                            >
-                              {!offboardingUsers.length ? <option value="">No employees found</option> : null}
-                              {offboardingUsers.map((emp) => (
-                                <option key={emp.emp_id} value={emp.emp_id}>
-                                  {emp.emp_id} - {emp.name} ({emp.email})
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <InputField
-                            label="Last Working Day"
-                            type="date"
-                            value={attritionForm.last_working_day}
-                            onChange={(v) => setAttritionForm((p) => ({ ...p, last_working_day: v }))}
-                          />
-                          <SelectField
-                            label="Separation Type"
-                            value={attritionForm.separation_type}
-                            options={["VOLUNTARY", "INVOLUNTARY"]}
-                            onChange={(v) =>
-                              setAttritionForm((p) => ({
-                                ...p,
-                                separation_type: v === "INVOLUNTARY" ? "INVOLUNTARY" : "VOLUNTARY",
-                              }))
-                            }
-                          />
-                          <InputField
-                            label="Reason"
-                            value={attritionForm.reason}
-                            onChange={(v) => setAttritionForm((p) => ({ ...p, reason: v }))}
-                          />
-                          <InputField
-                            label="Critical Skill"
-                            value={attritionForm.critical_skill}
-                            onChange={(v) => setAttritionForm((p) => ({ ...p, critical_skill: v }))}
-                          />
-                          <label className="text-xs text-wt-text-muted flex items-center gap-2 mt-5">
-                            <input
-                              type="checkbox"
-                              checked={attritionForm.is_regretted}
-                              onChange={(e) => setAttritionForm((p) => ({ ...p, is_regretted: e.target.checked }))}
-                            />
-                            Is Regretted
-                          </label>
-                        </div>
-                        <button
-                          type="button"
-                          className="btn-primary px-3 py-2"
-                          disabled={actionLoading}
-                          onClick={() =>
-                            runAction("Upsert attrition record", async () => {
-                              const parsedFy = Number.parseInt(attritionFyStartYear, 10);
-                              if (!Number.isFinite(parsedFy) || parsedFy < 2000 || parsedFy > 2100) {
-                                throw new Error("FY start year must be between 2000 and 2100.");
-                              }
-                              const empId = attritionForm.emp_id.trim();
-                              if (!empId) throw new Error("Please select emp_id.");
-                              const lastWorkingDay = attritionForm.last_working_day.trim();
-                              if (!lastWorkingDay) throw new Error("Please select last working day.");
-                              const result = await hrmsService.upsertAttritionRecord(empId, {
-                                separation_type: attritionForm.separation_type,
-                                reason: attritionForm.reason.trim() || undefined,
-                                critical_skill: attritionForm.critical_skill.trim() || undefined,
-                                is_regretted: attritionForm.is_regretted,
-                                last_working_day: lastWorkingDay,
-                              });
-                              const payload = ((result as { data?: unknown }).data ?? {}) as Record<string, unknown>;
-                              const row = (payload.data ?? payload) as Record<string, unknown>;
-                              setAttritionUpsertResultRows(row && typeof row === "object" ? [row] : []);
-                              await loadAttritionReports();
-                            })
-                          }
-                        >
-                          Save Attrition Record
-                        </button>
-                        <DataTable
-                          title="Latest Upserted Attrition Record"
-                          columns={[
-                            "emp_id",
-                            "employee_name",
-                            "separation_type",
-                            "reason",
-                            "critical_skill",
-                            "is_regretted",
-                            "last_working_day",
-                            "designation",
-                            "band_name",
-                            "band_role",
-                            "project_manager",
-                          ]}
-                          rows={attritionUpsertResultRows}
-                          emptyLabel="No attrition upsert record submitted yet."
-                          compact
-                        />
-                      </div>
-                    </div>
+                    <AttritionRetentionReports
+                      fyStartYear={attritionFyStartYear}
+                      onFyStartYearChange={setAttritionFyStartYear}
+                      overallRows={attritionOverallRows}
+                      voluntaryRows={attritionVoluntaryRows}
+                      roleWiseRows={attritionRoleWiseRows}
+                      managerWiseRows={attritionManagerWiseRows}
+                      criticalSkillRows={attritionCriticalSkillRows}
+                      regrettedRows={attritionRegrettedRows}
+                      tenureBucketRows={attritionAverageTenureBuckets}
+                      tenureSummaryRows={attritionAverageTenureSummaryRows}
+                    />
                   ) : activeTab === "reports-section-4" ? (
                     <div className="space-y-4">
                       <DataTable
@@ -6014,11 +6000,101 @@ function UploadTile({
   );
 }
 
-function ProfileField({ label, value }: { label: string; value: unknown }) {
+function resolveProfilePhotoSrc(profile: Record<string, unknown> | null | undefined): string | null {
+  if (!profile) return null;
+  const raw = String(
+    profile.profile_photo_url ??
+      profile.profilePhotoUrl ??
+      profile.profile_pic_url ??
+      profile.profilePicUrl ??
+      profile.photo_url ??
+      profile.photoUrl ??
+      profile.avatar_url ??
+      profile.avatarUrl ??
+      profile.image_url ??
+      profile.imageUrl ??
+      profile.profile_photo ??
+      profile.profilePhoto ??
+      ""
+  ).trim();
+  if (!raw) return null;
+  if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("data:")) {
+    return raw;
+  }
+  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "");
+  return raw.startsWith("/") ? `${base}${raw}` : `${base}/${raw}`;
+}
+
+function formatSecondarySkillsForProfile(profile: Record<string, unknown> | null | undefined): string {
+  if (!profile) return "—";
+  const raw =
+    profile.secondary_skills ?? profile.secondarySkills ?? profile.secondary_skill;
+  if (Array.isArray(raw)) {
+    const parts = raw
+      .map((item) => {
+        if (item && typeof item === "object") {
+          const rec = item as Record<string, unknown>;
+          const skill = String(rec.skill ?? rec.name ?? "").trim();
+          const rating = rec.rating ?? rec.level;
+          if (!skill) return "";
+          return rating !== undefined && String(rating).trim() !== ""
+            ? `${skill} (${String(rating)}/5)`
+            : skill;
+        }
+        return String(item ?? "").trim();
+      })
+      .filter(Boolean);
+    return parts.length ? parts.join(", ") : "—";
+  }
+  const single = String(raw ?? "").trim();
+  return single || "—";
+}
+
+function ProfilePhotoAvatar({
+  profile,
+  fallbackName,
+}: {
+  profile: Record<string, unknown> | null | undefined;
+  fallbackName?: string | null;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const src = resolveProfilePhotoSrc(profile);
+  const displayName = String(profile?.name ?? fallbackName ?? "User").trim();
+  const initial = (displayName.charAt(0) || "?").toUpperCase();
+
+  return (
+    <div
+      className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-2 flex items-center justify-center"
+      aria-hidden={!src || imageFailed}
+    >
+      {src && !imageFailed ? (
+        <img
+          src={src}
+          alt={`${displayName} profile photo`}
+          className="h-full w-full object-cover"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <span className="text-3xl font-semibold text-wt-text-muted">{initial}</span>
+      )}
+    </div>
+  );
+}
+
+function ProfileField({
+  label,
+  value,
+  fullWidth = false,
+}: {
+  label: string;
+  value: unknown;
+  fullWidth?: boolean;
+}) {
+  const spanClass = fullWidth ? "sm:col-span-2" : "";
   return (
     <>
-      <dt className="text-wt-text-muted">{label}</dt>
-      <dd className="font-medium">{value ? String(value) : "—"}</dd>
+      <dt className={`text-wt-text-muted ${spanClass}`}>{label}</dt>
+      <dd className={`font-medium ${spanClass}`}>{value ? String(value) : "—"}</dd>
     </>
   );
 }

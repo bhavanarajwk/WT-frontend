@@ -8,7 +8,8 @@ import {
   useUpdateTraining,
 } from "@/components/learning-development/hooks/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/components/learning-development/hooks/useLearningTrainerDirectory";
-import { DataTable, InputField, SelectField, Sheet, StatusBadge } from "@/components/learning-development/ui/forms";
+import { TrainingCard } from "@/components/learning-development/TrainingCard";
+import { InputField, SelectField, Sheet } from "@/components/learning-development/ui/forms";
 import { trainingDurationDaysFromRange } from "@/src/lib/learning/trainingDates";
 import { resolveLearningTrainerUserId } from "@/src/lib/learning/resolveTrainerUserId";
 import { hrmsService } from "@/src/services/hrms.service";
@@ -25,9 +26,6 @@ export function TrainingsPageClient() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [page, setPage] = useState(0);
-  const pageSize = 10;
-
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -58,13 +56,6 @@ export function TrainingsPageClient() {
     }
     return list;
   }, [rows, search, statusFilter]);
-
-  const pageRows = useMemo(() => {
-    const start = page * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, page]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
 
   function openCreate() {
     setEditingId(null);
@@ -138,7 +129,9 @@ export function TrainingsPageClient() {
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-wt-border pb-4">
           <div className="min-w-0">
             <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Trainings</h1>
-            <p className="text-sm text-wt-text-muted mt-1">Create, filter, and open training records.</p>
+            <p className="text-sm text-wt-text-muted mt-1">
+              Open a training card to manage sessions, trainers, trainees, attendance, scores, and analytics.
+            </p>
           </div>
           <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
             <button
@@ -166,10 +159,7 @@ export function TrainingsPageClient() {
                 label="Status"
                 value={statusFilter}
                 options={["ALL", "DRAFT", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]}
-                onChange={(v) => {
-                  setStatusFilter(v);
-                  setPage(0);
-                }}
+                onChange={setStatusFilter}
               />
             </div>
           </div>
@@ -178,55 +168,27 @@ export function TrainingsPageClient() {
           </p>
         </div>
 
-        <DataTable
-          title="Training records"
-          compact
-          columns={["id", "name", "category", "type", "status", "start", "end", "actions"]}
-          rows={pageRows.map((row) => {
-            return {
-              id: row.id,
-              name: row.name,
-              category: row.category,
-              type: row.type,
-              status: <StatusBadge status={String(row.status ?? "—")} />,
-              start: row.start_date ?? row.training_start ?? "—",
-              end: row.end_date ?? row.training_end ?? "—",
-              actions: hasHrAccess ? (
-                <button
-                  type="button"
-                  className="text-xs font-medium text-wt-text hover:underline"
-                  onClick={() => openEdit(row)}
-                >
-                  Edit
-                </button>
-              ) : (
-                "—"
-              ),
-            };
-          })}
-          emptyLabel={isLoading ? "Loading trainings…" : "No trainings match your filters."}
-        />
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-wt-border pt-4 text-sm">
-          <button
-            type="button"
-            className="btn-ghost px-3 py-1.5 rounded-lg border border-wt-border disabled:opacity-40"
-            disabled={page <= 0}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-          >
-            Previous
-          </button>
-          <span className="text-wt-text-muted">
-            Page {page + 1} / {totalPages}
-          </span>
-          <button
-            type="button"
-            className="btn-ghost px-3 py-1.5 rounded-lg border border-wt-border disabled:opacity-40"
-            disabled={page + 1 >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-          >
-            Next
-          </button>
-        </div>
+        {isLoading ? (
+          <p className="text-sm text-wt-text-muted py-8 text-center">Loading trainings…</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-wt-text-muted py-8 text-center">No trainings match your filters.</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((row) => {
+              const id = String(row.id ?? "").trim();
+              const href = `/dashboard/learning-development/trainings/${encodeURIComponent(id)}`;
+              return (
+                <TrainingCard
+                  key={id || String(row.name)}
+                  row={row}
+                  href={href}
+                  showEdit={hasHrAccess}
+                  onEdit={() => openEdit(row)}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <Sheet

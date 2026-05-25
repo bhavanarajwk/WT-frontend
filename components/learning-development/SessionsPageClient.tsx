@@ -93,7 +93,7 @@ export function SessionsPageClient() {
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
         <DataTable
           title="Sessions for selected training"
-          columns={["id", "session_date", "start_time", "end_time", "mode", "venue", "meeting_link"]}
+          columns={["session_date", "start_time", "end_time", "mode", "venue", "meeting_link"]}
           rows={sessionsQ.data ?? []}
           emptyLabel={trainingId.trim() ? "No sessions yet." : "Pick a training to load sessions."}
         />

@@ -1,5 +1,5 @@
-import { SessionsPageClient } from "@/components/learning-development/SessionsPageClient";
+import { LearningHubRedirect } from "@/components/learning-development/LearningHubRedirect";
 
 export default function LearningSessionsPage() {
-  return <SessionsPageClient />;
+  return <LearningHubRedirect feature="Sessions" />;
 }

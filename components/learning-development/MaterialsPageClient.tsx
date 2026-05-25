@@ -67,7 +67,7 @@ export function MaterialsPageClient() {
       ) : null}
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        <DataTable columns={["id", "training_id", "title", "material_url", "visibility"]} rows={materialsQ.data ?? []} emptyLabel="No materials." />
+        <DataTable columns={["title", "material_url", "visibility"]} rows={materialsQ.data ?? []} emptyLabel="No materials." />
       </section>
     </div>
   );
