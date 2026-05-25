@@ -1,5 +1,6 @@
 import { endpoints } from "@/src/api/endpoints";
 import { apiClient, type ApiEnvelope } from "@/src/api/httpClient";
+import { toPagedRows } from "@/src/lib/apiRows";
 
 export interface PagedData<T> {
   items: T[];
@@ -15,6 +16,24 @@ export interface OnboardItem {
   status: string;
   user_type: string;
   department?: string | null;
+  created_at?: string | null;
+  createdAt?: string | null;
+}
+
+export interface InvitedUsersQuery {
+  fromDate?: string;
+  toDate?: string;
+  page?: string;
+  size?: string;
+}
+
+export interface InvitedUsersListData {
+  from_date: string;
+  to_date: string;
+  items: OnboardItem[];
+  total: number;
+  page: number;
+  size: number;
 }
 
 export interface NotificationItem {
@@ -33,6 +52,48 @@ export interface ApiPage<T> {
   page_size: number;
   total_elements: number;
   data: T[];
+}
+
+/** GET /allocation/active-non-bench — active non-bench allocations (paginated). */
+export interface ActiveNonBenchAllocationsPage {
+  current_page: number;
+  total_pages: number;
+  page_size: number;
+  total_elements: number;
+  allocations: unknown[];
+}
+
+export interface EmployeeAttendanceLeaveDateRow {
+  leave_date: string;
+  value: number;
+}
+
+export interface EmployeeAttendanceLeaveEmployeeRow {
+  user_id: number;
+  emp_id: string | null;
+  email: string;
+  leave_days_taken: number;
+  leave_dates: EmployeeAttendanceLeaveDateRow[];
+  total_attendance_days: number;
+  weekday_days_with_timelog: number;
+}
+
+export interface EmployeeAttendanceLeaveData {
+  from_date: string;
+  to_date: string;
+  working_weekdays_in_range: number;
+  current_page: number;
+  total_page: number;
+  page_size: number;
+  total_element: number;
+  employees: EmployeeAttendanceLeaveEmployeeRow[];
+}
+
+export interface EmployeeAttendanceLeaveQuery {
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  size?: number;
 }
 
 export interface AllocationExtensionRequestRow {
@@ -54,6 +115,16 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<PagedData<OnboardItem>>>(endpoints.user.onboard, {
       query: params,
     });
+  },
+
+  /** GET /user/invited — invited employees in a date range (default last 7 days on backend). */
+  getInvitedUsers(params: InvitedUsersQuery) {
+    const query: Record<string, string> = {};
+    if (params.fromDate?.trim()) query.fromDate = params.fromDate.trim();
+    if (params.toDate?.trim()) query.toDate = params.toDate.trim();
+    if (params.page != null) query.page = String(params.page);
+    if (params.size != null) query.size = String(params.size);
+    return apiClient.get<ApiEnvelope<InvitedUsersListData>>(endpoints.user.invited, { query });
   },
 
   /** GET /user?email= or empId= — contract: fetch user profile */
@@ -117,6 +188,36 @@ export const hrmsService = {
 
   getAllocations(params: Record<string, string>) {
     return apiClient.get<ApiEnvelope<PagedData<unknown>>>(endpoints.allocation.root, { query: params });
+  },
+
+  getActiveNonBenchAllocations(params: { page?: string; size?: string } = {}) {
+    const query: Record<string, string> = {};
+    if (params.page != null) query.page = String(params.page);
+    if (params.size != null) query.size = String(params.size);
+    return apiClient.get<ApiEnvelope<ActiveNonBenchAllocationsPage>>(
+      endpoints.allocation.activeNonBench,
+      { query }
+    );
+  },
+
+  async fetchAllActiveNonBenchAllocations(pageSize = 200): Promise<Array<Record<string, unknown>>> {
+    const all: Array<Record<string, unknown>> = [];
+    let page = 0;
+    let totalPages = 1;
+    while (page < totalPages) {
+      const res = await hrmsService.getActiveNonBenchAllocations({
+        page: String(page),
+        size: String(pageSize),
+      });
+      const payload = ((res as { data?: unknown }).data ?? res) as Record<string, unknown>;
+      const rows = toPagedRows(payload);
+      all.push(...rows);
+      const tp = Number(payload.total_pages);
+      totalPages = Number.isFinite(tp) && tp > 0 ? tp : page + 1;
+      if (!rows.length) break;
+      page += 1;
+    }
+    return all;
   },
 
   getMyAllocations() {
@@ -202,6 +303,19 @@ export const hrmsService = {
 
   getLeaveSummary(params: Record<string, string>) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.leaveSummary, { query: params });
+  },
+
+  /** GET /employee-attendance-leave — employee-wise attendance and leave in a date range. */
+  getEmployeeAttendanceLeave(params: EmployeeAttendanceLeaveQuery = {}) {
+    const query: Record<string, string> = {};
+    if (params.fromDate?.trim()) query.fromDate = params.fromDate.trim();
+    if (params.toDate?.trim()) query.toDate = params.toDate.trim();
+    if (params.page != null) query.page = String(params.page);
+    if (params.size != null) query.size = String(params.size);
+    return apiClient.get<ApiEnvelope<EmployeeAttendanceLeaveData>>(
+      endpoints.employeeAttendanceLeave,
+      { query }
+    );
   },
 
   getNotifications(params: Record<string, string>) {

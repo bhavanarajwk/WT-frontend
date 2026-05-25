@@ -45,6 +45,11 @@ function emailFromOnboardRow(r: Record<string, unknown>): string {
   return "";
 }
 
+export function isActiveOnboardRow(row: OnboardItem | Record<string, unknown>): boolean {
+  const r = onboardRowRecord(row);
+  return String(r.status ?? "").trim().toUpperCase() === "ACTIVE";
+}
+
 export function isAccountManagerOnboardRow(row: OnboardItem | Record<string, unknown>): boolean {
   const r = onboardRowRecord(row);
   const fields = [
