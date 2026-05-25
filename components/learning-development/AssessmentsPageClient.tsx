@@ -71,7 +71,7 @@ export function AssessmentsPageClient() {
       ) : null}
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        <DataTable columns={["id", "training_id", "name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." />
+        <DataTable columns={["name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." />
       </section>
     </div>
   );

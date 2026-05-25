@@ -13,6 +13,7 @@ export const endpoints = {
 
   user: {
     onboard: `${api}/user/onboard`,
+    invited: `${api}/user/invited`,
     offboard: (empId: string) => `${api}/user/offboard/${encodeURIComponent(empId)}`,
     lookup: `${api}/user`,
     batch: `${api}/user/batch`,
@@ -32,6 +33,7 @@ export const endpoints = {
 
   allocation: {
     root: `${api}/allocation`,
+    activeNonBench: `${api}/allocation/active-non-bench`,
     byId: (allocationId: string) => `${api}/allocation/${encodeURIComponent(allocationId)}`,
     updateLegacy: `${api}/allocation/update`,
     roles: `${api}/allocation/roles`,
@@ -63,6 +65,8 @@ export const endpoints = {
     statusBatch: `${api}/timelog/status/batch`,
     export: `${api}/export/timelogs`,
   },
+
+  employeeAttendanceLeave: `${api}/employee-attendance-leave`,
 
   userRequest: {
     root: `${api}/userRequest`,

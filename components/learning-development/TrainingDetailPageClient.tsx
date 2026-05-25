@@ -296,7 +296,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
             <DataTable
               title="Sessions"
-              columns={["id", "session_date", "start_time", "end_time", "mode", "venue", "meeting_link"]}
+              columns={["session_date", "start_time", "end_time", "mode", "venue", "meeting_link"]}
               rows={sessionsQ.data ?? []}
               emptyLabel={sessionsQ.isLoading ? "Loading sessions…" : "No sessions yet."}
             />
@@ -330,7 +330,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               </div>
             </div>
           ) : null}
-          <DataTable columns={["id", "user_id", "name", "email", "trainer_user_id"]} rows={trainersQ.data ?? []} emptyLabel="No trainers assigned." />
+          <DataTable columns={["name", "email"]} rows={trainersQ.data ?? []} emptyLabel="No trainers assigned." />
         </section>
       ) : null}
 
@@ -356,7 +356,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
             </div>
           ) : null}
           <DataTable
-            columns={["id", "training_id", "user_id", "name", "email", "enrollment_status"]}
+            columns={["name", "email", "enrollment_status"]}
             rows={participantsQ.data ?? []}
             emptyLabel="No trainees enrolled."
           />
@@ -378,7 +378,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               </div>
             </div>
           ) : null}
-          <DataTable columns={["id", "training_id", "title", "material_url", "visibility"]} rows={materialsQ.data ?? []} emptyLabel="No materials." />
+          <DataTable columns={["title", "material_url", "visibility"]} rows={materialsQ.data ?? []} emptyLabel="No materials." />
         </section>
       ) : null}
 
@@ -400,7 +400,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               </div>
             </div>
           ) : null}
-          <DataTable columns={["id", "training_id", "name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." />
+          <DataTable columns={["name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." />
         </section>
       ) : null}
 

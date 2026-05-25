@@ -8,12 +8,17 @@ export type NavItem =
     };
 
 export const dashboardNavigation: NavItem[] = [
-  { id: "overview", label: "Overview", roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN", "ROLE_FINANCE"] },
+  { id: "overview", label: "Overview", roles: ["ROLE_HR", "ROLE_ADMIN", "ROLE_FINANCE"] },
   { id: "employee", label: "Employee & Onboarding", roles: ["ROLE_EMPLOYEE", "ROLE_HR", "ROLE_ADMIN"] },
   { id: "allocation", label: "Allocation & Projects", roles: ["ROLE_HR", "ROLE_ADMIN"] },
   { id: "allocation-extension", label: "Allocation Extensions", roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"] },
   { id: "offboarding", label: "Offboarding", roles: ["ROLE_HR"] },
   { id: "background-verification", label: "Background Verification", roles: ["ROLE_HR"] },
+  {
+    id: "employee-attendance",
+    label: "Employee Attendance",
+    roles: ["ROLE_HR", "ROLE_ADMIN"],
+  },
   { id: "timelog", label: "Timelog", roles: ["ROLE_EMPLOYEE", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"] },
   { id: "leave", label: "Leave Requests", roles: ["ROLE_EMPLOYEE", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"] },
   {
