@@ -156,7 +156,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       }
                     }}
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                      activeTab.startsWith("reports-")
+                      !isLearningRoute && activeTab.startsWith("reports-")
                         ? "bg-wt-surface-3 text-wt-text"
                         : "text-wt-text-muted hover:bg-wt-surface-2"
                     }`}
@@ -171,7 +171,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                           type="button"
                           onClick={() => goToTab(child.id)}
                           className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition ${
-                            activeTab === child.id
+                            !isLearningRoute && activeTab === child.id
                               ? "bg-wt-surface-3 text-wt-text"
                               : "text-wt-text-muted hover:bg-wt-surface-2"
                           }`}
@@ -205,7 +205,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                         const active =
                           pathname === link.href ||
                           (link.href === LEARNING_BASE
-                            ? pathname === LEARNING_BASE || pathname === `${LEARNING_BASE}/`
+                            ? pathname === LEARNING_BASE ||
+                              pathname === `${LEARNING_BASE}/` ||
+                              pathname.startsWith(`${LEARNING_BASE}/trainings`)
                             : pathname.startsWith(`${link.href}/`) || pathname.startsWith(link.href));
                         return (
                           <Link
@@ -231,7 +233,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => goToTab(item.id)}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                  activeTab === item.id ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
+                  !isLearningRoute && activeTab === item.id
+                    ? "bg-wt-surface-3 text-wt-text"
+                    : "text-wt-text-muted hover:bg-wt-surface-2"
                 }`}
               >
                 {item.label}

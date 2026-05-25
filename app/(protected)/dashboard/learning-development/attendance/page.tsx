@@ -1,5 +1,5 @@
-import { AttendancePageClient } from "@/components/learning-development/AttendancePageClient";
+import { LearningHubRedirect } from "@/components/learning-development/LearningHubRedirect";
 
 export default function LearningAttendancePage() {
-  return <AttendancePageClient />;
+  return <LearningHubRedirect feature="Attendance" />;
 }

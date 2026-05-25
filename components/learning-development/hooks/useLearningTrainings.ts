@@ -7,14 +7,20 @@ import {
   normalizeParticipantRows,
   participantListFromApiEnvelope,
 } from "@/src/lib/learning/participants";
+import {
+  TRAININGS_LIST_QUERY_KEY,
+  fetchTrainingsListRows,
+  findTrainingInList,
+} from "@/src/lib/learning/trainingsList";
 
 export function useTrainingsList() {
   return useQuery({
-    queryKey: ["learning", "trainings", "list"],
+    queryKey: [...TRAININGS_LIST_QUERY_KEY],
     queryFn: async () => {
       const res = await hrmsService.getTrainings();
       return toPagedRows(res.data ?? res);
     },
+    staleTime: 30_000,
   });
 }
 
@@ -51,13 +57,19 @@ export function useUpdateTraining(trainingId: string | undefined) {
   });
 }
 
+/** Resolves one training from GET /trainings list (backend has no GET /trainings/:id). */
 export function useTrainingDetail(trainingId: string | undefined, enabled: boolean) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ["learning", "training", trainingId],
     enabled: Boolean(enabled && trainingId?.trim()),
+    retry: false,
+    staleTime: 30_000,
     queryFn: async () => {
-      const res = await hrmsService.getTrainingById(trainingId!);
-      return ((res as { data?: unknown }).data ?? res) as Record<string, unknown>;
+      const rows = await fetchTrainingsListRows(queryClient);
+      const found = findTrainingInList(rows, trainingId!);
+      if (!found) throw new Error("Training not found in list.");
+      return found;
     },
   });
 }
@@ -107,13 +119,15 @@ export function useTrainingAnalytics(trainingId: string | undefined, enabled: bo
 }
 
 export function useTrainingTrainers(trainingId: string | undefined, enabled: boolean) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ["learning", "trainers", trainingId],
     enabled: Boolean(enabled && trainingId?.trim()),
+    retry: false,
+    staleTime: 30_000,
     queryFn: async () => {
-      // Backend exposes POST/DELETE on /trainers; list comes from training detail (trainer_user_ids).
-      const res = await hrmsService.getTrainingById(trainingId!);
-      const data = ((res as { data?: unknown }).data ?? res) as Record<string, unknown>;
+      const rows = await fetchTrainingsListRows(queryClient);
+      const data = findTrainingInList(rows, trainingId!) ?? {};
       const ids = data.trainer_user_ids ?? data.trainerUserIds;
       if (!Array.isArray(ids) || !ids.length) return [];
 

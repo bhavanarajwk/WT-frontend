@@ -106,7 +106,7 @@ export function ParticipantsPageClient() {
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
         <DataTable
           title="Enrolled trainees"
-          columns={["id", "training_id", "user_id", "name", "email", "enrollment_status"]}
+          columns={["name", "email", "enrollment_status"]}
           rows={traineesQ.data ?? []}
           emptyLabel={trainingId ? "No trainees enrolled for this training." : "Select a training to view trainees."}
         />

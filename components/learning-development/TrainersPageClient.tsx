@@ -155,7 +155,7 @@ export function TrainersPageClient() {
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
         <DataTable
-          columns={["id", "user_id", "name", "email", "trainer_user_id"]}
+          columns={["name", "email"]}
           rows={trainersQ.data ?? []}
           emptyLabel="No trainers loaded."
         />

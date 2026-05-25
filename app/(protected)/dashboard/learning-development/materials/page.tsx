@@ -1,5 +1,5 @@
-import { MaterialsPageClient } from "@/components/learning-development/MaterialsPageClient";
+import { LearningHubRedirect } from "@/components/learning-development/LearningHubRedirect";
 
 export default function LearningMaterialsPage() {
-  return <MaterialsPageClient />;
+  return <LearningHubRedirect feature="Materials" />;
 }

@@ -15,6 +15,9 @@ import {
   useTrainingTrainers,
 } from "@/components/learning-development/hooks/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/components/learning-development/hooks/useLearningTrainerDirectory";
+import { AttendancePageClient } from "@/components/learning-development/AttendancePageClient";
+import { ScoresPageClient } from "@/components/learning-development/ScoresPageClient";
+import { TrainingStatusControl } from "@/components/learning-development/TrainingStatusControl";
 import { DataTable, FileField, InputField, SelectField } from "@/components/learning-development/ui/forms";
 import { resolveLearningTrainerUserId } from "@/src/lib/learning/resolveTrainerUserId";
 import { participantRowUserId } from "@/src/lib/learning/participants";
@@ -27,12 +30,23 @@ const TABS = [
   { id: "participants", label: "Trainees" },
   { id: "materials", label: "Materials" },
   { id: "assessments", label: "Assessments" },
+  { id: "attendance", label: "Attendance" },
+  { id: "scores", label: "Scores" },
 ] as const;
+
+const ANALYTICS_LABELS: Record<string, string> = {
+  training_id: "Training ID",
+  enrolled_count: "Enrolled count",
+  completed_count: "Completed count",
+  average_score_percent: "Average score (%)",
+  average_attendance_percent: "Average attendance (%)",
+};
 
 export function TrainingDetailPageClient({ trainingId }: { trainingId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tab = (searchParams.get("tab") ?? "overview") as (typeof TABS)[number]["id"];
+  const rawTab = searchParams.get("tab") ?? "overview";
+  const tab = rawTab === "analytics" ? "overview" : rawTab;
   const safeTab = TABS.some((t) => t.id === tab) ? tab : "overview";
 
   const { user } = useAuth();
@@ -43,13 +57,15 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   const tid = trainingId.trim();
 
   const detailQ = useTrainingDetail(tid, Boolean(tid));
-  const sessionsQ = useTrainingSessions(tid, Boolean(tid));
-  const trainersQ = useTrainingTrainers(tid, Boolean(tid));
-  const participantsQ = useTrainingParticipants(tid, Boolean(tid));
-  const materialsQ = useTrainingMaterials(tid, Boolean(tid));
-  const assessmentsQ = useTrainingAssessments(tid, Boolean(tid));
-  const analyticsQ = useTrainingAnalytics(tid, Boolean(tid));
-  const directoryQ = useLearningTrainerDirectory();
+  const sessionsQ = useTrainingSessions(tid, Boolean(tid) && safeTab === "sessions");
+  const trainersQ = useTrainingTrainers(tid, Boolean(tid) && safeTab === "trainers");
+  const participantsQ = useTrainingParticipants(tid, Boolean(tid) && safeTab === "participants");
+  const materialsQ = useTrainingMaterials(tid, Boolean(tid) && safeTab === "materials");
+  const assessmentsQ = useTrainingAssessments(tid, Boolean(tid) && safeTab === "assessments");
+  const analyticsQ = useTrainingAnalytics(tid, Boolean(tid) && safeTab === "overview");
+  const directoryQ = useLearningTrainerDirectory(
+    safeTab === "trainers" || safeTab === "participants"
+  );
 
   const assignedTrainerUserIds = useMemo(() => {
     const ids = new Set<string>();
@@ -194,11 +210,20 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/dashboard/learning-development/trainings" className="text-xs font-medium text-indigo-600 hover:underline">
-            ← Trainings
+          <Link href="/dashboard/learning-development" className="text-xs font-medium text-indigo-600 hover:underline">
+            ← Dashboard
           </Link>
-          <h1 className="text-2xl font-semibold tracking-tight mt-2">{title}</h1>
-          <p className="text-sm text-wt-text-muted mt-1">Training id: {tid}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+            <TrainingStatusControl
+              trainingId={tid}
+              currentStatus={String(training.status ?? "DRAFT")}
+              canEdit={hasHrAccess}
+            />
+          </div>
+          <p className="text-sm text-wt-text-muted mt-1">
+            Manage this training — sessions, people, attendance, scores, and analytics.
+          </p>
         </div>
         <button type="button" className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() => router.refresh()}>
           Refresh view
@@ -220,52 +245,27 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
       </div>
 
       {safeTab === "overview" ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
-            <h2 className="font-semibold">Summary</h2>
-            <dl className="grid grid-cols-1 gap-2 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-wt-text-muted">Category</dt>
-                <dd className="font-medium">{String(training.category ?? "—")}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-wt-text-muted">Type</dt>
-                <dd className="font-medium">{String(training.type ?? "—")}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-wt-text-muted">Status</dt>
-                <dd className="font-medium">{String(training.status ?? "—")}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-wt-text-muted">Dates</dt>
-                <dd className="font-medium">
-                  {String(training.start_date ?? training.training_start ?? "—")} →{" "}
-                  {String(training.end_date ?? training.training_end ?? "—")}
-                </dd>
-              </div>
-            </dl>
-            <p className="text-sm text-wt-text-muted">{String(training.description ?? "").trim() || "No description."}</p>
-          </section>
-          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
-            <h2 className="font-semibold">Analytics snapshot</h2>
-            {analyticsQ.isLoading ? (
-              <p className="text-sm text-wt-text-muted">Loading analytics…</p>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {analyticsCards.length ? (
-                  analyticsCards.map(([k, v]) => (
-                    <div key={k} className="rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2">
-                      <p className="text-[11px] text-wt-text-muted uppercase tracking-wide">{k.replaceAll("_", " ")}</p>
-                      <p className="text-sm font-medium mt-1 break-all">{typeof v === "object" ? JSON.stringify(v) : String(v)}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-wt-text-muted">No analytics payload returned.</p>
-                )}
-              </div>
-            )}
-          </section>
-        </div>
+        <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
+          <h2 className="font-semibold">Training analytics</h2>
+          {analyticsQ.isLoading ? (
+            <p className="text-sm text-wt-text-muted">Loading analytics…</p>
+          ) : analyticsCards.length ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {analyticsCards.map(([k, v]) => (
+                <article key={k} className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
+                    {ANALYTICS_LABELS[k] ?? k.replaceAll("_", " ")}
+                  </p>
+                  <p className="text-lg font-semibold mt-2 break-all">
+                    {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-wt-text-muted">No analytics returned for this training.</p>
+          )}
+        </section>
       ) : null}
 
       {safeTab === "sessions" ? (
@@ -296,7 +296,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
             <DataTable
               title="Sessions"
-              columns={["id", "session_date", "start_time", "end_time", "mode", "venue", "meeting_link"]}
+              columns={["session_date", "start_time", "end_time", "mode", "venue", "meeting_link"]}
               rows={sessionsQ.data ?? []}
               emptyLabel={sessionsQ.isLoading ? "Loading sessions…" : "No sessions yet."}
             />
@@ -330,7 +330,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               </div>
             </div>
           ) : null}
-          <DataTable columns={["id", "user_id", "name", "email", "trainer_user_id"]} rows={trainersQ.data ?? []} emptyLabel="No trainers assigned." />
+          <DataTable columns={["name", "email"]} rows={trainersQ.data ?? []} emptyLabel="No trainers assigned." />
         </section>
       ) : null}
 
@@ -356,7 +356,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
             </div>
           ) : null}
           <DataTable
-            columns={["id", "training_id", "user_id", "name", "email", "enrollment_status"]}
+            columns={["name", "email", "enrollment_status"]}
             rows={participantsQ.data ?? []}
             emptyLabel="No trainees enrolled."
           />
@@ -378,7 +378,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               </div>
             </div>
           ) : null}
-          <DataTable columns={["id", "training_id", "title", "material_url", "visibility"]} rows={materialsQ.data ?? []} emptyLabel="No materials." />
+          <DataTable columns={["title", "material_url", "visibility"]} rows={materialsQ.data ?? []} emptyLabel="No materials." />
         </section>
       ) : null}
 
@@ -400,9 +400,12 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               </div>
             </div>
           ) : null}
-          <DataTable columns={["id", "training_id", "name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." />
+          <DataTable columns={["name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." />
         </section>
       ) : null}
+
+      {safeTab === "attendance" ? <AttendancePageClient fixedTrainingId={tid} /> : null}
+      {safeTab === "scores" ? <ScoresPageClient fixedTrainingId={tid} /> : null}
     </div>
   );
 }

@@ -1,5 +1,5 @@
-import { AnalyticsPageClient } from "@/components/learning-development/AnalyticsPageClient";
+import { LearningHubRedirect } from "@/components/learning-development/LearningHubRedirect";
 
 export default function LearningAnalyticsPage() {
-  return <AnalyticsPageClient />;
+  return <LearningHubRedirect feature="Analytics" />;
 }

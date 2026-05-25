@@ -1,5 +1,5 @@
-import { ParticipantsPageClient } from "@/components/learning-development/ParticipantsPageClient";
+import { LearningHubRedirect } from "@/components/learning-development/LearningHubRedirect";
 
 export default function LearningParticipantsPage() {
-  return <ParticipantsPageClient />;
+  return <LearningHubRedirect feature="Trainees" />;
 }
