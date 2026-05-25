@@ -6,7 +6,10 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    files: ["app/(protected)/dashboard/page.tsx"],
+    files: [
+      "src/app/(protected)/dashboard/**/page.tsx",
+      "src/components/dashboard/**/*PageClient.tsx",
+    ],
     rules: {
       // Dashboard is a large legacy surface; many effects reset derived UI state from URL/tabs.
       "react-hooks/set-state-in-effect": "off",
