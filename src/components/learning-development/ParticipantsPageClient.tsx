@@ -48,7 +48,6 @@ export function ParticipantsPageClient() {
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["learning", "participants", trainingId] });
-      await qc.invalidateQueries({ queryKey: ["learning", "trainings", "mine"] });
     },
   });
 
