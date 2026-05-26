@@ -1,7 +1,8 @@
 "use client";
 
-import { useTrainingsList } from "@/hooks/learning/useLearningTrainings";
+import { useHrTrainingsList } from "@/hooks/learning/useLearningTrainings";
 
+/** HR-only training picker (GET /api/v1/trainings). */
 export function TrainingScopePicker({
   trainingId,
   onTrainingIdChange,
@@ -9,7 +10,7 @@ export function TrainingScopePicker({
   trainingId: string;
   onTrainingIdChange: (id: string) => void;
 }) {
-  const { data: trainings = [], isLoading } = useTrainingsList();
+  const { data: trainings = [], isLoading } = useHrTrainingsList();
 
   return (
     <label className="text-xs text-wt-text-muted flex flex-col gap-1 max-w-xl">

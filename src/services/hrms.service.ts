@@ -678,16 +678,6 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.learning.trainings);
   },
 
-  /** Enrolled trainings for current user, or ?user_id= for HR viewing another employee. */
-  getMyTrainingEnrollments(params?: { userId?: string | number }) {
-    const query: Record<string, string> = {};
-    const userId = params?.userId;
-    if (userId != null && String(userId).trim() && !String(userId).startsWith("email:")) {
-      query.user_id = String(userId).trim();
-    }
-    return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.learning.myEnrollments, { query });
-  },
-
   getTrainingById(trainingId: string) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.learning.trainingById(trainingId));
   },

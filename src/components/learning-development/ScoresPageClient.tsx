@@ -143,7 +143,8 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
       if (!traineeRows.length) throw new Error("No trainees enrolled for this training.");
       await hrmsService.publishTrainingMarks(trainingId, assessId);
       await qc.invalidateQueries({ queryKey: ["learning", "assessments", trainingId] });
-      await qc.invalidateQueries({ queryKey: ["learning"] });
+      await qc.invalidateQueries({ queryKey: ["learning", "scores", trainingId] });
+      await qc.invalidateQueries({ queryKey: ["learning", "my-marks", trainingId] });
     });
 
   return (

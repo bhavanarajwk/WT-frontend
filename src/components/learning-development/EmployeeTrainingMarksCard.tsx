@@ -2,11 +2,11 @@
 
 import { useQueries } from "@tanstack/react-query";
 import Link from "next/link";
-import { useMemo, type ReactNode } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useMemo } from "react";
 import { LEARNING_BASE } from "@/constants/learningNav";
 import {
-  useMyTrainingEnrollments,
+  useHrTrainingsList,
+  useOpenTrainingsList,
 } from "@/hooks/learning/useLearningTrainings";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
@@ -19,8 +19,6 @@ import {
   type ParticipantTrainingScore,
 } from "@/utils/learning/trainingScores";
 
-type EnrollmentRow = Record<string, unknown>;
-
 type HrTrainingMarks = {
   trainingId: string;
   trainingName: string;
@@ -28,8 +26,6 @@ type HrTrainingMarks = {
   participant: ParticipantTrainingScore | null;
   assessments: Array<{ id: string; name: string; weightPercent: number; published: boolean }>;
   overall: number | null;
-  marks: MyTrainingMarks | null;
-  marksPending: boolean;
 };
 
 function MarksTable({
@@ -64,46 +60,245 @@ function MarksTable({
   );
 }
 
-function TrainingMarksArticle({
-  title,
-  trainingId,
-  enrollmentStatus,
-  overall,
-  marksPending,
-  children,
-}: {
-  title: string;
-  trainingId: string;
-  enrollmentStatus: string;
-  overall: number | null;
-  marksPending?: boolean;
-  children?: ReactNode;
-}) {
+function EmployeeMarksBlock({ marks }: { marks: MyTrainingMarks }) {
+  const rows = marks.assessments.map((a) => ({
+    name: a.name,
+    weight: a.weightPercent > 0 ? `${a.weightPercent}%` : "—",
+    score: `${a.score}%`,
+    status: "Published",
+  }));
   return (
     <article className="rounded-xl border border-wt-border bg-wt-surface-2/40 p-4 space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h4 className="font-semibold text-sm">{title}</h4>
-          <p className="text-xs text-wt-text-muted mt-0.5">
-            Training #{trainingId} · {enrollmentStatus}
-          </p>
+          <h4 className="font-semibold text-sm">{marks.trainingName}</h4>
+          <p className="text-xs text-wt-text-muted mt-0.5">Training #{marks.trainingId}</p>
         </div>
         <p className="text-lg font-semibold text-indigo-700">
-          {overall != null ? `${overall}%` : "—"}
+          {marks.finalScorePercent != null ? `${marks.finalScorePercent}%` : "—"}
           <span className="text-xs font-normal text-wt-text-muted ml-1">overall</span>
         </p>
       </div>
-      {marksPending ? (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          Enrolled — marks not published yet. They will appear here after HR publishes scores.
-        </p>
-      ) : null}
-      {children}
+      <MarksTable rows={rows} />
     </article>
   );
 }
 
-/** Employee: GET …/my-marks per enrolled training. HR: GET …/scores for that employee. */
+function HrMarksBlock({ entry }: { entry: HrTrainingMarks }) {
+  const rows = entry.assessments.map((a) => {
+    const score = entry.participant?.scoresJson[a.id];
+    return {
+      name: a.name,
+      weight: a.weightPercent > 0 ? `${a.weightPercent}%` : "—",
+      score: score != null ? `${score}%` : "—",
+      status: a.published ? "Published" : "Draft",
+    };
+  });
+  return (
+    <article className="rounded-xl border border-wt-border bg-wt-surface-2/40 p-4 space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h4 className="font-semibold text-sm">{entry.trainingName}</h4>
+          <p className="text-xs text-wt-text-muted mt-0.5">
+            Training #{entry.trainingId} · {entry.enrollmentStatus}
+          </p>
+        </div>
+        <p className="text-lg font-semibold text-indigo-700">
+          {entry.overall != null ? `${entry.overall}%` : "—"}
+          <span className="text-xs font-normal text-wt-text-muted ml-1">overall</span>
+        </p>
+      </div>
+      <MarksTable rows={rows} />
+    </article>
+  );
+}
+
+function EmployeeTrainingMarksCardEmployee({ enabled = true }: { enabled?: boolean }) {
+  const openTrainingsQ = useOpenTrainingsList(enabled);
+
+  const openTrainingIds = useMemo(
+    () =>
+      (openTrainingsQ.data ?? [])
+        .map((row) => String(row.id ?? "").trim())
+        .filter(Boolean),
+    [openTrainingsQ.data]
+  );
+
+  const myMarksQueries = useQueries({
+    queries: openTrainingIds.map((trainingId) => ({
+      queryKey: ["learning", "my-marks", trainingId],
+      enabled: Boolean(enabled),
+      retry: false,
+      staleTime: 30_000,
+      queryFn: async () => {
+        try {
+          const res = await hrmsService.getMyTrainingMarks(trainingId);
+          return normalizeMyTrainingMarks((res as { data?: unknown }).data ?? res);
+        } catch (error) {
+          if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+            return null;
+          }
+          throw error;
+        }
+      },
+    })),
+  });
+
+  const employeeMarks = useMemo(
+    () =>
+      myMarksQueries
+        .map((q) => q.data)
+        .filter((m): m is MyTrainingMarks => Boolean(m && m.assessments.length)),
+    [myMarksQueries]
+  );
+
+  const loading = openTrainingsQ.isLoading || myMarksQueries.some((q) => q.isLoading);
+
+  return (
+    <section className="rounded-xl border border-wt-border p-5 md:p-6 space-y-4">
+      <div>
+        <h4 className="text-base font-semibold">Training scores</h4>
+        <p className="text-xs text-wt-text-muted mt-1">
+          Published marks for open trainings you enrolled in.
+        </p>
+      </div>
+
+      {loading ? <p className="text-sm text-wt-text-muted">Loading training scores…</p> : null}
+
+      {!loading && employeeMarks.length ? (
+        <div className="space-y-4">
+          {employeeMarks.map((marks) => (
+            <EmployeeMarksBlock key={marks.trainingId} marks={marks} />
+          ))}
+        </div>
+      ) : null}
+
+      {!loading && !employeeMarks.length ? (
+        <p className="text-sm text-wt-text-muted">
+          No published marks yet. Enroll in an open training and check back after HR publishes scores.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function EmployeeTrainingMarksCardHr({
+  targetUserId,
+  targetEmail,
+  enabled = true,
+}: {
+  targetUserId?: string;
+  targetEmail?: string;
+  enabled?: boolean;
+}) {
+  const allTrainingsQ = useHrTrainingsList(enabled);
+
+  const hrTrainingIds = useMemo(
+    () =>
+      (allTrainingsQ.data ?? [])
+        .map((row) => String(row.id ?? "").trim())
+        .filter(Boolean),
+    [allTrainingsQ.data]
+  );
+
+  const trainingNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of allTrainingsQ.data ?? []) {
+      const id = String(row.id ?? "").trim();
+      if (!id) continue;
+      map.set(id, String(row.name ?? `Training ${id}`).trim());
+    }
+    return map;
+  }, [allTrainingsQ.data]);
+
+  const hrScoresQueries = useQueries({
+    queries: hrTrainingIds.map((trainingId) => ({
+      queryKey: ["learning", "scores", trainingId],
+      enabled: Boolean(enabled),
+      staleTime: 30_000,
+      queryFn: async () => {
+        const res = await hrmsService.getTrainingScores(trainingId);
+        return normalizeTrainingScoresHrSnapshot((res as { data?: unknown }).data ?? res);
+      },
+    })),
+  });
+
+  const hrMarks = useMemo((): HrTrainingMarks[] => {
+    if (!targetUserId?.trim()) return [];
+    const out: HrTrainingMarks[] = [];
+    for (const query of hrScoresQueries) {
+      const snapshot = query.data;
+      if (!snapshot) continue;
+      const participant = findParticipantScoreForTrainee(
+        snapshot.participants,
+        targetUserId,
+        targetEmail
+      );
+      if (!participant) continue;
+      const assessments = snapshot.assessments.length
+        ? snapshot.assessments.map((a) => ({
+            id: a.id,
+            name: a.name,
+            weightPercent: a.weightPercent,
+            published: Boolean(a.marksPublishedAt),
+          }))
+        : [];
+      const overall = resolveOverallScorePercent(
+        participant,
+        assessments.map((a) => ({ id: a.id, weight_percent: a.weightPercent }))
+      );
+      out.push({
+        trainingId: snapshot.trainingId,
+        trainingName: trainingNameById.get(snapshot.trainingId) ?? `Training ${snapshot.trainingId}`,
+        enrollmentStatus: participant.isCompleted ? "COMPLETED" : "ENROLLED",
+        participant,
+        assessments,
+        overall,
+      });
+    }
+    return out.sort((a, b) => a.trainingName.localeCompare(b.trainingName));
+  }, [targetUserId, targetEmail, hrScoresQueries, trainingNameById]);
+
+  const loading = allTrainingsQ.isLoading || hrScoresQueries.some((q) => q.isLoading);
+
+  return (
+    <section className="rounded-xl border border-wt-border p-5 md:p-6 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h4 className="text-base font-semibold">Training scores</h4>
+          <p className="text-xs text-wt-text-muted mt-1">
+            Scores for trainings this employee is enrolled in (from HR scores API).
+          </p>
+        </div>
+        <Link
+          href={`${LEARNING_BASE}/trainings`}
+          className="text-sm font-medium text-indigo-600 hover:underline shrink-0"
+        >
+          Manage trainings
+        </Link>
+      </div>
+
+      {loading ? <p className="text-sm text-wt-text-muted">Loading training scores…</p> : null}
+
+      {!loading && hrMarks.length ? (
+        <div className="space-y-4">
+          {hrMarks.map((entry) => (
+            <HrMarksBlock key={entry.trainingId} entry={entry} />
+          ))}
+        </div>
+      ) : null}
+
+      {!loading && !hrMarks.length ? (
+        <p className="text-sm text-wt-text-muted">
+          No training scores for this employee. Assign them as a trainee and save scores in Learning
+          &amp; Development.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+/** Employee profile: published marks via GET …/my-marks. HR: scores via GET …/scores. */
 export function EmployeeTrainingMarksCard({
   variant,
   targetUserId,
@@ -115,234 +310,14 @@ export function EmployeeTrainingMarksCard({
   targetEmail?: string;
   enabled?: boolean;
 }) {
-  const { user } = useAuth();
-  const roles = user?.roles ?? [];
-  const hasHrListAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
-
-  const enrollmentUserKey =
-    variant === "hr" && targetUserId?.trim() && !targetUserId.startsWith("email:")
-      ? targetUserId.trim()
-      : variant === "employee"
-        ? undefined
-        : undefined;
-
-  const enrollmentsQ = useMyTrainingEnrollments(
-    enrollmentUserKey,
-    Boolean(enabled && (variant === "employee" || Boolean(enrollmentUserKey)))
-  );
-
-  const enrollments = enrollmentsQ.data ?? [];
-
-  const enrolledTrainingIds = useMemo(
-    () =>
-      enrollments
-        .map((row) => String(row.id ?? "").trim())
-        .filter(Boolean),
-    [enrollments]
-  );
-
-  const myMarksQueries = useQueries({
-    queries: enrolledTrainingIds.map((trainingId) => ({
-      queryKey: ["learning", "my-marks", trainingId],
-      enabled: Boolean(enabled && variant === "employee"),
-      retry: false,
-      staleTime: 30_000,
-      queryFn: async () => {
-        try {
-          const res = await hrmsService.getMyTrainingMarks(trainingId);
-          return normalizeMyTrainingMarks((res as { data?: unknown }).data ?? res);
-        } catch (error) {
-          if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
-            return { trainingId, pending: true as const };
-          }
-          throw error;
-        }
-      },
-    })),
-  });
-
-  const hrScoresQueries = useQueries({
-    queries: enrolledTrainingIds.map((trainingId) => ({
-      queryKey: ["learning", "scores", trainingId],
-      enabled: Boolean(enabled && variant === "hr" && hasHrListAccess),
-      staleTime: 30_000,
-      queryFn: async () => {
-        const res = await hrmsService.getTrainingScores(trainingId);
-        return normalizeTrainingScoresHrSnapshot((res as { data?: unknown }).data ?? res);
-      },
-    })),
-  });
-
-  const employeeEntries = useMemo(() => {
-    if (variant !== "employee") return [];
-    return enrollments.map((row, index) => {
-      const trainingId = String(row.id ?? "").trim();
-      const trainingName = String(row.name ?? `Training ${trainingId}`).trim();
-      const enrollmentStatus = String(
-        row.enrollment_status ?? row.enrollmentStatus ?? "ENROLLED"
-      ).trim();
-      const query = myMarksQueries[index];
-      const data = query?.data;
-      if (data && "pending" in data && data.pending) {
-        return {
-          trainingId,
-          trainingName,
-          enrollmentStatus,
-          marks: null as MyTrainingMarks | null,
-          marksPending: true,
-          overall: null as number | null,
-        };
-      }
-      const marks = data && !("pending" in data) ? (data as MyTrainingMarks) : null;
-      return {
-        trainingId,
-        trainingName,
-        enrollmentStatus,
-        marks,
-        marksPending: !marks,
-        overall: marks?.finalScorePercent ?? null,
-      };
-    });
-  }, [variant, enrollments, myMarksQueries]);
-
-  const hrEntries = useMemo((): HrTrainingMarks[] => {
-    if (variant !== "hr" || !targetUserId?.trim()) return [];
-    return enrollments.map((row, index) => {
-      const trainingId = String(row.id ?? "").trim();
-      const trainingName = String(row.name ?? `Training ${trainingId}`).trim();
-      const enrollmentStatus = String(
-        row.enrollment_status ?? row.enrollmentStatus ?? "ENROLLED"
-      ).trim();
-      const snapshot = hrScoresQueries[index]?.data;
-      const participant = snapshot
-        ? findParticipantScoreForTrainee(
-            snapshot.participants,
-            targetUserId,
-            targetEmail
-          ) ?? null
-        : null;
-      const assessments = snapshot?.assessments.length
-        ? snapshot.assessments.map((a) => ({
-            id: a.id,
-            name: a.name,
-            weightPercent: a.weightPercent,
-            published: Boolean(a.marksPublishedAt),
-          }))
-        : [];
-      const overall = resolveOverallScorePercent(
-        participant ?? undefined,
-        assessments.map((a) => ({ id: a.id, weight_percent: a.weightPercent }))
-      );
-      return {
-        trainingId,
-        trainingName,
-        enrollmentStatus,
-        participant,
-        assessments,
-        overall,
-        marks: null,
-        marksPending: !participant?.scoresJson || !Object.keys(participant.scoresJson).length,
-      };
-    });
-  }, [variant, enrollments, hrScoresQueries, targetUserId, targetEmail]);
-
-  const loading =
-    enrollmentsQ.isLoading ||
-    (variant === "employee" && myMarksQueries.some((q) => q.isLoading)) ||
-    (variant === "hr" && hrScoresQueries.some((q) => q.isLoading));
-
-  const noEnrollments = !loading && enrollments.length === 0;
-
-  return (
-    <section className="rounded-xl border border-wt-border p-5 md:p-6 space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h4 className="text-base font-semibold">Training &amp; scores</h4>
-          <p className="text-xs text-wt-text-muted mt-1">
-            {variant === "employee"
-              ? "Trainings you are enrolled in. Published marks appear after HR publishes them."
-              : "Trainings this employee is enrolled in, including draft and published scores."}
-          </p>
-        </div>
-        {hasHrListAccess ? (
-          <Link
-            href={`${LEARNING_BASE}/trainings`}
-            className="text-sm font-medium text-indigo-600 hover:underline shrink-0"
-          >
-            Manage trainings
-          </Link>
-        ) : null}
-      </div>
-
-      {variant === "hr" && !enrollmentUserKey && targetEmail ? (
-        <p className="text-sm text-wt-text-muted">
-          Cannot load training enrollments: employee user id is missing from the profile. Scores are
-          keyed by user id in the API.
-        </p>
-      ) : null}
-
-      {loading ? <p className="text-sm text-wt-text-muted">Loading trainings…</p> : null}
-
-      {noEnrollments ? (
-        <p className="text-sm text-wt-text-muted">
-          {variant === "employee"
-            ? "You are not enrolled in any trainings yet."
-            : "This employee is not enrolled in any trainings yet. Assign them under Learning & Development → training → Trainees."}
-        </p>
-      ) : null}
-
-      {!loading && variant === "employee"
-        ? employeeEntries.map((entry) => {
-            const markRows =
-              entry.marks?.assessments.map((a) => ({
-                name: a.name,
-                weight: a.weightPercent > 0 ? `${a.weightPercent}%` : "—",
-                score: `${a.score}%`,
-                status: "Published",
-              })) ?? [];
-            return (
-              <TrainingMarksArticle
-                key={entry.trainingId}
-                title={entry.trainingName}
-                trainingId={entry.trainingId}
-                enrollmentStatus={entry.enrollmentStatus}
-                overall={entry.overall}
-                marksPending={entry.marksPending}
-              >
-                {!entry.marksPending ? <MarksTable rows={markRows} /> : null}
-              </TrainingMarksArticle>
-            );
-          })
-        : null}
-
-      {!loading && variant === "hr"
-        ? hrEntries.map((entry) => {
-            const markRows = entry.assessments.map((a) => {
-              const score = entry.participant?.scoresJson[a.id];
-              return {
-                name: a.name,
-                weight: a.weightPercent > 0 ? `${a.weightPercent}%` : "—",
-                score: score != null ? `${score}%` : "—",
-                status: a.published ? "Published" : "Draft",
-              };
-            });
-            return (
-              <TrainingMarksArticle
-                key={entry.trainingId}
-                title={entry.trainingName}
-                trainingId={entry.trainingId}
-                enrollmentStatus={entry.enrollmentStatus}
-                overall={entry.overall}
-                marksPending={entry.marksPending && !markRows.some((r) => r.score !== "—")}
-              >
-                {markRows.length ? <MarksTable rows={markRows} /> : null}
-                {entry.participant?.isCompleted ? (
-                  <p className="text-xs text-emerald-700">Training marked complete.</p>
-                ) : null}
-              </TrainingMarksArticle>
-            );
-          })
-        : null}
-    </section>
-  );
+  if (variant === "hr") {
+    return (
+      <EmployeeTrainingMarksCardHr
+        targetUserId={targetUserId}
+        targetEmail={targetEmail}
+        enabled={enabled}
+      />
+    );
+  }
+  return <EmployeeTrainingMarksCardEmployee enabled={enabled} />;
 }

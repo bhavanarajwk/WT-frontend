@@ -91,7 +91,6 @@ export const endpoints = {
 
   learning: {
     trainings: `${api}/trainings`,
-    myEnrollments: `${api}/trainings/mine`,
     trainingById: (trainingId: string | number) => `${api}/trainings/${encodeURIComponent(String(trainingId))}`,
     trainers: (trainingId: string | number) =>
       `${api}/trainings/${encodeURIComponent(String(trainingId))}/trainers`,
