@@ -46,7 +46,10 @@ export function ParticipantsPageClient() {
       const idNum = await resolveLearningTrainerUserId(traineePick);
       await hrmsService.addTrainingParticipants(trainingId, { user_ids: [idNum], select_all: false });
     },
-    onSuccess: async () => qc.invalidateQueries({ queryKey: ["learning", "participants", trainingId] }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["learning", "participants", trainingId] });
+      await qc.invalidateQueries({ queryKey: ["learning", "trainings", "mine"] });
+    },
   });
 
   return (

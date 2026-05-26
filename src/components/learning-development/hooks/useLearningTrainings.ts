@@ -7,6 +7,7 @@ import {
   normalizeParticipantRows,
   participantListFromApiEnvelope,
 } from "@/utils/learning/participants";
+import { normalizeTrainingTrainerRows } from "@/utils/learning/trainers";
 import {
   TRAININGS_LIST_QUERY_KEY,
   fetchTrainingsListRows,
@@ -119,48 +120,13 @@ export function useTrainingAnalytics(trainingId: string | undefined, enabled: bo
 }
 
 export function useTrainingTrainers(trainingId: string | undefined, enabled: boolean) {
-  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ["learning", "trainers", trainingId],
     enabled: Boolean(enabled && trainingId?.trim()),
-    retry: false,
     staleTime: 30_000,
     queryFn: async () => {
-      const rows = await fetchTrainingsListRows(queryClient);
-      const data = findTrainingInList(rows, trainingId!) ?? {};
-      const ids = data.trainer_user_ids ?? data.trainerUserIds;
-      if (!Array.isArray(ids) || !ids.length) return [];
-
-      let onboardRows: Array<Record<string, unknown>> = [];
-      try {
-        const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "500" });
-        onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
-      } catch {
-        onboardRows = [];
-      }
-
-      const labelByUserId = new Map<string, { name: string; email: string }>();
-      for (const row of onboardRows) {
-        const uid = String(
-          row.user_id ?? row.userId ?? row.emp_id ?? row.empId ?? row.id ?? ""
-        ).trim();
-        if (!uid || !Number(uid)) continue;
-        const name = String(row.name ?? "Employee").trim();
-        const email = String(row.email ?? row.user_email ?? row.userEmail ?? "").trim();
-        labelByUserId.set(uid, { name, email });
-      }
-
-      return ids.map((id, idx) => {
-        const uid = String(id).trim();
-        const labels = labelByUserId.get(uid);
-        return {
-          id: idx + 1,
-          trainer_user_id: uid,
-          user_id: uid,
-          name: labels?.name ?? `User #${uid}`,
-          email: labels?.email ?? "—",
-        };
-      }) as Array<Record<string, unknown>>;
+      const res = await hrmsService.getTrainingTrainers(trainingId!);
+      return normalizeTrainingTrainerRows((res as { data?: unknown }).data ?? res);
     },
   });
 }

@@ -18,6 +18,12 @@ import { AllocationExtensionPanel } from "@/components/dashboard/sections/Alloca
 import { EmployeeAttendancePanel } from "@/components/dashboard/sections/EmployeeAttendancePanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
+import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
+import { cleanEmployeeName, rowEmail } from "@/utils/employeeDirectory";
+import {
+  fetchHrTimelogsForEmployee,
+} from "@/utils/timelog/hrEmployeeTimelogs";
+import { isAccountManagerEmployeeUser } from "@/utils/roles";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import {
   HARDCODED_DEPARTMENT_OPTIONS,
@@ -137,6 +143,9 @@ export function TimelogPageClient() {
   const [managerEmailsForHr, setManagerEmailsForHr] = useState<string[]>([]);
   const [timelogProjects, setTimelogProjects] = useState<Array<{ code: string; name: string }>>([]);
   const [hrTimelogDirectoryEmails, setHrTimelogDirectoryEmails] = useState<string[]>([]);
+  const [hrTimelogEmployeeOptions, setHrTimelogEmployeeOptions] = useState<
+    Array<{ email: string; label: string }>
+  >([]);
   const [timelogForm, setTimelogForm] = useState({
     project_code: "",
     log_date: "",
@@ -327,6 +336,11 @@ export function TimelogPageClient() {
   const managerDataLoadedRef = useRef(false);
   const managerDataLoadingRef = useRef(false);
   const timelogLoadInFlightRef = useRef(false);
+  const loadTimelogsForCurrentRoleRef = useRef<
+    (targetEmployeeEmail?: string) => Promise<Array<Record<string, unknown>>>
+  >(async () => []);
+  const teamTimelogEmailFilterRef = useRef(teamTimelogEmailFilter);
+  teamTimelogEmailFilterRef.current = teamTimelogEmailFilter;
   const [managerProjectAllocations, setManagerProjectAllocations] = useState<Array<Record<string, unknown>>>([]);
   const managerAllocationsCacheRef = useRef<Record<string, Array<Record<string, unknown>>>>({});
   const [allocationForm, setAllocationForm] = useState({
@@ -356,6 +370,7 @@ export function TimelogPageClient() {
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
+  const submitsToHrForReview = isAccountManagerEmployeeUser(userRoles);
   /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
   const timelogHrNoSelfProject =
     userRoles.includes("ROLE_HR") && !hasManagerAccess;
@@ -402,7 +417,7 @@ export function TimelogPageClient() {
         managerDataLoadingRef.current = false;
       }
     },
-    [hasManagerAccess, managerProjects, managerPortfolioRows]
+    [hasManagerAccess]
   );
 
   const loadAllProjectsForHr = useCallback(async () => {
@@ -750,17 +765,24 @@ export function TimelogPageClient() {
         try {
           const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "200" });
           const rows = toPagedRows(onboardRes.data ?? onboardRes);
-          const emails = Array.from(
-            new Set(
-              rows
-                .map((row) =>
-                  String(row.email ?? row.user_email ?? row.userEmail ?? "").trim().toLowerCase()
-                )
-                .filter(Boolean)
-            )
-          ).sort();
-          setHrTimelogDirectoryEmails(emails);
+          const optionMap = new Map<string, { email: string; label: string }>();
+          for (const row of rows) {
+            const record = row as Record<string, unknown>;
+            const email = rowEmail(record).trim().toLowerCase();
+            if (!email) continue;
+            const name = cleanEmployeeName(record);
+            optionMap.set(email, {
+              email,
+              label: name ? `${name} (${email})` : email,
+            });
+          }
+          const options = Array.from(optionMap.values()).sort((a, b) =>
+            a.label.localeCompare(b.label)
+          );
+          setHrTimelogEmployeeOptions(options);
+          setHrTimelogDirectoryEmails(options.map((o) => o.email));
         } catch {
+          setHrTimelogEmployeeOptions([]);
           setHrTimelogDirectoryEmails([]);
         }
       })();
@@ -1525,6 +1547,7 @@ export function TimelogPageClient() {
   const loadTimelogsForCurrentRole = useCallback(async function loadTimelogsForCurrentRole(
     targetEmployeeEmail?: string
   ) {
+    const normalizedTargetEmail = String(targetEmployeeEmail ?? "").trim().toLowerCase();
     const parseManagerFlag = (value: unknown): boolean => {
       if (typeof value === "boolean") return value;
       if (typeof value === "number") return value === 1;
@@ -1537,40 +1560,23 @@ export function TimelogPageClient() {
 
     let timelogRows: Array<Record<string, unknown>> = [];
     if (hasHrAccess) {
-      const normalizedTarget = String(targetEmployeeEmail ?? "")
-        .trim()
-        .toLowerCase();
-      if (normalizedTarget) {
+      if (!normalizedTargetEmail) {
         try {
-          const focusedRes = await hrmsService.getTimelogs({
-            page: "0",
-            size: "200",
-            view: "ALL",
-            employee_email: normalizedTarget,
-            employeeEmail: normalizedTarget,
-          } as Record<string, string>);
-          const focusedRows = toPagedRows((focusedRes as { data?: unknown }).data ?? focusedRes).filter((row) => {
-            const email = String(
-              row.employee_email ?? row.user_email ?? row.userEmail ?? row.email ?? ""
-            )
-              .trim()
-              .toLowerCase();
-            return email === normalizedTarget;
-          });
-          if (focusedRows.length) {
-            setTimelogs(focusedRows);
-            return focusedRows;
-          }
+          const ownRes = await hrmsService.getTimelogs({ page: "0", size: "200" });
+          const ownRows = toPagedRows((ownRes as { data?: unknown }).data ?? ownRes);
+          setManagerEmailsForHr([]);
+          setTimelogs(ownRows);
+          return ownRows;
         } catch {
-          /* fall through to org-wide load */
+          setManagerEmailsForHr([]);
+          setTimelogs([]);
+          return [];
         }
       }
-      try {
-        const hrView = await hrmsService.getTimelogs({ page: "0", size: "200", view: "ALL" });
-        timelogRows = toPagedRows((hrView as { data?: unknown }).data ?? hrView);
-      } catch {
-        timelogRows = [];
-      }
+      const hrRows = await fetchHrTimelogsForEmployee(normalizedTargetEmail);
+      setManagerEmailsForHr([]);
+      setTimelogs(hrRows);
+      return hrRows;
     }
     if (!timelogRows.length) {
       const fallback = await hrmsService.getTimelogs({ page: "0", size: "200" });
@@ -1633,17 +1639,19 @@ export function TimelogPageClient() {
               setTimelogs(focusedRows);
               return focusedRows;
             }
+          } else if (normalizedTarget) {
+            setManagerEmailsForHr([]);
+            setTimelogs([]);
+            return [];
           }
 
-          // Preferred path: query timelog endpoint by employee email (works in this backend).
+          // Org-wide team load: one list call per team member (no per-day legacy unless a single employee is selected above).
           const directResponses = await Promise.allSettled(
             Array.from(teamEmailSet).map((email) =>
               hrmsService.getTimelogs({
                 page: "0",
                 size: "200",
-                view: "ALL",
                 employee_email: email,
-                employeeEmail: email,
               } as Record<string, string>)
             )
           );
@@ -1691,55 +1699,66 @@ export function TimelogPageClient() {
             return dedupedDirectRows;
           }
 
-          const today = new Date();
-          const dates: string[] = [];
-          // Wider fallback window so future planned logs are visible.
-          for (let i = -30; i < 90; i += 1) {
-            const d = new Date(today);
-            d.setDate(today.getDate() - i);
-            dates.push(d.toISOString().slice(0, 10));
-          }
-          const legacyResponses = await Promise.allSettled(
-            Array.from(teamEmailSet).flatMap((email) =>
-              dates.map((logDate) =>
-                apiClient.get(endpoints.timelog.legacyGetByDate(email, logDate), {
-                  query: { page: "0", size: "200" },
-                })
-              )
-            )
-          );
-          const teamTimelogRows = legacyResponses
-            .filter(
-              (
-                item
-              ): item is PromiseFulfilledResult<unknown> => item.status === "fulfilled"
-            )
-            .flatMap((item) => toPagedRows((item.value as { data?: unknown }).data ?? item.value));
-          const merged = [...timelogRows, ...teamTimelogRows];
-          const deduped = Array.from(
-            new Map(
-              merged.map((row) => {
-                const key = String(
-                  row.timelog_id ??
-                    row.timeLogId ??
-                    row.id ??
-                    `${row.employee_email ?? row.email}-${row.project_code}-${row.log_date}-${row.hours}`
-                );
-                const email = String(
-                  row.employee_email ?? row.user_email ?? row.userEmail ?? row.email ?? ""
+          // Per-day legacy fallback only when viewing one team member (avoids hundreds of requests).
+          const emailsForLegacy =
+            normalizedTarget && teamEmailSet.has(normalizedTarget)
+              ? [normalizedTarget]
+              : [];
+          if (emailsForLegacy.length) {
+            const today = new Date();
+            const dates: string[] = [];
+            for (let i = -60; i <= 7; i += 1) {
+              const d = new Date(today);
+              d.setDate(today.getDate() - i);
+              dates.push(d.toISOString().slice(0, 10));
+            }
+            const legacyResponses = await Promise.allSettled(
+              emailsForLegacy.flatMap((email) =>
+                dates.map((logDate) =>
+                  apiClient.get(endpoints.timelog.legacyGetByDate(email, logDate), {
+                    query: { page: "0", size: "200" },
+                  })
                 )
-                  .trim()
-                  .toLowerCase();
-                const resolvedName = String(
-                  row.employee_name ?? row.employeeName ?? row.name ?? (email ? teamEmailToName[email] : "") ?? ""
-                ).trim();
-                return [key, { ...row, employee_name: resolvedName || "—" }] as const;
-              })
-            ).values()
-          );
-          setManagerEmailsForHr([]);
-          setTimelogs(deduped);
-          return deduped;
+              )
+            );
+            const teamTimelogRows = legacyResponses
+              .filter(
+                (
+                  item
+                ): item is PromiseFulfilledResult<unknown> => item.status === "fulfilled"
+              )
+              .flatMap((item) => toPagedRows((item.value as { data?: unknown }).data ?? item.value));
+            if (teamTimelogRows.length) {
+              const deduped = Array.from(
+                new Map(
+                  teamTimelogRows.map((row) => {
+                    const key = String(
+                      row.timelog_id ??
+                        row.timeLogId ??
+                        row.id ??
+                        `${row.employee_email ?? row.email}-${row.project_code}-${row.log_date}-${row.hours}`
+                    );
+                    const email = String(
+                      row.employee_email ?? row.user_email ?? row.userEmail ?? row.email ?? ""
+                    )
+                      .trim()
+                      .toLowerCase();
+                    const resolvedName = String(
+                      row.employee_name ??
+                        row.employeeName ??
+                        row.name ??
+                        (email ? teamEmailToName[email] : "") ??
+                        ""
+                    ).trim();
+                    return [key, { ...row, employee_name: resolvedName || "—" }] as const;
+                  })
+                ).values()
+              );
+              setManagerEmailsForHr([]);
+              setTimelogs(deduped);
+              return deduped;
+            }
+          }
         }
       }
       setManagerEmailsForHr([]);
@@ -1747,143 +1766,21 @@ export function TimelogPageClient() {
       return timelogRows;
     }
 
-    let allocationRows: Array<Record<string, unknown>> = [];
-    let onboardRows: Array<Record<string, unknown>> = [];
-    try {
-      const allocRes = await hrmsService.getAllocations({ page: "0", size: "200", view: "ALL" });
-      allocationRows = toPagedRows((allocRes as { data?: unknown }).data ?? allocRes);
-      if (!allocationRows.length) {
-        const allocFallback = await hrmsService.getAllocations({ page: "0", size: "200" });
-        allocationRows = toPagedRows((allocFallback as { data?: unknown }).data ?? allocFallback);
-      }
-    } catch {
-      allocationRows = [];
-    }
-    try {
-      const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "200" });
-      onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
-    } catch {
-      onboardRows = [];
-    }
-
-    const managerEmailSet = new Set<string>();
-    const onboardUserIdToEmail: Record<string, string> = {};
-    const onboardEmailToName: Record<string, string> = {};
-    for (const row of onboardRows) {
-      const uid = String(
-        row.user_id ?? row.userId ?? row.userID ?? row.id ?? row.emp_id ?? ""
-      ).trim();
-      const email = String(row.email ?? row.user_email ?? row.userEmail ?? "")
-        .trim()
-        .toLowerCase();
-      const name = String(row.name ?? "").trim();
-      if (uid && email) onboardUserIdToEmail[uid] = email;
-      if (email && name) onboardEmailToName[email] = name;
-    }
-    for (const row of allocationRows) {
-      const isManager =
-        parseManagerFlag(row.is_manager) ||
-        isManagerRoleLabel(row.role ?? row.designation);
-      if (!isManager) continue;
-      const email = String(
-        row.employee_email ?? row.email ?? row.user_email ?? row.userEmail ?? ""
-      )
-        .trim()
-        .toLowerCase();
-      if (email) {
-        managerEmailSet.add(email);
-        continue;
-      }
-      const uid = String(row.user_id ?? row.userId ?? row.userID ?? row.id ?? "").trim();
-      const mappedEmail = onboardUserIdToEmail[uid];
-      if (mappedEmail) managerEmailSet.add(mappedEmail);
-    }
-    for (const row of onboardRows) {
-      const isManager =
-        isManagerRoleLabel(row.role ?? row.designation ?? row.department ?? row.name);
-      if (!isManager) continue;
-      const email = String(row.email ?? row.user_email ?? row.userEmail ?? "")
-        .trim()
-        .toLowerCase();
-      if (email) managerEmailSet.add(email);
-    }
-
-    // /timelog returns own logs only in many environments; for HR, fallback to
-    // legacy manager-email/date endpoint to collect manager timelogs.
-    if (!timelogRows.length && managerEmailSet.size) {
-      const today = new Date();
-      const dates: string[] = [];
-      // Include recent past plus a small forward window (future-dated entries can exist).
-      for (let i = -3; i < 14; i += 1) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
-        dates.push(d.toISOString().slice(0, 10));
-      }
-      const legacyResponses = await Promise.allSettled(
-        Array.from(managerEmailSet).flatMap((email) =>
-          dates.map((logDate) =>
-            apiClient.get(endpoints.timelog.legacyGetByDate(email, logDate), {
-              query: { page: "0", size: "200" },
-            })
-          )
-        )
-      );
-      const legacyRows = legacyResponses
-        .filter(
-          (
-            item
-          ): item is PromiseFulfilledResult<unknown> => item.status === "fulfilled"
-        )
-        .flatMap((item) => toPagedRows((item.value as { data?: unknown }).data ?? item.value));
-      if (legacyRows.length) {
-        timelogRows = legacyRows;
-      }
-    }
-    setManagerEmailsForHr(Array.from(managerEmailSet));
-
-    const normalizedRows = timelogRows.map((row) => {
-      const existingManagerFlag = parseManagerFlag(row.is_manager);
-      const email = String(
-        row.employee_email ?? row.user_email ?? row.userEmail ?? row.email ?? ""
-      )
-        .trim()
-        .toLowerCase();
-      const employeeName = String(
-        row.employee_name ??
-          row.employeeName ??
-          row.name ??
-          (email ? onboardEmailToName[email] : "") ??
-          ""
-      ).trim();
-      if (existingManagerFlag) {
-        return {
-          ...row,
-          employee_name: employeeName || "—",
-        };
-      }
-      if (!email || !managerEmailSet.has(email)) {
-        return {
-          ...row,
-          employee_name: employeeName || "—",
-        };
-      }
-      return {
-        ...row,
-        is_manager: true,
-        employee_name: employeeName || "—",
-      };
-    });
-    setTimelogs(normalizedRows);
-    return normalizedRows;
+    setManagerEmailsForHr([]);
+    setTimelogs(timelogRows);
+    return timelogRows;
   }, [hasHrAccess, hasManagerAccess, loadManagerData]);
+  loadTimelogsForCurrentRoleRef.current = loadTimelogsForCurrentRole;
+
   useEffect(() => {
-        const id = window.setTimeout(() => {
+    const id = window.setTimeout(() => {
       void (async () => {
         if (timelogLoadInFlightRef.current) return;
         timelogLoadInFlightRef.current = true;
+        const loadTimelogs = loadTimelogsForCurrentRoleRef.current;
         try {
           if (timelogSubTab === "my") {
-            await loadTimelogsForCurrentRole();
+            await loadTimelogs();
             if (timelogHrNoSelfProject) {
               setTimelogProjects([]);
               return;
@@ -1911,7 +1808,14 @@ export function TimelogPageClient() {
             setTimelogProjects(projects);
             return;
           }
-          await loadTimelogsForCurrentRole();
+          if (timelogSubTab === "team") {
+            const selected = teamTimelogEmailFilterRef.current.trim();
+            if (selected && selected.toUpperCase() !== "ALL") {
+              await loadTimelogs(selected);
+            } else {
+              setTimelogs([]);
+            }
+          }
         } catch {
           setTimelogs([]);
           setManagerEmailsForHr([]);
@@ -1922,13 +1826,7 @@ export function TimelogPageClient() {
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [
-    ,
-    timelogSubTab,
-    timelogHrNoSelfProject,
-    requiresSelfOnboarding,
-    loadTimelogsForCurrentRole,
-  ]);
+  }, [timelogSubTab, timelogHrNoSelfProject, requiresSelfOnboarding]);
 
   async function loadMyLeaveRequests() {
     const email = String((user as { email?: string } | null)?.email ?? "").trim();
@@ -2393,6 +2291,7 @@ export function TimelogPageClient() {
   }, [hasHrAccess, hrTimelogDirectoryEmails, managerTeamEmailList]);
   const managerTeamTimelogs = useMemo(() => {
     const normalizedFilter = teamTimelogEmailFilter.trim().toLowerCase();
+    if (hasHrAccess && (!normalizedFilter || normalizedFilter === "all")) return [];
     if (normalizedFilter && normalizedFilter !== "all") {
       return timelogs.filter((row) => {
         const email = String(
@@ -2402,9 +2301,6 @@ export function TimelogPageClient() {
           .toLowerCase();
         return Boolean(email) && email === normalizedFilter;
       });
-    }
-    if (hasHrAccess) {
-      return timelogs;
     }
     if (!managerTeamEmailList.length) return timelogs;
     const teamEmailSet = new Set(managerTeamEmailList);
@@ -2416,7 +2312,17 @@ export function TimelogPageClient() {
         .toLowerCase();
       return Boolean(email) && teamEmailSet.has(email);
     });
-  }, [timelogs, managerTeamEmailList, teamTimelogEmailFilter, hasHrAccess]);  useEffect(() => {
+  }, [timelogs, managerTeamEmailList, teamTimelogEmailFilter, hasHrAccess]);
+  useEffect(() => {
+    if (hasHrAccess) {
+      const selected = teamTimelogEmailFilter.trim().toLowerCase();
+      if (!selected || selected === "all") return;
+      const exists = hrTimelogEmployeeOptions.some(
+        (opt) => opt.email.trim().toLowerCase() === selected
+      );
+      if (!exists) setTeamTimelogEmailFilter("");
+      return;
+    }
     if (teamTimelogEmailFilter === "ALL") return;
     const exists = teamTimelogEmployeeOptions.some(
       (email) => email.toLowerCase() === teamTimelogEmailFilter.trim().toLowerCase()
@@ -2424,14 +2330,11 @@ export function TimelogPageClient() {
     if (!exists) {
       setTeamTimelogEmailFilter("ALL");
     }
-  }, [teamTimelogEmployeeOptions, teamTimelogEmailFilter]);  useEffect(() => {
-    if (timelogSubTab !== "team") return;
-    const selected = teamTimelogEmailFilter.trim();
-    if (!selected || selected.toUpperCase() === "ALL") return;
-    void loadTimelogsForCurrentRole(selected).catch(() => {
-      /* ignore focused refresh errors */
-    });
-  }, [timelogSubTab, teamTimelogEmailFilter, loadTimelogsForCurrentRole]);
+  }, [hasHrAccess, hrTimelogEmployeeOptions, teamTimelogEmployeeOptions, teamTimelogEmailFilter]);
+  useEffect(() => {
+    if (!hasHrAccess || timelogSubTab !== "team") return;
+    if (teamTimelogEmailFilter === "ALL") setTeamTimelogEmailFilter("");
+  }, [hasHrAccess, timelogSubTab, teamTimelogEmailFilter]);
   // (learning loaders moved above useEffects to avoid TDZ)
   const loadWorkforceOverviewReports = useCallback(async () => {
     const params = {
@@ -3274,6 +3177,7 @@ export function TimelogPageClient() {
           
                           {timelogSubTab === "my" ? (
                           <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+                            {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wt-border pb-4">
                               <h3 className="font-semibold">Timelog</h3>
                               <button
@@ -3457,9 +3361,11 @@ export function TimelogPageClient() {
                               <div>
                                 <h3 className="font-semibold">Team Timelogs</h3>
                                 <p className="text-xs text-wt-text-muted mt-1">
-                                  {hasManagerAccess
-                                    ? "View timelog entries for your team, or use the employee filter to focus on one person."
-                                    : "Review timelogs across the organization. Pick an employee email to load their entries, or leave ALL for the full feed."}
+                                  {hasHrAccess
+                                    ? "Select an employee to view their timelog entries."
+                                    : hasManagerAccess
+                                      ? "View timelog entries for your team, or use the employee filter to focus on one person."
+                                      : "View timelogs across the organization."}
                                 </p>
                               </div>
                               <button
@@ -3471,6 +3377,9 @@ export function TimelogPageClient() {
                                       await loadManagerData();
                                     }
                                     const selected = teamTimelogEmailFilter.trim();
+                                    if (hasHrAccess && (!selected || selected.toUpperCase() === "ALL")) {
+                                      throw new Error("Select an employee first.");
+                                    }
                                     await loadTimelogsForCurrentRole(
                                       selected && selected.toUpperCase() !== "ALL" ? selected : undefined
                                     );
@@ -3482,17 +3391,64 @@ export function TimelogPageClient() {
                               </button>
                             </div>
                             <div className="mb-3 max-w-md">
-                              <SelectField
-                                label="Employee email (filter)"
-                                value={teamTimelogEmailFilter}
-                                options={["ALL", ...teamTimelogEmployeeOptions]}
-                                onChange={setTeamTimelogEmailFilter}
-                              />
+                              {hasHrAccess ? (
+                                <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+                                  Employee
+                                  <select
+                                    className="input-field px-3 py-2 text-sm"
+                                    value={teamTimelogEmailFilter}
+                                    onChange={(e) => {
+                                      const email = e.target.value;
+                                      setTeamTimelogEmailFilter(email);
+                                      if (!email) {
+                                        setTimelogs([]);
+                                        return;
+                                      }
+                                      void runAction("Load employee timelogs", () =>
+                                        loadTimelogsForCurrentRole(email)
+                                      );
+                                    }}
+                                  >
+                                    <option value="">Select employee…</option>
+                                    {hrTimelogEmployeeOptions.map((opt) => (
+                                      <option key={opt.email} value={opt.email}>
+                                        {opt.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              ) : (
+                                <SelectField
+                                  label="Employee email (filter)"
+                                  value={teamTimelogEmailFilter}
+                                  options={["ALL", ...teamTimelogEmployeeOptions]}
+                                  onChange={(value) => {
+                                    setTeamTimelogEmailFilter(value);
+                                    if (value && value.toUpperCase() !== "ALL") {
+                                      void runAction("Load employee timelogs", () =>
+                                        loadTimelogsForCurrentRole(value)
+                                      );
+                                    } else {
+                                      setTimelogs([]);
+                                    }
+                                  }}
+                                />
+                              )}
                             </div>
                             <DataTable
-                              columns={["project_code", "employee_name", "log_date", "hours", "description"]}
+                              columns={
+                                hasHrAccess
+                                  ? ["project_code", "log_date", "hours", "description"]
+                                  : ["project_code", "employee_name", "log_date", "hours", "description"]
+                              }
                               rows={managerTeamTimelogs}
-                              emptyLabel="No team timelogs loaded."
+                              emptyLabel={
+                                hasHrAccess
+                                  ? teamTimelogEmailFilter
+                                    ? "No timelog entries for this employee."
+                                    : "Select an employee to view their timelogs."
+                                  : "No team timelogs loaded."
+                              }
                             />
                           </div>
                         </div>

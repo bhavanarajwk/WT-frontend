@@ -2,6 +2,11 @@
 
 import { useMemo } from "react";
 import type { TraineeTableRow } from "@/utils/learning/participants";
+import {
+  findParticipantScoreForTrainee,
+  resolveOverallScorePercent,
+  type ParticipantTrainingScore,
+} from "@/utils/learning/trainingScores";
 
 type ScoreDraft = { scorePct: string; markCompleted: boolean };
 
@@ -11,33 +16,74 @@ function parseScorePct(value: string): number | null {
   return Math.min(100, Math.max(0, n));
 }
 
+function scoreForAssessment(
+  assessmentId: string,
+  participant: ParticipantTrainingScore | undefined,
+  draft: ScoreDraft | undefined,
+  isSelected: boolean
+): number | null {
+  if (isSelected && draft) {
+    const fromDraft = parseScorePct(draft.scorePct);
+    if (fromDraft != null) return fromDraft;
+  }
+  const saved = participant?.scoresJson[assessmentId];
+  if (saved != null && Number.isFinite(saved)) return saved;
+  return null;
+}
+
 export function TraineeScoreAnalytics({
   employeeUserId,
   traineeRows,
   assessments,
   assessmentId,
   scoresByUser,
+  savedScores,
+  scoresLoading,
 }: {
   employeeUserId: string;
   traineeRows: TraineeTableRow[];
   assessments: Array<Record<string, unknown>>;
   assessmentId: string;
   scoresByUser: Record<string, ScoreDraft>;
+  savedScores: ParticipantTrainingScore[];
+  scoresLoading: boolean;
 }) {
   const trainee = useMemo(
     () => traineeRows.find((r) => r.userId === employeeUserId),
     [traineeRows, employeeUserId]
   );
 
+  const participantScore = useMemo(
+    () =>
+      employeeUserId
+        ? findParticipantScoreForTrainee(savedScores, employeeUserId, trainee?.email)
+        : undefined,
+    [savedScores, employeeUserId, trainee?.email]
+  );
+
   const draft = scoresByUser[employeeUserId] ?? { scorePct: "0", markCompleted: false };
-  const currentScore = parseScorePct(draft.scorePct);
   const selectedAssessment = useMemo(
     () => assessments.find((a) => String(a.id ?? "").trim() === assessmentId.trim()),
     [assessments, assessmentId]
   );
   const selectedName = String(selectedAssessment?.name ?? "Selected assessment").trim();
+  const selectedId = assessmentId.trim();
+  const currentScore = scoreForAssessment(
+    selectedId,
+    participantScore,
+    draft,
+    Boolean(selectedId)
+  );
+  const overallScore = resolveOverallScorePercent(participantScore, assessments);
   const totalAssessments = assessments.length;
-  const markedComplete = draft.markCompleted;
+  const scoredAssessmentCount = useMemo(() => {
+    if (!participantScore) return 0;
+    return assessments.filter((a) => {
+      const id = String(a.id ?? "").trim();
+      return id && participantScore.scoresJson[id] != null;
+    }).length;
+  }, [assessments, participantScore]);
+  const markedComplete = participantScore?.isCompleted ?? draft.markCompleted;
 
   if (!employeeUserId) {
     return (
@@ -55,6 +101,14 @@ export function TraineeScoreAnalytics({
     );
   }
 
+  if (!assessmentId.trim()) {
+    return (
+      <p className="text-sm text-wt-text-muted">
+        Select an assessment to view score analytics for {trainee.name}.
+      </p>
+    );
+  }
+
   if (!totalAssessments) {
     return (
       <p className="text-sm text-wt-text-muted">
@@ -66,7 +120,24 @@ export function TraineeScoreAnalytics({
   return (
     <div className="space-y-4">
       <p className="text-sm font-medium">{trainee.name}</p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {scoresLoading ? (
+        <p className="text-xs text-wt-text-muted">Loading saved scores…</p>
+      ) : null}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <article className="rounded-xl border border-wt-border bg-wt-surface-2 p-4 sm:col-span-2 lg:col-span-1">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
+            Overall score
+          </p>
+          <p className="text-2xl font-semibold mt-1 text-indigo-700">
+            {overallScore != null ? `${overallScore}%` : "—"}
+          </p>
+          <p className="text-xs text-wt-text-muted mt-1">
+            Weighted across all assessments
+            {scoredAssessmentCount > 0
+              ? ` (${scoredAssessmentCount}/${totalAssessments} scored)`
+              : ""}
+          </p>
+        </article>
         <article className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
           <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
             Total assessments
@@ -108,6 +179,7 @@ export function TraineeScoreAnalytics({
           <thead className="bg-wt-surface-2 text-wt-text-muted">
             <tr>
               <th className="text-left px-3 py-2 font-medium">Assessment</th>
+              <th className="text-left px-3 py-2 font-medium">Weight</th>
               <th className="text-left px-3 py-2 font-medium">Score (%)</th>
               <th className="text-left px-3 py-2 font-medium">Completion</th>
             </tr>
@@ -116,7 +188,14 @@ export function TraineeScoreAnalytics({
             {assessments.map((a) => {
               const id = String(a.id ?? "").trim();
               const name = String(a.name ?? `Assessment ${id}`).trim();
+              const weight = Number(a.weight_percent ?? a.weightPercent ?? 0);
               const isSelected = id === assessmentId.trim();
+              const rowScore = scoreForAssessment(
+                id,
+                participantScore,
+                isSelected ? draft : undefined,
+                isSelected
+              );
               return (
                 <tr
                   key={id || name}
@@ -130,9 +209,14 @@ export function TraineeScoreAnalytics({
                       </span>
                     ) : null}
                   </td>
+                  <td className="px-3 py-2 whitespace-nowrap text-wt-text-muted">
+                    {Number.isFinite(weight) && weight > 0 ? `${weight}%` : "—"}
+                  </td>
                   <td className="px-3 py-2 whitespace-nowrap">
-                    {isSelected && currentScore != null ? (
-                      <span className="font-medium text-sky-700">{currentScore}%</span>
+                    {rowScore != null ? (
+                      <span className={`font-medium ${isSelected ? "text-sky-700" : ""}`}>
+                        {rowScore}%
+                      </span>
                     ) : (
                       <span className="text-wt-text-muted">—</span>
                     )}

@@ -9,7 +9,10 @@ export function useDashboardAccess() {
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
+  const hasAccountManagerAccess = userRoles.includes("ROLE_AM");
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
+  const isAccountManagerOnly =
+    hasAccountManagerAccess && !hasHrAccess && !hasManagerAccess;
   const restrictForPendingOnboarding =
     isEmployee && !hasHrAccess && !hasManagerAccess;
   const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(user?.status === "ACTIVE");
@@ -47,6 +50,8 @@ export function useDashboardAccess() {
     userRoles,
     hasHrAccess,
     hasManagerAccess,
+    hasAccountManagerAccess,
+    isAccountManagerOnly,
     isEmployee,
     requiresSelfOnboarding,
     employeeSelfServeProfile,

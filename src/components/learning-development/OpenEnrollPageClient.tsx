@@ -16,6 +16,7 @@ export function OpenEnrollPageClient() {
     mutationFn: () => hrmsService.selfEnrollTraining(trainingId),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["learning"] });
+      await qc.invalidateQueries({ queryKey: ["learning", "trainings", "mine"] });
       await refetch();
     },
   });

@@ -20,6 +20,19 @@ export interface OnboardItem {
   createdAt?: string | null;
 }
 
+export interface EmployeeLeaveBalanceBreakdown {
+  primary: number;
+  secondary: number;
+  carry_forward: number;
+  total: number;
+}
+
+export interface EmployeeLeaveBalancesData {
+  emp_id: string;
+  leave: EmployeeLeaveBalanceBreakdown;
+  comp_off_balance: number;
+}
+
 export interface InvitedUsersQuery {
   fromDate?: string;
   toDate?: string;
@@ -186,6 +199,47 @@ export const hrmsService = {
     });
   },
 
+  getEmployeeLeaveBalances(empId: string) {
+    return apiClient.get<ApiEnvelope<EmployeeLeaveBalancesData>>(
+      endpoints.profile.employeeBalances(empId)
+    );
+  },
+
+  /** GET /api/v1/employee-resume — list resumes (account manager). */
+  getEmployeeResumes(params: Record<string, string> = {}) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.employeeResume.root, { query: params });
+  },
+
+  /** Download resume file for an employee (tries primary then alternate path). */
+  async downloadEmployeeResume(empId: string): Promise<Blob> {
+    const id = String(empId).trim();
+    if (!id) throw new Error("Employee ID is required to download a resume.");
+    try {
+      return await apiClient.get<Blob>(endpoints.employeeResume.download(id), {
+        responseType: "blob",
+      });
+    } catch {
+      return apiClient.get<Blob>(endpoints.employeeResume.downloadAlt(id), {
+        responseType: "blob",
+      });
+    }
+  },
+
+  /** GET /api/v1/allocation/bench-forecast?days=N */
+  getBenchForecast(days: number) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.benchForecast, {
+      query: { days: String(Math.max(1, days)) },
+    });
+  },
+
+  /** GET /api/v1/timelog/get/{empEmail}/{logDate} */
+  getTimelogByEmployeeAndDate(empEmail: string, logDate: string) {
+    return apiClient.get<ApiEnvelope<unknown>>(
+      endpoints.timelog.legacyGetByDate(empEmail, logDate),
+      { query: { page: "0", size: "200" } }
+    );
+  },
+
   getAllocations(params: Record<string, string>) {
     return apiClient.get<ApiEnvelope<PagedData<unknown>>>(endpoints.allocation.root, { query: params });
   },
@@ -299,6 +353,30 @@ export const hrmsService = {
 
   getTimelogs(params: Record<string, string>) {
     return apiClient.get<ApiEnvelope<PagedData<unknown>>>(endpoints.timelog.root, { query: params });
+  },
+
+  updateTimelogStatus(payload: {
+    timelog_id: number;
+    status: "APPROVED" | "REJECTED";
+    manager_comment?: string | null;
+  }) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.status, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateTimelogStatusBatch(payload: {
+    employee_email: string;
+    project_code: string;
+    log_date: string;
+    status: "APPROVED" | "REJECTED";
+    manager_comment?: string | null;
+  }) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.statusBatch, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
   },
 
   getLeaveSummary(params: Record<string, string>) {
@@ -600,6 +678,16 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.learning.trainings);
   },
 
+  /** Enrolled trainings for current user, or ?user_id= for HR viewing another employee. */
+  getMyTrainingEnrollments(params?: { userId?: string | number }) {
+    const query: Record<string, string> = {};
+    const userId = params?.userId;
+    if (userId != null && String(userId).trim() && !String(userId).startsWith("email:")) {
+      query.user_id = String(userId).trim();
+    }
+    return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.learning.myEnrollments, { query });
+  },
+
   getTrainingById(trainingId: string) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.learning.trainingById(trainingId));
   },
@@ -708,6 +796,16 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.learning.assessments(trainingId));
   },
 
+  /** HR / Admin — all participants (draft or published). */
+  getTrainingScores(trainingId: string) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.learning.scores(trainingId));
+  },
+
+  /** Enrolled employee — published marks only (403 until published). */
+  getMyTrainingMarks(trainingId: string) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.learning.myMarks(trainingId));
+  },
+
   submitTrainingScores(trainingId: string, payload: {
     user_id: number;
     scores_json: Record<string, number>;
@@ -717,6 +815,13 @@ export const hrmsService = {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
+  },
+
+  /** POST …/trainings/:id/assessments/:assessmentId/marks/publish — emails scores to trainees (HR/Admin). */
+  publishTrainingMarks(trainingId: string, assessmentId: string) {
+    return apiClient.post<ApiEnvelope<unknown>>(
+      endpoints.learning.marksPublish(trainingId, assessmentId)
+    );
   },
 
   getTrainingAnalytics(trainingId: string) {

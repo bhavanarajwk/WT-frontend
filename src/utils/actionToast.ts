@@ -88,9 +88,18 @@ export function formatActionSuccessMessage(label: string): string {
     const rest = l.replace(/^save /i, "").trim();
     return `${titleCasePhrase(rest)} saved.`;
   }
+  if (/^publish scores$/i.test(l)) {
+    return "Scores published. Employees will be notified by email.";
+  }
   if (/^upload /i.test(l)) {
     const rest = l.replace(/^upload /i, "").trim();
     return `${titleCasePhrase(rest)} uploaded.`;
+  }
+  if (/^assign trainer$/i.test(l)) {
+    return "Trainer assigned.";
+  }
+  if (/^remove trainer$/i.test(l)) {
+    return "Trainer removed.";
   }
   if (/^assign /i.test(l)) {
     const rest = l.replace(/^assign /i, "").trim();

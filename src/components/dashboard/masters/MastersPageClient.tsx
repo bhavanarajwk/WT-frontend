@@ -3245,6 +3245,7 @@ export function MastersPageClient() {
                                     >
                                       <option value="ROLE_HR">HR</option>
                                       <option value="ROLE_MANAGER">Manager</option>
+                                      <option value="ROLE_AM">Account Manager</option>
                                       <option value="ROLE_EMPLOYEE">Employee</option>
                                       <option value="ROLE_ADMIN">Admin</option>
                                       <option value="ROLE_FINANCE">Finance</option>
