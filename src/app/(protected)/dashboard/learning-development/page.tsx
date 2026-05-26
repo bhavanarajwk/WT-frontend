@@ -1,11 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
-import { useTrainingsList } from "@/hooks/learning/useLearningTrainings";
+import {
+  useMyTrainingEnrollments,
+  useTrainingsList,
+} from "@/hooks/learning/useLearningTrainings";
 
 export default function LearningDevelopmentDashboardPage() {
-  const { data: trainings = [], isLoading } = useTrainingsList();
+  const { user } = useAuth();
+  const roles = user?.roles ?? [];
+  const hasHrAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+
+  const hrTrainingsQ = useTrainingsList(hasHrAccess);
+  const myEnrollmentsQ = useMyTrainingEnrollments(undefined, !hasHrAccess);
+
+  const trainings = hasHrAccess ? (hrTrainingsQ.data ?? []) : (myEnrollmentsQ.data ?? []);
+  const isLoading = hasHrAccess ? hrTrainingsQ.isLoading : myEnrollmentsQ.isLoading;
 
   return (
     <div className="space-y-6">
@@ -13,7 +25,9 @@ export default function LearningDevelopmentDashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Learning overview</h1>
           <p className="text-sm text-wt-text-muted mt-1">
-            Open a training card to manage sessions, trainers, trainees, attendance, and scores.
+            {hasHrAccess
+              ? "Open a training card to manage sessions, trainers, trainees, attendance, and scores."
+              : "Trainings you are enrolled in. Open a card to view materials and published marks."}
           </p>
         </div>
         <Link href="/dashboard/learning-development/trainings" className="btn-primary px-4 py-2 text-sm">
@@ -27,11 +41,15 @@ export default function LearningDevelopmentDashboardPage() {
       </article>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Trainings</h2>
+        <h2 className="text-lg font-semibold">{hasHrAccess ? "Trainings" : "My trainings"}</h2>
         {isLoading ? (
           <p className="text-sm text-wt-text-muted">Loading trainings…</p>
         ) : trainings.length === 0 ? (
-          <p className="text-sm text-wt-text-muted">No trainings yet.</p>
+          <p className="text-sm text-wt-text-muted">
+            {hasHrAccess
+              ? "No trainings yet."
+              : "You are not enrolled in any trainings yet."}
+          </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {trainings.map((row) => {

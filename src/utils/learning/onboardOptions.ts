@@ -50,8 +50,18 @@ export function isActiveOnboardRow(row: OnboardItem | Record<string, unknown>): 
   return String(r.status ?? "").trim().toUpperCase() === "ACTIVE";
 }
 
+function rowRoleList(row: Record<string, unknown>): string[] {
+  const raw = row.roles ?? row.user_roles ?? row.userRoles;
+  if (Array.isArray(raw)) {
+    return raw.map((r) => String(r ?? "").trim().toUpperCase()).filter(Boolean);
+  }
+  const single = String(raw ?? "").trim().toUpperCase();
+  return single ? [single] : [];
+}
+
 export function isAccountManagerOnboardRow(row: OnboardItem | Record<string, unknown>): boolean {
   const r = onboardRowRecord(row);
+  if (rowRoleList(r).includes("ROLE_AM")) return true;
   const fields = [
     r.department,
     r.user_type,
@@ -65,6 +75,34 @@ export function isAccountManagerOnboardRow(row: OnboardItem | Record<string, unk
   return fields.some(
     (f) => f === "account manager" || f.includes("account manager")
   );
+}
+
+/** Lowercase emails for users tagged as account managers on the onboard list. */
+export function buildAccountManagerEmailSet(
+  rows: Array<OnboardItem | Record<string, unknown>>
+): Set<string> {
+  const emails = new Set<string>();
+  for (const row of rows) {
+    if (!isAccountManagerOnboardRow(row)) continue;
+    const email = emailFromOnboardRow(onboardRowRecord(row)).toLowerCase();
+    if (email) emails.add(email);
+  }
+  return emails;
+}
+
+export function requestRowEmail(row: Record<string, unknown>): string {
+  const direct = String(
+    row.emp_email ??
+      row.employee_email ??
+      row.user_email ??
+      row.userEmail ??
+      row.email ??
+      ""
+  )
+    .trim()
+    .toLowerCase();
+  if (direct) return direct;
+  return emailFromOnboardRow(row);
 }
 
 /** Map GET /api/v1/user/onboard rows to picker options (deduped by user id). */

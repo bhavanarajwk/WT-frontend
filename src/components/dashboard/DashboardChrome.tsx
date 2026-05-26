@@ -10,7 +10,7 @@ import { endpoints } from "@/api/endpoints";
 import { hrmsService } from "@/services/hrms.service";
 import { toRows } from "@/utils/apiRows";
 import { dashboardNavigation, filterVisibleNavigation } from "@/constants/dashboardNavigation";
-import { dashboardHref } from "@/constants/routes";
+import { dashboardHref, DASHBOARD_ROUTES } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 
@@ -84,11 +84,23 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
+  const hasAccountManagerAccess = userRoles.includes("ROLE_AM");
   const canAccessProfile = Boolean(user);
-
+  const isEmployeeDirectoryRoute = pathname.startsWith("/dashboard/employee-directory");
+  const isEmployeeOnboardingRoute =
+    pathname === DASHBOARD_ROUTES.employee ||
+    pathname.startsWith("/dashboard/employee/assign-account-manager");
+  const isAssignAccountManagerRoute = pathname.startsWith(
+    "/dashboard/employee/assign-account-manager"
+  );
+  const isEmployeeProfileRoute = Boolean(pathname.match(/^\/dashboard\/employee-directory\/[^/]+$/));
   const visibleNavigation = useMemo(
-    () => filterVisibleNavigation(dashboardNavigation, userRoles, { hasHrAccess }),
-    [userRoles, hasHrAccess]
+    () =>
+      filterVisibleNavigation(dashboardNavigation, userRoles, {
+        hasHrAccess,
+        hasAccountManagerAccess,
+      }),
+    [userRoles, hasHrAccess, hasAccountManagerAccess]
   );
 
   const [notifications, setNotifications] = useState<Array<Record<string, unknown>>>([]);
@@ -259,12 +271,70 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           <div>
             <h2 className="text-xl font-semibold">
               {activeSection === "profile" && !isLearningRoute ? "My profile" : null}
-              {activeSection !== "profile" && !isLearningRoute ? "Dashboard" : null}
+              {activeSection === "employee-directory" && !isLearningRoute ? "Employee Directory" : null}
+              {activeSection === "resumes" && !isLearningRoute ? "Resumes" : null}
+              {activeSection === "bench-forecast" && !isLearningRoute ? "Bench Forecast" : null}
+              {activeSection === "employee" && !isLearningRoute ? "Employee Onboarding" : null}
+              {activeSection !== "profile" &&
+              activeSection !== "employee-directory" &&
+              activeSection !== "resumes" &&
+              activeSection !== "bench-forecast" &&
+              activeSection !== "employee" &&
+              !isLearningRoute
+                ? "Dashboard"
+                : null}
               {isLearningRoute ? "Learning & Development" : null}
             </h2>
-            <p className="text-xs text-wt-text-muted">
-              {isLearningRoute ? learningSectionTitle : "WebTrak workforce workspace"}
-            </p>
+            {isEmployeeDirectoryRoute && !isLearningRoute ? (
+              <nav
+                className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
+                aria-label="Breadcrumb"
+              >
+                <Link href={dashboardHref("overview")} className="hover:text-wt-text transition">
+                  Dashboard
+                </Link>
+                <span aria-hidden>/</span>
+                {isEmployeeProfileRoute ? (
+                  <>
+                    <Link
+                      href={DASHBOARD_ROUTES["employee-directory"]}
+                      className="hover:text-wt-text transition"
+                    >
+                      Employee Directory
+                    </Link>
+                    <span aria-hidden>/</span>
+                    <span className="text-wt-text">Employee Profile</span>
+                  </>
+                ) : (
+                  <span className="text-wt-text">Employee Directory</span>
+                )}
+              </nav>
+            ) : isEmployeeOnboardingRoute && !isLearningRoute ? (
+              <nav
+                className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
+                aria-label="Breadcrumb"
+              >
+                <Link href={dashboardHref("overview")} className="hover:text-wt-text transition">
+                  Dashboard
+                </Link>
+                <span aria-hidden>/</span>
+                {isAssignAccountManagerRoute ? (
+                  <>
+                    <Link href={DASHBOARD_ROUTES.employee} className="hover:text-wt-text transition">
+                      Employee Onboarding
+                    </Link>
+                    <span aria-hidden>/</span>
+                    <span className="text-wt-text">Assign Acc Manager</span>
+                  </>
+                ) : (
+                  <span className="text-wt-text">Employee Onboarding</span>
+                )}
+              </nav>
+            ) : (
+              <p className="text-xs text-wt-text-muted">
+                {isLearningRoute ? learningSectionTitle : "WebTrak workforce workspace"}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <details

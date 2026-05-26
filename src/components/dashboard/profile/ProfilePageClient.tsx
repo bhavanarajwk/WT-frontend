@@ -18,6 +18,7 @@ import { AllocationExtensionPanel } from "@/components/dashboard/sections/Alloca
 import { EmployeeAttendancePanel } from "@/components/dashboard/sections/EmployeeAttendancePanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
+import { EmployeeTrainingMarksCard } from "@/components/learning-development/EmployeeTrainingMarksCard";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import {
   HARDCODED_DEPARTMENT_OPTIONS,
@@ -3016,6 +3017,9 @@ export function ProfilePageClient() {
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
+      <div className="mt-8 border-t border-wt-border pt-6">
+        <EmployeeTrainingMarksCard variant="employee" enabled />
+      </div>
     </div>
   );
 
@@ -3229,6 +3233,11 @@ export function ProfilePageClient() {
                                 <ProfileField label="Years of Experience" value={employeeProfile?.yoe} />
                               </dl>
                               {!requiresSelfOnboarding ? renderProfileAssignedProjectsSection() : null}
+                              {!requiresSelfOnboarding ? (
+                                <div className="mt-8 border-t border-wt-border pt-6">
+                                  <EmployeeTrainingMarksCard variant="employee" enabled />
+                                </div>
+                              ) : null}
                             </div>
                           )}
                         </section>

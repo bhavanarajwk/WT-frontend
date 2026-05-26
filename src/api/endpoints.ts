@@ -22,6 +22,16 @@ export const endpoints = {
   profile: {
     self: `${api}/profile`,
     employeeById: (empId: string) => `${api}/employee-profile/${encodeURIComponent(empId)}`,
+    employeeBalances: (empId: string) =>
+      `${api}/employee-profile/${encodeURIComponent(empId)}/balances`,
+  },
+
+  employeeResume: {
+    root: `${api}/employee-resume`,
+    download: (empId: string) =>
+      `${api}/employee-resume/download/${encodeURIComponent(empId)}`,
+    downloadAlt: (empId: string) =>
+      `${api}/employee-resume/${encodeURIComponent(empId)}/download`,
   },
 
   upload: {
@@ -39,6 +49,7 @@ export const endpoints = {
     roles: `${api}/allocation/roles`,
     user: `${api}/allocation/user`,
     forecasting: `${api}/allocation/forecasting`,
+    benchForecast: `${api}/allocation/bench-forecast`,
     extensionRequest: `${api}/allocation-extension-request`,
     extensionStatus: `${api}/allocation-extension-request/status`,
     managerExtensionStatus: `${api}/manager/allocation-extension-status`,
@@ -80,6 +91,7 @@ export const endpoints = {
 
   learning: {
     trainings: `${api}/trainings`,
+    myEnrollments: `${api}/trainings/mine`,
     trainingById: (trainingId: string | number) => `${api}/trainings/${encodeURIComponent(String(trainingId))}`,
     trainers: (trainingId: string | number) =>
       `${api}/trainings/${encodeURIComponent(String(trainingId))}/trainers`,
@@ -102,6 +114,10 @@ export const endpoints = {
       `${api}/trainings/${encodeURIComponent(String(trainingId))}/assessments`,
     scores: (trainingId: string | number) =>
       `${api}/trainings/${encodeURIComponent(String(trainingId))}/scores`,
+    myMarks: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/my-marks`,
+    marksPublish: (trainingId: string | number, assessmentId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/assessments/${encodeURIComponent(String(assessmentId))}/marks/publish`,
     analytics: (trainingId: string | number) =>
       `${api}/trainings/${encodeURIComponent(String(trainingId))}/analytics`,
   },

@@ -1,8 +1,12 @@
 /** Path for each dashboard nav id (route-based; no ?tab=). */
 export const DASHBOARD_ROUTES: Record<string, string> = {
   overview: "/dashboard/overview",
+  "employee-directory": "/dashboard/employee-directory",
+  resumes: "/dashboard/resumes",
+  "employee-assign-am": "/dashboard/employee/assign-account-manager",
   employee: "/dashboard/employee",
   allocation: "/dashboard/allocation",
+  "bench-forecast": "/dashboard/allocation/bench-forecast",
   "allocation-extension": "/dashboard/allocation-extension",
   offboarding: "/dashboard/offboarding",
   "background-verification": "/dashboard/background-verification",
@@ -34,7 +38,11 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/reports/compliance", id: "reports-section-6" },
   { prefix: "/dashboard/reports/bgv-dashboard", id: "reports-section-7" },
   { prefix: "/dashboard/overview", id: "overview" },
+  { prefix: "/dashboard/employee-directory", id: "employee-directory" },
+  { prefix: "/dashboard/resumes", id: "resumes" },
+  { prefix: "/dashboard/employee/assign-account-manager", id: "employee" },
   { prefix: "/dashboard/employee", id: "employee" },
+  { prefix: "/dashboard/allocation/bench-forecast", id: "bench-forecast" },
   { prefix: "/dashboard/allocation-extension", id: "allocation-extension" },
   { prefix: "/dashboard/allocation", id: "allocation" },
   { prefix: "/dashboard/offboarding", id: "offboarding" },
@@ -61,4 +69,27 @@ export function dashboardNavIdFromPathname(pathname: string): string {
 
 export function dashboardHref(navId: string): string {
   return DASHBOARD_ROUTES[navId] ?? DASHBOARD_DEFAULT_PATH;
+}
+
+export function employeeDirectoryProfilePath(empId: string): string {
+  const id = encodeURIComponent(String(empId).trim());
+  return `/dashboard/employee-directory/${id}`;
+}
+
+/** Landing route after login based on the user's roles. */
+export function defaultDashboardPathForRoles(roles: string[]): string {
+  const r = roles ?? [];
+  if (r.includes("ROLE_HR") || r.includes("ROLE_ADMIN") || r.includes("ROLE_FINANCE")) {
+    return DASHBOARD_ROUTES.overview;
+  }
+  if (r.includes("ROLE_AM") && !r.includes("ROLE_HR") && !r.includes("ROLE_ADMIN")) {
+    return DASHBOARD_ROUTES.resumes;
+  }
+  if (r.includes("ROLE_MANAGER")) {
+    return DASHBOARD_ROUTES.timelog;
+  }
+  if (r.includes("ROLE_EMPLOYEE")) {
+    return DASHBOARD_ROUTES.profile;
+  }
+  return DASHBOARD_ROUTES.overview;
 }

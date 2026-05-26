@@ -17,7 +17,13 @@ import {
 import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
 import { EmployeeAttendancePanel } from "@/components/dashboard/sections/EmployeeAttendancePanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
-import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
+import {
+  normalizePickerEmail,
+  requestRowEmail,
+} from "@/utils/learning/onboardOptions";
+import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
+import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
+import { isAccountManagerEmployeeUser } from "@/utils/roles";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import {
   HARDCODED_DEPARTMENT_OPTIONS,
@@ -357,6 +363,9 @@ export function LeavePageClient() {
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
+  const submitsToHrForReview = isAccountManagerEmployeeUser(userRoles);
+  const [teamAccountManagersOnly, setTeamAccountManagersOnly] = useState(false);
+  const { data: accountManagerEmails = new Set<string>() } = useAccountManagerEmails();
   /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
   const timelogHrNoSelfProject =
     userRoles.includes("ROLE_HR") && !hasManagerAccess;
@@ -378,6 +387,14 @@ export function LeavePageClient() {
       setLeaveSubTab("my");
     }
   }, [hasManagerAccess, hasHrAccess, leaveSubTab]);
+
+  const teamLeaveRequests = useMemo(() => {
+    if (!hasHrAccess || !teamAccountManagersOnly) return employeeRequests;
+    return employeeRequests.filter((row) => {
+      const email = requestRowEmail(row as Record<string, unknown>);
+      return email && accountManagerEmails.has(email);
+    });
+  }, [employeeRequests, hasHrAccess, teamAccountManagersOnly, accountManagerEmails]);
 
   const loadManagerData = useCallback(
     async (force = false) => {
@@ -3242,6 +3259,7 @@ export function LeavePageClient() {
                           {leaveSubTab === "my" ? (
                         <section className="grid gap-4 xl:grid-cols-1">
                           <div className="space-y-4">
+                            {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                             <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                               <h3 className="font-semibold mb-1">Create Request</h3>
                               <p className="text-sm text-wt-text-muted mb-3">
@@ -3457,7 +3475,24 @@ export function LeavePageClient() {
                         </section>
                           ) : hasManagerAccess || hasHrAccess ? (
                         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+                          {hasHrAccess ? (
+                            <p className="text-sm text-wt-text-muted">
+                              Review leave, WFH, and comp-off requests from account managers and other
+                              employees. Account manager submissions are routed to HR for approval.
+                            </p>
+                          ) : null}
                           <div className="flex flex-wrap items-end gap-3">
+                            {hasHrAccess ? (
+                              <label className="flex items-center gap-2 text-sm text-wt-text-muted pb-2">
+                                <input
+                                  type="checkbox"
+                                  checked={teamAccountManagersOnly}
+                                  onChange={(e) => setTeamAccountManagersOnly(e.target.checked)}
+                                  className="rounded border-wt-border"
+                                />
+                                Account managers only
+                              </label>
+                            ) : null}
                             <InputField
                               label="From Date"
                               value={employeeRequestFilters.fromDate}
@@ -3486,7 +3521,7 @@ export function LeavePageClient() {
                             </button>
                           </div>
           
-                          {employeeRequests.length ? (
+                          {teamLeaveRequests.length ? (
                             <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
                               <table className="min-w-full text-sm">
                                 <thead className="bg-wt-surface-2 text-wt-text-muted">
@@ -3501,7 +3536,7 @@ export function LeavePageClient() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {employeeRequests.map((row, idx) => {
+                                  {teamLeaveRequests.map((row, idx) => {
                                     const requestId = String(
                                       row.user_request_id ??
                                         row.userRequestId ??
@@ -3513,6 +3548,8 @@ export function LeavePageClient() {
                                     const status = String(
                                       row.user_request_status ?? row.userRequestStatus ?? row.status ?? "PENDING"
                                     ).toUpperCase();
+                                    const rowEmail = requestRowEmail(row as Record<string, unknown>);
+                                    const isAm = rowEmail ? accountManagerEmails.has(rowEmail) : false;
                                     const employee = String(
                                       row.employee_display ??
                                         row.name ??
@@ -3524,7 +3561,14 @@ export function LeavePageClient() {
                                     ).trim();
                                     return (
                                       <tr key={`${requestId || "req"}-${idx}`} className="border-t border-wt-border">
-                                        <td className="px-3 py-2 whitespace-nowrap">{employee || "—"}</td>
+                                        <td className="px-3 py-2 whitespace-nowrap">
+                                          {employee || "—"}
+                                          {isAm ? (
+                                            <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 border border-blue-200">
+                                              AM
+                                            </span>
+                                          ) : null}
+                                        </td>
                                         <td className="px-3 py-2 whitespace-nowrap">{String(row.request_type ?? row.requestType ?? "—")}</td>
                                         <td className="px-3 py-2 whitespace-nowrap">{String(row.request_from_date ?? row.requestFromDate ?? "—")}</td>
                                         <td className="px-3 py-2 whitespace-nowrap">{String(row.request_to_date ?? row.requestToDate ?? "—")}</td>

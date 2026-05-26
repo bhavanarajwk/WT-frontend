@@ -22,6 +22,8 @@ import { DataTable, FileField, InputField, SelectField } from "@/components/lear
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { participantRowUserId } from "@/utils/learning/participants";
 import { hrmsService } from "@/services/hrms.service";
+import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 
 const TABS = [
   { id: "overview", label: "Overview" },
@@ -54,6 +56,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   const hasHrAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
 
   const qc = useQueryClient();
+  const { toast, runAction } = useDashboardAction();
   const tid = trainingId.trim();
 
   const detailQ = useTrainingDetail(tid, Boolean(tid));
@@ -109,6 +112,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   });
 
   const [trainerPick, setTrainerPick] = useState("");
+  const [removeTrainerPick, setRemoveTrainerPick] = useState("");
   const [participantPick, setParticipantPick] = useState("");
   const [materialForm, setMaterialForm] = useState<{ title: string; visibility: "EMPLOYEE" | "HR_ONLY" }>({
     title: "",
@@ -138,27 +142,23 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
     },
   });
 
-  const assignTrainerMut = useMutation({
-    mutationFn: async () => {
+  const assignTrainer = () =>
+    void runAction("Assign trainer", async () => {
       const idNum = await resolveLearningTrainerUserId(trainerPick);
       await hrmsService.assignTrainers(tid, [idNum]);
-    },
-    onSuccess: async () => {
+      setTrainerPick("");
       await qc.invalidateQueries({ queryKey: ["learning", "trainers", tid] });
       await qc.invalidateQueries({ queryKey: ["learning", "training", tid] });
-    },
-  });
+    });
 
-  const removeTrainerMut = useMutation({
-    mutationFn: async () => {
-      const idNum = await resolveLearningTrainerUserId(trainerPick);
+  const removeTrainer = () =>
+    void runAction("Remove trainer", async () => {
+      const idNum = await resolveLearningTrainerUserId(removeTrainerPick);
       await hrmsService.removeTrainer(tid, String(idNum));
-    },
-    onSuccess: async () => {
+      setRemoveTrainerPick("");
       await qc.invalidateQueries({ queryKey: ["learning", "trainers", tid] });
       await qc.invalidateQueries({ queryKey: ["learning", "training", tid] });
-    },
-  });
+    });
 
   const addParticipantMut = useMutation({
     mutationFn: async () => {
@@ -207,6 +207,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   }, [analyticsQ.data]);
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -310,7 +311,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           {hasHrAccess ? (
             <div className="grid sm:grid-cols-2 gap-4 items-end">
               <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                Trainer
+                Assign trainer
                 <select className="input-field px-3 py-2 text-sm" value={trainerPick} onChange={(e) => setTrainerPick(e.target.value)}>
                   <option value="">Select trainer</option>
                   {trainerOptions.map((o) => (
@@ -320,17 +321,50 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                   ))}
                 </select>
               </label>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn-primary px-3 py-2 text-sm" disabled={assignTrainerMut.isPending || !trainerPick} onClick={() => assignTrainerMut.mutate()}>
+              <div className="flex flex-wrap gap-2 pb-1">
+                <button type="button" className="btn-primary px-3 py-2 text-sm" disabled={!trainerPick} onClick={assignTrainer}>
                   Assign
                 </button>
-                <button type="button" className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg" disabled={removeTrainerMut.isPending || !trainerPick} onClick={() => removeTrainerMut.mutate()}>
+              </div>
+              <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+                Remove trainer
+                <select
+                  className="input-field px-3 py-2 text-sm"
+                  value={removeTrainerPick}
+                  onChange={(e) => setRemoveTrainerPick(e.target.value)}
+                >
+                  <option value="">Select assigned trainer</option>
+                  {(trainersQ.data ?? []).map((row) => {
+                    const uid = String(
+                      row.trainer_user_id ?? row.trainerUserId ?? row.user_id ?? row.userId ?? ""
+                    );
+                    const label = `${row.name ?? "Trainer"} (${row.email ?? uid})`;
+                    return (
+                      <option key={uid} value={uid}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              <div className="flex flex-wrap gap-2 pb-1">
+                <button
+                  type="button"
+                  className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg"
+                  disabled={!removeTrainerPick}
+                  onClick={removeTrainer}
+                >
                   Remove
                 </button>
               </div>
             </div>
           ) : null}
-          <DataTable columns={["name", "email"]} rows={trainersQ.data ?? []} emptyLabel="No trainers assigned." />
+          <DataTable
+            title="Assigned trainers"
+            columns={["name", "email"]}
+            rows={trainersQ.data ?? []}
+            emptyLabel={trainersQ.isLoading ? "Loading trainers…" : "No trainers assigned."}
+          />
         </section>
       ) : null}
 
@@ -407,5 +441,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
       {safeTab === "attendance" ? <AttendancePageClient fixedTrainingId={tid} /> : null}
       {safeTab === "scores" ? <ScoresPageClient fixedTrainingId={tid} /> : null}
     </div>
+    <DashboardToast toast={toast} />
+    </>
   );
 }

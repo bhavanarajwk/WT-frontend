@@ -71,6 +71,7 @@ import {
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { EmployeeOnboardingSubNav } from "@/components/employee-onboarding/EmployeeOnboardingSubNav";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -248,6 +249,7 @@ export function EmployeePageClient() {
     role: "",
     band_id: 1,
     delivery_status: "DELIVERABLE",
+    dob: "",
     doj: "",
     doi: "",
     internship_duration: "",
@@ -3191,6 +3193,7 @@ export function EmployeePageClient() {
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className="space-y-4">
+            {hasHrAccess ? <EmployeeOnboardingSubNav /> : null}
                               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                                 <h3 className="font-semibold mb-1">Create New Employee</h3>
                                 <p className="text-sm text-wt-text-muted mb-4">Capture core onboarding details used by HR operations.</p>
@@ -3292,6 +3295,7 @@ export function EmployeePageClient() {
                                   <SelectField label="Work Mode" value={onboardForm.work_mode} options={["WFO", "WFH", "HYBRID"]} onChange={(v) => setOnboardForm((p) => ({ ...p, work_mode: v }))} />
                                   <SelectField label="Work Location" value={onboardForm.work_location_type} options={["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"]} onChange={(v) => setOnboardForm((p) => ({ ...p, work_location_type: v }))} />
                                   <SelectField label="Delivery Status" value={onboardForm.delivery_status} options={["DELIVERABLE", "NON_DELIVERABLE"]} onChange={(v) => setOnboardForm((p) => ({ ...p, delivery_status: v }))} />
+                                  <InputField label="Date of Birth" value={onboardForm.dob} onChange={(v) => setOnboardForm((p) => ({ ...p, dob: v }))} type="date" />
                                   {onboardForm.user_type === "INTERN" ? (
                                     <>
                                       <InputField label="Date of Internship" value={onboardForm.doi} onChange={(v) => setOnboardForm((p) => ({ ...p, doi: v }))} type="date" />
@@ -3312,6 +3316,7 @@ export function EmployeePageClient() {
                                         const department = onboardForm.department.trim();
                                         const role = onboardForm.role.trim();
                                         const phoneNumber = onboardForm.phone_number.trim();
+                                        const dob = onboardForm.dob.trim();
                                         const doj = onboardForm.doj.trim();
                                         const doi = onboardForm.doi.trim();
                                         const internshipDurationRaw = onboardForm.internship_duration.trim();
@@ -3344,6 +3349,18 @@ export function EmployeePageClient() {
                                         if (!Number.isFinite(bandId) || bandId <= 0) {
                                           throw new Error("Please select a valid Band.");
                                         }
+                                        if (!dob) {
+                                          throw new Error("Date of Birth is required.");
+                                        }
+                                        const dobDate = new Date(`${dob}T00:00:00`);
+                                        if (Number.isNaN(dobDate.getTime())) {
+                                          throw new Error("Date of Birth is invalid.");
+                                        }
+                                        const today = new Date();
+                                        today.setHours(0, 0, 0, 0);
+                                        if (dobDate > today) {
+                                          throw new Error("Date of Birth cannot be in the future.");
+                                        }
                                         if (onboardForm.user_type === "INTERN") {
                                           if (!doi) {
                                             throw new Error("Date of Internship is required for interns.");
@@ -3367,6 +3384,7 @@ export function EmployeePageClient() {
                                           delivery_status: onboardForm.delivery_status,
                                           role,
                                           band_id: bandId,
+                                          date_of_birth: dob,
                                         };
           
                                         if (onboardForm.user_type === "INTERN") {

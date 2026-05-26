@@ -9,8 +9,15 @@ export type NavItem =
 
 export const dashboardNavigation: NavItem[] = [
   { id: "overview", label: "Overview", roles: ["ROLE_HR", "ROLE_ADMIN", "ROLE_FINANCE"] },
-  { id: "employee", label: "Employee & Onboarding", roles: ["ROLE_EMPLOYEE", "ROLE_HR", "ROLE_ADMIN"] },
+  {
+    id: "employee-directory",
+    label: "Employee Directory",
+    roles: ["ROLE_HR", "ROLE_ADMIN"],
+  },
+  { id: "resumes", label: "Resumes", roles: ["ROLE_AM"] },
+  { id: "employee", label: "Employee Onboarding", roles: ["ROLE_EMPLOYEE", "ROLE_HR", "ROLE_ADMIN"] },
   { id: "allocation", label: "Allocation & Projects", roles: ["ROLE_HR", "ROLE_ADMIN"] },
+  { id: "bench-forecast", label: "Bench Forecast", roles: ["ROLE_HR", "ROLE_ADMIN"] },
   { id: "allocation-extension", label: "Allocation Extensions", roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"] },
   { id: "offboarding", label: "Offboarding", roles: ["ROLE_HR"] },
   { id: "background-verification", label: "Background Verification", roles: ["ROLE_HR"] },
@@ -19,12 +26,20 @@ export const dashboardNavigation: NavItem[] = [
     label: "Employee Attendance",
     roles: ["ROLE_HR", "ROLE_ADMIN"],
   },
-  { id: "timelog", label: "Timelog", roles: ["ROLE_EMPLOYEE", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"] },
-  { id: "leave", label: "Leave Requests", roles: ["ROLE_EMPLOYEE", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"] },
+  {
+    id: "timelog",
+    label: "Timelog",
+    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+  },
+  {
+    id: "leave",
+    label: "Leave Requests",
+    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+  },
   {
     id: "learning",
     label: "Learning & Development",
-    roles: ["ROLE_EMPLOYEE", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
   },
   {
     id: "reports",
@@ -47,7 +62,7 @@ export const dashboardNavigation: NavItem[] = [
 export function filterVisibleNavigation(
   items: NavItem[],
   userRoles: string[],
-  options: { hasHrAccess: boolean }
+  options: { hasHrAccess: boolean; hasAccountManagerAccess?: boolean }
 ): NavItem[] {
   return items.filter((item) => {
     if (item.id === "employee" && !options.hasHrAccess) return false;
