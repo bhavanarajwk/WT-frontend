@@ -1,3 +1,7 @@
+"use client";
+
+import { useRef } from "react";
+
 export function InputField({
   label,
   value,
@@ -38,6 +42,84 @@ export function SelectField({
           </option>
         ))}
       </select>
+    </label>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+
+export function DatePickerField({
+  label,
+  value,
+  onChange,
+  disabled = false,
+  min,
+  max,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  min?: string;
+  max?: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function openPicker() {
+    if (disabled) return;
+    try {
+      inputRef.current?.showPicker?.();
+    } catch {
+      inputRef.current?.focus();
+    }
+  }
+
+  return (
+    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+      {label}
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="date"
+          className="input-field date-picker-field px-3 py-2 pr-10 text-sm w-full"
+          value={value}
+          min={min}
+          max={max}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+          onClick={openPicker}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          aria-label={`Open calendar for ${label}`}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-wt-text-muted hover:text-wt-text hover:bg-wt-surface-2 disabled:opacity-50 disabled:pointer-events-none"
+          onClick={(e) => {
+            e.preventDefault();
+            openPicker();
+          }}
+        >
+          <CalendarIcon />
+        </button>
+      </div>
     </label>
   );
 }

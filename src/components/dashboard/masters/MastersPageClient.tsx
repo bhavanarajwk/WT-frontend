@@ -61,6 +61,7 @@ import {
   managerTeamEmails,
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
+import { fetchAllocationUserDirectory } from "@/utils/allocation/allocationUserDirectory";
 import { MetricCard } from "@/components/dashboard/ui/MetricCard";
 import { InputField, SelectField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
 import {
@@ -598,13 +599,9 @@ export function MastersPageClient() {
     const id = window.setTimeout(() => {
       void (async () => {
         try {
-          const [response, onboardRes, projectRes] = await Promise.all([
+          const [response, directory, projectRes] = await Promise.all([
             hrmsService.getAllocationRoles({}),
-            hrmsService.getOnboardList({
-              page: "0",
-              size: "500",
-              onboardingStatus: "ACTIVE",
-            }),
+            fetchAllocationUserDirectory(),
             hrmsService.getProjects({ page: "0", size: "10" }),
           ]);
           const rows = toRows(response.data ?? response);
@@ -616,30 +613,7 @@ export function MastersPageClient() {
             )
           ).sort();
           setAllocationRoles(roles);
-          const isActiveOnboardRow = (row: Record<string, unknown>) =>
-            String(row.status ?? "").trim().toUpperCase() === "ACTIVE";
-          let userRows = toPagedRows(onboardRes.data ?? onboardRes).filter(isActiveOnboardRow);
-          if (!userRows.length) {
-            const fallbackOnboard = await hrmsService.getOnboardList({ page: "0", size: "500" });
-            userRows = toPagedRows(fallbackOnboard.data ?? fallbackOnboard).filter(isActiveOnboardRow);
-          }
-          const users = Array.from(
-            new Map(
-              userRows
-                .map((row) => {
-                  const email = String(row.email ?? "").trim();
-                  const name = String(row.name ?? email).trim();
-                  const role = String(
-                    row.role ?? row.designation ?? row.designation_name ?? row.designationName ?? ""
-                  ).trim();
-                  if (!email) return null;
-                  return [email.toLowerCase(), { name, email, ...(role ? { role } : {}) }] as const;
-                })
-                .filter(
-                  (x): x is readonly [string, { name: string; email: string; role?: string }] => Boolean(x)
-                )
-            ).values()
-          );
+          const { rows: userRows, users } = directory;
           setAllocationUsers(users);
           let projectRows = toRows(projectRes.data);
           if (!projectRows.length) {

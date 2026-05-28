@@ -279,6 +279,16 @@ body::-webkit-scrollbar {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
 }
 
+/* Native date input — hide default icon; DatePickerField provides its own */
+.date-picker-field::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 2.5rem;
+  height: 100%;
+  cursor: pointer;
+}
+
 /* Spinner */
 @keyframes spin {
   to { transform: rotate(360deg); }

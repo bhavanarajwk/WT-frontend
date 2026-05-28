@@ -334,6 +334,13 @@ export const hrmsService = {
     });
   },
 
+  /** GET /project/manager-emails?projectName= */
+  getProjectManagerEmails(projectName: string) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.project.managerEmailsByProjectName, {
+      query: { projectName: projectName.trim() },
+    });
+  },
+
   /** POST /projects — body: CreateProjectRequest[] — ROLE_ADMIN per contract */
   createProjectsBulk(payload: Array<Record<string, unknown>>) {
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.project.createBulk, {

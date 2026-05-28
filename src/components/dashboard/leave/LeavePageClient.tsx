@@ -3263,12 +3263,12 @@ export function LeavePageClient() {
                             <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                               <h3 className="font-semibold mb-1">Create Request</h3>
                               <p className="text-sm text-wt-text-muted mb-3">
-                                Submit leave, work-from-home, or comp-off request.
+                                Submit leave or work-from-home. Use Comp-off in the sidebar for earn and usage.
                               </p>
                               <div className="space-y-2">
                                 <InputField label="From Date" value={leaveRequestForm.request_from_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_from_date: v }))} type="date" />
                                 <InputField label="To Date" value={leaveRequestForm.request_to_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_to_date: v }))} type="date" />
-                                <SelectField label="Request Type" value={leaveRequestForm.request_type} options={["LEAVE", "WFH", "COMP_OFF"]} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_type: v }))} />
+                                <SelectField label="Request Type" value={leaveRequestForm.request_type} options={["LEAVE", "WFH"]} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_type: v }))} />
                                 <InputField label="Comments" value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                               </div>
                               <div className="mt-4 flex gap-2">

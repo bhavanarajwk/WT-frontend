@@ -61,6 +61,7 @@ export const endpoints = {
     list: `${api}/projects`,
     listAll: `${api}/projects/all`,
     getOne: `${api}/project`,
+    managerEmailsByProjectName: `${api}/project/manager-emails`,
     managerProjects: `${api}/manager-projects`,
     managerProjectsWithRoles: `${api}/manager-projects-with-roles`,
     assignedToUser: `${api}/project-assigned-to-user`,
@@ -87,6 +88,15 @@ export const endpoints = {
       `${api}/userRequest/get/${encodeURIComponent(empEmails)}/${encodeURIComponent(fromDate)}/${encodeURIComponent(toDate)}/${encodeURIComponent(requestType)}`,
     status: `${api}/userRequest/status`,
     leaveSummary: `${api}/leave-summary`,
+  },
+
+  compOff: {
+    earn: `${api}/comp-off/earn`,
+    earnStatus: `${api}/comp-off/earn/status`,
+    balance: `${api}/comp-off/balance`,
+    grants: `${api}/comp-off/grants`,
+    grantsForEmployee: (empId: string) =>
+      `${api}/comp-off/grants/${encodeURIComponent(empId)}`,
   },
 
   learning: {

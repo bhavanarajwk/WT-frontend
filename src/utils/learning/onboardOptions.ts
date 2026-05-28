@@ -25,7 +25,7 @@ export function onboardOptionEmail(opt: Pick<OnboardEmployeeOption, "id" | "labe
   return fromLabel?.trim() ?? "";
 }
 
-function emailFromOnboardRow(r: Record<string, unknown>): string {
+export function emailFromOnboardRow(r: Record<string, unknown>): string {
   const direct = String(
     r.email ?? r.user_email ?? r.userEmail ?? r.employee_email ?? r.employeeEmail ?? ""
   ).trim();
