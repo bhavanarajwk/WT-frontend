@@ -13,12 +13,15 @@ import {
   normalizeTrainingScoresHrSnapshot,
 } from "@/utils/learning/trainingScores";
 import {
+  OPEN_TRAININGS_QUERY_KEY,
   TRAININGS_LIST_QUERY_KEY,
+  fetchOpenTrainingsRows,
   fetchTrainingsListRows,
   findTrainingInList,
 } from "@/utils/learning/trainingsList";
 
-export function useTrainingsList(enabled = true) {
+/** HR/Admin only — GET /api/v1/trainings */
+export function useHrTrainingsList(enabled = true) {
   return useQuery({
     queryKey: [...TRAININGS_LIST_QUERY_KEY],
     enabled,
@@ -30,32 +33,35 @@ export function useTrainingsList(enabled = true) {
   });
 }
 
-export function useOpenTrainingsList() {
+/** @deprecated Use useHrTrainingsList for HR or useOpenTrainingsList for employees. */
+export const useTrainingsList = useHrTrainingsList;
+
+/** All employees — GET /api/v1/trainings/open */
+export function useOpenTrainingsList(enabled = true) {
   return useQuery({
-    queryKey: ["learning", "trainings", "open"],
+    queryKey: [...OPEN_TRAININGS_QUERY_KEY],
+    enabled,
     queryFn: async () => {
       const res = await hrmsService.getOpenTrainings();
-      return toPagedRows(res.data ?? res);
+      return toPagedRows((res as { data?: unknown }).data ?? res);
     },
+    staleTime: 30_000,
   });
 }
 
-export function useMyTrainingEnrollments(
-  userId: string | undefined,
-  enabled: boolean
-) {
-  const numericOnly =
-    userId?.trim() && !userId.trim().startsWith("email:") ? userId.trim() : undefined;
+/** Training catalog for the current access level (HR list vs open catalog). */
+export function useLearningTrainingsList(hasHrAccess: boolean) {
   return useQuery({
-    queryKey: ["learning", "trainings", "mine", numericOnly ?? "self"],
-    enabled: Boolean(enabled),
-    staleTime: 30_000,
+    queryKey: hasHrAccess ? [...TRAININGS_LIST_QUERY_KEY] : [...OPEN_TRAININGS_QUERY_KEY],
     queryFn: async () => {
-      const res = await hrmsService.getMyTrainingEnrollments(
-        numericOnly ? { userId: numericOnly } : undefined
-      );
+      if (hasHrAccess) {
+        const res = await hrmsService.getTrainings();
+        return toPagedRows(res.data ?? res);
+      }
+      const res = await hrmsService.getOpenTrainings();
       return toPagedRows((res as { data?: unknown }).data ?? res);
     },
+    staleTime: 30_000,
   });
 }
 
@@ -64,7 +70,9 @@ export function useCreateTraining() {
   return useMutation({
     mutationFn: (payload: Record<string, unknown>) => hrmsService.createTraining(payload),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["learning"] });
+      await qc.invalidateQueries({ queryKey: [...TRAININGS_LIST_QUERY_KEY] });
+      await qc.invalidateQueries({ queryKey: [...OPEN_TRAININGS_QUERY_KEY] });
+      await qc.invalidateQueries({ queryKey: ["learning", "training"] });
     },
   });
 }
@@ -77,23 +85,38 @@ export function useUpdateTraining(trainingId: string | undefined) {
       return hrmsService.updateTraining(trainingId.trim(), payload);
     },
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["learning"] });
+      await qc.invalidateQueries({ queryKey: [...TRAININGS_LIST_QUERY_KEY] });
+      await qc.invalidateQueries({ queryKey: [...OPEN_TRAININGS_QUERY_KEY] });
+      await qc.invalidateQueries({ queryKey: ["learning", "training"] });
     },
   });
 }
 
-/** Resolves one training from GET /trainings list (backend has no GET /trainings/:id). */
-export function useTrainingDetail(trainingId: string | undefined, enabled: boolean) {
+/** Resolves training metadata from HR list or GET /trainings/open (employees). */
+export function useTrainingDetail(
+  trainingId: string | undefined,
+  enabled: boolean,
+  options?: { employeeView?: boolean }
+) {
   const queryClient = useQueryClient();
+  const employeeView = Boolean(options?.employeeView);
   return useQuery({
-    queryKey: ["learning", "training", trainingId],
+    queryKey: ["learning", "training", trainingId, employeeView ? "employee" : "hr"],
     enabled: Boolean(enabled && trainingId?.trim()),
     retry: false,
     staleTime: 30_000,
     queryFn: async () => {
-      const rows = await fetchTrainingsListRows(queryClient);
+      const rows = employeeView
+        ? await fetchOpenTrainingsRows(queryClient)
+        : await fetchTrainingsListRows(queryClient);
       const found = findTrainingInList(rows, trainingId!);
-      if (!found) throw new Error("Training not found in list.");
+      if (!found) {
+        throw new Error(
+          employeeView
+            ? "Training not found in open catalog. Only scheduled optional/hybrid trainings are visible."
+            : "Training not found in list."
+        );
+      }
       return found;
     },
   });
@@ -167,6 +190,7 @@ export function useTrainingScores(trainingId: string | undefined, enabled: boole
   });
 }
 
+/** GET /api/v1/trainings/{training_id}/my-marks — enrolled employee's published scores. */
 export function useMyTrainingMarks(trainingId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: ["learning", "my-marks", trainingId],
@@ -175,7 +199,11 @@ export function useMyTrainingMarks(trainingId: string | undefined, enabled: bool
     staleTime: 30_000,
     queryFn: async () => {
       const res = await hrmsService.getMyTrainingMarks(trainingId!);
-      return normalizeMyTrainingMarks((res as { data?: unknown }).data ?? res);
+      const normalized = normalizeMyTrainingMarks((res as { data?: unknown }).data ?? res);
+      if (!normalized) {
+        throw new Error("No marks returned for this training.");
+      }
+      return normalized;
     },
   });
 }

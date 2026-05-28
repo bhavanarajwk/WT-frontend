@@ -1,4 +1,4 @@
-export type UserRequestType = "LEAVE" | "WFH" | "COMP_OFF";
+export type UserRequestType = "LEAVE" | "WFH" | "COMP_OFF" | "COMP_OFF_EARN";
 
 export function normalizeUserRequestType(value: unknown): UserRequestType {
   const raw = String(value ?? "LEAVE")
@@ -6,6 +6,7 @@ export function normalizeUserRequestType(value: unknown): UserRequestType {
     .toUpperCase()
     .replace(/[\s-]+/g, "_");
   if (raw === "WFH" || raw === "WORK_FROM_HOME") return "WFH";
+  if (raw === "COMP_OFF_EARN" || raw === "COMPOFF_EARN") return "COMP_OFF_EARN";
   if (raw === "COMP_OFF" || raw === "COMPOFF") return "COMP_OFF";
   return "LEAVE";
 }
@@ -13,6 +14,7 @@ export function normalizeUserRequestType(value: unknown): UserRequestType {
 export function userRequestTypePhrase(type: unknown): string {
   const normalized = normalizeUserRequestType(type);
   if (normalized === "WFH") return "work-from-home";
+  if (normalized === "COMP_OFF_EARN") return "comp-off earn";
   if (normalized === "COMP_OFF") return "comp-off";
   return "leave";
 }

@@ -334,6 +334,13 @@ export const hrmsService = {
     });
   },
 
+  /** GET /project/manager-emails?projectName= */
+  getProjectManagerEmails(projectName: string) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.project.managerEmailsByProjectName, {
+      query: { projectName: projectName.trim() },
+    });
+  },
+
   /** POST /projects — body: CreateProjectRequest[] — ROLE_ADMIN per contract */
   createProjectsBulk(payload: Array<Record<string, unknown>>) {
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.project.createBulk, {
@@ -676,16 +683,6 @@ export const hrmsService = {
 
   getTrainings() {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.learning.trainings);
-  },
-
-  /** Enrolled trainings for current user, or ?user_id= for HR viewing another employee. */
-  getMyTrainingEnrollments(params?: { userId?: string | number }) {
-    const query: Record<string, string> = {};
-    const userId = params?.userId;
-    if (userId != null && String(userId).trim() && !String(userId).startsWith("email:")) {
-      query.user_id = String(userId).trim();
-    }
-    return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.learning.myEnrollments, { query });
   },
 
   getTrainingById(trainingId: string) {

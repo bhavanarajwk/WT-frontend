@@ -16,6 +16,7 @@ import {
 } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
 import { AttendancePageClient } from "@/components/learning-development/AttendancePageClient";
+import { EmployeeTrainingMyMarks } from "@/components/learning-development/EmployeeTrainingMyMarks";
 import { ScoresPageClient } from "@/components/learning-development/ScoresPageClient";
 import { TrainingStatusControl } from "@/components/learning-development/TrainingStatusControl";
 import { DataTable, FileField, InputField, SelectField } from "@/components/learning-development/ui/forms";
@@ -25,7 +26,7 @@ import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 
-const TABS = [
+const HR_TABS = [
   { id: "overview", label: "Overview" },
   { id: "sessions", label: "Sessions" },
   { id: "trainers", label: "Trainers" },
@@ -34,6 +35,13 @@ const TABS = [
   { id: "assessments", label: "Assessments" },
   { id: "attendance", label: "Attendance" },
   { id: "scores", label: "Scores" },
+] as const;
+
+const EMPLOYEE_TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "materials", label: "Materials" },
+  { id: "assessments", label: "Assessments" },
+  { id: "scored", label: "Scored" },
 ] as const;
 
 const ANALYTICS_LABELS: Record<string, string> = {
@@ -48,24 +56,36 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawTab = searchParams.get("tab") ?? "overview";
-  const tab = rawTab === "analytics" ? "overview" : rawTab;
-  const safeTab = TABS.some((t) => t.id === tab) ? tab : "overview";
+  const tab =
+    rawTab === "analytics" ? "overview" : rawTab === "marks" ? "scored" : rawTab;
 
   const { user } = useAuth();
   const roles = user?.roles ?? [];
   const hasHrAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+  const tabs = hasHrAccess ? HR_TABS : EMPLOYEE_TABS;
+  const safeTab = tabs.some((t) => t.id === tab) ? tab : "overview";
 
   const qc = useQueryClient();
   const { toast, runAction } = useDashboardAction();
   const tid = trainingId.trim();
 
-  const detailQ = useTrainingDetail(tid, Boolean(tid));
-  const sessionsQ = useTrainingSessions(tid, Boolean(tid) && safeTab === "sessions");
-  const trainersQ = useTrainingTrainers(tid, Boolean(tid) && safeTab === "trainers");
-  const participantsQ = useTrainingParticipants(tid, Boolean(tid) && safeTab === "participants");
-  const materialsQ = useTrainingMaterials(tid, Boolean(tid) && safeTab === "materials");
-  const assessmentsQ = useTrainingAssessments(tid, Boolean(tid) && safeTab === "assessments");
-  const analyticsQ = useTrainingAnalytics(tid, Boolean(tid) && safeTab === "overview");
+  const detailQ = useTrainingDetail(tid, Boolean(tid), { employeeView: !hasHrAccess });
+  const sessionsQ = useTrainingSessions(tid, Boolean(tid) && hasHrAccess && safeTab === "sessions");
+  const trainersQ = useTrainingTrainers(tid, Boolean(tid) && hasHrAccess && safeTab === "trainers");
+  const participantsQ = useTrainingParticipants(
+    tid,
+    Boolean(tid) && hasHrAccess && safeTab === "participants"
+  );
+  const materialsQ = useTrainingMaterials(
+    tid,
+    Boolean(tid) &&
+      (safeTab === "materials" || (!hasHrAccess && safeTab === "overview"))
+  );
+  const assessmentsQ = useTrainingAssessments(
+    tid,
+    Boolean(tid) && (safeTab === "assessments" || (!hasHrAccess && safeTab === "overview"))
+  );
+  const analyticsQ = useTrainingAnalytics(tid, Boolean(tid) && hasHrAccess && safeTab === "overview");
   const directoryQ = useLearningTrainerDirectory(
     safeTab === "trainers" || safeTab === "participants"
   );
@@ -223,7 +243,9 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
             />
           </div>
           <p className="text-sm text-wt-text-muted mt-1">
-            Manage this training — sessions, people, attendance, scores, and analytics.
+            {hasHrAccess
+              ? "Manage this training — sessions, people, attendance, scores, and analytics."
+              : "View materials, assessments, and your published scores for this training."}
           </p>
         </div>
         <button type="button" className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() => router.refresh()}>
@@ -231,8 +253,16 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         </button>
       </div>
 
+      {detailQ.isError ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          {detailQ.error instanceof Error
+            ? detailQ.error.message
+            : "This training is not available in the open catalog."}
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-2 border-b border-wt-border pb-2">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <Link
             key={t.id}
             href={`/dashboard/learning-development/trainings/${encodeURIComponent(tid)}?tab=${t.id}`}
@@ -245,28 +275,58 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         ))}
       </div>
 
-      {safeTab === "overview" ? (
-        <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
-          <h2 className="font-semibold">Training analytics</h2>
-          {analyticsQ.isLoading ? (
-            <p className="text-sm text-wt-text-muted">Loading analytics…</p>
-          ) : analyticsCards.length ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {analyticsCards.map(([k, v]) => (
-                <article key={k} className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
-                    {ANALYTICS_LABELS[k] ?? k.replaceAll("_", " ")}
-                  </p>
-                  <p className="text-lg font-semibold mt-2 break-all">
-                    {typeof v === "object" ? JSON.stringify(v) : String(v)}
-                  </p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-wt-text-muted">No analytics returned for this training.</p>
-          )}
-        </section>
+      {safeTab === "overview" && !detailQ.isError ? (
+        hasHrAccess ? (
+          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
+            <h2 className="font-semibold">Training analytics</h2>
+            {analyticsQ.isLoading ? (
+              <p className="text-sm text-wt-text-muted">Loading analytics…</p>
+            ) : analyticsCards.length ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {analyticsCards.map(([k, v]) => (
+                  <article key={k} className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
+                      {ANALYTICS_LABELS[k] ?? k.replaceAll("_", " ")}
+                    </p>
+                    <p className="text-lg font-semibold mt-2 break-all">
+                      {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-wt-text-muted">No analytics returned for this training.</p>
+            )}
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+            <h2 className="font-semibold">Training details</h2>
+            <dl className="grid sm:grid-cols-2 gap-3 text-sm">
+              <div>
+                <dt className="text-wt-text-muted">Category</dt>
+                <dd className="font-medium">{String(training.category ?? "—")}</dd>
+              </div>
+              <div>
+                <dt className="text-wt-text-muted">Type</dt>
+                <dd className="font-medium">{String(training.type ?? "—")}</dd>
+              </div>
+              <div>
+                <dt className="text-wt-text-muted">Status</dt>
+                <dd className="font-medium">{String(training.status ?? "—")}</dd>
+              </div>
+              <div>
+                <dt className="text-wt-text-muted">Dates</dt>
+                <dd className="font-medium">
+                  {String(training.start_date ?? "").slice(0, 10)} →{" "}
+                  {String(training.end_date ?? "").slice(0, 10)}
+                </dd>
+              </div>
+            </dl>
+            {String(training.description ?? "").trim() ? (
+              <p className="text-sm text-wt-text-muted">{String(training.description)}</p>
+            ) : null}
+          </section>
+        )
       ) : null}
 
       {safeTab === "sessions" ? (
@@ -439,7 +499,18 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
       ) : null}
 
       {safeTab === "attendance" ? <AttendancePageClient fixedTrainingId={tid} /> : null}
-      {safeTab === "scores" ? <ScoresPageClient fixedTrainingId={tid} /> : null}
+      {safeTab === "scores" && hasHrAccess ? <ScoresPageClient fixedTrainingId={tid} /> : null}
+      {safeTab === "scored" && !hasHrAccess ? (
+        <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+          <div>
+            <h2 className="font-semibold">Scored</h2>
+            <p className="text-sm text-wt-text-muted mt-1">
+              Your published assessment scores for this training.
+            </p>
+          </div>
+          <EmployeeTrainingMyMarks trainingId={tid} enabled={safeTab === "scored"} />
+        </section>
+      ) : null}
     </div>
     <DashboardToast toast={toast} />
     </>
