@@ -37,6 +37,11 @@ export const dashboardNavigation: NavItem[] = [
     roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
   },
   {
+    id: "comp-off",
+    label: "Comp-off",
+    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+  },
+  {
     id: "learning",
     label: "Learning & Development",
     roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],

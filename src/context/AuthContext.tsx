@@ -56,10 +56,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await logout();
-    setUser(null);
-    setStatus("unauthenticated");
-    router.push("/login");
+    try {
+      await logout();
+    } finally {
+      setUser(null);
+      setStatus("unauthenticated");
+      router.push("/login");
+    }
   }, [router]);
 
   /* Validate session on first mount */

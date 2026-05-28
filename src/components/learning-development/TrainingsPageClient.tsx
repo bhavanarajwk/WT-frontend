@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   useCreateTraining,
-  useTrainingsList,
+  useHrTrainingsList,
   useUpdateTraining,
 } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
@@ -13,14 +13,24 @@ import { InputField, SelectField, Sheet } from "@/components/learning-developmen
 import { trainingDurationDaysFromRange } from "@/utils/learning/trainingDates";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { hrmsService } from "@/services/hrms.service";
-import { OpenEnrollPageClient } from "@/components/learning-development/OpenEnrollPageClient";
+import { EmployeeLearningCatalog } from "@/components/learning-development/EmployeeLearningCatalog";
 
-export function TrainingsPageClient() {
-  const { user } = useAuth();
-  const roles = user?.roles ?? [];
-  const hasHrAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+function EmployeeTrainingsView() {
+  return (
+    <section className="space-y-4">
+      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Trainings</h1>
+        <p className="text-sm text-wt-text-muted">
+          Optional trainings are open to everyone. Mandatory trainings appear only when HR assigns you.
+        </p>
+      </div>
+      <EmployeeLearningCatalog />
+    </section>
+  );
+}
 
-  const { data: rows = [], isLoading, refetch } = useTrainingsList();
+function HrTrainingsView() {
+  const { data: rows = [], isLoading, refetch } = useHrTrainingsList();
   const { data: trainerOptions = [] } = useLearningTrainerDirectory();
   const createMut = useCreateTraining();
 
@@ -141,11 +151,9 @@ export function TrainingsPageClient() {
             >
               Refresh
             </button>
-            {hasHrAccess ? (
-              <button type="button" className="btn-primary px-4 py-2 text-sm" onClick={openCreate}>
-                New training
-              </button>
-            ) : null}
+            <button type="button" className="btn-primary px-4 py-2 text-sm" onClick={openCreate}>
+              New training
+            </button>
           </div>
         </div>
 
@@ -182,7 +190,7 @@ export function TrainingsPageClient() {
                   key={id || String(row.name)}
                   row={row}
                   href={href}
-                  showEdit={hasHrAccess}
+                  showEdit
                   onEdit={() => openEdit(row)}
                 />
               );
@@ -197,14 +205,20 @@ export function TrainingsPageClient() {
         onClose={() => setSheetOpen(false)}
         footer={
           <div className="flex justify-end gap-2">
-            <button type="button" className="btn-ghost px-4 py-2 rounded-lg border border-wt-border" onClick={() => setSheetOpen(false)}>
+            <button
+              type="button"
+              className="btn-ghost px-4 py-2 rounded-lg border border-wt-border"
+              onClick={() => setSheetOpen(false)}
+            >
               Cancel
             </button>
             <button
               type="button"
               className="btn-primary px-4 py-2"
               disabled={createMut.isPending || updateMut.isPending}
-              onClick={() => submitForm().catch((e) => alert(e instanceof Error ? e.message : "Unable to save"))}
+              onClick={() =>
+                submitForm().catch((e) => alert(e instanceof Error ? e.message : "Unable to save"))
+              }
             >
               Save
             </button>
@@ -231,12 +245,26 @@ export function TrainingsPageClient() {
             options={["DRAFT", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]}
             onChange={(v) => setForm((p) => ({ ...p, status: v }))}
           />
-          <InputField label="Start date" type="date" value={form.start_date} onChange={(v) => setForm((p) => ({ ...p, start_date: v }))} />
-          <InputField label="End date" type="date" value={form.end_date} onChange={(v) => setForm((p) => ({ ...p, end_date: v }))} />
+          <InputField
+            label="Start date"
+            type="date"
+            value={form.start_date}
+            onChange={(v) => setForm((p) => ({ ...p, start_date: v }))}
+          />
+          <InputField
+            label="End date"
+            type="date"
+            value={form.end_date}
+            onChange={(v) => setForm((p) => ({ ...p, end_date: v }))}
+          />
           <div className="sm:col-span-2">
-            <InputField label="Description" value={form.description} onChange={(v) => setForm((p) => ({ ...p, description: v }))} />
+            <InputField
+              label="Description"
+              value={form.description}
+              onChange={(v) => setForm((p) => ({ ...p, description: v }))}
+            />
           </div>
-          {!editingId && hasHrAccess ? (
+          {!editingId ? (
             <div className="sm:col-span-2">
               <label className="text-xs text-wt-text-muted flex flex-col gap-1">
                 Trainer (optional, assigned after create)
@@ -257,8 +285,14 @@ export function TrainingsPageClient() {
           ) : null}
         </div>
       </Sheet>
-
-      {!hasHrAccess ? <OpenEnrollPageClient /> : null}
     </section>
   );
+}
+
+export function TrainingsPageClient() {
+  const { user } = useAuth();
+  const roles = user?.roles ?? [];
+  const hasHrAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+
+  return hasHrAccess ? <HrTrainingsView /> : <EmployeeTrainingsView />;
 }
