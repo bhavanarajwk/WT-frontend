@@ -3195,8 +3195,7 @@ export function EmployeePageClient() {
           <section className="space-y-4">
             {hasHrAccess ? <EmployeeOnboardingSubNav /> : null}
                               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                                <h3 className="font-semibold mb-1">Create New Employee</h3>
-                                <p className="text-sm text-wt-text-muted mb-4">Capture core onboarding details used by HR operations.</p>
+                                <h3 className="font-semibold mb-4">Create New Employee</h3>
                                 <div className="grid sm:grid-cols-2 gap-3">
                                   <InputField label="Employee ID" value={onboardForm.emp_id} onChange={(v) => setOnboardForm((p) => ({ ...p, emp_id: v }))} />
                                   <InputField label="Email" value={onboardForm.email} onChange={(v) => setOnboardForm((p) => ({ ...p, email: v }))} />
@@ -3425,12 +3424,7 @@ export function EmployeePageClient() {
                               </div>
           
                               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                                <div className="flex flex-wrap items-end justify-between gap-3">
-                                  <h3 className="font-semibold">Employee onboarding</h3>
-                                  <p className="text-xs text-wt-text-muted">
-                                    Invited employees for {invitedListFromDate} — {invitedListToDate}
-                                  </p>
-                                </div>
+                                <h3 className="font-semibold">Employee onboarding</h3>
                                 <div className="flex flex-wrap items-end gap-3">
                                   <InputField
                                     label="From date"

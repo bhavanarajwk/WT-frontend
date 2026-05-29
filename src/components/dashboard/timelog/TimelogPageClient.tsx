@@ -3195,14 +3195,7 @@ export function TimelogPageClient() {
                             </div>
           
                             <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-4 space-y-3">
-                              <div>
-                                <p className="text-sm font-medium text-wt-text">Log time</p>
-                                <p className="text-xs text-wt-text-muted mt-1">
-                                  {timelogHrNoSelfProject
-                                    ? "Submit hours for the selected date."
-                                    : "Submit hours against an allocated project."}
-                                </p>
-                              </div>
+                              <p className="text-sm font-medium text-wt-text">Log time</p>
                               <div className="grid sm:grid-cols-2 gap-3">
                                 {!timelogHrNoSelfProject ? (
                                   <label className="text-xs text-wt-text-muted flex flex-col gap-1">

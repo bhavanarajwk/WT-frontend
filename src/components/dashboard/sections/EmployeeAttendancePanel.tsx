@@ -94,7 +94,6 @@ export function EmployeeAttendancePanel() {
   }, [toast]);
 
   const workingWeekdays = payload?.working_weekdays_in_range ?? 0;
-  const totalElements = payload?.total_element ?? 0;
 
   const filteredEmployees = useMemo(() => {
     const rows = payload?.employees ?? [];
@@ -122,42 +121,50 @@ export function EmployeeAttendancePanel() {
       ) : null}
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <div>
-          <h3 className="font-semibold mb-1">Employee attendance &amp; leave</h3>
-          <p className="text-sm text-wt-text-muted">
-            Weekday attendance and approved leave days per employee for the selected range.
-          </p>
-        </div>
+        <h3 className="font-semibold">Employee attendance &amp; leave</h3>
 
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+          <label className="text-xs text-wt-text-muted flex w-[10.5rem] shrink-0 flex-col gap-1">
             From date
             <input
               type="date"
-              className="input-field px-3 py-2 text-sm"
+              className="input-field w-full px-3 py-2 text-sm"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
             />
           </label>
-          <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+          <label className="text-xs text-wt-text-muted flex w-[10.5rem] shrink-0 flex-col gap-1">
             To date
             <input
               type="date"
-              className="input-field px-3 py-2 text-sm"
+              className="input-field w-full px-3 py-2 text-sm"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
             />
           </label>
-          <label className="text-xs text-wt-text-muted flex flex-col gap-1 min-w-[200px] flex-1">
-            Filter by email or employee ID
-            <input
-              type="search"
-              className="input-field px-3 py-2 text-sm"
-              placeholder="Search…"
-              value={emailFilter}
-              onChange={(e) => setEmailFilter(e.target.value)}
-            />
+          {payload ? (
+            <div className="flex w-[10.5rem] shrink-0 flex-col gap-1 text-xs text-wt-text-muted">
+              <span>Working days</span>
+              <div
+                className="input-field flex w-full items-center justify-center px-3 py-2 text-sm font-semibold tabular-nums"
+                aria-live="polite"
+              >
+                {workingWeekdays}
+              </div>
+            </div>
+          ) : null}
+          <label className="sr-only" htmlFor="attendance-email-filter">
+            Search
           </label>
+          <input
+            id="attendance-email-filter"
+            type="search"
+            className="input-field min-w-[200px] flex-1 px-3 py-2 text-sm"
+            placeholder="Search…"
+            value={emailFilter}
+            onChange={(e) => setEmailFilter(e.target.value)}
+            aria-label="Search"
+          />
           <button
             type="button"
             className="btn-primary px-3 py-2 text-sm h-10"
@@ -167,25 +174,6 @@ export function EmployeeAttendancePanel() {
             {loading ? "Loading…" : "Apply"}
           </button>
         </div>
-
-        {payload ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-xl border border-wt-border bg-wt-surface-2 px-4 py-3">
-              <p className="text-xs text-wt-text-muted">Date range</p>
-              <p className="text-sm font-medium mt-1">
-                {payload.from_date} — {payload.to_date}
-              </p>
-            </div>
-            <div className="rounded-xl border border-wt-border bg-wt-surface-2 px-4 py-3">
-              <p className="text-xs text-wt-text-muted">Working weekdays in range</p>
-              <p className="text-2xl font-semibold mt-1">{workingWeekdays}</p>
-            </div>
-            <div className="rounded-xl border border-wt-border bg-wt-surface-2 px-4 py-3">
-              <p className="text-xs text-wt-text-muted">Employees (total)</p>
-              <p className="text-2xl font-semibold mt-1">{totalElements}</p>
-            </div>
-          </div>
-        ) : null}
       </div>
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">

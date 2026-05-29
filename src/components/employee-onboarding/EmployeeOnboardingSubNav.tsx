@@ -8,7 +8,7 @@ const TABS = [
   { href: DASHBOARD_ROUTES.employee, label: "Employee Onboarding", exact: true },
   {
     href: DASHBOARD_ROUTES["employee-assign-am"],
-    label: "Assign Acc Manager",
+    label: "Assign",
     exact: false,
   },
 ] as const;

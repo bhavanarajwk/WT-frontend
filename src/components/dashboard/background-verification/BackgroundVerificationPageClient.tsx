@@ -3182,10 +3182,7 @@ export function BackgroundVerificationPageClient() {
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                          <h3 className="font-semibold mb-1">Background Verification</h3>
-                          <p className="text-sm text-wt-text-muted mb-4">
-                            HR-only verification form. Employees cannot view or edit these records.
-                          </p>
+                          <h3 className="font-semibold mb-4">Background Verification</h3>
                           <div className="grid md:grid-cols-2 gap-3">
                             <label className="text-xs text-wt-text-muted flex flex-col gap-1">
                               ID (Employee ID)

@@ -21,7 +21,6 @@ import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeSta
 
 const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "name", label: "Employee Name" },
-  { key: "emp_id", label: "Employee ID" },
   { key: "email", label: "Email" },
   { key: "department", label: "Department" },
   { key: "role", label: "Role" },
@@ -31,9 +30,8 @@ const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "status", label: "Status" },
   { key: "user_type", label: "User Type" },
   { key: "work_mode", label: "Work Mode" },
-  { key: "work_location", label: "Work Location" },
   { key: "phone_number", label: "Phone" },
-  { key: "yoe", label: "YOE" },
+  { key: "yoe", label: "Years of Experience" },
   { key: "primary_skills", label: "Primary Skills" },
 ];
 
@@ -58,26 +56,14 @@ export function EmployeeDirectoryPageClient() {
     const needle = search.trim().toLowerCase();
     return rows
       .map((row) => {
-        const record = row as Record<string, unknown>;
+        const record = row as unknown as Record<string, unknown>;
         const empId = rowEmpId(record);
-        return { record, empId, display: onboardRowToListRow(record) };
+        return { record, empId, display: onboardRowToListRow(row) };
       })
       .filter(({ empId, record, display }) => {
         if (!empId) return false;
         if (!needle) return true;
-        const haystack = [
-          display.name,
-          display.emp_id,
-          display.email,
-          display.department,
-          display.role,
-          display.band,
-          display.status,
-          cleanEmployeeName(record),
-          rowEmail(record),
-        ]
-          .join(" ")
-          .toLowerCase();
+        const haystack = [display.name, cleanEmployeeName(record)].join(" ").toLowerCase();
         return haystack.includes(needle);
       });
   }, [rows, search]);
@@ -113,17 +99,14 @@ export function EmployeeDirectoryPageClient() {
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="border-b border-wt-border px-5 py-5 md:px-7 md:py-6">
           <h3 className="text-lg font-semibold">All employees</h3>
-          <p className="mt-1 text-sm text-wt-text-muted">
-            Browse onboarded employees. Click a row to open their profile.
-          </p>
           <label className="mt-4 flex max-w-md flex-col gap-1 text-xs text-wt-text-muted">
             Search employees
             <input
               className="input-field px-3 py-2.5 text-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Name, email, department, designation…"
-              aria-label="Search employees"
+              placeholder="Search name"
+              aria-label="Search name"
             />
           </label>
         </div>
@@ -187,7 +170,14 @@ export function EmployeeDirectoryPageClient() {
                         aria-label={`View profile for ${display.name}`}
                       >
                         {LIST_COLUMNS.map((col) => (
-                          <td key={col.key} className="whitespace-nowrap px-4 py-3">
+                          <td
+                            key={col.key}
+                            className={`px-4 py-3 ${
+                              col.key === "primary_skills"
+                                ? "max-w-[14rem] whitespace-normal text-xs"
+                                : "whitespace-nowrap"
+                            }`}
+                          >
                             {col.key === "status" ? (
                               <EmployeeStatusBadge status={display.status} />
                             ) : col.key === "name" ? (

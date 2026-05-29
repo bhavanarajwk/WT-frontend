@@ -242,11 +242,6 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               canEdit={hasHrAccess}
             />
           </div>
-          <p className="text-sm text-wt-text-muted mt-1">
-            {hasHrAccess
-              ? "Manage this training — sessions, people, attendance, scores, and analytics."
-              : "View materials, assessments, and your published scores for this training."}
-          </p>
         </div>
         <button type="button" className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() => router.refresh()}>
           Refresh view
