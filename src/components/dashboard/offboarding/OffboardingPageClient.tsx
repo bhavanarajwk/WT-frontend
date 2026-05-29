@@ -3182,10 +3182,7 @@ export function OffboardingPageClient() {
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                          <h3 className="font-semibold mb-1">Employee Offboarding</h3>
-                          <p className="text-sm text-wt-text-muted mb-4">
-                            Submit employee exit details including separation type and retention context.
-                          </p>
+                          <h3 className="font-semibold mb-4">Employee Offboarding</h3>
                           <div className="grid md:grid-cols-2 gap-3">
                             <label className="text-xs text-wt-text-muted flex flex-col gap-1">
                               Employee ID
@@ -3231,7 +3228,7 @@ export function OffboardingPageClient() {
                               onChange={(v) => setOffboardingForm((p) => ({ ...p, reason: v }))}
                             />
                             <InputField
-                              label="Critical Skill (one or many, comma-separated)"
+                              label="Critical Skill"
                               value={offboardingForm.critical_skill}
                               onChange={(v) => setOffboardingForm((p) => ({ ...p, critical_skill: v }))}
                             />

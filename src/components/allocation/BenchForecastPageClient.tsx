@@ -76,9 +76,6 @@ export function BenchForecastPageClient() {
       <div className="rounded-xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="border-b border-wt-border px-5 py-5 md:px-7">
           <h3 className="text-lg font-semibold">Bench days forecasting</h3>
-          <p className="mt-1 max-w-2xl text-sm text-wt-text-muted">
-            Forecast bench capacity for the next period using allocation bench data.
-          </p>
         </div>
 
         <div className="space-y-4 p-5 md:p-7">

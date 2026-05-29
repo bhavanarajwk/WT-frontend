@@ -142,7 +142,6 @@ export function CompOffPageClient() {
   const [teamFilters, setTeamFilters] = useState(() => ({
     ...defaultRequestRange(),
     flow: "ALL" as "ALL" | "EARN" | "USAGE",
-    accountManagersOnly: false,
   }));
 
   const usageDays = useMemo(() => {
@@ -485,44 +484,12 @@ export function CompOffPageClient() {
     }
     let merged: Array<Record<string, unknown>> = [];
     if (hasHrAccess) {
-      if (teamFilters.flow !== "USAGE") {
-        const earnRes = await compOffService.listEarnRequests({ fromDate: from, toDate: to });
-        merged.push(
-          ...compOffService.parseRequestRows(earnRes).map((row) => ({
-            ...row,
-            request_type: COMP_OFF_EARN_LIST_TYPE,
-            request_from_date: pickRowField(
-              row,
-              "request_from_date",
-              "requestFromDate",
-              "worked_date",
-              "workedDate"
-            ),
-            request_to_date: pickRowField(
-              row,
-              "request_to_date",
-              "requestToDate",
-              "worked_date",
-              "workedDate"
-            ),
-            comments: pickRowField(row, "comments", "comment", "work_description", "workDescription"),
-            user_request_status: pickRowField(
-              row,
-              "user_request_status",
-              "userRequestStatus",
-              "status"
-            ) ?? "PENDING",
-          }))
-        );
-      }
-      if (teamFilters.flow !== "EARN") {
-        const usageRows = await compOffService.fetchHrTeamRequests({
-          fromDate: from,
-          toDate: to,
-          requestTypes: [COMP_OFF_USAGE_LIST_TYPE],
-        });
-        merged.push(...usageRows);
-      }
+      const usageRows = await compOffService.fetchHrTeamRequests({
+        fromDate: from,
+        toDate: to,
+        requestTypes: [COMP_OFF_USAGE_LIST_TYPE],
+      });
+      merged.push(...usageRows);
     } else {
       merged = await compOffService.fetchHrTeamRequests({
         fromDate: from,
@@ -544,13 +511,6 @@ export function CompOffPageClient() {
         return t === "COMP_OFF";
       });
     }
-    if (teamFilters.accountManagersOnly) {
-      merged = merged.filter((row) => {
-        const email = requestRowEmail(row);
-        return email ? accountManagerEmails.has(email) : false;
-      });
-    }
-
     const seen = new Set<string>();
     merged = merged.filter((row) => {
       const id = requestRowId(row);
@@ -704,12 +664,7 @@ export function CompOffPageClient() {
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className="space-y-4">
-            <div>
-              <h2 className="text-xl font-semibold text-wt-text">Comp-off</h2>
-              <p className="text-sm text-wt-text-muted mt-1">
-                Earn credits for weekend project work and use them for time off.
-              </p>
-            </div>
+            <h2 className="text-xl font-semibold text-wt-text">Comp-off</h2>
 
             {canApplyCompOff && canReviewTeam ? (
               <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
@@ -885,7 +840,6 @@ export function CompOffPageClient() {
                       <table className="min-w-full text-sm">
                         <thead className="bg-wt-surface-2 text-wt-text-muted">
                           <tr>
-                            <th className="text-left px-3 py-2 font-medium">Flow</th>
                             <th className="text-left px-3 py-2 font-medium">From</th>
                             <th className="text-left px-3 py-2 font-medium">To</th>
                             <th className="text-left px-3 py-2 font-medium">Status</th>
@@ -904,9 +858,6 @@ export function CompOffPageClient() {
                             const canEdit = isPending && Boolean(id) && flow === "COMP_OFF";
                             return (
                               <tr key={`${id || idx}`} className="border-t border-wt-border">
-                                <td className="px-3 py-2 whitespace-nowrap">
-                                  {requestTypeLabel(row.request_type ?? row.requestType)}
-                                </td>
                                 <td className="px-3 py-2 whitespace-nowrap">
                                   {String(
                                     pickRowField(row, "request_from_date", "requestFromDate") ?? "—"
@@ -993,16 +944,6 @@ export function CompOffPageClient() {
               </div>
             ) : showTeamReview ? (
               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                {hasHrAccess ? (
-                  <p className="text-sm text-wt-text-muted">
-                    Review manager-approved comp-off usage claims. HR approves or rejects requests
-                    from this queue.
-                  </p>
-                ) : (
-                  <p className="text-sm text-wt-text-muted">
-                    Manager can approve/reject employee earn and usage requests from team review.
-                  </p>
-                )}
                 <div className="flex flex-wrap items-end gap-3">
                   <InputField
                     label="From"
@@ -1016,31 +957,19 @@ export function CompOffPageClient() {
                     value={teamFilters.to}
                     onChange={(v) => setTeamFilters((p) => ({ ...p, to: v }))}
                   />
-                  <SelectField
-                    label="Flow"
-                    value={teamFilters.flow}
-                    options={["ALL", "EARN", "USAGE"]}
-                    onChange={(v) =>
-                      setTeamFilters((p) => ({
-                        ...p,
-                        flow: v as "ALL" | "EARN" | "USAGE",
-                      }))
-                    }
-                  />
-                  <label className="flex items-center gap-2 text-sm text-wt-text-muted pb-2">
-                    <input
-                      type="checkbox"
-                      checked={teamFilters.accountManagersOnly}
-                      onChange={(e) =>
+                  {managerOnlyReview ? (
+                    <SelectField
+                      label="Flow"
+                      value={teamFilters.flow}
+                      options={["ALL", "EARN", "USAGE"]}
+                      onChange={(v) =>
                         setTeamFilters((p) => ({
                           ...p,
-                          accountManagersOnly: e.target.checked,
+                          flow: v as "ALL" | "EARN" | "USAGE",
                         }))
                       }
-                      className="rounded border-wt-border"
                     />
-                    Account managers only
-                  </label>
+                  ) : null}
                   <button
                     type="button"
                     className="btn-primary px-3 py-2 h-10"
@@ -1060,7 +989,6 @@ export function CompOffPageClient() {
                         <tr>
                           <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Employee</th>
                           <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Email</th>
-                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Flow</th>
                           <th className="text-left px-3 py-2 font-medium whitespace-nowrap">From</th>
                           <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
                           <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Description</th>
@@ -1123,9 +1051,6 @@ export function CompOffPageClient() {
                                 ) : null}
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap">{empEmail || "—"}</td>
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                {requestTypeLabel(row.request_type ?? row.requestType)}
-                              </td>
                               <td className="px-3 py-2 whitespace-nowrap">
                                 {String(
                                   pickRowField(row, "request_from_date", "requestFromDate") ?? "—"

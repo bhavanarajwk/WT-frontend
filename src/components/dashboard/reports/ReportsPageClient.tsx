@@ -80,7 +80,7 @@ import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 
 
 export function ReportsPageClient() {
-  const { activeSection, setReportsExpanded } = useDashboardNav();
+  const { activeSection, setExpandedSection } = useDashboardNav();
   const isManagerRoleLabel = (value: unknown): boolean =>
     String(value ?? "")
       .trim()
@@ -2745,8 +2745,8 @@ export function ReportsPageClient() {
     }
   }, [normalizedManagerProjects, selectedManagerProjectCode]);  useEffect(() => {
     if (!hasHrAccess) return;
-    if (activeSection.startsWith("reports-")) setReportsExpanded(true);
-  }, [activeSection, hasHrAccess]);
+    if (activeSection.startsWith("reports-")) setExpandedSection("reports");
+  }, [activeSection, hasHrAccess, setExpandedSection]);
   const renderSelfOnboardingPanel = () => (
     <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
       <h3 className="font-semibold mb-1">Complete Your Onboarding</h3>

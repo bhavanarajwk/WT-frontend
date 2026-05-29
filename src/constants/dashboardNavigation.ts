@@ -1,55 +1,158 @@
-export type NavItem =
-  | { id: string; label: string; roles: string[] }
-  | {
-      id: string;
-      label: string;
-      roles: string[];
-      children: Array<{ id: string; label: string }>;
-    };
+import type { SidebarIconName } from "@/constants/sidebarIcons";
+
+export type NavChild = {
+  id: string;
+  label: string;
+  roles: string[];
+  icon: SidebarIconName;
+};
+
+export type NavGroup = {
+  kind: "group";
+  id: "employee" | "projects" | "personal";
+  label: string;
+  icon: SidebarIconName;
+  children: NavChild[];
+};
+
+export type NavLink = {
+  kind: "link";
+  id: string;
+  label: string;
+  roles: string[];
+  icon: SidebarIconName;
+};
+
+export type NavExpandable = {
+  kind: "expandable";
+  id: string;
+  label: string;
+  roles: string[];
+  icon: SidebarIconName;
+  children: Array<{ id: string; label: string; icon?: SidebarIconName }>;
+};
+
+export type NavItem = NavGroup | NavLink | NavExpandable;
 
 export const dashboardNavigation: NavItem[] = [
-  { id: "overview", label: "Overview", roles: ["ROLE_HR", "ROLE_ADMIN", "ROLE_FINANCE"] },
   {
-    id: "employee-directory",
-    label: "Employee Directory",
-    roles: ["ROLE_HR", "ROLE_ADMIN"],
+    kind: "group",
+    id: "employee",
+    label: "Employee",
+    icon: "users",
+    children: [
+      {
+        id: "employee",
+        label: "Onboarding",
+        roles: ["ROLE_EMPLOYEE", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "userPlus",
+      },
+      {
+        id: "employee-directory",
+        label: "Directory",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        icon: "bookUser",
+      },
+      {
+        id: "employee-attendance",
+        label: "Attendance",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        icon: "calendarCheck",
+      },
+      {
+        id: "offboarding",
+        label: "Offboarding",
+        roles: ["ROLE_HR"],
+        icon: "userMinus",
+      },
+      {
+        id: "leave-team",
+        label: "Leave requests",
+        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "calendarDays",
+      },
+      {
+        id: "timelog-team",
+        label: "Timelogs",
+        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "clock",
+      },
+      {
+        id: "comp-off-team",
+        label: "Comp off",
+        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "gift",
+      },
+    ],
   },
-  { id: "resumes", label: "Resumes", roles: ["ROLE_AM"] },
-  { id: "employee", label: "Employee Onboarding", roles: ["ROLE_EMPLOYEE", "ROLE_HR", "ROLE_ADMIN"] },
-  { id: "allocation", label: "Allocation & Projects", roles: ["ROLE_HR", "ROLE_ADMIN"] },
-  { id: "bench-forecast", label: "Bench Forecast", roles: ["ROLE_HR", "ROLE_ADMIN"] },
-  { id: "allocation-extension", label: "Allocation Extensions", roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"] },
-  { id: "offboarding", label: "Offboarding", roles: ["ROLE_HR"] },
-  { id: "background-verification", label: "Background Verification", roles: ["ROLE_HR"] },
   {
-    id: "employee-attendance",
-    label: "Employee Attendance",
-    roles: ["ROLE_HR", "ROLE_ADMIN"],
+    kind: "group",
+    id: "projects",
+    label: "Projects",
+    icon: "folder",
+    children: [
+      {
+        id: "allocation",
+        label: "Projects allocation",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        icon: "layoutGrid",
+      },
+      {
+        id: "allocation-extension",
+        label: "Allocation extension",
+        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "calendarRange",
+      },
+      {
+        id: "bench-forecast",
+        label: "Bench forecast",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        icon: "trendingUp",
+      },
+    ],
   },
   {
-    id: "timelog",
-    label: "Timelog",
-    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+    kind: "group",
+    id: "personal",
+    label: "Personal",
+    icon: "user",
+    children: [
+      {
+        id: "timelog",
+        label: "Timelogs",
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "clock",
+      },
+      {
+        id: "leave",
+        label: "Leave request",
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "calendarDays",
+      },
+    ],
+  },
+  { kind: "link", id: "resumes", label: "Resumes", roles: ["ROLE_AM"], icon: "fileText" },
+  {
+    kind: "link",
+    id: "background-verification",
+    label: "Background Verification",
+    roles: ["ROLE_HR"],
+    icon: "shield",
   },
   {
-    id: "leave",
-    label: "Leave Requests",
-    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
-  },
-  {
-    id: "comp-off",
-    label: "Comp-off",
-    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
-  },
-  {
+    kind: "expandable",
     id: "learning",
     label: "Learning & Development",
     roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+    icon: "graduationCap",
+    children: [],
   },
   {
+    kind: "expandable",
     id: "reports",
     label: "Reports",
     roles: ["ROLE_HR", "ROLE_ADMIN"],
+    icon: "barChart",
     children: [
       { id: "reports-workforce", label: "Workforce Overview" },
       { id: "reports-section-2", label: "Utilization vs Effort" },
@@ -60,17 +163,57 @@ export const dashboardNavigation: NavItem[] = [
       { id: "reports-section-7", label: "BGV Report Dashboard" },
     ],
   },
-  { id: "uploads", label: "Uploads", roles: ["ROLE_HR", "ROLE_ADMIN"] },
-  { id: "masters", label: "Masters & Admin", roles: ["ROLE_HR", "ROLE_ADMIN"] },
+  { kind: "link", id: "uploads", label: "Uploads", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "upload" },
+  { kind: "link", id: "masters", label: "Masters & Admin", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "settings" },
 ];
+
+function childVisible(
+  child: NavChild,
+  userRoles: string[],
+  options: { hasHrAccess: boolean }
+): boolean {
+  if (child.id === "employee" && !options.hasHrAccess) return false;
+  return child.roles.length === 0 ? true : child.roles.some((r) => userRoles.includes(r));
+}
 
 export function filterVisibleNavigation(
   items: NavItem[],
   userRoles: string[],
   options: { hasHrAccess: boolean; hasAccountManagerAccess?: boolean }
 ): NavItem[] {
-  return items.filter((item) => {
-    if (item.id === "employee" && !options.hasHrAccess) return false;
-    return item.roles.length === 0 ? true : item.roles.some((r) => userRoles.includes(r));
-  });
+  const result: NavItem[] = [];
+  for (const item of items) {
+    if (item.kind === "group") {
+      const children = item.children.filter((child) => childVisible(child, userRoles, options));
+      if (children.length) result.push({ ...item, children });
+      continue;
+    }
+
+    if (item.kind === "link" || item.kind === "expandable") {
+      if (item.id === "employee" && !options.hasHrAccess) continue;
+      if (item.roles.length === 0 ? false : !item.roles.some((r) => userRoles.includes(r))) continue;
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+/** Map nav id to sidebar group id for accordion auto-expand. */
+export function navGroupForSection(sectionId: string): "employee" | "projects" | "personal" | null {
+  for (const item of dashboardNavigation) {
+    if (item.kind !== "group") continue;
+    if (item.children.some((child) => child.id === sectionId)) return item.id;
+  }
+  return null;
+}
+
+/** Expandable sections that participate in the accordion (groups + reports + learning). */
+export type AccordionSectionId = "employee" | "projects" | "personal" | "reports" | "learning";
+
+export function accordionSectionForPathname(pathname: string, activeSection: string): AccordionSectionId | null {
+  const group = navGroupForSection(activeSection);
+  if (group) return group;
+  if (activeSection.startsWith("reports-")) return "reports";
+  if (pathname.startsWith("/dashboard/learning-development")) return "learning";
+  return null;
 }

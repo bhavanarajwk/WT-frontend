@@ -40,7 +40,7 @@ export function HrEmployeeTimelogPageClient() {
   const employeeOptions = useMemo(() => {
     const options: Array<{ email: string; label: string }> = [];
     for (const row of onboardRows) {
-      const record = row as Record<string, unknown>;
+      const record = row as unknown as Record<string, unknown>;
       const email = rowEmail(record);
       if (!email) continue;
       const name = cleanEmployeeName(record);
