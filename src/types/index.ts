@@ -6,3 +6,9 @@ export type {
   InvitedUsersQuery,
   InvitedUsersListData,
 } from "@/services/hrms.service";
+export type {
+  OnboardListData,
+  OnboardListItem,
+  OnboardUserResponse,
+  SecondarySkillRating,
+} from "@/types/onboard";

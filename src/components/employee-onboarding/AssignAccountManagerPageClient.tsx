@@ -30,7 +30,7 @@ export function AssignAccountManagerPageClient() {
   const options = useMemo(() => {
     return rows
       .map((row) => {
-        const record = row as Record<string, unknown>;
+        const record = row as unknown as Record<string, unknown>;
         const empId = rowEmpId(record);
         const email = rowEmail(record);
         if (!empId || !email) return null;
@@ -87,11 +87,6 @@ export function AssignAccountManagerPageClient() {
         <div className="p-5 md:p-7">
           <EmployeeOnboardingSubNav />
           <h3 className="text-lg font-semibold">Assign account manager</h3>
-          <p className="mt-1 max-w-2xl text-sm text-wt-text-muted">
-            Select an onboarded employee to grant the account manager role ({`ROLE_AM`}). They will keep{" "}
-            {`ROLE_EMPLOYEE`} and can complete onboarding, submit timelogs, and request leave like other
-            employees.
-          </p>
 
           {isLoading ? <p className="mt-6 text-sm text-wt-text-muted">Loading employees…</p> : null}
 
@@ -144,7 +139,7 @@ export function AssignAccountManagerPageClient() {
                 disabled={!selected?.email || actionLoading}
                 onClick={assignAccountManager}
               >
-                Assign as account manager
+                Assign
               </button>
             </div>
           ) : null}

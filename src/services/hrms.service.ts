@@ -1,23 +1,18 @@
 import { endpoints } from "@/api/endpoints";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
+import type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
 import { toPagedRows } from "@/utils/apiRows";
+
+export type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
+
+/** @deprecated Use OnboardListItem — kept for existing imports. */
+export type OnboardItem = OnboardListItem;
 
 export interface PagedData<T> {
   items: T[];
   total: number;
   page: number;
   size: number;
-}
-
-export interface OnboardItem {
-  emp_id: string | null;
-  email: string;
-  name: string;
-  status: string;
-  user_type: string;
-  department?: string | null;
-  created_at?: string | null;
-  createdAt?: string | null;
 }
 
 export interface EmployeeLeaveBalanceBreakdown {
@@ -125,7 +120,7 @@ export interface AllocationExtensionRequestRow {
 
 export const hrmsService = {
   getOnboardList(params: Record<string, string>) {
-    return apiClient.get<ApiEnvelope<PagedData<OnboardItem>>>(endpoints.user.onboard, {
+    return apiClient.get<ApiEnvelope<OnboardListData>>(endpoints.user.onboard, {
       query: params,
     });
   },

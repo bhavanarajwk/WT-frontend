@@ -1,5 +1,12 @@
 import { formatSecondarySkillsForProfile } from "@/components/dashboard/ui/profile";
+import type { OnboardListItem } from "@/types/onboard";
 import { pickResumeShareLink } from "@/utils/employeeResume";
+
+type OnboardRowInput = OnboardListItem | Record<string, unknown>;
+
+function asOnboardRecord(row: OnboardRowInput): Record<string, unknown> {
+  return row as Record<string, unknown>;
+}
 
 export function rowEmpId(row: Record<string, unknown>): string {
   return String(
@@ -89,32 +96,28 @@ export function formatSecondarySkills(profile: Record<string, unknown>): string 
   return formatSecondarySkillsForProfile(profile);
 }
 
-export function onboardRowToListRow(row: Record<string, unknown>): Record<string, string> {
-  const primary = row.primary_skills ?? row.primarySkills;
-  const primaryStr = Array.isArray(primary)
-    ? primary.map((s) => String(s)).join(", ")
-    : String(primary ?? "").trim();
-
+export function onboardRowToListRow(row: OnboardRowInput): Record<string, string> {
+  const record = asOnboardRecord(row);
   return {
-    emp_id: rowEmpId(row) || "—",
-    name: cleanEmployeeName(row),
-    email: rowEmail(row) || "—",
-    department: String(row.department ?? "").trim() || "—",
-    role: String(row.role ?? "").trim() || "—",
-    band: String(row.band ?? row.band_name ?? row.bandName ?? "").trim() || "—",
+    emp_id: rowEmpId(record) || "—",
+    name: cleanEmployeeName(record),
+    email: rowEmail(record) || "—",
+    department: String(record.department ?? "").trim() || "—",
+    role: String(record.role ?? "").trim() || "—",
+    band: String(record.band ?? record.band_name ?? record.bandName ?? "").trim() || "—",
     date_of_joining: String(
-      row.date_of_joining ?? row.doj ?? row.joining_date ?? row.joiningDate ?? ""
+      record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate ?? ""
     ).trim() || "—",
-    date_of_birth: String(row.date_of_birth ?? row.dob ?? "").trim() || "—",
-    status: String(row.status ?? "").trim() || "—",
-    user_type: String(row.user_type ?? row.userType ?? "").trim() || "—",
-    work_mode: String(row.work_mode ?? row.workMode ?? "").trim() || "—",
+    date_of_birth: String(record.date_of_birth ?? record.dob ?? "").trim() || "—",
+    status: String(record.status ?? "").trim() || "—",
+    user_type: String(record.user_type ?? record.userType ?? "").trim() || "—",
+    work_mode: String(record.work_mode ?? record.workMode ?? "").trim() || "—",
     work_location: String(
-      row.work_location ?? row.work_location_type ?? row.workLocationType ?? ""
+      record.work_location ?? record.work_location_type ?? record.workLocationType ?? ""
     ).trim() || "—",
-    phone_number: String(row.phone_number ?? row.phoneNumber ?? "").trim() || "—",
-    yoe: String(row.yoe ?? row.experience ?? "").trim() || "—",
-    primary_skills: primaryStr || "—",
+    phone_number: String(record.phone_number ?? record.phoneNumber ?? "").trim() || "—",
+    yoe: formatYoeDisplay(record.yoe ?? record.years_of_experience ?? record.experience),
+    primary_skills: formatPrimarySkills(record),
   };
 }
 

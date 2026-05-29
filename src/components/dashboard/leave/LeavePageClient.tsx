@@ -364,7 +364,6 @@ export function LeavePageClient() {
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const submitsToHrForReview = isAccountManagerEmployeeUser(userRoles);
-  const [teamAccountManagersOnly, setTeamAccountManagersOnly] = useState(false);
   const { data: accountManagerEmails = new Set<string>() } = useAccountManagerEmails();
   /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
   const timelogHrNoSelfProject =
@@ -387,14 +386,6 @@ export function LeavePageClient() {
       setLeaveSubTab("my");
     }
   }, [hasManagerAccess, hasHrAccess, leaveSubTab]);
-
-  const teamLeaveRequests = useMemo(() => {
-    if (!hasHrAccess || !teamAccountManagersOnly) return employeeRequests;
-    return employeeRequests.filter((row) => {
-      const email = requestRowEmail(row as Record<string, unknown>);
-      return email && accountManagerEmails.has(email);
-    });
-  }, [employeeRequests, hasHrAccess, teamAccountManagersOnly, accountManagerEmails]);
 
   const loadManagerData = useCallback(
     async (force = false) => {
@@ -3261,10 +3252,7 @@ export function LeavePageClient() {
                           <div className="space-y-4">
                             {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                             <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                              <h3 className="font-semibold mb-1">Create Request</h3>
-                              <p className="text-sm text-wt-text-muted mb-3">
-                                Submit leave or work-from-home. Use Comp-off in the sidebar for earn and usage.
-                              </p>
+                              <h3 className="font-semibold mb-3">Create Request</h3>
                               <div className="space-y-2">
                                 <InputField label="From Date" value={leaveRequestForm.request_from_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_from_date: v }))} type="date" />
                                 <InputField label="To Date" value={leaveRequestForm.request_to_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_to_date: v }))} type="date" />
@@ -3475,24 +3463,7 @@ export function LeavePageClient() {
                         </section>
                           ) : hasManagerAccess || hasHrAccess ? (
                         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                          {hasHrAccess ? (
-                            <p className="text-sm text-wt-text-muted">
-                              Review leave, WFH, and comp-off requests from account managers and other
-                              employees. Account manager submissions are routed to HR for approval.
-                            </p>
-                          ) : null}
                           <div className="flex flex-wrap items-end gap-3">
-                            {hasHrAccess ? (
-                              <label className="flex items-center gap-2 text-sm text-wt-text-muted pb-2">
-                                <input
-                                  type="checkbox"
-                                  checked={teamAccountManagersOnly}
-                                  onChange={(e) => setTeamAccountManagersOnly(e.target.checked)}
-                                  className="rounded border-wt-border"
-                                />
-                                Account managers only
-                              </label>
-                            ) : null}
                             <InputField
                               label="From Date"
                               value={employeeRequestFilters.fromDate}
@@ -3521,7 +3492,7 @@ export function LeavePageClient() {
                             </button>
                           </div>
           
-                          {teamLeaveRequests.length ? (
+                          {employeeRequests.length ? (
                             <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
                               <table className="min-w-full text-sm">
                                 <thead className="bg-wt-surface-2 text-wt-text-muted">
@@ -3536,7 +3507,7 @@ export function LeavePageClient() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {teamLeaveRequests.map((row, idx) => {
+                                  {employeeRequests.map((row, idx) => {
                                     const requestId = String(
                                       row.user_request_id ??
                                         row.userRequestId ??

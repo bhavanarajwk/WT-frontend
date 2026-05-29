@@ -12,8 +12,11 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   "background-verification": "/dashboard/background-verification",
   "employee-attendance": "/dashboard/employee-attendance",
   timelog: "/dashboard/timelog",
+  "timelog-team": "/dashboard/timelog/team",
   leave: "/dashboard/leave",
+  "leave-team": "/dashboard/leave/team",
   "comp-off": "/dashboard/comp-off",
+  "comp-off-team": "/dashboard/comp-off/team",
   learning: "/dashboard/learning-development",
   "reports-workforce": "/dashboard/reports/workforce",
   "reports-section-2": "/dashboard/reports/utilization",
@@ -27,7 +30,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   profile: "/dashboard/profile",
 };
 
-export const DASHBOARD_DEFAULT_PATH = DASHBOARD_ROUTES.overview;
+export const DASHBOARD_DEFAULT_PATH = DASHBOARD_ROUTES["employee-directory"];
 
 const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/learning-development", id: "learning" },
@@ -49,8 +52,11 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/offboarding", id: "offboarding" },
   { prefix: "/dashboard/background-verification", id: "background-verification" },
   { prefix: "/dashboard/employee-attendance", id: "employee-attendance" },
+  { prefix: "/dashboard/timelog/team", id: "timelog-team" },
   { prefix: "/dashboard/timelog", id: "timelog" },
+  { prefix: "/dashboard/leave/team", id: "leave-team" },
   { prefix: "/dashboard/leave", id: "leave" },
+  { prefix: "/dashboard/comp-off/team", id: "comp-off-team" },
   { prefix: "/dashboard/comp-off", id: "comp-off" },
   { prefix: "/dashboard/uploads", id: "uploads" },
   { prefix: "/dashboard/masters", id: "masters" },
@@ -59,14 +65,14 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
 
 export function dashboardNavIdFromPathname(pathname: string): string {
   if (pathname === "/dashboard" || pathname === "/dashboard/") {
-    return "overview";
+    return "employee-directory";
   }
   for (const { prefix, id } of PATH_TO_NAV_ID) {
     if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
       return id;
     }
   }
-  return "overview";
+  return "employee-directory";
 }
 
 export function dashboardHref(navId: string): string {
@@ -82,7 +88,7 @@ export function employeeDirectoryProfilePath(empId: string): string {
 export function defaultDashboardPathForRoles(roles: string[]): string {
   const r = roles ?? [];
   if (r.includes("ROLE_HR") || r.includes("ROLE_ADMIN") || r.includes("ROLE_FINANCE")) {
-    return DASHBOARD_ROUTES.overview;
+    return DASHBOARD_ROUTES["employee-directory"];
   }
   if (r.includes("ROLE_AM") && !r.includes("ROLE_HR") && !r.includes("ROLE_ADMIN")) {
     return DASHBOARD_ROUTES.resumes;
@@ -93,5 +99,5 @@ export function defaultDashboardPathForRoles(roles: string[]): string {
   if (r.includes("ROLE_EMPLOYEE")) {
     return DASHBOARD_ROUTES.profile;
   }
-  return DASHBOARD_ROUTES.overview;
+  return DASHBOARD_ROUTES["employee-directory"];
 }
