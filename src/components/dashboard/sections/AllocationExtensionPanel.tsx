@@ -348,7 +348,8 @@ export function AllocationExtensionPanel() {
                 setPage(0);
               }}
               className="w-64 max-w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-              placeholder="name, email, project…"
+              placeholder="Search name"
+              aria-label="Search name"
             />
           </label>
 

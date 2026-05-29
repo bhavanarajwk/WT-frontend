@@ -12,6 +12,7 @@ import { toRows } from "@/utils/apiRows";
 import { dashboardNavigation, filterVisibleNavigation } from "@/constants/dashboardNavigation";
 import { dashboardHref, DASHBOARD_ROUTES } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
+import { SidebarIcon } from "@/constants/sidebarIcons";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 
 function IconUser({ className = "" }: { className?: string }) {
@@ -76,10 +77,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const {
     activeSection,
-    reportsExpanded,
-    setReportsExpanded,
-    learningExpanded,
-    setLearningExpanded,
+    expandedSection,
+    toggleExpandedSection,
   } = useDashboardNav();
 
   const userRoles = user?.roles ?? [];
@@ -153,30 +152,80 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         <div className="mb-4 shrink-0">
           <WebTrakBrand variant="sidebar" />
         </div>
-        <nav className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto">
           {visibleNavigation.map((item) => {
-            const children = "children" in item ? item.children : undefined;
-            if (children?.length && item.id === "reports") {
+            if (item.kind === "group") {
+              const isExpanded = expandedSection === item.id;
+              const groupActive = item.children.some((child) => activeSection === child.id);
               return (
-                <div key={item.id} className="space-y-1">
+                <div key={item.id} className="space-y-0.5">
                   <button
                     type="button"
-                    onClick={() => setReportsExpanded((prev) => !prev)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                      !isLearningRoute && activeSection.startsWith("reports-")
+                    onClick={() => toggleExpandedSection(item.id)}
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
+                      !isLearningRoute && groupActive
                         ? "bg-wt-surface-3 text-wt-text"
                         : "text-wt-text-muted hover:bg-wt-surface-2"
                     }`}
                   >
-                    {item.label}
+                    <SidebarIcon name={item.icon} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    <SidebarIcon
+                      name={isExpanded ? "chevronDown" : "chevronRight"}
+                      className="opacity-60"
+                    />
                   </button>
-                  {reportsExpanded ? (
-                    <div className="ml-2 space-y-1 border-l border-wt-border pl-2">
+                  {isExpanded ? (
+                    <div className="ml-3 space-y-0.5 border-l border-wt-border pl-2">
+                      {item.children.map((child) => (
+                        <Link
+                          key={child.id}
+                          href={dashboardHref(child.id)}
+                          className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition ${
+                            !isLearningRoute && activeSection === child.id
+                              ? "bg-wt-surface-3 text-wt-text"
+                              : "text-wt-text-muted hover:bg-wt-surface-2"
+                          }`}
+                        >
+                          <SidebarIcon name={child.icon} />
+                          <span>{child.label}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            }
+
+            if (item.kind === "expandable" && item.id === "reports") {
+              const children = item.children;
+              const isExpanded = expandedSection === "reports";
+              const groupActive = activeSection.startsWith("reports-");
+              return (
+                <div key={item.id} className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleExpandedSection("reports")}
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
+                      !isLearningRoute && groupActive
+                        ? "bg-wt-surface-3 text-wt-text"
+                        : "text-wt-text-muted hover:bg-wt-surface-2"
+                    }`}
+                  >
+                    <SidebarIcon name={item.icon} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    <SidebarIcon
+                      name={isExpanded ? "chevronDown" : "chevronRight"}
+                      className="opacity-60"
+                    />
+                  </button>
+                  {isExpanded ? (
+                    <div className="ml-3 space-y-0.5 border-l border-wt-border pl-2">
                       {children.map((child) => (
                         <Link
                           key={child.id}
                           href={dashboardHref(child.id)}
-                          className={`block w-full text-left px-3 py-1.5 rounded-lg text-xs transition ${
+                          className={`block w-full rounded-lg px-3 py-1.5 text-left text-xs transition ${
                             !isLearningRoute && activeSection === child.id
                               ? "bg-wt-surface-3 text-wt-text"
                               : "text-wt-text-muted hover:bg-wt-surface-2"
@@ -191,22 +240,26 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               );
             }
 
-            if (item.id === "learning") {
+            if (item.kind === "expandable" && item.id === "learning") {
+              const isExpanded = expandedSection === "learning";
               return (
-                <div key={item.id} className="space-y-1">
+                <div key={item.id} className="space-y-0.5">
                   <button
                     type="button"
-                    onClick={() => {
-                      setLearningExpanded((prev) => !prev);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
+                    onClick={() => toggleExpandedSection("learning")}
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
                       isLearningRoute ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
                     }`}
                   >
-                    {item.label}
+                    <SidebarIcon name={item.icon} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    <SidebarIcon
+                      name={isExpanded ? "chevronDown" : "chevronRight"}
+                      className="opacity-60"
+                    />
                   </button>
-                  {learningExpanded ? (
-                    <div className="ml-2 space-y-1 border-l border-wt-border pl-2">
+                  {isExpanded ? (
+                    <div className="ml-3 space-y-0.5 border-l border-wt-border pl-2">
                       {learningSubNav.map((link) => {
                         const active =
                           pathname === link.href ||
@@ -219,7 +272,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                           <Link
                             key={link.href}
                             href={link.href}
-                            className={`block w-full text-left px-3 py-1.5 rounded-lg text-xs transition ${
+                            className={`block w-full rounded-lg px-3 py-1.5 text-left text-xs transition ${
                               active ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
                             }`}
                           >
@@ -233,19 +286,24 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               );
             }
 
-            return (
-              <Link
-                key={item.id}
-                href={dashboardHref(item.id)}
-                className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                  !isLearningRoute && activeSection === item.id
-                    ? "bg-wt-surface-3 text-wt-text"
-                    : "text-wt-text-muted hover:bg-wt-surface-2"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
+            if (item.kind === "link") {
+              return (
+                <Link
+                  key={item.id}
+                  href={dashboardHref(item.id)}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
+                    !isLearningRoute && activeSection === item.id
+                      ? "bg-wt-surface-3 text-wt-text"
+                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                  }`}
+                >
+                  <SidebarIcon name={item.icon} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            }
+
+            return null;
           })}
         </nav>
         {canAccessProfile ? (
@@ -290,7 +348,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
                 aria-label="Breadcrumb"
               >
-                <Link href={dashboardHref("overview")} className="hover:text-wt-text transition">
+                <Link href="/dashboard" className="hover:text-wt-text transition">
                   Dashboard
                 </Link>
                 <span aria-hidden>/</span>
@@ -314,7 +372,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
                 aria-label="Breadcrumb"
               >
-                <Link href={dashboardHref("overview")} className="hover:text-wt-text transition">
+                <Link href="/dashboard" className="hover:text-wt-text transition">
                   Dashboard
                 </Link>
                 <span aria-hidden>/</span>
@@ -324,7 +382,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       Employee Onboarding
                     </Link>
                     <span aria-hidden>/</span>
-                    <span className="text-wt-text">Assign Acc Manager</span>
+                    <span className="text-wt-text">Assign</span>
                   </>
                 ) : (
                   <span className="text-wt-text">Employee Onboarding</span>
