@@ -15,6 +15,8 @@ import {
   filterVisibleNavigation,
 } from "@/constants/dashboardNavigation";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
+import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
+import { shouldShowExitSurveyInNav } from "@/utils/exitInterview";
 import { dashboardHref, DASHBOARD_ROUTES } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { SidebarIcon } from "@/constants/sidebarIcons";
@@ -99,15 +101,24 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   );
   const isEmployeeProfileRoute = Boolean(pathname.match(/^\/dashboard\/employee-directory\/[^/]+$/));
   const { isOffboarded } = useDashboardAccess();
+  const exitProfileQ = useExitInterviewProfile({ enabled: Boolean(user) });
+  const showExitSurveyNav = useMemo(() => {
+    const flags = exitProfileQ.data?.flags;
+    if (!flags) return false;
+    return shouldShowExitSurveyInNav(flags);
+  }, [exitProfileQ.data?.flags]);
 
   const visibleNavigation = useMemo(() => {
     const base = filterVisibleNavigation(dashboardNavigation, userRoles, {
       hasHrAccess,
       hasAccountManagerAccess,
+      showExitSurvey: showExitSurveyNav,
     });
-    if (isOffboarded) return filterNavigationForOffboardedUser(base);
+    if (isOffboarded) {
+      return filterNavigationForOffboardedUser(base, { showExitSurvey: showExitSurveyNav });
+    }
     return base;
-  }, [userRoles, hasHrAccess, hasAccountManagerAccess, isOffboarded]);
+  }, [userRoles, hasHrAccess, hasAccountManagerAccess, isOffboarded, showExitSurveyNav]);
 
   const isExitSurveyRoute = pathname.startsWith(DASHBOARD_ROUTES["exit-interview"]);
 
