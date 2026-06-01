@@ -17,6 +17,12 @@ export const EXIT_INTERVIEW_READONLY_KEYS = new Set([
   "last_working_day",
 ]);
 
+/** Show Exit survey in nav only during notice (can fill or already submitted while applicable). */
+export function shouldShowExitSurveyInNav(flags: ExitInterviewProfileFlags): boolean {
+  if (!flags.exit_interview_applicable) return false;
+  return flags.can_fill_exit_interview || flags.exit_interview_submitted;
+}
+
 export function parseExitInterviewProfileFlags(
   profile: Record<string, unknown> | null | undefined
 ): ExitInterviewProfileFlags {
