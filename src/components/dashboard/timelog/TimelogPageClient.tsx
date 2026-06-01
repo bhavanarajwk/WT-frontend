@@ -378,7 +378,11 @@ export function TimelogPageClient() {
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
   const restrictForPendingOnboarding =
     isEmployee && !hasHrAccess && !hasManagerAccess;
-  const requiresSelfOnboarding = restrictForPendingOnboarding && !isSelfOnboarded;
+  const [isOffboarded, setIsOffboarded] = useState(() =>
+    String(user?.status ?? "").trim().toUpperCase() === "OFFBOARDED"
+  );
+  const requiresSelfOnboarding =
+    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded;
   /** Self-service profile + onboarding (non-HR employees only) */
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canAccessProfile = Boolean(user);
@@ -446,8 +450,13 @@ export function TimelogPageClient() {
     setEmployeeProfile(profile);
     if (!profile) return;
 
-    const status = String(profile.status ?? user?.status ?? "").toUpperCase();
+    const status = String(
+      profile.status ?? profile.user_status ?? user?.status ?? ""
+    )
+      .trim()
+      .toUpperCase();
     setIsSelfOnboarded(status === "ACTIVE");
+    setIsOffboarded(status === "OFFBOARDED" || status === "OFF_BOARDED");
   }, [user?.status]);
   useEffect(() => {
     if (!user) return;
@@ -3146,7 +3155,7 @@ export function TimelogPageClient() {
   return (
     <>
       <DashboardPageShell>
-        <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
+        <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding} isOffboarded={isOffboarded}>
           <section className="space-y-4">
                           {hasManagerAccess || hasHrAccess ? (
                             <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
