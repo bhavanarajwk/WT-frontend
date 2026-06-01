@@ -9,7 +9,12 @@ import { apiClient } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
 import { hrmsService } from "@/services/hrms.service";
 import { toRows } from "@/utils/apiRows";
-import { dashboardNavigation, filterVisibleNavigation } from "@/constants/dashboardNavigation";
+import {
+  dashboardNavigation,
+  filterNavigationForOffboardedUser,
+  filterVisibleNavigation,
+} from "@/constants/dashboardNavigation";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { dashboardHref, DASHBOARD_ROUTES } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { SidebarIcon } from "@/constants/sidebarIcons";
@@ -93,14 +98,18 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     "/dashboard/employee/assign-account-manager"
   );
   const isEmployeeProfileRoute = Boolean(pathname.match(/^\/dashboard\/employee-directory\/[^/]+$/));
-  const visibleNavigation = useMemo(
-    () =>
-      filterVisibleNavigation(dashboardNavigation, userRoles, {
-        hasHrAccess,
-        hasAccountManagerAccess,
-      }),
-    [userRoles, hasHrAccess, hasAccountManagerAccess]
-  );
+  const { isOffboarded } = useDashboardAccess();
+
+  const visibleNavigation = useMemo(() => {
+    const base = filterVisibleNavigation(dashboardNavigation, userRoles, {
+      hasHrAccess,
+      hasAccountManagerAccess,
+    });
+    if (isOffboarded) return filterNavigationForOffboardedUser(base);
+    return base;
+  }, [userRoles, hasHrAccess, hasAccountManagerAccess, isOffboarded]);
+
+  const isExitSurveyRoute = pathname.startsWith(DASHBOARD_ROUTES["exit-interview"]);
 
   const [notifications, setNotifications] = useState<Array<Record<string, unknown>>>([]);
   const [theme, setTheme] = useState<"light" | "dark" | "system">(() => {
@@ -121,9 +130,10 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const loadNotifications = useCallback(async () => {
+    if (isOffboarded) return;
     const res = await hrmsService.getNotifications({ page: "0", size: "20" });
     setNotifications(toRows(res.data));
-  }, []);
+  }, [isOffboarded]);
 
   const runAction = useCallback(async (label: string, fn: () => Promise<unknown>) => {
     setActionLoading(true);
@@ -306,7 +316,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             return null;
           })}
         </nav>
-        {canAccessProfile ? (
+        {canAccessProfile && !isOffboarded ? (
           <div className="mt-4 shrink-0 border-t border-wt-border pt-4">
             <Link
               href={dashboardHref("profile")}
@@ -328,17 +338,25 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-10 shrink-0 border-b border-wt-border bg-wt-bg px-6 py-4 flex items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold">
-              {activeSection === "profile" && !isLearningRoute ? "My profile" : null}
+              {isOffboarded && !isExitSurveyRoute && !isLearningRoute ? "You are offboarded" : null}
+              {activeSection === "profile" && !isLearningRoute && !isOffboarded ? "My profile" : null}
               {activeSection === "employee-directory" && !isLearningRoute ? "Employee Directory" : null}
               {activeSection === "resumes" && !isLearningRoute ? "Resumes" : null}
               {activeSection === "bench-forecast" && !isLearningRoute ? "Bench Forecast" : null}
               {activeSection === "employee" && !isLearningRoute ? "Employee Onboarding" : null}
+              {activeSection === "exit-interview" && !isLearningRoute ? "Exit survey" : null}
+              {activeSection === "exit-interview-submissions" && !isLearningRoute
+                ? "Exit interview submissions"
+                : null}
               {activeSection !== "profile" &&
               activeSection !== "employee-directory" &&
               activeSection !== "resumes" &&
               activeSection !== "bench-forecast" &&
               activeSection !== "employee" &&
-              !isLearningRoute
+              activeSection !== "exit-interview" &&
+              activeSection !== "exit-interview-submissions" &&
+              !isLearningRoute &&
+              !isOffboarded
                 ? "Dashboard"
                 : null}
               {isLearningRoute ? "Learning & Development" : null}
@@ -388,13 +406,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                   <span className="text-wt-text">Employee Onboarding</span>
                 )}
               </nav>
-            ) : (
+            ) : isOffboarded && !isExitSurveyRoute && !isLearningRoute ? null : (
               <p className="text-xs text-wt-text-muted">
                 {isLearningRoute ? learningSectionTitle : "WebTrak workforce workspace"}
               </p>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {!isOffboarded ? (
             <details
               className="group relative"
               onToggle={(e) => {
@@ -471,6 +490,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </details>
+            ) : null}
             <details className="group relative">
               <summary className="flex cursor-pointer list-none items-center justify-center rounded-lg border border-wt-border bg-wt-surface-1 p-2.5 text-wt-text shadow-sm transition hover:bg-wt-surface-2 [&::-webkit-details-marker]:hidden">
                 <IconSettings className="h-5 w-5 text-wt-text-muted" />
