@@ -191,12 +191,15 @@ function childVisible(
 export function filterVisibleNavigation(
   items: NavItem[],
   userRoles: string[],
-  options: { hasHrAccess: boolean; hasAccountManagerAccess?: boolean }
+  options: { hasHrAccess: boolean; hasAccountManagerAccess?: boolean; showExitSurvey?: boolean }
 ): NavItem[] {
   const result: NavItem[] = [];
   for (const item of items) {
     if (item.kind === "group") {
-      const children = item.children.filter((child) => childVisible(child, userRoles, options));
+      const children = item.children.filter((child) => {
+        if (child.id === "exit-interview" && !options.showExitSurvey) return false;
+        return childVisible(child, userRoles, options);
+      });
       if (children.length) result.push({ ...item, children });
       continue;
     }
@@ -210,8 +213,12 @@ export function filterVisibleNavigation(
   return result;
 }
 
-/** Offboarded employees may only open Exit survey under Personal. */
-export function filterNavigationForOffboardedUser(_items: NavItem[]): NavItem[] {
+/** Offboarded employees may only open Exit survey under Personal (during notice only). */
+export function filterNavigationForOffboardedUser(
+  _items: NavItem[],
+  options?: { showExitSurvey?: boolean }
+): NavItem[] {
+  if (!options?.showExitSurvey) return [];
   const personal = dashboardNavigation.find(
     (item) => item.kind === "group" && item.id === "personal"
   );
