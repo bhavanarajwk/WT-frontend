@@ -163,6 +163,14 @@ export const endpoints = {
     schedulerRunAll: `${api}/scheduler/run-all`,
   },
 
+  exitInterview: {
+    formDefinition: `${api}/exit-interview/form-definition`,
+    submit: `${api}/exit-interview`,
+    submissions: `${api}/exit-interview/submissions`,
+    submissionByEmpId: (empId: string) =>
+      `${api}/exit-interview/submissions/${encodeURIComponent(empId)}`,
+  },
+
   hrReports: {
     headcountDistribution: `${api}/reports/workforce/headcount-distribution`,
     roleBilling: `${api}/reports/workforce/role-wise-billed`,

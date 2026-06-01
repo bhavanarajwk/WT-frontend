@@ -66,6 +66,12 @@ export const dashboardNavigation: NavItem[] = [
         icon: "userMinus",
       },
       {
+        id: "exit-interview-submissions",
+        label: "Exit interviews",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        icon: "fileText",
+      },
+      {
         id: "leave-team",
         label: "Leave requests",
         roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
@@ -128,6 +134,12 @@ export const dashboardNavigation: NavItem[] = [
         label: "Leave request",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
+      },
+      {
+        id: "exit-interview",
+        label: "Exit survey",
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "fileText",
       },
     ],
   },
@@ -196,6 +208,17 @@ export function filterVisibleNavigation(
     }
   }
   return result;
+}
+
+/** Offboarded employees may only open Exit survey under Personal. */
+export function filterNavigationForOffboardedUser(_items: NavItem[]): NavItem[] {
+  const personal = dashboardNavigation.find(
+    (item) => item.kind === "group" && item.id === "personal"
+  );
+  if (!personal || personal.kind !== "group") return [];
+  const exitSurvey = personal.children.find((child) => child.id === "exit-interview");
+  if (!exitSurvey) return [];
+  return [{ ...personal, children: [exitSurvey] }];
 }
 
 /** Map nav id to sidebar group id for accordion auto-expand. */
