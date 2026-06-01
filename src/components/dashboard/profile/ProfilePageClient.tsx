@@ -19,6 +19,7 @@ import { EmployeeAttendancePanel } from "@/components/dashboard/sections/Employe
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { EmployeeTrainingMarksCard } from "@/components/learning-development/EmployeeTrainingMarksCard";
+import { ExitInterviewProfileBanner } from "@/components/exit-interview/ExitInterviewProfileBanner";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import {
   HARDCODED_DEPARTMENT_OPTIONS,
@@ -76,6 +77,11 @@ import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
+import {
+  isActiveUserStatus,
+  isOffboardedUserStatus,
+  resolveProfileStatus,
+} from "@/utils/userStatus";
 
 
 
@@ -309,7 +315,12 @@ export function ProfilePageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfProfileForm.yoe]);
-  const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(user?.status === "ACTIVE");
+  const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(() =>
+    isActiveUserStatus(user?.status)
+  );
+  const [isOffboarded, setIsOffboarded] = useState<boolean>(() =>
+    isOffboardedUserStatus(user?.status)
+  );
   const [projectForm, setProjectForm] = useState({
     project_name: "",
     project_type: "IN_HOUSE" as "IN_HOUSE" | "STAFFING" | "PRODUCT",
@@ -358,7 +369,8 @@ export function ProfilePageClient() {
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
   const restrictForPendingOnboarding =
     isEmployee && !hasHrAccess && !hasManagerAccess;
-  const requiresSelfOnboarding = restrictForPendingOnboarding && !isSelfOnboarded;
+  const requiresSelfOnboarding =
+    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded;
   /** Self-service profile + onboarding (non-HR employees only) */
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canAccessProfile = Boolean(user);
@@ -426,8 +438,9 @@ export function ProfilePageClient() {
     setEmployeeProfile(profile);
     if (!profile) return;
 
-    const status = String(profile.status ?? user?.status ?? "").toUpperCase();
-    setIsSelfOnboarded(status === "ACTIVE");
+    const status = resolveProfileStatus(profile, user);
+    setIsSelfOnboarded(isActiveUserStatus(status));
+    setIsOffboarded(isOffboardedUserStatus(status));
   }, [user?.status]);
   useEffect(() => {
     if (!user) return;
@@ -3003,23 +3016,31 @@ export function ProfilePageClient() {
           <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
           <div className="min-w-0">
             <h3 className="text-lg font-semibold mb-1">My Profile</h3>
-            <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
+            <p className="text-sm text-wt-text-muted">
+              {isOffboarded
+                ? "Your profile is read-only because your account is offboarded."
+                : "Review your profile details before editing."}
+            </p>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn-primary px-4 py-2.5"
-          onClick={openOwnProfileEditor}
-          disabled={actionLoading}
-        >
-          Edit Profile
-        </button>
+        {!isOffboarded ? (
+          <button
+            type="button"
+            className="btn-primary px-4 py-2.5"
+            onClick={openOwnProfileEditor}
+            disabled={actionLoading}
+          >
+            Edit Profile
+          </button>
+        ) : null}
       </div>
       {renderProfileDetailsGrid()}
-      {renderProfileAssignedProjectsSection()}
-      <div className="mt-8 border-t border-wt-border pt-6">
-        <EmployeeTrainingMarksCard variant="employee" enabled />
-      </div>
+      {!isOffboarded ? renderProfileAssignedProjectsSection() : null}
+      {!isOffboarded ? (
+        <div className="mt-8 border-t border-wt-border pt-6">
+          <EmployeeTrainingMarksCard variant="employee" enabled />
+        </div>
+      ) : null}
     </div>
   );
 
@@ -3184,8 +3205,9 @@ export function ProfilePageClient() {
   return (
     <>
       <DashboardPageShell>
-        <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
+        <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding} allowContentWhenOnboarding>
           <section className="max-w-5xl">
+                          <ExitInterviewProfileBanner />
                           {employeeSelfServeProfile ? (
                             requiresSelfOnboarding ? (
                               renderSelfOnboardingPanel()

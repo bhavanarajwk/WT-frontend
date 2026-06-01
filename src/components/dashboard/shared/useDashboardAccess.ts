@@ -1,10 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
+import {
+  isActiveUserStatus,
+  isOffboardedUserStatus,
+  normalizeUserStatus,
+  resolveProfileStatus,
+} from "@/utils/userStatus";
 
 export function useDashboardAccess() {
+  const queryClient = useQueryClient();
   const { user, refresh: refreshSession } = useAuth();
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
@@ -15,8 +23,13 @@ export function useDashboardAccess() {
     hasAccountManagerAccess && !hasHrAccess && !hasManagerAccess;
   const restrictForPendingOnboarding =
     isEmployee && !hasHrAccess && !hasManagerAccess;
-  const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(user?.status === "ACTIVE");
-  const requiresSelfOnboarding = restrictForPendingOnboarding && !isSelfOnboarded;
+  const initialStatus = normalizeUserStatus(user?.status);
+  const [profileStatus, setProfileStatus] = useState(initialStatus);
+  const [isSelfOnboarded, setIsSelfOnboarded] = useState(() => isActiveUserStatus(initialStatus));
+  /** Employment ended — applies regardless of manager/AM roles on the account. */
+  const isOffboarded = isOffboardedUserStatus(profileStatus);
+  const requiresSelfOnboarding =
+    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded;
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canAccessProfile = Boolean(user);
   const canAccessOverview = useMemo(
@@ -31,10 +44,15 @@ export function useDashboardAccess() {
     const res = await hrmsService.getMyProfile();
     const profile = (res.data ?? null) as Record<string, unknown> | null;
     if (!profile) return profile;
-    const status = String(profile.status ?? user?.status ?? "").toUpperCase();
-    setIsSelfOnboarded(status === "ACTIVE");
+    const status = resolveProfileStatus(profile, user);
+    setProfileStatus(status);
+    setIsSelfOnboarded(isActiveUserStatus(status));
+    if (user && normalizeUserStatus(user.status) !== status) {
+      void refreshSession();
+    }
+    void queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
     return profile;
-  }, [user?.status]);
+  }, [user, refreshSession, queryClient]);
 
   useEffect(() => {
     if (!user) return;
@@ -60,5 +78,7 @@ export function useDashboardAccess() {
     isSelfOnboarded,
     setIsSelfOnboarded,
     loadMyProfile,
+    profileStatus,
+    isOffboarded,
   };
 }
