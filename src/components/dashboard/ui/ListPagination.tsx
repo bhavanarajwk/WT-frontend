@@ -11,10 +11,10 @@ export function ListPagination({
   pageSize,
   pageSizeOptions = PAGE_SIZE_OPTIONS,
   onPageChange,
-  onPageSizeChange,
+  onPageSizeChange: _onPageSizeChange,
   className = "",
   showRangeText = false,
-  showPageSizeSelector = false,
+  showPageSizeSelector: _showPageSizeSelector = false,
 }: {
   page: number;
   totalPages: number;
@@ -41,23 +41,6 @@ export function ListPagination({
           <span>
             Showing {rangeStart}–{rangeEnd} of {totalItems}
           </span>
-        ) : null}
-        {showPageSizeSelector && onPageSizeChange && pageSizeOptions.length > 1 ? (
-          <label className="flex items-center gap-2 text-xs">
-            <span className="text-wt-text-muted">Per page</span>
-            <select
-              className="input-field px-2 py-1 text-xs"
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              aria-label="Rows per page"
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </label>
         ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">

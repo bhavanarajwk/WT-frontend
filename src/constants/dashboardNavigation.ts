@@ -136,6 +136,25 @@ export const dashboardNavigation: NavItem[] = [
         icon: "calendarDays",
       },
       {
+        id: "comp-off",
+        label: "Comp off",
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "gift",
+      },
+      {
+        id: "annual-calendar",
+        label: "Annual calendar",
+        roles: [
+          "ROLE_EMPLOYEE",
+          "ROLE_MANAGER",
+          "ROLE_HR",
+          "ROLE_ADMIN",
+          "ROLE_FINANCE",
+          "ROLE_AM",
+        ],
+        icon: "calendarDays",
+      },
+      {
         id: "exit-interview",
         label: "Exit survey",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],

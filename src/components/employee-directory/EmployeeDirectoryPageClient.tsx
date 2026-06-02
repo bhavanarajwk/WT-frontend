@@ -38,7 +38,6 @@ const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "user_type", label: "User Type" },
   { key: "work_mode", label: "Work Mode" },
   { key: "phone_number", label: "Phone" },
-  { key: "yoe", label: "Years of Experience" },
   { key: "primary_skills", label: "Primary Skills" },
 ];
 

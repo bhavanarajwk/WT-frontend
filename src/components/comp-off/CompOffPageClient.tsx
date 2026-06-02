@@ -24,7 +24,7 @@ import {
   resolveCompOffManagerEmail,
   type CompOffProjectCatalog,
 } from "@/services/compOffProjectCatalog.service";
-import type { CompOffGrant } from "@/types/compOff";
+import type { CompOffExpiryItem, CompOffGrant } from "@/types/compOff";
 import {
   COMP_OFF_EARN_LIST_TYPE,
   COMP_OFF_USAGE_LIST_TYPE,
@@ -56,7 +56,7 @@ import {
   compOffEmployeeDisplayName,
   resolveEmployeeNamesByEmail,
 } from "@/utils/compOff/resolveEmployeeDisplayNames";
-import { formatApiDate, todayApiDate } from "@/utils/apiDate";
+import { formatApiDate, normalizeToApiDate, todayApiDate } from "@/utils/apiDate";
 
 function todayYmd(): string {
   return todayApiDate();
@@ -117,6 +117,7 @@ export function CompOffPageClient() {
   const [balanceAsOf, setBalanceAsOf] = useState(todayYmd());
   const [grants, setGrants] = useState<CompOffGrant[]>([]);
   const [grantsLoading, setGrantsLoading] = useState(false);
+  const [expiryRows, setExpiryRows] = useState<CompOffExpiryItem[]>([]);
 
   const [projectOptions, setProjectOptions] = useState<CompOffProjectOption[]>([]);
   const [projectCatalog, setProjectCatalog] = useState<CompOffProjectCatalog | null>(null);
@@ -200,6 +201,29 @@ export function CompOffPageClient() {
       return t === "COMP_OFF";
     });
   }, [myRequests, myRequestsFlowFilter]);
+  const hasEarnRequest = useMemo(
+    () =>
+      myRequests.some(
+        (row) =>
+          normalizeCompOffRequestType(row.request_type ?? row.requestType) === "COMP_OFF_EARN"
+      ),
+    [myRequests]
+  );
+
+  const expiryByWorkedDate = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const row of expiryRows) {
+      const workedDate = normalizeToApiDate(
+        String(row.worked_date ?? row.workedDate ?? "").trim()
+      );
+      const lastUsable = String(row.last_usable_date ?? row.lastUsableDate ?? "").trim();
+      if (!workedDate || !lastUsable) continue;
+      const prev = map.get(workedDate) ?? [];
+      if (!prev.includes(lastUsable)) prev.push(lastUsable);
+      map.set(workedDate, prev);
+    }
+    return map;
+  }, [expiryRows]);
 
   const myRequestsPagination = useClientPagination(filteredMyRequests, {
     resetKeys: [myRequestsFlowFilter],
@@ -216,9 +240,10 @@ export function CompOffPageClient() {
     setBalanceAsOf(asOf);
     setGrantsLoading(true);
     try {
-      const [balanceRes, grantsRes] = await Promise.allSettled([
+      const [balanceRes, grantsRes, expiryRes] = await Promise.allSettled([
         compOffService.getBalance(asOf),
         compOffService.getGrants(),
+        compOffService.getExpiry(asOf),
       ]);
       if (balanceRes.status === "fulfilled") {
         const b = compOffService.parseBalanceResponse(balanceRes.value);
@@ -233,6 +258,12 @@ export function CompOffPageClient() {
         setGrants(sortGrantsFifo(compOffService.parseGrantsResponse(grantsRes.value)));
       } else {
         setGrants([]);
+      }
+      if (expiryRes.status === "fulfilled") {
+        const parsedExpiry = compOffService.parseExpiryResponse(expiryRes.value);
+        setExpiryRows(parsedExpiry.rows);
+      } else {
+        setExpiryRows([]);
       }
     } finally {
       setGrantsLoading(false);
@@ -868,10 +899,28 @@ export function CompOffPageClient() {
                             const flow = normalizeCompOffRequestType(
                               row.request_type ?? row.requestType
                             );
+                            const fromDate = normalizeToApiDate(
+                              String(
+                              pickRowField(row, "request_from_date", "requestFromDate") ?? ""
+                              ).trim()
+                            );
+                            const matchedExpiry = fromDate ? expiryByWorkedDate.get(fromDate) ?? [] : [];
+                            const hoverHint =
+                              flow === "COMP_OFF_EARN"
+                                ? matchedExpiry.length
+                                  ? `Last usable date: ${matchedExpiry.join(", ")}`
+                                  : "No expiry date found for this earned request."
+                                : hasEarnRequest
+                                  ? "This is a usage request. Expiry applies only to earned comp-off requests."
+                                  : "Apply for an earn comp-off request first to get comp-off expiry details.";
                             const canEdit = isPending && Boolean(id) && flow === "COMP_OFF";
                             return (
-                              <tr key={`${id || idx}`} className="border-t border-wt-border">
-                                <td className="px-3 py-2 whitespace-nowrap">
+                              <tr
+                                key={`${id || idx}`}
+                                className="border-t border-wt-border"
+                                title={hoverHint}
+                              >
+                                <td className="px-3 py-2 whitespace-nowrap" title={hoverHint}>
                                   {String(
                                     pickRowField(row, "request_from_date", "requestFromDate") ?? "—"
                                   )}
@@ -1168,6 +1217,7 @@ export function CompOffPageClient() {
                 )}
               </div>
             ) : null}
+
           </section>
         </OnboardingGate>
       </DashboardPageShell>

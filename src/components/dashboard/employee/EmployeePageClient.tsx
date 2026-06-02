@@ -3065,7 +3065,12 @@ export function EmployeePageClient() {
                               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                                 <h3 className="font-semibold mb-4">Create New Employee</h3>
                                 <div key={onboardFormKey} className="grid sm:grid-cols-2 gap-3">
-                                  <InputField label="Employee ID" value={onboardForm.emp_id} onChange={(v) => setOnboardForm((p) => ({ ...p, emp_id: v }))} />
+                                  <InputField
+                                    label="Employee ID"
+                                    required
+                                    value={onboardForm.emp_id}
+                                    onChange={(v) => setOnboardForm((p) => ({ ...p, emp_id: v }))}
+                                  />
                                   <InputField
                                     label="Work email"
                                     type="email"
@@ -3117,38 +3122,28 @@ export function EmployeePageClient() {
                                     }
                                   />
                                   {onboardForm.user_type !== "CONSULTANT" ? (
-                                    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                      <FieldLabel label="Band" required />
-                                      <select
-                                        required
-                                        aria-required
-                                        className="input-field px-3 py-2 text-sm"
-                                        value={onboardForm.band_id ? String(onboardForm.band_id) : ""}
-                                        disabled={onboardForm.user_type === "INTERN"}
-                                        onChange={(e) =>
-                                          setOnboardForm((p) => ({
-                                            ...p,
-                                            band_id: Number(e.target.value) || 0,
-                                            role: "",
-                                          }))
-                                        }
-                                      >
-                                        <option value="" disabled>
-                                          Select band
-                                        </option>
-                                        {onboardBands.length ? (
-                                          onboardBands.map((row) => (
-                                            <option key={String(row.id)} value={String(row.id)}>
-                                              {String(row.name ?? row.id ?? "")}
-                                            </option>
-                                          ))
-                                        ) : (
-                                          <option value="1" disabled>
-                                            B1
-                                          </option>
-                                        )}
-                                      </select>
-                                    </label>
+                                    <SelectField
+                                      label="Band"
+                                      required
+                                      value={onboardForm.band_id ? String(onboardForm.band_id) : ""}
+                                      disabled={onboardForm.user_type === "INTERN"}
+                                      placeholder="Select band"
+                                      options={
+                                        onboardBands.length
+                                          ? onboardBands.map((row) => ({
+                                              value: String(row.id),
+                                              label: String(row.name ?? row.id ?? ""),
+                                            }))
+                                          : [{ value: "1", label: "B1" }]
+                                      }
+                                      onChange={(v) =>
+                                        setOnboardForm((p) => ({
+                                          ...p,
+                                          band_id: Number(v) || 0,
+                                          role: "",
+                                        }))
+                                      }
+                                    />
                                   ) : null}
                                   {onboardForm.user_type === "CONSULTANT" ? (
                                     <InputField
@@ -3246,10 +3241,11 @@ export function EmployeePageClient() {
                                     className="btn-primary px-3 py-2"
                                     onClick={() =>
                                       runAction("Create employee", async () => {
-                                        const email = onboardForm.email.trim();
+                                        const empId = onboardForm.emp_id.trim();
+                                        const email = onboardForm.email.trim().toLowerCase();
                                         const personalEmailRaw = onboardForm.personal_email.trim();
                                         const personalEmailError = validatePersonalEmail(email, personalEmailRaw, {
-                                          required: true,
+                                          required: false,
                                         });
                                         if (personalEmailError) {
                                           throw new Error(personalEmailError);
@@ -3269,8 +3265,18 @@ export function EmployeePageClient() {
                                               ? internBandId
                                               : Number(onboardForm.band_id);
           
+                                        if (!empId) {
+                                          throw new Error("Employee ID is required.");
+                                        }
+                                        if (empId.length > 50) {
+                                          throw new Error("Employee ID must be at most 50 characters.");
+                                        }
                                         if (!email || !name) {
                                           throw new Error("Email and Name are required.");
+                                        }
+                                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                        if (!emailRegex.test(email)) {
+                                          throw new Error("Please enter a valid work email.");
                                         }
                                         if (!onboardForm.user_type) {
                                           throw new Error("User type is required.");
@@ -3327,9 +3333,9 @@ export function EmployeePageClient() {
                                         }
           
                                         const basePayload: Record<string, unknown> = {
-                                          emp_id: onboardForm.emp_id.trim() || null,
+                                          emp_id: empId,
                                           email,
-                                          personal_email: personalEmailRaw,
+                                          personal_email: personalEmailRaw || null,
                                           name,
                                           user_type: onboardForm.user_type,
                                           department,

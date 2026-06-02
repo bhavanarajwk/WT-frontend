@@ -3165,51 +3165,42 @@ export function MastersPageClient() {
                               <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4 space-y-3">
                                 <p className="text-sm text-wt-text-muted">Select an employee and assign the required role.</p>
                                 <div className="grid sm:grid-cols-2 gap-3">
-                                  <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                    <FieldLabel label="Email" required />
-                                    <select
-                                      required
-                                      aria-required
-                                      className="input-field px-3 py-2 text-sm"
-                                      value={roleAssignForm.target_email}
-                                      onChange={(e) =>
-                                        setRoleAssignForm((prev) => ({
-                                          ...prev,
-                                          target_email: e.target.value,
-                                        }))
-                                      }
-                                    >
-                                      <option value="">Select employee</option>
-                                      {roleAssignUsers.map((u) => (
-                                        <option key={u.email} value={u.email}>
-                                          {u.name} ({u.email})
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
-                                  <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                    <FieldLabel label="Role" required />
-                                    <select
-                                      required
-                                      aria-required
-                                      className="input-field px-3 py-2 text-sm"
-                                      value={roleAssignForm.role}
-                                      onChange={(e) =>
-                                        setRoleAssignForm((prev) => ({
-                                          ...prev,
-                                          role: e.target.value,
-                                        }))
-                                      }
-                                    >
-                                      <option value="">Select role</option>
-                                      <option value="ROLE_HR">HR</option>
-                                      <option value="ROLE_MANAGER">Manager</option>
-                                      <option value="ROLE_AM">Account Manager</option>
-                                      <option value="ROLE_EMPLOYEE">Employee</option>
-                                      <option value="ROLE_ADMIN">Admin</option>
-                                      <option value="ROLE_FINANCE">Finance</option>
-                                    </select>
-                                  </label>
+                                  <SelectField
+                                    label="Email"
+                                    required
+                                    value={roleAssignForm.target_email}
+                                    placeholder="Select employee"
+                                    options={roleAssignUsers.map((u) => ({
+                                      value: u.email,
+                                      label: `${u.name} (${u.email})`,
+                                    }))}
+                                    onChange={(target_email) =>
+                                      setRoleAssignForm((prev) => ({
+                                        ...prev,
+                                        target_email,
+                                      }))
+                                    }
+                                  />
+                                  <SelectField
+                                    label="Role"
+                                    required
+                                    value={roleAssignForm.role}
+                                    placeholder="Select role"
+                                    options={[
+                                      { value: "ROLE_HR", label: "HR" },
+                                      { value: "ROLE_MANAGER", label: "Manager" },
+                                      { value: "ROLE_AM", label: "Account Manager" },
+                                      { value: "ROLE_EMPLOYEE", label: "Employee" },
+                                      { value: "ROLE_ADMIN", label: "Admin" },
+                                      { value: "ROLE_FINANCE", label: "Finance" },
+                                    ]}
+                                    onChange={(role) =>
+                                      setRoleAssignForm((prev) => ({
+                                        ...prev,
+                                        role,
+                                      }))
+                                    }
+                                  />
                                 </div>
                                 <div className="flex gap-2">
                                   <button

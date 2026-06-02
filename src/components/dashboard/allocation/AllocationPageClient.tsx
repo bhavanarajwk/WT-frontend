@@ -3444,50 +3444,35 @@ export function AllocationPageClient() {
                                       </div>
                                     ) : null}
                                   </div>
-                                  <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                    <FieldLabel label="Project" required />
-                                    <select
-                                      required
-                                      aria-required
-                                      className="input-field px-3 py-2 text-sm"
-                                      value={allocationForm.project_code}
-                                      onChange={(e) =>
-                                        setAllocationForm((p) => ({
-                                          ...p,
-                                          project_code: e.target.value,
-                                        }))
-                                      }
-                                    >
-                                      <option value="">Select project</option>
-                                      {allocationProjects.map((p) => (
-                                        <option key={p.code} value={p.code}>
-                                          {p.name} ({p.code})
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
-                                  <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                    <FieldLabel label="Designation" required />
-                                    <select
-                                      required
-                                      aria-required
-                                      className="input-field px-3 py-2 text-sm"
-                                      value={allocationForm.role}
-                                      onChange={(e) =>
-                                        setAllocationForm((p) => ({
-                                          ...p,
-                                          role: e.target.value,
-                                        }))
-                                      }
-                                    >
-                                      <option value="">Select designation</option>
-                                      {allocationRoles.map((role) => (
-                                        <option key={role} value={role}>
-                                          {role}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
+                                  <SelectField
+                                    label="Project"
+                                    required
+                                    value={allocationForm.project_code}
+                                    placeholder="Select project"
+                                    options={allocationProjects.map((p) => ({
+                                      value: p.code,
+                                      label: `${p.name} (${p.code})`,
+                                    }))}
+                                    onChange={(project_code) =>
+                                      setAllocationForm((p) => ({
+                                        ...p,
+                                        project_code,
+                                      }))
+                                    }
+                                  />
+                                  <SelectField
+                                    label="Designation"
+                                    required
+                                    value={allocationForm.role}
+                                    placeholder="Select designation"
+                                    options={allocationRoles}
+                                    onChange={(role) =>
+                                      setAllocationForm((p) => ({
+                                        ...p,
+                                        role,
+                                      }))
+                                    }
+                                  />
                                   <SelectField
                                     label="Allocated hours"
                                     placeholder="Select allocated hours"

@@ -293,24 +293,19 @@ export function EmployeeProfilePageClient() {
                       options={WORK_LOCATIONS}
                       onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
                     />
-                    <label className="flex flex-col gap-1 text-xs text-wt-text-muted">
-                      Band
-                      <select
-                        className="input-field px-3 py-2 text-sm"
-                        value={editForm.band_id}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          const id = raw.match(/\(([^)]+)\)\s*$/)?.[1]?.trim() ?? raw;
-                          setEditForm({ ...editForm, band_id: id });
-                        }}
-                      >
-                        {bandSelectOptions.map((opt, index) => (
-                          <option key={`band-${index}-${opt}`} value={opt}>
-                            {opt || "Select band"}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <SelectField
+                      label="Band"
+                      value={editForm.band_id}
+                      placeholder="Select band"
+                      options={bandSelectOptions.map((opt) => ({
+                        value: opt,
+                        label: opt || "Select band",
+                      }))}
+                      onChange={(raw) => {
+                        const id = raw.match(/\(([^)]+)\)\s*$/)?.[1]?.trim() ?? raw;
+                        setEditForm({ ...editForm, band_id: id });
+                      }}
+                    />
                     <InputField
                       label="Primary skills (comma-separated)"
                       value={editForm.primary_skills}
@@ -325,16 +320,6 @@ export function EmployeeProfilePageClient() {
                       label="Secondary skill rating (1–5)"
                       value={editForm.secondary_rating}
                       onChange={(v) => setEditForm({ ...editForm, secondary_rating: v })}
-                    />
-                    <InputField
-                      label="Experience"
-                      value={editForm.experience}
-                      onChange={(v) => setEditForm({ ...editForm, experience: v })}
-                    />
-                    <InputField
-                      label="Years of experience (YOE)"
-                      value={editForm.yoe}
-                      onChange={(v) => setEditForm({ ...editForm, yoe: v })}
                     />
                   </div>
                   <div className="flex flex-wrap gap-2 pt-2">

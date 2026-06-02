@@ -293,21 +293,13 @@ function HrTrainingsView() {
           </div>
           {!editingId ? (
             <div className="sm:col-span-2">
-              <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                Trainer (optional, assigned after create)
-                <select
-                  className="input-field px-3 py-2 text-sm"
-                  value={createTrainerId}
-                  onChange={(e) => setCreateTrainerId(e.target.value)}
-                >
-                  <option value="">Select trainer</option>
-                  {trainerOptions.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SelectField
+                label="Trainer (optional, assigned after create)"
+                value={createTrainerId}
+                onChange={setCreateTrainerId}
+                placeholder="Select trainer"
+                options={trainerOptions.map((t) => ({ value: t.id, label: t.label }))}
+              />
             </div>
           ) : null}
         </div>

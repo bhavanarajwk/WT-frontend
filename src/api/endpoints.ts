@@ -94,6 +94,7 @@ export const endpoints = {
     earn: `${api}/comp-off/earn`,
     earnStatus: `${api}/comp-off/earn/status`,
     balance: `${api}/comp-off/balance`,
+    expiry: `${api}/comp-off/expiry`,
     grants: `${api}/comp-off/grants`,
     grantsForEmployee: (empId: string) =>
       `${api}/comp-off/grants/${encodeURIComponent(empId)}`,
@@ -162,6 +163,12 @@ export const endpoints = {
     assignRole: `${api}/roles/assign`,
     assignRoleLegacy: `${api}/assign-role`,
     schedulerRunAll: `${api}/scheduler/run-all`,
+  },
+
+  annualCalendar: {
+    root: `${api}/annual-calendar`,
+    byYear: (year: string | number) =>
+      `${api}/annual-calendar/${encodeURIComponent(String(year))}`,
   },
 
   exitInterview: {

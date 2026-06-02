@@ -1,5 +1,6 @@
 "use client";
 
+import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 import type { ListSortOptionMeta } from "@/utils/listSort";
 
 export function ListSortSelect({
@@ -24,19 +25,14 @@ export function ListSortSelect({
       className={`flex min-w-[min(100%,220px)] flex-col gap-1 text-xs text-wt-text-muted ${className}`.trim()}
     >
       {label}
-      <select
-        className="input-field px-3 py-2 text-sm"
+      <SearchableSelectCombobox
         value={value}
+        onChange={onChange}
         disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
+        options={options.map((opt) => ({ value: opt.id, label: opt.label }))}
+        placeholder="Search sort…"
         aria-label={label}
-      >
-        {options.map((opt) => (
-          <option key={opt.id} value={opt.id}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      />
     </label>
   );
 }

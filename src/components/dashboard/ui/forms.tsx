@@ -1,6 +1,12 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { Children, isValidElement, useRef, type ReactElement, type ReactNode } from "react";
+import {
+  SearchableSelectCombobox,
+  type SearchableSelectOption,
+} from "@/components/dashboard/ui/SearchableSelectCombobox";
+
+export { SearchableSelectCombobox, type SearchableSelectOption };
 import {
   API_DATE_PLACEHOLDER,
   apiDateFieldValue,
@@ -160,10 +166,39 @@ export function InputField({
 
 export type SelectFieldOption = string | { value: string; label: string };
 
-function normalizeSelectOptions(options: SelectFieldOption[]): { value: string; label: string }[] {
+function normalizeSelectOptions(options: SelectFieldOption[]): SearchableSelectOption[] {
   return options.map((opt) =>
     typeof opt === "string" ? { value: opt, label: opt } : { value: opt.value, label: opt.label }
   );
+}
+
+function optionsFromSelectChildren(children: ReactNode): SearchableSelectOption[] {
+  const out: SearchableSelectOption[] = [];
+  Children.forEach(children, (child) => {
+    if (!isValidElement(child)) return;
+    const el = child as ReactElement<{ value?: string; children?: ReactNode }>;
+    if (el.type !== "option") return;
+    const val = String(el.props.value ?? "");
+    const raw = el.props.children;
+    const label =
+      typeof raw === "string"
+        ? raw
+        : Array.isArray(raw)
+          ? raw.map((part) => String(part ?? "")).join("")
+          : String(raw ?? val);
+    out.push({ value: val, label: label.trim() || val });
+  });
+  return out;
+}
+
+function withPlaceholderOption(
+  items: SearchableSelectOption[],
+  placeholder?: string,
+  required?: boolean
+): SearchableSelectOption[] {
+  if (!placeholder) return items;
+  if (items.some((opt) => opt.value === "")) return items;
+  return [{ value: "", label: placeholder }, ...items];
 }
 
 export function SelectField({
@@ -173,6 +208,8 @@ export function SelectField({
   onChange,
   required = false,
   placeholder,
+  disabled = false,
+  className,
 }: {
   label: string;
   value: string;
@@ -180,29 +217,22 @@ export function SelectField({
   onChange: (value: string) => void;
   required?: boolean;
   placeholder?: string;
+  disabled?: boolean;
+  className?: string;
 }) {
-  const items = normalizeSelectOptions(options);
+  const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
   return (
-    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
       <FieldLabel label={label} required={required} />
-      <select
-        className="input-field px-3 py-2 text-sm"
+      <SearchableSelectCombobox
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
+        options={items}
+        placeholder={placeholder ?? "Search…"}
         required={required}
-        aria-required={required || undefined}
-      >
-        {placeholder ? (
-          <option value="" disabled={required}>
-            {placeholder}
-          </option>
-        ) : null}
-        {items.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        disabled={disabled}
+        aria-label={label}
+      />
     </label>
   );
 }
@@ -226,24 +256,19 @@ export function NativeSelectField({
   className?: string;
   children: ReactNode;
 }) {
+  const items = withPlaceholderOption(optionsFromSelectChildren(children), placeholder, required);
   return (
     <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
       <FieldLabel label={label} required={required} />
-      <select
-        className="input-field px-3 py-2 text-sm"
+      <SearchableSelectCombobox
         value={value}
-        disabled={disabled}
+        onChange={onChange}
+        options={items}
+        placeholder={placeholder ?? "Search…"}
         required={required}
-        aria-required={required || undefined}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {placeholder ? (
-          <option value="" disabled={required}>
-            {placeholder}
-          </option>
-        ) : null}
-        {children}
-      </select>
+        disabled={disabled}
+        aria-label={label}
+      />
     </label>
   );
 }

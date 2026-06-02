@@ -8,37 +8,37 @@ import {
   type EmployeeAttendanceLeaveEmployeeRow,
 } from "@/services/hrms.service";
 import { DatePickerField } from "@/components/dashboard/ui/forms";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { formatApiDate, formatApiDateDisplay } from "@/utils/apiDate";
 
 type Toast = { type: "success" | "error"; message: string } | null;
 
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 10;
 
 function defaultAttendanceDateRange(): { from: string; to: string } {
   const to = new Date();
-  const from = new Date();
-  from.setMonth(from.getMonth() - 4);
+  const from = new Date(2026, 0, 1);
   return { from: formatApiDate(from), to: formatApiDate(to) };
 }
 
-function formatLeaveDates(row: EmployeeAttendanceLeaveEmployeeRow): string {
+function formatLeaveDatesHover(row: EmployeeAttendanceLeaveEmployeeRow): string {
   const dates = row.leave_dates ?? [];
-  if (!dates.length) return "—";
+  if (!dates.length) {
+    return "No leave dates in this range";
+  }
   return dates
-    .map((d) => {
-      const day = formatApiDateDisplay(String(d.leave_date ?? "").trim());
-      const value = d.value;
-      return value != null && Number(value) !== 1 ? `${day} (${value})` : day;
-    })
+    .map((d) => formatApiDateDisplay(String(d.leave_date ?? "")).trim())
     .filter(Boolean)
-    .join(", ");
+    .join("\n");
 }
 
 export function EmployeeAttendancePanel() {
   const defaults = useMemo(() => defaultAttendanceDateRange(), []);
   const [fromDate, setFromDate] = useState(defaults.from);
   const [toDate, setToDate] = useState(defaults.to);
-  const [emailFilter, setEmailFilter] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [page, setPage] = useState(0);
   const [payload, setPayload] = useState<EmployeeAttendanceLeaveData | null>(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
@@ -60,8 +60,9 @@ export function EmployeeAttendancePanel() {
       const res = await hrmsService.getEmployeeAttendanceLeave({
         fromDate: from,
         toDate: to,
-        page: 0,
+        page,
         size: DEFAULT_PAGE_SIZE,
+        search: appliedSearch.trim() || undefined,
       });
       setPayload(res.data ?? null);
     } catch (error) {
@@ -76,7 +77,7 @@ export function EmployeeAttendancePanel() {
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, page, appliedSearch]);
 
   useEffect(() => {
     void load();
@@ -89,17 +90,17 @@ export function EmployeeAttendancePanel() {
   }, [toast]);
 
   const workingWeekdays = payload?.working_weekdays_in_range ?? 0;
+  const employees = payload?.employees ?? [];
+  const totalPages = Math.max(1, payload?.total_page ?? 1);
+  const totalItems = payload?.total_element ?? 0;
+  const currentPage = payload?.current_page ?? page;
+  const rangeStart = totalItems === 0 ? 0 : currentPage * DEFAULT_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(totalItems, (currentPage + 1) * DEFAULT_PAGE_SIZE);
 
-  const filteredEmployees = useMemo(() => {
-    const rows = payload?.employees ?? [];
-    const q = emailFilter.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((row) => {
-      const email = String(row.email ?? "").toLowerCase();
-      const empId = String(row.emp_id ?? "").toLowerCase();
-      return email.includes(q) || empId.includes(q);
-    });
-  }, [payload?.employees, emailFilter]);
+  function applyFilters() {
+    setPage(0);
+    setAppliedSearch(searchInput.trim());
+  }
 
   return (
     <section className="space-y-4">
@@ -142,60 +143,83 @@ export function EmployeeAttendancePanel() {
               </div>
             </div>
           ) : null}
-          <label className="sr-only" htmlFor="attendance-email-filter">
+          <label className="sr-only" htmlFor="attendance-search">
             Search
           </label>
           <input
-            id="attendance-email-filter"
+            id="attendance-search"
             type="search"
             className="input-field min-w-[200px] flex-1 px-3 py-2 text-sm"
-            placeholder="Search…"
-            value={emailFilter}
-            onChange={(e) => setEmailFilter(e.target.value)}
-            aria-label="Search"
+            placeholder="Search by name, emp id, or email…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") applyFilters();
+            }}
+            aria-label="Search employees"
           />
           <button
             type="button"
             className="btn-primary px-3 py-2 text-sm h-10"
-            onClick={() => void load()}
+            onClick={applyFilters}
             disabled={loading}
           >
             {loading ? "Loading…" : "Apply"}
           </button>
         </div>
+        {payload ? (
+          <p className="text-xs text-wt-text-muted">
+            Range {formatApiDateDisplay(payload.from_date)} – {formatApiDateDisplay(payload.to_date)}
+          </p>
+        ) : null}
       </div>
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        {loading && !filteredEmployees.length ? (
+        {loading && !employees.length ? (
           <p className="text-sm text-wt-text-muted">Loading attendance data…</p>
-        ) : filteredEmployees.length ? (
-          <div className="wt-scroll-both max-h-[min(70vh,560px)] rounded-xl border border-wt-border">
-            <table className="min-w-full text-sm">
-              <thead className="bg-wt-surface-2 text-wt-text-muted sticky top-0 z-10">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Employee ID</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Email</th>
-                  <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Leave days</th>
-                  <th className="text-left px-3 py-2 font-medium min-w-[160px]">Leave dates</th>
-                  <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Attendance days</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEmployees.map((row) => (
-                  <tr
-                    key={String(row.user_id ?? row.email)}
-                    className="border-t border-wt-border hover:bg-wt-surface-2/50"
-                  >
-                    <td className="px-3 py-2 whitespace-nowrap">{row.emp_id ?? "—"}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{row.email}</td>
-                    <td className="px-3 py-2 text-right whitespace-nowrap">{row.leave_days_taken}</td>
-                    <td className="px-3 py-2 max-w-[280px] text-xs">{formatLeaveDates(row)}</td>
-                    <td className="px-3 py-2 text-right whitespace-nowrap">{row.total_attendance_days}</td>
+        ) : employees.length ? (
+          <>
+            <div className="mx-auto max-w-4xl">
+              <div className="wt-scroll-both max-h-[min(70vh,560px)] rounded-xl border border-wt-border">
+                <table className="w-full text-sm">
+                <thead className="bg-wt-surface-2 text-wt-text-muted sticky top-0 z-10">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Name</th>
+                    <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Leave days</th>
+                    <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Attendance days</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {employees.map((row) => (
+                    <tr
+                      key={String(row.user_id ?? row.emp_id ?? row.name)}
+                      className="border-t border-wt-border hover:bg-wt-surface-2/50"
+                    >
+                      <td className="px-3 py-2 whitespace-nowrap">{row.name?.trim() || "—"}</td>
+                      <td
+                        className="px-3 py-2 text-right whitespace-nowrap cursor-default"
+                        title={formatLeaveDatesHover(row)}
+                      >
+                        {row.leave_days_taken}
+                      </td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap">{row.total_attendance_days}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ListPagination
+              className="mt-3"
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              pageSize={DEFAULT_PAGE_SIZE}
+              onPageChange={setPage}
+            />
+            </div>
+          </>
         ) : (
           <p className="text-sm text-wt-text-muted">No employees found for this range.</p>
         )}

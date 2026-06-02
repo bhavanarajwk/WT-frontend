@@ -83,6 +83,7 @@ import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAc
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { createEmptyTimelogForm } from "@/utils/timelogFormState";
+import { isOffboardedUserStatus } from "@/utils/userStatus";
 
 
 
@@ -374,7 +375,7 @@ export function TimelogPageClient() {
   const restrictForPendingOnboarding =
     isEmployee && !hasHrAccess && !hasManagerAccess;
   const [isOffboarded, setIsOffboarded] = useState(() =>
-    String(user?.status ?? "").trim().toUpperCase() === "OFFBOARDED"
+    isOffboardedUserStatus(user?.status)
   );
   const requiresSelfOnboarding =
     restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded;
@@ -451,7 +452,7 @@ export function TimelogPageClient() {
       .trim()
       .toUpperCase();
     setIsSelfOnboarded(status === "ACTIVE");
-    setIsOffboarded(status === "OFFBOARDED" || status === "OFF_BOARDED");
+    setIsOffboarded(isOffboardedUserStatus(status));
   }, [user?.status]);
   useEffect(() => {
     if (!user) return;
@@ -3371,31 +3372,26 @@ export function TimelogPageClient() {
                             </div>
                             <div className="mb-3 max-w-md">
                               {hasHrAccess ? (
-                                <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                  Employee
-                                  <select
-                                    className="input-field px-3 py-2 text-sm"
-                                    value={teamTimelogEmailFilter}
-                                    onChange={(e) => {
-                                      const email = e.target.value;
-                                      setTeamTimelogEmailFilter(email);
-                                      if (!email) {
-                                        setTimelogs([]);
-                                        return;
-                                      }
-                                      void runAction("Load employee timelogs", () =>
-                                        loadTimelogsForCurrentRole(email)
-                                      );
-                                    }}
-                                  >
-                                    <option value="">Select employee…</option>
-                                    {hrTimelogEmployeeOptions.map((opt) => (
-                                      <option key={opt.email} value={opt.email}>
-                                        {opt.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </label>
+                                <SelectField
+                                  label="Employee"
+                                  className="max-w-md"
+                                  value={teamTimelogEmailFilter}
+                                  placeholder="Select employee…"
+                                  options={hrTimelogEmployeeOptions.map((opt) => ({
+                                    value: opt.email,
+                                    label: opt.label,
+                                  }))}
+                                  onChange={(email) => {
+                                    setTeamTimelogEmailFilter(email);
+                                    if (!email) {
+                                      setTimelogs([]);
+                                      return;
+                                    }
+                                    void runAction("Load employee timelogs", () =>
+                                      loadTimelogsForCurrentRole(email)
+                                    );
+                                  }}
+                                />
                               ) : (
                                 <SelectField
                                   label="Employee email (filter)"

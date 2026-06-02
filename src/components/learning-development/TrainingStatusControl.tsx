@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUpdateTraining } from "@/hooks/learning/useLearningTrainings";
+import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 import { StatusBadge } from "@/components/learning-development/ui/forms";
 
 export const TRAINING_STATUS_OPTIONS = [
@@ -50,18 +51,17 @@ export function TrainingStatusControl({
       </summary>
       <div className="absolute right-0 top-[calc(100%+6px)] z-30 w-56 rounded-xl border border-wt-border bg-wt-surface-1 p-3 shadow-lg">
         <p className="text-xs text-wt-text-muted mb-2">Change training status</p>
-        <select
-          className="input-field w-full px-3 py-2 text-sm"
+        <SearchableSelectCombobox
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={setDraft}
           disabled={updateMut.isPending}
-        >
-          {TRAINING_STATUS_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt.replace(/_/g, " ")}
-            </option>
-          ))}
-        </select>
+          placeholder="Search status…"
+          options={TRAINING_STATUS_OPTIONS.map((opt) => ({
+            value: opt,
+            label: opt.replace(/_/g, " "),
+          }))}
+          aria-label="Training status"
+        />
         <button
           type="button"
           className="btn-primary mt-2 w-full px-3 py-2 text-sm"

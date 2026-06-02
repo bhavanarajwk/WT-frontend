@@ -58,6 +58,12 @@ export function pickProfileField(profile: Record<string, unknown>, keys: string[
   return undefined;
 }
 
+function normalizeStatusLabel(value: unknown): string {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (!normalized) return "—";
+  return normalized;
+}
+
 export function formatYoeDisplay(value: unknown): string {
   if (value === null || value === undefined) return "—";
   const text = String(value).trim();
@@ -116,7 +122,7 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
       record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate
     ),
     date_of_birth: formatDirectoryDate(record.date_of_birth ?? record.dob),
-    status: String(record.status ?? "").trim() || "—",
+    status: normalizeStatusLabel(record.status),
     user_type: String(record.user_type ?? record.userType ?? "").trim() || "—",
     work_mode: String(record.work_mode ?? record.workMode ?? "").trim() || "—",
     work_location: String(
@@ -139,8 +145,6 @@ export type EmployeeProfileEditForm = {
   primary_skills: string;
   secondary_skill: string;
   secondary_rating: string;
-  experience: string;
-  yoe: string;
 };
 
 export function profileToEditForm(profile: Record<string, unknown>): EmployeeProfileEditForm {
@@ -172,8 +176,6 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     primary_skills: primarySkills,
     secondary_skill: String(firstSecondary?.skill ?? "").trim(),
     secondary_rating: String(firstSecondary?.rating ?? "3").trim() || "3",
-    experience: String(pickProfileField(profile, ["experience"]) ?? "").trim(),
-    yoe: String(pickProfileField(profile, ["yoe"]) ?? "").trim(),
   };
 }
 
@@ -194,8 +196,6 @@ export function editFormToUpdatePayload(form: EmployeeProfileEditForm): Record<s
     user_status: form.user_status.trim(),
     work_mode: form.work_mode.trim(),
     work_location_type: form.work_location_type.trim(),
-    experience: form.experience.trim(),
-    yoe: form.yoe.trim(),
     primary_skills: primary,
     secondary_skills,
   };
@@ -236,6 +236,12 @@ const PROFILE_HIDDEN_LABELS = new Set([
   "Secondary",
   "Carry Forward",
   "Total Leave",
+  "Exit Interview Applicable",
+  "Can Fill Exit Interview",
+  "Exit Interview Submitted",
+  "Exit Interview Resignation Date",
+  "Exit Interview Last Working Day",
+  "Exit Interview Days Until Last Working Day",
 ]);
 
 const PROFILE_EXCLUDED_KEYS = new Set([
@@ -271,6 +277,12 @@ const PROFILE_EXCLUDED_KEYS = new Set([
   "comp_off_balance",
   "compOffBalance",
   "leave",
+  "exit_interview_applicable",
+  "can_fill_exit_interview",
+  "exit_interview_submitted",
+  "exit_interview_resignation_date",
+  "exit_interview_last_working_day",
+  "exit_interview_days_until_last_working_day",
 ]);
 
 const PROFILE_SKIP_KEYS = new Set([
@@ -307,6 +319,10 @@ export function buildProfileDisplayEntries(
     },
     { label: "Employee ID", value: pickProfileField(profile, ["emp_id", "empId", "employee_id"]) },
     { label: "Work email", value: pickProfileField(profile, ["email"]) },
+    {
+      label: "Status",
+      value: normalizeStatusLabel(pickProfileField(profile, ["status", "user_status", "userStatus"])),
+    },
     { label: "Personal mail ID", value: pickProfileField(profile, ["personal_email"]) },
     { label: "User type", value: pickProfileField(profile, ["user_type", "userType"]) },
     { label: "Phone number", value: pickProfileField(profile, ["phone_number", "phoneNumber"]) },
@@ -327,8 +343,14 @@ export function buildProfileDisplayEntries(
     { label: "Work mode", value: pickProfileField(profile, ["work_mode", "workMode"]) },
     { label: "Primary skills", value: formatPrimarySkills(profile) },
     { label: "Secondary skills", value: formatSecondarySkills(profile) },
-    { label: "Years of experience", value: formatYoeDisplay(pickProfileField(profile, ["yoe", "years_of_experience"])) },
-    { label: "Total experience", value: pickProfileField(profile, ["experience"]) },
+    {
+      label: "Webknot experience",
+      value: pickProfileField(profile, ["webknot_experience", "webknotExperience"]),
+    },
+    {
+      label: "Total experience",
+      value: pickProfileField(profile, ["total_experience", "totalExperience"]),
+    },
     ...((): ProfileDisplayEntry[] => {
       const href =
         resumeShareHref !== undefined ? resumeShareHref : pickResumeShareLink(profile);
@@ -377,6 +399,10 @@ export function buildProfileDisplayEntries(
     "primarySkills",
     "secondary_skills",
     "secondarySkills",
+    "webknot_experience",
+    "webknotExperience",
+    "total_experience",
+    "totalExperience",
     "yoe",
     "years_of_experience",
     "experience",
