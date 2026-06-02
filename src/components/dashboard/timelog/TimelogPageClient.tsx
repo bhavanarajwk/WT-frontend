@@ -68,19 +68,21 @@ import {
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
 import { MetricCard } from "@/components/dashboard/ui/MetricCard";
-import { InputField, SelectField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, FileField, UploadTile, NativeSelectField } from "@/components/dashboard/ui/forms";
 import {
   ProfilePhotoAvatar,
   ProfileField,
   formatSecondarySkillsForProfile,
 } from "@/components/dashboard/ui/profile";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
+import { TIMELOG_SORT_OPTIONS } from "@/utils/listSort";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
+import { createEmptyTimelogForm } from "@/utils/timelogFormState";
 
 
 
@@ -146,14 +148,7 @@ export function TimelogPageClient() {
   const [hrTimelogEmployeeOptions, setHrTimelogEmployeeOptions] = useState<
     Array<{ email: string; label: string }>
   >([]);
-  const [timelogForm, setTimelogForm] = useState({
-    project_code: "",
-    log_date: "",
-    hours: "1",
-    description: "",
-    /** HR/Admin: optional — submit timelog for this employee when the API accepts it */
-    subject_employee_email: "",
-  });
+  const [timelogForm, setTimelogForm] = useState(createEmptyTimelogForm);
   const [myLeaveRequests, setMyLeaveRequests] = useState<Array<Record<string, unknown>>>([]);
   const [employeeRequests, setEmployeeRequests] = useState<Array<Record<string, unknown>>>([]);
   const [kpis, setKpis] = useState<Array<Record<string, unknown>>>([]);
@@ -2610,22 +2605,7 @@ export function TimelogPageClient() {
             ).values()
           ).sort((a, b) => a.emp_id.localeCompare(b.emp_id));
           setBgvUsers(bgvRows);
-          setOffboardingForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setAttritionForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setBgvForm((prev) => {
-            const selected =
-              bgvRows.find((emp) => emp.emp_id === prev.emp_id) ??
-              bgvRows[0];
-            if (!selected) return prev;
-            return {
-              ...prev,
-              emp_id: prev.emp_id || selected.emp_id,
-              name: selected.name,
-              role: selected.role,
-              level: selected.level,
-              mail_id: selected.email,
-            };
-          });
+
         } catch {
           setOffboardingUsers([]);
           setBgvUsers([]);
@@ -2786,9 +2766,6 @@ export function TimelogPageClient() {
                 .filter(Boolean);
               if (!primarySkills.length) {
                 throw new Error("Please add at least one primary skill.");
-              }
-              if (!selfOnboardFiles.resume) {
-                throw new Error("Please upload resume.");
               }
               if (!selfOnboardFiles.profile_photo) {
                 throw new Error("Please upload profile photo.");
@@ -3207,35 +3184,36 @@ export function TimelogPageClient() {
                               <p className="text-sm font-medium text-wt-text">Log time</p>
                               <div className="grid sm:grid-cols-2 gap-3">
                                 {!timelogHrNoSelfProject ? (
-                                  <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                    Project
-                                    <select
-                                      className="input-field px-3 py-2 text-sm"
-                                      value={timelogForm.project_code}
-                                      onChange={(e) =>
-                                        setTimelogForm((prev) => ({
-                                          ...prev,
-                                          project_code: e.target.value,
-                                        }))
-                                      }
-                                    >
-                                      <option value="">Select project</option>
-                                      {timelogProjects.map((project) => (
-                                        <option key={project.code} value={project.code}>
-                                          {project.name} ({project.code})
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
+                                  <NativeSelectField
+                                    label="Project"
+                                    required
+                                    placeholder="Select project"
+                                    value={timelogForm.project_code}
+                                    onChange={(value) =>
+                                      setTimelogForm((prev) => ({
+                                        ...prev,
+                                        project_code: value,
+                                      }))
+                                    }
+                                  >
+                                    {timelogProjects.map((project) => (
+                                      <option key={project.code} value={project.code}>
+                                        {project.name} ({project.code})
+                                      </option>
+                                    ))}
+                                  </NativeSelectField>
                                 ) : null}
                                 <InputField
                                   label="Log Date"
+                                  required
                                   value={timelogForm.log_date}
                                   onChange={(v) => setTimelogForm((prev) => ({ ...prev, log_date: v }))}
                                   type="date"
                                 />
                                 <SelectField
                                   label="Hours"
+                                  placeholder="Select hours"
+                                  required
                                   value={timelogForm.hours}
                                   options={["1", "2", "3"]}
                                   onChange={(v) => setTimelogForm((prev) => ({ ...prev, hours: v }))}
@@ -3260,6 +3238,9 @@ export function TimelogPageClient() {
                                       if (!timelogHrNoSelfProject && !projectCode) {
                                         throw new Error("Project and Log Date are required.");
                                       }
+                                      if (!timelogForm.hours) {
+                                        throw new Error("Please select hours.");
+                                      }
                                       const body: Record<string, unknown> = {
                                         log_date: logDate,
                                         hours: Number(timelogForm.hours),
@@ -3272,13 +3253,7 @@ export function TimelogPageClient() {
                                         contentType: "application/json",
                                         body: JSON.stringify(body),
                                       });
-                                      setTimelogForm({
-                                        project_code: "",
-                                        log_date: "",
-                                        hours: "1",
-                                        description: "",
-                                        subject_employee_email: "",
-                                      });
+                                      setTimelogForm(createEmptyTimelogForm());
                                       try {
                                         await loadTimelogsForCurrentRole();
                                       } catch {
@@ -3298,6 +3273,7 @@ export function TimelogPageClient() {
                                 columns={["project_code", "log_date", "hours", "description"]}
                                 rows={timelogs}
                                 emptyLabel="No timelogs loaded."
+                                sortOptions={TIMELOG_SORT_OPTIONS}
                               />
                             )}
                           </div>
@@ -3348,6 +3324,7 @@ export function TimelogPageClient() {
                                       ]}
                                       rows={managerProjectTeamRows}
                                       emptyLabel="No employees found for the selected project."
+                                      sortOptions={TIMELOG_SORT_OPTIONS}
                                     />
                                   </div>
                                 </div>
@@ -3444,6 +3421,7 @@ export function TimelogPageClient() {
                                   : ["project_code", "employee_name", "log_date", "hours", "description"]
                               }
                               rows={managerTeamTimelogs}
+                              sortOptions={TIMELOG_SORT_OPTIONS}
                               emptyLabel={
                                 hasHrAccess
                                   ? teamTimelogEmailFilter

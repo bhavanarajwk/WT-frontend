@@ -43,6 +43,8 @@ import {
   formatAllocatedHoursPercentLabel,
 } from "@/utils/dashboard/validation";
 import { applyTheme } from "@/utils/dashboard/theme";
+import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboardingPanel";
+import { createEmptySelfProfileForm } from "@/utils/profileFormState";
 import {
   isManagerFlagTruthy,
   isManagerRoleLabel,
@@ -269,37 +271,7 @@ export function ProfilePageClient() {
   const [onboardBands, setOnboardBands] = useState<Array<Record<string, unknown>>>([]);
   const [onboardDepartments, setOnboardDepartments] = useState<string[]>([]);
   const [bandDeptRoleMap, setBandDeptRoleMap] = useState<Record<string, string[]>>({});
-  const [selfOnboardForm, setSelfOnboardForm] = useState({
-    full_name: "",
-    phone_number: "",
-    yoe: "",
-    primary_skills: "",
-    secondary_skill: "",
-    secondary_rating: "3",
-    work_location_type: "OFFSHORE",
-  });
-  const [selfOnboardFiles, setSelfOnboardFiles] = useState<{
-    resume: File | null;
-    profile_photo: File | null;
-    aadhaar: File | null;
-    pan_card: File | null;
-    reliving_letter: File | null;
-    salary_slips: File | null;
-  }>({
-    resume: null,
-    profile_photo: null,
-    aadhaar: null,
-    pan_card: null,
-    reliving_letter: null,
-    salary_slips: null,
-  });
-  const [selfProfileForm, setSelfProfileForm] = useState({
-    phone_number: "",
-    primary_skills: "",
-    secondary_skill: "",
-    secondary_rating: "3",
-    yoe: "",
-  });
+  const [selfProfileForm, setSelfProfileForm] = useState(createEmptySelfProfileForm);
   const [selfProfileEmploymentFiles, setSelfProfileEmploymentFiles] = useState<{
     reliving_letter: File | null;
     salary_slips: File | null;
@@ -373,6 +345,17 @@ export function ProfilePageClient() {
     restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded;
   /** Self-service profile + onboarding (non-HR employees only) */
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
+  const onboardPrefillKey = useMemo(
+    () =>
+      [
+        String(employeeProfile?.emp_id ?? user?.email ?? "onboard"),
+        String(employeeProfile?.personal_email ?? "").trim(),
+        String(
+          employeeProfile?.resume_share_link ?? employeeProfile?.resumeShareLink ?? ""
+        ).trim(),
+      ].join("|"),
+    [employeeProfile, user?.email]
+  );
   const canAccessProfile = Boolean(user);
   useEffect(() => {
         if (!hasManagerAccess && !hasHrAccess && timelogSubTab === "team") {
@@ -420,12 +403,6 @@ export function ProfilePageClient() {
     return toRows(fallback.data ?? fallback);
   }, []);
 
-  const priorEmploymentDocsRequired = useMemo(() => {
-    const raw = String(selfOnboardForm.yoe ?? "").trim().replace(",", ".");
-    if (!raw) return false;
-    const n = Number.parseFloat(raw);
-    return Number.isFinite(n) && n > 0;
-  }, [selfOnboardForm.yoe]);
   useEffect(() => {
     if (!toast) return;
     const id = window.setTimeout(() => setToast(null), 2800);
@@ -441,7 +418,13 @@ export function ProfilePageClient() {
     const status = resolveProfileStatus(profile, user);
     setIsSelfOnboarded(isActiveUserStatus(status));
     setIsOffboarded(isOffboardedUserStatus(status));
-  }, [user?.status]);
+  }, [user]);
+
+  const handleOnboardingSuccess = useCallback(async () => {
+    await refreshSession();
+    await loadMyProfile();
+    router.replace("/dashboard/overview", { scroll: false });
+  }, [refreshSession, loadMyProfile, router]);
   useEffect(() => {
     if (!user) return;
     const id = window.setTimeout(() => {
@@ -2649,22 +2632,7 @@ export function ProfilePageClient() {
             ).values()
           ).sort((a, b) => a.emp_id.localeCompare(b.emp_id));
           setBgvUsers(bgvRows);
-          setOffboardingForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setAttritionForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setBgvForm((prev) => {
-            const selected =
-              bgvRows.find((emp) => emp.emp_id === prev.emp_id) ??
-              bgvRows[0];
-            if (!selected) return prev;
-            return {
-              ...prev,
-              emp_id: prev.emp_id || selected.emp_id,
-              name: selected.name,
-              role: selected.role,
-              level: selected.level,
-              mail_id: selected.email,
-            };
-          });
+
         } catch {
           setOffboardingUsers([]);
           setBgvUsers([]);
@@ -2729,207 +2697,6 @@ export function ProfilePageClient() {
   }, [normalizedManagerProjects, selectedManagerProjectCode]);  useEffect(() => {
     if (!hasHrAccess) return;
   }, [ hasHrAccess]);
-  const renderSelfOnboardingPanel = () => (
-    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-      <h3 className="font-semibold mb-1">Complete Your Onboarding</h3>
-      <p className="text-sm text-wt-text-muted mb-4">
-        Employees must complete onboarding before full portal access. Your legal name and phone here replace what HR
-        entered when you were invited.
-      </p>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <InputField
-          label="Full name (as per ID)"
-          value={selfOnboardForm.full_name}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, full_name: v }))}
-        />
-        <InputField
-          label="Phone number"
-          value={selfOnboardForm.phone_number}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, phone_number: v }))}
-        />
-        <InputField label="Years of Experience" value={selfOnboardForm.yoe} onChange={(v) => setSelfOnboardForm((p) => ({ ...p, yoe: v }))} />
-        <InputField
-          label="Primary Skills (comma separated)"
-          value={selfOnboardForm.primary_skills}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, primary_skills: v }))}
-        />
-        <InputField
-          label="Secondary Skill"
-          value={selfOnboardForm.secondary_skill}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, secondary_skill: v }))}
-        />
-        <SelectField
-          label="Secondary Skill Rating"
-          value={selfOnboardForm.secondary_rating}
-          options={["1", "2", "3", "4", "5"]}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, secondary_rating: v }))}
-        />
-        <SelectField
-          label="Work Location"
-          value={selfOnboardForm.work_location_type}
-          options={["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"]}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, work_location_type: v }))}
-        />
-      </div>
-      <div className="grid sm:grid-cols-2 gap-3 mt-3">
-        <FileField label="Resume" accept=".pdf,.doc,.docx,image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, resume: file }))} />
-        <FileField label="Profile Photo" accept="image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, profile_photo: file }))} />
-        <FileField label="Aadhaar" accept=".pdf,image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, aadhaar: file }))} />
-        <FileField label="PAN Card" accept=".pdf,image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, pan_card: file }))} />
-      </div>
-      {priorEmploymentDocsRequired ? (
-        <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4">
-          <p className="text-sm font-medium text-wt-text mb-2">Prior employment (YoE &gt; 0)</p>
-          <p className="text-xs text-wt-text-muted mb-3">
-            Relieving letter and a payslip are required when years of experience is greater than zero.
-          </p>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <FileField
-              label="Relieving letter (previous company)"
-              accept=".pdf,image/*"
-              onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, reliving_letter: file }))}
-            />
-            <FileField
-              label="Upload last 3 months's payslip"
-              accept=".pdf,image/*"
-              onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, salary_slips: file }))}
-            />
-          </div>
-        </div>
-      ) : (
-        <p className="mt-3 text-xs text-wt-text-muted">
-          If your years of experience is above zero, add relieving letter and upload last 3 months&apos;s payslip (field appears when YoE &gt; 0).
-        </p>
-      )}
-      <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
-            runAction("Submit onboarding", async () => {
-              if (!user?.email) {
-                throw new Error("Unable to resolve logged-in email.");
-              }
-              const legalName = selfOnboardForm.full_name.trim();
-              const phone = selfOnboardForm.phone_number.trim();
-              if (!legalName || !isValidPersonName(legalName)) {
-                throw new Error("Enter your full name as per ID (letters and spaces, 2–120 characters).");
-              }
-              if (!phone || !isValidIndiaMobile(phone)) {
-                throw new Error("Enter a valid Indian mobile number (10 digits, optional +91).");
-              }
-              const fd = new FormData();
-              const primarySkills = selfOnboardForm.primary_skills
-                .split(",")
-                .map((item) => item.trim())
-                .filter(Boolean);
-              if (!primarySkills.length) {
-                throw new Error("Please add at least one primary skill.");
-              }
-              if (!selfOnboardFiles.resume) {
-                throw new Error("Please upload resume.");
-              }
-              if (!selfOnboardFiles.profile_photo) {
-                throw new Error("Please upload profile photo.");
-              }
-              if (!selfOnboardFiles.aadhaar) {
-                throw new Error("Please upload Aadhaar.");
-              }
-              if (!selfOnboardFiles.pan_card) {
-                throw new Error("Please upload PAN card.");
-              }
-              if (priorEmploymentDocsRequired) {
-                if (!selfOnboardFiles.reliving_letter) {
-                  throw new Error(
-                    "Please upload your relieving letter from the previous company."
-                  );
-                }
-                if (!selfOnboardFiles.salary_slips) {
-                  throw new Error("Please upload a payslip file in the payslip field.");
-                }
-              }
-              if (
-                selfOnboardFiles.profile_photo.type &&
-                !selfOnboardFiles.profile_photo.type.startsWith("image/")
-              ) {
-                throw new Error("Profile photo must be an image file (jpg/png/webp).");
-              }
-              const selectedFiles: Array<[string, File]> = [];
-              for (const [key, val] of Object.entries(selfOnboardFiles)) {
-                if (val) selectedFiles.push([key, val as File]);
-              }
-              for (const [key, file] of selectedFiles) {
-                if (file.size > MAX_ONBOARD_FILE_BYTES) {
-                  throw new Error(
-                    `${key.replaceAll("_", " ")} exceeds 2 MB. Please upload a smaller file.`
-                  );
-                }
-              }
-              const totalBytes = selectedFiles.reduce((sum, [, file]) => sum + file.size, 0);
-              if (totalBytes > MAX_ONBOARD_TOTAL_BYTES) {
-                throw new Error("Total upload size exceeds 6 MB. Compress files and retry.");
-              }
-              const yoeValue = selfOnboardForm.yoe ? Number(selfOnboardForm.yoe) : null;
-              fd.append(
-                "user_data",
-                JSON.stringify({
-                  email: user.email,
-                  name: legalName,
-                  phone_number: phone,
-                  yoe: yoeValue,
-                  experience: yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
-                  primary_skills: primarySkills,
-                  secondary_skills: selfOnboardForm.secondary_skill
-                    ? [
-                        {
-                          skill: selfOnboardForm.secondary_skill.trim(),
-                          rating: Number(selfOnboardForm.secondary_rating),
-                        },
-                      ]
-                    : [],
-                  work_location_type: selfOnboardForm.work_location_type,
-                })
-              );
-              Object.entries(selfOnboardFiles).forEach(([key, file]) => {
-                if (key === "salary_slips") {
-                  if (file) fd.append("salary_slips[]", file as File);
-                  return;
-                }
-                if (!file) return;
-                fd.append(key, file as File);
-              });
-              await hrmsService.completeMyOnboarding(fd);
-              setSelfOnboardForm({
-                full_name: "",
-                phone_number: "",
-                yoe: "",
-                primary_skills: "",
-                secondary_skill: "",
-                secondary_rating: "3",
-                work_location_type: "OFFSHORE",
-              });
-              setSelfOnboardFiles({
-                resume: null,
-                profile_photo: null,
-                aadhaar: null,
-                pan_card: null,
-                reliving_letter: null,
-                salary_slips: null,
-              });
-              setIsSelfOnboarded(true);
-              await refreshSession();
-              await loadMyProfile();
-              router.replace("/dashboard/overview", { scroll: false });
-              router.replace("/dashboard/overview", { scroll: false });
-            })
-          }
-          disabled={actionLoading}
-        >
-          Submit Onboarding Form
-        </button>
-      </div>
-    </div>
-  );
 
   const openOwnProfileEditor = () => {
     const profile = employeeProfile ?? {};
@@ -2947,7 +2714,7 @@ export function ProfilePageClient() {
       phone_number: String(profile.phone_number ?? profile.phoneNumber ?? "").trim(),
       primary_skills: primarySkills,
       secondary_skill: String(firstSecondary?.skill ?? "").trim(),
-      secondary_rating: String(firstSecondary?.rating ?? "3"),
+      secondary_rating: String(firstSecondary?.rating ?? "").trim(),
       yoe: String(profile.yoe ?? "").trim(),
     });
     setSelfProfileEmploymentFiles({
@@ -2989,7 +2756,8 @@ export function ProfilePageClient() {
   const renderProfileDetailsGrid = () => (
     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
       <ProfileField label="Name" value={employeeProfile?.name ?? user?.name} />
-      <ProfileField label="Email" value={employeeProfile?.email ?? user?.email} />
+      <ProfileField label="Work email" value={employeeProfile?.email ?? user?.email} />
+      <ProfileField label="Personal mail ID" value={employeeProfile?.personal_email} />
       <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
       <ProfileField label="Phone Number" value={employeeProfile?.phone_number ?? employeeProfile?.phoneNumber} />
       <ProfileField
@@ -3052,7 +2820,13 @@ export function ProfilePageClient() {
         <InputField label="Phone Number" value={selfProfileForm.phone_number} onChange={(v) => setSelfProfileForm((p) => ({ ...p, phone_number: v }))} />
         <InputField label="Primary Skills (comma separated)" value={selfProfileForm.primary_skills} onChange={(v) => setSelfProfileForm((p) => ({ ...p, primary_skills: v }))} />
         <InputField label="Secondary Skill" value={selfProfileForm.secondary_skill} onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_skill: v }))} />
-        <SelectField label="Secondary Skill Rating" value={selfProfileForm.secondary_rating} options={["1", "2", "3", "4", "5"]} onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_rating: v }))} />
+        <SelectField
+          label="Secondary Skill Rating"
+          placeholder="Select rating"
+          value={selfProfileForm.secondary_rating}
+          options={["1", "2", "3", "4", "5"]}
+          onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_rating: v }))}
+        />
         <InputField label="Years of Experience" value={selfProfileForm.yoe} onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))} />
       </div>
       {priorEmploymentDocsForProfile ? (
@@ -3064,11 +2838,13 @@ export function ProfilePageClient() {
           <div className="grid sm:grid-cols-2 gap-3">
             <FileField
               label="Relieving letter (previous company)"
+              required
               accept=".pdf,image/*"
               onPick={(file) => setSelfProfileEmploymentFiles((p) => ({ ...p, reliving_letter: file }))}
             />
             <FileField
               label="Upload last 3 months's payslip"
+              required
               accept=".pdf,image/*"
               onPick={(file) =>
                 setSelfProfileEmploymentFiles((p) => ({ ...p, salary_slips: file }))
@@ -3169,13 +2945,7 @@ export function ProfilePageClient() {
                 fd.append("salary_slips[]", selfProfileEmploymentFiles.salary_slips);
               }
               await hrmsService.updateMyProfile(fd);
-              setSelfProfileForm({
-                phone_number: "",
-                primary_skills: "",
-                secondary_skill: "",
-                secondary_rating: "3",
-                yoe: "",
-              });
+              setSelfProfileForm(createEmptySelfProfileForm());
               setSelfProfileEmploymentFiles({
                 reliving_letter: null,
                 salary_slips: null,
@@ -3210,7 +2980,19 @@ export function ProfilePageClient() {
                           <ExitInterviewProfileBanner />
                           {employeeSelfServeProfile ? (
                             requiresSelfOnboarding ? (
-                              renderSelfOnboardingPanel()
+                              <SelfOnboardingPanel
+                                key={onboardPrefillKey}
+                                workEmail={user?.email ?? ""}
+                                initialPersonalEmail={String(employeeProfile?.personal_email ?? "").trim()}
+                                initialResumeShareLink={String(
+                                  employeeProfile?.resume_share_link ??
+                                    employeeProfile?.resumeShareLink ??
+                                    ""
+                                ).trim()}
+                                actionLoading={actionLoading}
+                                runAction={runAction}
+                                onSuccess={handleOnboardingSuccess}
+                              />
                             ) : (
                               isEditingOwnProfile ? renderEditMyProfilePanel() : renderMyProfileViewPanel()
                             )
@@ -3227,7 +3009,11 @@ export function ProfilePageClient() {
                               </div>
                               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
                                 <ProfileField label="Name" value={employeeProfile?.name ?? user?.name} />
-                                <ProfileField label="Email" value={employeeProfile?.email ?? user?.email} />
+                                <ProfileField label="Work email" value={employeeProfile?.email ?? user?.email} />
+                                <ProfileField
+                                  label="Personal mail ID"
+                                  value={employeeProfile?.personal_email}
+                                />
                                 <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
                                 <ProfileField label="Department" value={employeeProfile?.department} />
                                 <ProfileField

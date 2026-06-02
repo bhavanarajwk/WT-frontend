@@ -10,8 +10,14 @@ import {
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
 import { InputField, SelectField, Sheet } from "@/components/learning-development/ui/forms";
+import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { useClientPagination } from "@/hooks/useClientPagination";
+import { applyListSort, TRAINING_SORT_OPTIONS } from "@/utils/listSort";
 import { trainingDurationDaysFromRange } from "@/utils/learning/trainingDates";
+import { normalizeToApiDate } from "@/utils/apiDate";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
+import { createEmptyTrainingForm } from "@/utils/learningFormState";
 import { hrmsService } from "@/services/hrms.service";
 import { EmployeeLearningCatalog } from "@/components/learning-development/EmployeeLearningCatalog";
 
@@ -36,17 +42,10 @@ function HrTrainingsView() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortId, setSortId] = useState(TRAINING_SORT_OPTIONS[0].id);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    name: "",
-    category: "TECHNICAL",
-    type: "OPTIONAL",
-    description: "",
-    start_date: "",
-    end_date: "",
-    status: "DRAFT",
-  });
+  const [form, setForm] = useState(createEmptyTrainingForm);
   const [createTrainerId, setCreateTrainerId] = useState("");
 
   const updateMut = useUpdateTraining(editingId ?? undefined);
@@ -64,20 +63,16 @@ function HrTrainingsView() {
     if (statusFilter !== "ALL") {
       list = list.filter((r) => String(r.status ?? "").toUpperCase() === statusFilter);
     }
-    return list;
-  }, [rows, search, statusFilter]);
+    return applyListSort(list, sortId, TRAINING_SORT_OPTIONS);
+  }, [rows, search, statusFilter, sortId]);
+
+  const cardPagination = useClientPagination(filtered, {
+    resetKeys: [search, statusFilter, sortId],
+  });
 
   function openCreate() {
     setEditingId(null);
-    setForm({
-      name: "",
-      category: "TECHNICAL",
-      type: "OPTIONAL",
-      description: "",
-      start_date: "",
-      end_date: "",
-      status: "DRAFT",
-    });
+    setForm(createEmptyTrainingForm());
     setCreateTrainerId("");
     setSheetOpen(true);
   }
@@ -90,8 +85,8 @@ function HrTrainingsView() {
       category: String(row.category ?? "TECHNICAL").trim(),
       type: String(row.type ?? "OPTIONAL").trim(),
       description: String(row.description ?? "").trim(),
-      start_date: String(row.start_date ?? row.training_start ?? "").slice(0, 10),
-      end_date: String(row.end_date ?? row.training_end ?? "").slice(0, 10),
+      start_date: normalizeToApiDate(String(row.start_date ?? row.training_start ?? "")),
+      end_date: normalizeToApiDate(String(row.end_date ?? row.training_end ?? "")),
       status: String(row.status ?? "DRAFT").trim(),
     });
     setSheetOpen(true);
@@ -101,6 +96,9 @@ function HrTrainingsView() {
     const sd = form.start_date.trim();
     const ed = form.end_date.trim();
     if (!sd || !ed) throw new Error("Start and end dates are required.");
+    if (!form.category) throw new Error("Please select category.");
+    if (!form.type) throw new Error("Please select type.");
+    if (!form.status) throw new Error("Please select status.");
     const duration_days = trainingDurationDaysFromRange(sd, ed);
     if (Number.isNaN(duration_days)) throw new Error("End date must be on or after start date.");
     const payload = {
@@ -130,6 +128,8 @@ function HrTrainingsView() {
       }
     }
     setSheetOpen(false);
+    setForm(createEmptyTrainingForm());
+    setCreateTrainerId("");
     await refetch();
   }
 
@@ -170,6 +170,12 @@ function HrTrainingsView() {
                 onChange={setStatusFilter}
               />
             </div>
+            <ListSortSelect
+              value={sortId}
+              onChange={setSortId}
+              options={sortOptionMeta(TRAINING_SORT_OPTIONS)}
+              className="w-full sm:w-52 sm:flex-shrink-0"
+            />
           </div>
           <p className="text-sm text-wt-text-muted sm:whitespace-nowrap sm:pb-2 sm:text-right">
             {isLoading ? "Loading…" : `${filtered.length} result(s)`}
@@ -181,8 +187,9 @@ function HrTrainingsView() {
         ) : filtered.length === 0 ? (
           <p className="text-sm text-wt-text-muted py-8 text-center">No trainings match your filters.</p>
         ) : (
+          <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((row) => {
+            {cardPagination.pageItems.map((row) => {
               const id = String(row.id ?? "").trim();
               const href = `/dashboard/learning-development/trainings/${encodeURIComponent(id)}`;
               return (
@@ -196,6 +203,18 @@ function HrTrainingsView() {
               );
             })}
           </div>
+          <ListPagination
+            page={cardPagination.page}
+            totalPages={cardPagination.totalPages}
+            totalItems={cardPagination.totalItems}
+            rangeStart={cardPagination.rangeStart}
+            rangeEnd={cardPagination.rangeEnd}
+            pageSize={cardPagination.pageSize}
+            pageSizeOptions={cardPagination.pageSizeOptions}
+            onPageChange={cardPagination.setPage}
+            onPageSizeChange={cardPagination.setPageSize}
+          />
+          </>
         )}
       </div>
 
@@ -226,21 +245,27 @@ function HrTrainingsView() {
         }
       >
         <div className="grid sm:grid-cols-2 gap-4">
-          <InputField label="Name" value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} />
+          <InputField label="Name" required value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} />
           <SelectField
             label="Category"
+            placeholder="Select category"
+            required
             value={form.category}
             options={["PROFESSIONAL", "TECHNICAL", "SOFT_SKILLS"]}
             onChange={(v) => setForm((p) => ({ ...p, category: v }))}
           />
           <SelectField
             label="Type"
+            placeholder="Select type"
+            required
             value={form.type}
             options={["MANDATORY", "OPTIONAL", "HYBRID"]}
             onChange={(v) => setForm((p) => ({ ...p, type: v }))}
           />
           <SelectField
             label="Status"
+            placeholder="Select status"
+            required
             value={form.status}
             options={["DRAFT", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]}
             onChange={(v) => setForm((p) => ({ ...p, status: v }))}
@@ -248,12 +273,14 @@ function HrTrainingsView() {
           <InputField
             label="Start date"
             type="date"
+            required
             value={form.start_date}
             onChange={(v) => setForm((p) => ({ ...p, start_date: v }))}
           />
           <InputField
             label="End date"
             type="date"
+            required
             value={form.end_date}
             onChange={(v) => setForm((p) => ({ ...p, end_date: v }))}
           />

@@ -6,8 +6,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTrainingTrainers } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
+import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { DataTable } from "@/components/learning-development/ui/forms";
+import { PARTICIPANT_SORT_OPTIONS } from "@/utils/listSort";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -90,15 +92,17 @@ export function TrainersPageClient() {
         ) : null}
       </div>
 
-      <TrainingScopePicker trainingId={trainingId} onTrainingIdChange={setTrainingId} />
+      <TrainingScopePicker trainingId={trainingId} onTrainingIdChange={setTrainingId} required />
 
       {hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4 items-end">
             <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-              Assign trainer
+              <FieldLabel label="Assign trainer" required />
               <select
                 className="input-field px-3 py-2 text-sm"
+                required
+                aria-required
                 value={trainerPick}
                 onChange={(e) => setTrainerPick(e.target.value)}
               >
@@ -170,6 +174,7 @@ export function TrainersPageClient() {
           columns={["name", "email"]}
           rows={trainersQ.data ?? []}
           emptyLabel={trainersQ.isLoading ? "Loading trainers…" : "No trainers assigned."}
+          sortOptions={PARTICIPANT_SORT_OPTIONS}
         />
       </section>
     </div>

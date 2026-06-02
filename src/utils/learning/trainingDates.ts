@@ -1,6 +1,9 @@
+import { compareApiDates, parseApiDate } from "@/utils/apiDate";
+
 export function trainingDurationDaysFromRange(startDate: string, endDate: string): number {
-  const s = Date.parse(startDate);
-  const e = Date.parse(endDate);
-  if (Number.isNaN(s) || Number.isNaN(e) || e < s) return NaN;
-  return Math.max(1, Math.round((e - s) / 86400000) + 1);
+  const start = parseApiDate(startDate);
+  const end = parseApiDate(endDate);
+  if (!start || !end || compareApiDates(startDate, endDate) > 0) return NaN;
+  const msPerDay = 86400000;
+  return Math.max(1, Math.round((end.getTime() - start.getTime()) / msPerDay) + 1);
 }

@@ -1,5 +1,6 @@
 import { ApiError } from "@/api/error";
 import type { CompOffGrant, CompOffRequestType } from "@/types/compOff";
+import { formatApiDate, parseApiDate } from "@/utils/apiDate";
 
 export const COMP_OFF_EARN_ALIASES = [
   "COMP_OFF_EARN",
@@ -37,29 +38,28 @@ export function isCompOffRequestType(value: unknown): boolean {
   return normalizeCompOffRequestType(value) !== null;
 }
 
-/** Inclusive calendar days between ISO dates (UTC midnight). */
-export function calendarDaysInclusive(fromYmd: string, toYmd: string): number {
-  const fromMs = Date.parse(fromYmd);
-  const toMs = Date.parse(toYmd);
-  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || toMs < fromMs) return 0;
+/** Inclusive calendar days between API dates (dd/mm/yyyy or legacy ISO). */
+export function calendarDaysInclusive(fromDate: string, toDate: string): number {
+  const from = parseApiDate(fromDate);
+  const to = parseApiDate(toDate);
+  if (!from || !to || to.getTime() < from.getTime()) return 0;
   const msPerDay = 24 * 60 * 60 * 1000;
-  return Math.floor((toMs - fromMs) / msPerDay) + 1;
+  return Math.floor((to.getTime() - from.getTime()) / msPerDay) + 1;
 }
 
-export function addDaysIso(ymd: string, days: number): string {
-  const d = new Date(`${ymd}T12:00:00`);
-  d.setDate(d.getDate() + days);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+/** Add days to an API or legacy date string; returns dd/mm/yyyy. */
+export function addDaysIso(dateStr: string, days: number): string {
+  const parsed = parseApiDate(dateStr);
+  if (!parsed) return dateStr;
+  parsed.setDate(parsed.getDate() + days);
+  return formatApiDate(parsed);
 }
 
-/** True when ISO date falls on Saturday/Sunday. */
-export function isWeekendYmd(ymd: string): boolean {
-  const d = new Date(`${ymd}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return false;
-  const day = d.getDay();
+/** True when date falls on Saturday/Sunday. */
+export function isWeekendYmd(dateStr: string): boolean {
+  const parsed = parseApiDate(dateStr);
+  if (!parsed) return false;
+  const day = parsed.getDay();
   return day === 0 || day === 6;
 }
 
@@ -132,12 +132,13 @@ export function isAlreadyActedOnRequestError(error: unknown): boolean {
 
 export function inferStatusFromAlreadyActedError(error: unknown): CompOffRequestStatus | null {
   if (!isAlreadyActedOnRequestError(error)) return null;
+  if (!(error instanceof ApiError)) return null;
   const payload = error.payload;
   const detail =
     payload && typeof payload === "object" && "detail" in payload
       ? String((payload as { detail?: unknown }).detail ?? "")
       : "";
-  const combined = `${error instanceof ApiError ? error.message : ""} ${detail}`.toLowerCase();
+  const combined = `${error.message} ${detail}`.toLowerCase();
   if (combined.includes("reject")) return "REJECTED";
   if (combined.includes("approv")) return "APPROVED";
   return null;

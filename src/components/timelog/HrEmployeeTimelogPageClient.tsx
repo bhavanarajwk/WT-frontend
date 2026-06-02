@@ -9,9 +9,15 @@ import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
 import { hrmsService } from "@/services/hrms.service";
+import { InputField, FieldLabel } from "@/components/dashboard/ui/forms";
+import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { applyListSort, TIMELOG_SORT_OPTIONS } from "@/utils/listSort";
+import { useClientPagination } from "@/hooks/useClientPagination";
 import { toPagedRows } from "@/utils/apiRows";
 import { cleanEmployeeName, rowEmail } from "@/utils/employeeDirectory";
 import { formatResumeCellValue } from "@/utils/employeeResume";
+import { todayApiDate } from "@/utils/apiDate";
 
 const LOG_COLUMNS = [
   "employee_name",
@@ -27,9 +33,10 @@ const LOG_COLUMNS = [
 export function HrEmployeeTimelogPageClient() {
   const { user, status: authStatus } = useAuth();
   const { toast, actionLoading, runAction } = useDashboardAction();
-  const [logDate, setLogDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [logDate, setLogDate] = useState(() => todayApiDate());
   const [emailFilter, setEmailFilter] = useState("ALL");
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  const [sortId, setSortId] = useState(TIMELOG_SORT_OPTIONS[0].id);
 
   const roles = user?.roles ?? [];
   const canView = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
@@ -57,6 +64,15 @@ export function HrEmployeeTimelogPageClient() {
     }
     return [...keys];
   }, [rows]);
+
+  const sortedRows = useMemo(
+    () => applyListSort(rows, sortId, TIMELOG_SORT_OPTIONS),
+    [rows, sortId]
+  );
+
+  const pagination = useClientPagination(sortedRows, {
+    resetKeys: [sortId, logDate, emailFilter],
+  });
 
   const loadTimelogs = async () => {
     const date = logDate.trim();
@@ -132,15 +148,13 @@ export function HrEmployeeTimelogPageClient() {
 
         <div className="space-y-4 p-5 md:p-7">
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-xs text-wt-text-muted">
-              Log date
-              <input
-                type="date"
-                className="input-field px-3 py-2 text-sm"
-                value={logDate}
-                onChange={(e) => setLogDate(e.target.value)}
-              />
-            </label>
+            <InputField
+              label="Log date"
+              type="date"
+              required
+              value={logDate}
+              onChange={setLogDate}
+            />
             <label className="flex min-w-[min(100%,280px)] flex-1 flex-col gap-1 text-xs text-wt-text-muted">
               Employee
               <select
@@ -156,6 +170,12 @@ export function HrEmployeeTimelogPageClient() {
                 ))}
               </select>
             </label>
+            <ListSortSelect
+              value={sortId}
+              onChange={setSortId}
+              options={sortOptionMeta(TIMELOG_SORT_OPTIONS)}
+              disabled={!rows.length}
+            />
             <button
               type="button"
               className="btn-primary px-4 py-2 text-sm"
@@ -166,10 +186,10 @@ export function HrEmployeeTimelogPageClient() {
             </button>
           </div>
 
-          {rows.length > 0 ? (
+          {sortedRows.length > 0 ? (
             <>
               <p className="text-sm text-wt-text-muted">
-                Showing {rows.length} entr{rows.length === 1 ? "y" : "ies"} for{" "}
+                {pagination.totalItems} entr{pagination.totalItems === 1 ? "y" : "ies"} for{" "}
                 <strong>{logDate}</strong>
                 {emailFilter !== "ALL" ? ` — ${emailFilter}` : ""}.
               </p>
@@ -188,7 +208,7 @@ export function HrEmployeeTimelogPageClient() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-wt-border">
-                    {rows.map((row, idx) => (
+                    {pagination.pageItems.map((row, idx) => (
                       <tr key={idx}>
                         {tableColumns.map((col) => (
                           <td key={col} className="whitespace-nowrap px-4 py-3">
@@ -200,6 +220,17 @@ export function HrEmployeeTimelogPageClient() {
                   </tbody>
                 </table>
               </div>
+              <ListPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                pageSize={pagination.pageSize}
+                pageSizeOptions={pagination.pageSizeOptions}
+                onPageChange={pagination.setPage}
+                onPageSizeChange={pagination.setPageSize}
+              />
             </>
           ) : (
             <p className="rounded-xl border border-dashed border-wt-border bg-wt-surface-2/40 px-6 py-10 text-center text-sm text-wt-text-muted">

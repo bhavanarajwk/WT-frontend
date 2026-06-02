@@ -22,6 +22,7 @@ import {
   rowEmail,
   type EmployeeProfileEditForm,
 } from "@/utils/employeeDirectory";
+import { validatePersonalEmail } from "@/utils/personalEmail";
 import {
   buildResumeShareLinkIndex,
   lookupResumeShareLink,
@@ -129,6 +130,12 @@ export function EmployeeProfilePageClient() {
   const saveProfile = () => {
     if (!editForm || !empId) return;
     void runAction("Update employee profile", async () => {
+      const workEmail = email || String(pickProfileField(profileRecord, ["email"]) ?? "").trim();
+      const personal = editForm.personal_email.trim();
+      if (personal) {
+        const personalError = validatePersonalEmail(workEmail, personal, { required: true });
+        if (personalError) throw new Error(personalError);
+      }
       await updateMutation.mutateAsync(editFormToUpdatePayload(editForm));
       await refetch();
       setIsEditing(false);
@@ -247,6 +254,22 @@ export function EmployeeProfilePageClient() {
                   <h4 className="text-base font-semibold">Edit profile</h4>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <InputField label="Name" value={editForm.name} onChange={(v) => setEditForm({ ...editForm, name: v })} />
+                    <label className="flex flex-col gap-1 text-xs text-wt-text-muted">
+                      Work email
+                      <input
+                        className="input-field bg-wt-surface-2 px-3 py-2 text-sm text-wt-text-muted"
+                        type="email"
+                        value={email}
+                        readOnly
+                        disabled
+                      />
+                    </label>
+                    <InputField
+                      label="Personal mail ID"
+                      type="email"
+                      value={editForm.personal_email}
+                      onChange={(v) => setEditForm({ ...editForm, personal_email: v })}
+                    />
                     <InputField
                       label="Department"
                       value={editForm.department}

@@ -18,6 +18,13 @@ import {
   rowEmpId,
 } from "@/utils/employeeDirectory";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
+import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { useClientPagination } from "@/hooks/useClientPagination";
+import {
+  applyListSort,
+  EMPLOYEE_DIRECTORY_SORT_OPTIONS,
+} from "@/utils/listSort";
 
 const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "name", label: "Employee Name" },
@@ -38,6 +45,7 @@ const LIST_COLUMNS: Array<{ key: string; label: string }> = [
 export function EmployeeDirectoryPageClient() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [sortId, setSortId] = useState("doj_desc");
   const { authStatus, canView: canViewDirectory, queriesEnabled, roles } =
     useEmployeeDirectoryAccess();
   const { data: rows = [], isLoading, isError, error, refetch } = useEmployeeDirectoryList({
@@ -54,7 +62,7 @@ export function EmployeeDirectoryPageClient() {
 
   const tableRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return rows
+    const filtered = rows
       .map((row) => {
         const record = row as unknown as Record<string, unknown>;
         const empId = rowEmpId(record);
@@ -66,7 +74,12 @@ export function EmployeeDirectoryPageClient() {
         const haystack = [display.name, cleanEmployeeName(record)].join(" ").toLowerCase();
         return haystack.includes(needle);
       });
-  }, [rows, search]);
+    return applyListSort(filtered, sortId, EMPLOYEE_DIRECTORY_SORT_OPTIONS);
+  }, [rows, search, sortId]);
+
+  const pagination = useClientPagination(tableRows, {
+    resetKeys: [search, sortId],
+  });
 
   if (authStatus === "loading") {
     return (
@@ -99,16 +112,23 @@ export function EmployeeDirectoryPageClient() {
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="border-b border-wt-border px-5 py-5 md:px-7 md:py-6">
           <h3 className="text-lg font-semibold">All employees</h3>
-          <label className="mt-4 flex max-w-md flex-col gap-1 text-xs text-wt-text-muted">
-            Search employees
-            <input
-              className="input-field px-3 py-2.5 text-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name"
-              aria-label="Search name"
+          <div className="mt-4 flex flex-wrap items-end gap-3">
+            <label className="flex min-w-[min(100%,280px)] flex-1 flex-col gap-1 text-xs text-wt-text-muted">
+              Search employees
+              <input
+                className="input-field px-3 py-2.5 text-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name"
+                aria-label="Search name"
+              />
+            </label>
+            <ListSortSelect
+              value={sortId}
+              onChange={setSortId}
+              options={sortOptionMeta(EMPLOYEE_DIRECTORY_SORT_OPTIONS)}
             />
-          </label>
+          </div>
         </div>
 
         <div className="p-5 md:p-7">
@@ -136,7 +156,7 @@ export function EmployeeDirectoryPageClient() {
 
           {!isLoading && !isError && tableRows.length ? (
             <>
-              <div className="wt-scroll-both max-h-[min(65vh,600px)] overflow-auto rounded-xl border border-wt-border">
+              <div className="wt-scroll-both overflow-auto rounded-xl border border-wt-border">
                 <table className="min-w-full text-sm">
                   <thead className="sticky top-0 z-[1] bg-wt-surface-2 text-wt-text-muted">
                     <tr>
@@ -154,7 +174,7 @@ export function EmployeeDirectoryPageClient() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-wt-border">
-                    {tableRows.map(({ empId, display, record }) => (
+                    {pagination.pageItems.map(({ empId, display, record }) => (
                       <tr
                         key={empId}
                         className="cursor-pointer transition hover:bg-blue-50/50 dark:hover:bg-wt-surface-2"
@@ -204,9 +224,18 @@ export function EmployeeDirectoryPageClient() {
                   </tbody>
                 </table>
               </div>
-              <p className="mt-3 text-xs text-wt-text-muted">
-                Showing {tableRows.length} employee{tableRows.length === 1 ? "" : "s"}
-              </p>
+              <ListPagination
+                className="mt-3"
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                pageSize={pagination.pageSize}
+                pageSizeOptions={pagination.pageSizeOptions}
+                onPageChange={pagination.setPage}
+                onPageSizeChange={pagination.setPageSize}
+              />
             </>
           ) : null}
         </div>

@@ -7,7 +7,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useTrainingAssessments } from "@/hooks/learning/useLearningTrainings";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { DataTable, FileField, InputField } from "@/components/learning-development/ui/forms";
+import { TITLE_SORT_OPTIONS } from "@/utils/listSort";
 import { hrmsService } from "@/services/hrms.service";
+import { createEmptyAssessmentForm } from "@/utils/learningFormState";
 
 export function AssessmentsPageClient() {
   const { user } = useAuth();
@@ -15,7 +17,7 @@ export function AssessmentsPageClient() {
   const hasHrAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
 
   const [trainingId, setTrainingId] = useState("");
-  const [form, setForm] = useState({ name: "", description: "", weight_percent: "10" });
+  const [form, setForm] = useState(createEmptyAssessmentForm);
   const [file, setFile] = useState<File | null>(null);
   const qc = useQueryClient();
   const assessmentsQ = useTrainingAssessments(trainingId, Boolean(trainingId.trim()));
@@ -32,6 +34,7 @@ export function AssessmentsPageClient() {
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["learning", "assessments", trainingId] });
+      setForm(createEmptyAssessmentForm());
       setFile(null);
     },
   });
@@ -50,17 +53,17 @@ export function AssessmentsPageClient() {
         ) : null}
       </div>
 
-      <TrainingScopePicker trainingId={trainingId} onTrainingIdChange={setTrainingId} />
+      <TrainingScopePicker trainingId={trainingId} onTrainingIdChange={setTrainingId} required />
 
       {hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
-            <InputField label="Name" value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} />
+            <InputField label="Name" required value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} />
             <InputField label="Weight %" value={form.weight_percent} onChange={(v) => setForm((p) => ({ ...p, weight_percent: v }))} />
             <div className="sm:col-span-2">
               <InputField label="Description" value={form.description} onChange={(v) => setForm((p) => ({ ...p, description: v }))} />
             </div>
-            <FileField label="Assessment PDF" accept=".pdf,application/pdf" onPick={setFile} />
+            <FileField label="Assessment PDF" required accept=".pdf,application/pdf" onPick={setFile} />
             <div className="flex items-end">
               <button type="button" className="btn-primary px-4 py-2 text-sm" disabled={uploadMut.isPending || !trainingId || !file} onClick={() => uploadMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
                 Upload
@@ -71,7 +74,7 @@ export function AssessmentsPageClient() {
       ) : null}
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        <DataTable columns={["name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." />
+        <DataTable columns={["name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." sortOptions={TITLE_SORT_OPTIONS} />
       </section>
     </div>
   );

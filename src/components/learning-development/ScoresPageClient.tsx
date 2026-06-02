@@ -9,6 +9,7 @@ import {
   useTrainingParticipants,
   useTrainingScores,
 } from "@/hooks/learning/useLearningTrainings";
+import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -165,14 +166,17 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
               setAssessmentId("");
               setViewEmployeeId("");
             }}
+            required
           />
         </>
       ) : null}
 
       <label className="text-xs text-wt-text-muted flex flex-col gap-1 max-w-md">
-        Assessment
+        <FieldLabel label="Assessment" required />
         <select
           className="input-field px-3 py-2 text-sm"
+          required
+          aria-required
           value={assessmentId}
           onChange={(e) => setAssessmentId(e.target.value)}
           disabled={!trainingId || assessmentsQ.isLoading}
@@ -327,9 +331,11 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
         </p>
         <div className="grid gap-4 sm:grid-cols-2 max-w-3xl">
           <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-            Assessment
+            <FieldLabel label="Assessment" required />
             <select
               className="input-field px-3 py-2 text-sm"
+              required
+              aria-required
               value={assessmentId}
               onChange={(e) => setAssessmentId(e.target.value)}
               disabled={!trainingId || assessmentsQ.isLoading}
