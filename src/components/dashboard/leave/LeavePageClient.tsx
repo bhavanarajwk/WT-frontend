@@ -75,6 +75,10 @@ import {
   formatSecondarySkillsForProfile,
 } from "@/components/dashboard/ui/profile";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
+import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { useClientPagination } from "@/hooks/useClientPagination";
+import { applyListSort, LEAVE_REQUEST_SORT_OPTIONS } from "@/utils/listSort";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
@@ -241,6 +245,8 @@ export function LeavePageClient() {
     toDate: "",
     requestType: "ALL",
   });
+  const [myLeaveSortId, setMyLeaveSortId] = useState(LEAVE_REQUEST_SORT_OPTIONS[0].id);
+  const [teamLeaveSortId, setTeamLeaveSortId] = useState(LEAVE_REQUEST_SORT_OPTIONS[0].id);
 
   const [onboardForm, setOnboardForm] = useState({
     emp_id: "",
@@ -2674,22 +2680,7 @@ export function LeavePageClient() {
             ).values()
           ).sort((a, b) => a.emp_id.localeCompare(b.emp_id));
           setBgvUsers(bgvRows);
-          setOffboardingForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setAttritionForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setBgvForm((prev) => {
-            const selected =
-              bgvRows.find((emp) => emp.emp_id === prev.emp_id) ??
-              bgvRows[0];
-            if (!selected) return prev;
-            return {
-              ...prev,
-              emp_id: prev.emp_id || selected.emp_id,
-              name: selected.name,
-              role: selected.role,
-              level: selected.level,
-              mail_id: selected.email,
-            };
-          });
+
         } catch {
           setOffboardingUsers([]);
           setBgvUsers([]);
@@ -2850,9 +2841,6 @@ export function LeavePageClient() {
                 .filter(Boolean);
               if (!primarySkills.length) {
                 throw new Error("Please add at least one primary skill.");
-              }
-              if (!selfOnboardFiles.resume) {
-                throw new Error("Please upload resume.");
               }
               if (!selfOnboardFiles.profile_photo) {
                 throw new Error("Please upload profile photo.");
@@ -3216,6 +3204,24 @@ export function LeavePageClient() {
   );
 
 
+  const sortedMyLeaveRequests = useMemo(
+    () => applyListSort(myLeaveRequests, myLeaveSortId, LEAVE_REQUEST_SORT_OPTIONS),
+    [myLeaveRequests, myLeaveSortId]
+  );
+
+  const sortedEmployeeRequests = useMemo(
+    () => applyListSort(employeeRequests, teamLeaveSortId, LEAVE_REQUEST_SORT_OPTIONS),
+    [employeeRequests, teamLeaveSortId]
+  );
+
+  const myLeavePagination = useClientPagination(sortedMyLeaveRequests, {
+    resetKeys: [myLeaveSortId],
+  });
+
+  const teamLeavePagination = useClientPagination(sortedEmployeeRequests, {
+    resetKeys: [teamLeaveSortId, employeeRequestFilters],
+  });
+
   return (
     <>
       <DashboardPageShell>
@@ -3350,18 +3356,25 @@ export function LeavePageClient() {
                             </div>
           
                             <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                              <div className="flex items-center justify-between mb-3">
+                              <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                                 <h3 className="font-semibold">My Previous Requests</h3>
-                                <button
-                                  type="button"
-                                  className="btn-primary px-3 py-2"
-                                  onClick={() => runAction("Refresh my requests", loadMyLeaveRequests)}
-                                  disabled={actionLoading}
-                                >
-                                  Refresh
-                                </button>
+                                <div className="flex flex-wrap items-end gap-2">
+                                  <ListSortSelect
+                                    value={myLeaveSortId}
+                                    onChange={setMyLeaveSortId}
+                                    options={sortOptionMeta(LEAVE_REQUEST_SORT_OPTIONS)}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="btn-primary px-3 py-2"
+                                    onClick={() => runAction("Refresh my requests", loadMyLeaveRequests)}
+                                    disabled={actionLoading}
+                                  >
+                                    Refresh
+                                  </button>
+                                </div>
                               </div>
-                              {myLeaveRequests.length ? (
+                              {sortedMyLeaveRequests.length ? (
                                 <div className="wt-scroll-both max-h-[min(50vh,380px)] rounded-xl border border-wt-border">
                                   <table className="min-w-full text-sm">
                                     <thead className="bg-wt-surface-2 text-wt-text-muted">
@@ -3375,7 +3388,7 @@ export function LeavePageClient() {
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {myLeaveRequests.map((row, idx) => {
+                                      {myLeavePagination.pageItems.map((row, idx) => {
                                         const requestId = String(
                                           row.user_request_id ??
                                             row.userRequestId ??
@@ -3458,6 +3471,20 @@ export function LeavePageClient() {
                               ) : (
                                 <p className="text-sm text-wt-text-muted">No previous requests found.</p>
                               )}
+                              {sortedMyLeaveRequests.length > 0 ? (
+                                <ListPagination
+                                  className="mt-3"
+                                  page={myLeavePagination.page}
+                                  totalPages={myLeavePagination.totalPages}
+                                  totalItems={myLeavePagination.totalItems}
+                                  rangeStart={myLeavePagination.rangeStart}
+                                  rangeEnd={myLeavePagination.rangeEnd}
+                                  pageSize={myLeavePagination.pageSize}
+                                  pageSizeOptions={myLeavePagination.pageSizeOptions}
+                                  onPageChange={myLeavePagination.setPage}
+                                  onPageSizeChange={myLeavePagination.setPageSize}
+                                />
+                              ) : null}
                             </div>
                           </div>
                         </section>
@@ -3490,9 +3517,14 @@ export function LeavePageClient() {
                             >
                               Fetch Requests
                             </button>
+                            <ListSortSelect
+                              value={teamLeaveSortId}
+                              onChange={setTeamLeaveSortId}
+                              options={sortOptionMeta(LEAVE_REQUEST_SORT_OPTIONS)}
+                            />
                           </div>
           
-                          {employeeRequests.length ? (
+                          {sortedEmployeeRequests.length ? (
                             <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
                               <table className="min-w-full text-sm">
                                 <thead className="bg-wt-surface-2 text-wt-text-muted">
@@ -3507,7 +3539,7 @@ export function LeavePageClient() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {employeeRequests.map((row, idx) => {
+                                  {teamLeavePagination.pageItems.map((row, idx) => {
                                     const requestId = String(
                                       row.user_request_id ??
                                         row.userRequestId ??
@@ -3596,6 +3628,20 @@ export function LeavePageClient() {
                               No employee requests loaded yet. Click <strong>Fetch Requests</strong>.
                             </p>
                           )}
+                          {sortedEmployeeRequests.length > 0 ? (
+                            <ListPagination
+                              className="mt-3"
+                              page={teamLeavePagination.page}
+                              totalPages={teamLeavePagination.totalPages}
+                              totalItems={teamLeavePagination.totalItems}
+                              rangeStart={teamLeavePagination.rangeStart}
+                              rangeEnd={teamLeavePagination.rangeEnd}
+                              pageSize={teamLeavePagination.pageSize}
+                              pageSizeOptions={teamLeavePagination.pageSizeOptions}
+                              onPageChange={teamLeavePagination.setPage}
+                              onPageSizeChange={teamLeavePagination.setPageSize}
+                            />
+                          ) : null}
                         </section>
                           ) : null}
                         </section>

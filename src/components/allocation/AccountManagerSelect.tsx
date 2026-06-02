@@ -1,25 +1,30 @@
 "use client";
 
 import { useOnboardAccountManagers } from "@/hooks/learning/useLearningTrainerDirectory";
+import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { onboardOptionEmail } from "@/utils/learning/onboardOptions";
 
 export function AccountManagerSelect({
   value,
   onChange,
+  required = false,
 }: {
   value: string;
   onChange: (value: string) => void;
+  required?: boolean;
 }) {
   const { data: options = [], isLoading, isError } = useOnboardAccountManagers();
 
   return (
     <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-      Account manager
+      <FieldLabel label="Account manager" required={required} />
       <select
         className="input-field px-3 py-2 text-sm"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={isLoading}
+        required={required}
+        aria-required={required || undefined}
       >
         <option value="">
           {isLoading

@@ -2,6 +2,7 @@
 export interface OnboardUserResponse {
   emp_id: string;
   email: string;
+  personal_email: string | null;
   name: string;
   status: string;
   user_type: string;
@@ -21,6 +22,7 @@ export interface SecondarySkillRating {
 export interface OnboardListItem {
   emp_id: string | null;
   email: string;
+  personal_email: string | null;
   name: string;
   status: string;
   user_type: string;

@@ -6,6 +6,9 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useExitInterviewSubmissions } from "@/hooks/exit-interview/useExitInterviewSubmissions";
+import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { applyListSort, EXIT_INTERVIEW_SORT_OPTIONS } from "@/utils/listSort";
 const STATUS_OPTIONS: Array<{ value: "SUBMITTED" | "PENDING" | "ALL"; label: string }> = [
   { value: "SUBMITTED", label: "Submitted" },
   { value: "PENDING", label: "Pending" },
@@ -21,6 +24,7 @@ export function ExitInterviewSubmissionsPageClient() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [status, setStatus] = useState<"SUBMITTED" | "PENDING" | "ALL">("SUBMITTED");
+  const [sortId, setSortId] = useState(EXIT_INTERVIEW_SORT_OPTIONS[0].id);
 
   const listQ = useExitInterviewSubmissions(
     { page, size, search, status },
@@ -31,6 +35,15 @@ export function ExitInterviewSubmissionsPageClient() {
     const total = listQ.data?.total ?? 0;
     return Math.max(1, Math.ceil(total / size));
   }, [listQ.data?.total, size]);
+
+  const sortedItems = useMemo(() => {
+    const items = listQ.data?.items ?? [];
+    return applyListSort(
+      items as unknown as Record<string, unknown>[],
+      sortId,
+      EXIT_INTERVIEW_SORT_OPTIONS
+    ) as typeof items;
+  }, [listQ.data?.items, sortId]);
 
   if (!canView) {
     return (
@@ -90,6 +103,11 @@ export function ExitInterviewSubmissionsPageClient() {
             >
               Apply
             </button>
+            <ListSortSelect
+              value={sortId}
+              onChange={setSortId}
+              options={sortOptionMeta(EXIT_INTERVIEW_SORT_OPTIONS)}
+            />
           </div>
         </div>
 
@@ -103,11 +121,11 @@ export function ExitInterviewSubmissionsPageClient() {
             </div>
           ) : null}
 
-          {!listQ.isLoading && !listQ.isError && !(listQ.data?.items.length ?? 0) ? (
+          {!listQ.isLoading && !listQ.isError && !sortedItems.length ? (
             <p className="text-sm text-wt-text-muted">No submissions match your filters.</p>
           ) : null}
 
-          {(listQ.data?.items.length ?? 0) > 0 ? (
+          {sortedItems.length > 0 ? (
             <>
               <div className="wt-scroll-both overflow-auto rounded-xl border border-wt-border">
                 <table className="min-w-full text-sm">
@@ -120,7 +138,7 @@ export function ExitInterviewSubmissionsPageClient() {
                     </tr>
                   </thead>
                   <tbody>
-                    {listQ.data?.items.map((row) => {
+                    {sortedItems.map((row) => {
                       const empId = String(row.emp_id ?? "").trim();
                       const isSubmitted = row.submission_status === "SUBMITTED";
                       return (
@@ -157,29 +175,17 @@ export function ExitInterviewSubmissionsPageClient() {
                 </table>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-wt-text-muted">
-                <span>
-                  Page {page + 1} of {totalPages} · {listQ.data?.total ?? 0} total
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="btn-ghost px-3 py-1.5 text-xs"
-                    disabled={page <= 0}
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  >
-                    Previous
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-ghost px-3 py-1.5 text-xs"
-                    disabled={page + 1 >= totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
+              <ListPagination
+                className="mt-4"
+                page={page}
+                totalPages={totalPages}
+                totalItems={listQ.data?.total ?? sortedItems.length}
+                rangeStart={sortedItems.length ? page * size + 1 : 0}
+                rangeEnd={Math.min((page + 1) * size, listQ.data?.total ?? sortedItems.length)}
+                pageSize={size}
+                pageSizeOptions={[10, 25, 50]}
+                onPageChange={setPage}
+              />
             </>
           ) : null}
         </div>

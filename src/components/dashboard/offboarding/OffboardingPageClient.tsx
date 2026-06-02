@@ -62,7 +62,7 @@ import {
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
 import { MetricCard } from "@/components/dashboard/ui/MetricCard";
-import { InputField, SelectField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, FileField, UploadTile, NativeSelectField, FieldLabel } from "@/components/dashboard/ui/forms";
 import {
   ProfilePhotoAvatar,
   ProfileField,
@@ -75,8 +75,8 @@ import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
-
-
+import { createEmptyOffboardingForm } from "@/utils/offboardingFormState";
+import { createEmptyBgvForm } from "@/utils/bgvFormState";
 
 export function OffboardingPageClient() {
   const isManagerRoleLabel = (value: unknown): boolean =>
@@ -159,29 +159,8 @@ export function OffboardingPageClient() {
   >([]);
   const [bgvRecords, setBgvRecords] = useState<Array<Record<string, unknown>>>([]);
   const [bgvDashboardRows, setBgvDashboardRows] = useState<Array<Record<string, unknown>>>([]);
-  const [offboardingForm, setOffboardingForm] = useState({
-    emp_id: "",
-    resignation_date: "",
-    last_working_day: "",
-    separation_type: "VOLUNTARY" as "VOLUNTARY" | "INVOLUNTARY",
-    reason: "",
-    critical_skill: "",
-    is_regretted: false,
-  });
-  const [bgvForm, setBgvForm] = useState({
-    emp_id: "",
-    name: "",
-    role: "",
-    level: "",
-    consent_form_signed: "NO",
-    identity: "",
-    employment: "N/A",
-    reference: "N/A",
-    mail_id: "",
-    onboarding_form: "PENDING",
-    overall_status: "IN_PROGRESS",
-    remarks: "",
-  });
+  const [offboardingForm, setOffboardingForm] = useState(createEmptyOffboardingForm);
+  const [bgvForm, setBgvForm] = useState(createEmptyBgvForm);
   const [attritionFyStartYear, setAttritionFyStartYear] = useState<string>(() => {
     const now = new Date();
     const year = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
@@ -2635,22 +2614,6 @@ export function OffboardingPageClient() {
             ).values()
           ).sort((a, b) => a.emp_id.localeCompare(b.emp_id));
           setBgvUsers(bgvRows);
-          setOffboardingForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setAttritionForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setBgvForm((prev) => {
-            const selected =
-              bgvRows.find((emp) => emp.emp_id === prev.emp_id) ??
-              bgvRows[0];
-            if (!selected) return prev;
-            return {
-              ...prev,
-              emp_id: prev.emp_id || selected.emp_id,
-              name: selected.name,
-              role: selected.role,
-              level: selected.level,
-              mail_id: selected.email,
-            };
-          });
         } catch {
           setOffboardingUsers([]);
           setBgvUsers([]);
@@ -2811,9 +2774,6 @@ export function OffboardingPageClient() {
                 .filter(Boolean);
               if (!primarySkills.length) {
                 throw new Error("Please add at least one primary skill.");
-              }
-              if (!selfOnboardFiles.resume) {
-                throw new Error("Please upload resume.");
               }
               if (!selfOnboardFiles.profile_photo) {
                 throw new Error("Please upload profile photo.");
@@ -3184,21 +3144,21 @@ export function OffboardingPageClient() {
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                           <h3 className="font-semibold mb-4">Employee Offboarding</h3>
                           <div className="grid md:grid-cols-2 gap-3">
-                            <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                              Employee ID
-                              <select
-                                className="input-field px-3 py-2 text-sm"
-                                value={offboardingForm.emp_id}
-                                onChange={(e) => setOffboardingForm((p) => ({ ...p, emp_id: e.target.value }))}
-                              >
-                                {!offboardingUsers.length ? <option value="">No employees found</option> : null}
-                                {offboardingUsers.map((emp) => (
-                                  <option key={emp.emp_id} value={emp.emp_id}>
-                                    {emp.emp_id} - {emp.name} ({emp.email})
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                            <NativeSelectField
+                              label="Employee ID"
+                              required
+                              placeholder={
+                                offboardingUsers.length ? "Select employee" : "No employees found"
+                              }
+                              value={offboardingForm.emp_id}
+                              onChange={(value) => setOffboardingForm((p) => ({ ...p, emp_id: value }))}
+                            >
+                              {offboardingUsers.map((emp) => (
+                                <option key={emp.emp_id} value={emp.emp_id}>
+                                  {emp.emp_id} - {emp.name} ({emp.email})
+                                </option>
+                              ))}
+                            </NativeSelectField>
                             <InputField
                               label="Resignation date"
                               type="date"
@@ -3207,18 +3167,26 @@ export function OffboardingPageClient() {
                             />
                             <InputField
                               label="Last Working Day"
+                              required
                               type="date"
                               value={offboardingForm.last_working_day}
                               onChange={(v) => setOffboardingForm((p) => ({ ...p, last_working_day: v }))}
                             />
                             <SelectField
                               label="Separation Type"
+                              required
+                              placeholder="Select separation type"
                               value={offboardingForm.separation_type}
                               options={["VOLUNTARY", "INVOLUNTARY"]}
                               onChange={(v) =>
                                 setOffboardingForm((p) => ({
                                   ...p,
-                                  separation_type: v === "INVOLUNTARY" ? "INVOLUNTARY" : "VOLUNTARY",
+                                  separation_type:
+                                    v === "INVOLUNTARY"
+                                      ? "INVOLUNTARY"
+                                      : v === "VOLUNTARY"
+                                        ? "VOLUNTARY"
+                                        : "",
                                 }))
                               }
                             />
@@ -3252,9 +3220,12 @@ export function OffboardingPageClient() {
                               onClick={() =>
                                 runAction("Submit offboarding", async () => {
                                   const empIdValue = offboardingForm.emp_id.trim();
-                                  if (!empIdValue) throw new Error("Please select emp_id.");
+                                  if (!empIdValue) throw new Error("Please select an employee.");
                                   const lastWorkingDay = offboardingForm.last_working_day.trim();
                                   if (!lastWorkingDay) throw new Error("Please select last working day.");
+                                  if (!offboardingForm.separation_type) {
+                                    throw new Error("Please select separation type.");
+                                  }
                                   const resignationDate = offboardingForm.resignation_date.trim();
                                   const payload = {
                                     last_working_day: lastWorkingDay,
@@ -3265,14 +3236,7 @@ export function OffboardingPageClient() {
                                     is_regretted: offboardingForm.is_regretted,
                                   };
                                   await hrmsService.offboardEmployee(empIdValue, payload);
-                                  setOffboardingForm((prev) => ({
-                                    ...prev,
-                                    resignation_date: "",
-                                    last_working_day: "",
-                                    reason: "",
-                                    critical_skill: "",
-                                    is_regretted: false,
-                                  }));
+                                  setOffboardingForm(createEmptyOffboardingForm());
                                 })
                               }
                             >
