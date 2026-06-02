@@ -21,6 +21,7 @@ import { dashboardHref, DASHBOARD_ROUTES } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { SidebarIcon } from "@/constants/sidebarIcons";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
+import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 
 function IconUser({ className = "" }: { className?: string }) {
   return (
@@ -353,6 +354,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               {activeSection === "profile" && !isLearningRoute && !isOffboarded ? "My profile" : null}
               {activeSection === "employee-directory" && !isLearningRoute ? "Employee Directory" : null}
               {activeSection === "resumes" && !isLearningRoute ? "Resumes" : null}
+              {activeSection === "annual-calendar" && !isLearningRoute ? "Annual calendar" : null}
               {activeSection === "bench-forecast" && !isLearningRoute ? "Bench Forecast" : null}
               {activeSection === "employee" && !isLearningRoute ? "Employee Onboarding" : null}
               {activeSection === "exit-interview" && !isLearningRoute ? "Exit survey" : null}
@@ -362,6 +364,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               {activeSection !== "profile" &&
               activeSection !== "employee-directory" &&
               activeSection !== "resumes" &&
+              activeSection !== "annual-calendar" &&
               activeSection !== "bench-forecast" &&
               activeSection !== "employee" &&
               activeSection !== "exit-interview" &&
@@ -417,11 +420,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                   <span className="text-wt-text">Employee Onboarding</span>
                 )}
               </nav>
-            ) : isOffboarded && !isExitSurveyRoute && !isLearningRoute ? null : (
-              <p className="text-xs text-wt-text-muted">
-                {isLearningRoute ? learningSectionTitle : "WebTrak workforce workspace"}
-              </p>
-            )}
+            ) : isLearningRoute ? (
+              <p className="text-xs text-wt-text-muted">{learningSectionTitle}</p>
+            ) : null}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {!isOffboarded ? (
@@ -509,19 +510,21 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(100vw-2rem,280px)] space-y-4 rounded-xl border border-wt-border bg-wt-surface-1 p-4 shadow-lg">
                 <div>
                   <span className="mb-1.5 block text-xs font-medium text-wt-text-muted">Theme</span>
-                  <select
+                  <SearchableSelectCombobox
                     value={theme}
-                    onChange={(event) => {
-                      const nextTheme = event.target.value as "light" | "dark" | "system";
-                      setTheme(nextTheme);
-                      applyTheme(nextTheme);
+                    onChange={(nextTheme) => {
+                      const next = nextTheme as "light" | "dark" | "system";
+                      setTheme(next);
+                      applyTheme(next);
                     }}
-                    className="input-field w-full px-3 py-2 text-sm"
-                  >
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="system">System</option>
-                  </select>
+                    options={[
+                      { value: "light", label: "Light" },
+                      { value: "dark", label: "Dark" },
+                      { value: "system", label: "System" },
+                    ]}
+                    placeholder="Search theme…"
+                    aria-label="Theme"
+                  />
                 </div>
                 <button
                   type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { SelectField } from "@/components/dashboard/ui/forms";
 
 const COLUMN_LABELS: Record<string, string> = {
   fy_start_year: "FY start year",
@@ -190,20 +191,16 @@ export function AttritionRetentionReports({
             Financial-year metrics for exits, regretted loss, tenure, and voluntary vs involuntary split.
           </p>
         </div>
-        <label className="text-xs text-wt-text-muted flex flex-col gap-1 min-w-[10rem]">
-          Financial year (start)
-          <select
-            className="input-field px-3 py-2 text-sm"
-            value={fyStartYear}
-            onChange={(e) => onFyStartYearChange(e.target.value)}
-          >
-            {fyOptions.map((year) => (
-              <option key={year} value={year}>
-                FY {year}–{String(Number(year) + 1).slice(-2)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="Financial year (start)"
+          className="min-w-[10rem]"
+          value={fyStartYear}
+          onChange={onFyStartYearChange}
+          options={fyOptions.map((year) => ({
+            value: year,
+            label: `FY ${year}–${String(Number(year) + 1).slice(-2)}`,
+          }))}
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

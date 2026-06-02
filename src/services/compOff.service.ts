@@ -2,7 +2,7 @@ import { endpoints } from "@/api/endpoints";
 import { ApiError } from "@/api/error";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { hrmsService } from "@/services/hrms.service";
-import type { CompOffBalanceData, CompOffGrant } from "@/types/compOff";
+import type { CompOffBalanceData, CompOffExpiryData, CompOffExpiryItem, CompOffGrant } from "@/types/compOff";
 import { applyApiDateFields, applyApiDateQuery, toApiDateParam } from "@/utils/apiDate";
 import { dedupeCompOffRequestRows, isAlreadyActedOnRequestError } from "@/utils/compOff";
 import { toPagedRows, toRows } from "@/utils/apiRows";
@@ -76,6 +76,17 @@ export const compOffService = {
     });
   },
 
+  getExpiry(asOfDate?: string) {
+    const normalized = toApiDateParam(asOfDate);
+    const query: Record<string, string> = {};
+    if (normalized) {
+      query.asOfDate = normalized;
+    }
+    return apiClient.get<ApiEnvelope<CompOffExpiryData>>(endpoints.compOff.expiry, {
+      query: Object.keys(query).length ? query : undefined,
+    });
+  },
+
   getGrants(empId?: string) {
     const path = empId?.trim()
       ? endpoints.compOff.grantsForEmployee(empId.trim())
@@ -100,6 +111,26 @@ export const compOffService = {
       return data as CompOffBalanceData;
     }
     return null;
+  },
+
+  parseExpiryResponse(res: ApiEnvelope<unknown>): {
+    asOfDate: string | null;
+    total: number;
+    rows: CompOffExpiryItem[];
+  } {
+    const data = res.data;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      return { asOfDate: null, total: 0, rows: [] };
+    }
+    const record = data as Record<string, unknown>;
+    const rawRows = Array.isArray(record.data) ? (record.data as CompOffExpiryItem[]) : [];
+    const total = Number(record.total ?? rawRows.length ?? 0);
+    const asOfDate = String(record.as_of_date ?? record.asOfDate ?? "").trim() || null;
+    return {
+      asOfDate,
+      total: Number.isFinite(total) ? total : rawRows.length,
+      rows: rawRows,
+    };
   },
 
   listRequests(params: {

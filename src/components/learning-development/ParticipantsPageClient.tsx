@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTrainingParticipants } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
-import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { SelectField } from "@/components/dashboard/ui/forms";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { DataTable } from "@/components/learning-development/ui/forms";
 import { PARTICIPANT_SORT_OPTIONS } from "@/utils/listSort";
@@ -21,6 +21,8 @@ export function ParticipantsPageClient() {
 
   const [trainingId, setTrainingId] = useState("");
   const [traineePick, setTraineePick] = useState("");
+  const [statusUserId, setStatusUserId] = useState("");
+  const [statusValue, setStatusValue] = useState<"COMPLETED" | "WITHDRAWN">("COMPLETED");
   const qc = useQueryClient();
   const traineesQ = useTrainingParticipants(trainingId, Boolean(trainingId.trim()));
   const onboardQ = useLearningTrainerDirectory();
@@ -41,7 +43,27 @@ export function ParticipantsPageClient() {
 
   useEffect(() => {
     setTraineePick("");
+    setStatusUserId("");
+    setStatusValue("COMPLETED");
   }, [trainingId]);
+
+  const enrolledOptions = useMemo(
+    () =>
+      (traineesQ.data ?? [])
+        .map((row) => {
+          const id = participantRowUserId(row);
+          if (!id) return null;
+          const name = String(row.name ?? "Employee").trim() || "Employee";
+          const email = String(row.email ?? "").trim();
+          const status = String(row.enrollment_status ?? row.enrollmentStatus ?? "ENROLLED").trim();
+          return {
+            id,
+            label: `${name}${email ? ` (${email})` : ""} — ${status}`,
+          };
+        })
+        .filter((row): row is { id: string; label: string } => Boolean(row)),
+    [traineesQ.data]
+  );
 
   const addMut = useMutation({
     mutationFn: async () => {
@@ -50,6 +72,18 @@ export function ParticipantsPageClient() {
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["learning", "participants", trainingId] });
+    },
+  });
+
+  const statusMut = useMutation({
+    mutationFn: async () => {
+      if (!statusUserId.trim()) throw new Error("Select a trainee.");
+      await hrmsService.updateTrainingParticipantStatus(trainingId, statusUserId, statusValue);
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["learning", "participants", trainingId] });
+      setStatusUserId("");
+      setStatusValue("COMPLETED");
     },
   });
 
@@ -75,23 +109,15 @@ export function ParticipantsPageClient() {
       {hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <div className="flex flex-wrap items-end gap-3">
-            <label className="text-xs text-wt-text-muted flex flex-col gap-1 min-w-[min(100%,280px)] flex-1 max-w-md">
-              <FieldLabel label="Add trainee" required />
-              <select
-                className="input-field px-3 py-2 text-sm"
-                required
-                aria-required
-                value={traineePick}
-                onChange={(e) => setTraineePick(e.target.value)}
-              >
-                <option value="">Select trainee</option>
-                {addTraineeOptions.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label="Add trainee"
+              required
+              className="min-w-[min(100%,280px)] flex-1 max-w-md"
+              value={traineePick}
+              onChange={setTraineePick}
+              placeholder="Select trainee"
+              options={addTraineeOptions.map((o) => ({ value: o.id, label: o.label }))}
+            />
             <button
               type="button"
               className="btn-primary px-4 py-2 text-sm shrink-0"
@@ -104,6 +130,30 @@ export function ParticipantsPageClient() {
           {onboardQ.isLoading ? (
             <p className="text-xs text-wt-text-muted">Loading employees from onboard list…</p>
           ) : null}
+          <div className="grid sm:grid-cols-3 gap-3 items-end">
+            <SelectField
+              label="Update trainee status"
+              required
+              value={statusUserId}
+              onChange={setStatusUserId}
+              placeholder="Select enrolled trainee"
+              options={enrolledOptions.map((o) => ({ value: o.id, label: o.label }))}
+            />
+            <SelectField
+              label="Status"
+              value={statusValue}
+              onChange={(v) => setStatusValue(v as "COMPLETED" | "WITHDRAWN")}
+              options={["COMPLETED", "WITHDRAWN"]}
+            />
+            <button
+              type="button"
+              className="btn-primary px-4 py-2 text-sm"
+              disabled={statusMut.isPending || !statusUserId || !trainingId}
+              onClick={() => statusMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+            >
+              Update status
+            </button>
+          </div>
         </section>
       ) : (
         <p className="text-sm text-wt-text-muted">Trainee management requires HR/Admin.</p>

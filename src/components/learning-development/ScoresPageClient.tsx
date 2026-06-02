@@ -9,7 +9,7 @@ import {
   useTrainingParticipants,
   useTrainingScores,
 } from "@/hooks/learning/useLearningTrainings";
-import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { SelectField } from "@/components/dashboard/ui/forms";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -171,30 +171,22 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
         </>
       ) : null}
 
-      <label className="text-xs text-wt-text-muted flex flex-col gap-1 max-w-md">
-        <FieldLabel label="Assessment" required />
-        <select
-          className="input-field px-3 py-2 text-sm"
-          required
-          aria-required
-          value={assessmentId}
-          onChange={(e) => setAssessmentId(e.target.value)}
-          disabled={!trainingId || assessmentsQ.isLoading}
-        >
-          <option value="">
-            {assessmentsQ.isLoading ? "Loading…" : assessments.length ? "Select assessment" : "No assessments"}
-          </option>
-          {assessments.map((a) => {
-            const id = String(a.id ?? "").trim();
-            const name = String(a.name ?? `Assessment ${id}`).trim();
-            return (
-              <option key={id} value={id}>
-                {name}
-              </option>
-            );
-          })}
-        </select>
-      </label>
+      <SelectField
+        label="Assessment"
+        required
+        className="max-w-md"
+        value={assessmentId}
+        onChange={setAssessmentId}
+        disabled={!trainingId || assessmentsQ.isLoading}
+        placeholder={
+          assessmentsQ.isLoading ? "Loading…" : assessments.length ? "Select assessment" : "No assessments"
+        }
+        options={assessments.map((a) => {
+          const id = String(a.id ?? "").trim();
+          const name = String(a.name ?? `Assessment ${id}`).trim();
+          return { value: id, label: name || id };
+        })}
+      />
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wt-border pb-4">
@@ -330,50 +322,33 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
           Scores and completion for the selected assessment and trainee.
         </p>
         <div className="grid gap-4 sm:grid-cols-2 max-w-3xl">
-          <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-            <FieldLabel label="Assessment" required />
-            <select
-              className="input-field px-3 py-2 text-sm"
-              required
-              aria-required
-              value={assessmentId}
-              onChange={(e) => setAssessmentId(e.target.value)}
-              disabled={!trainingId || assessmentsQ.isLoading}
-            >
-              <option value="">
-                {assessmentsQ.isLoading
-                  ? "Loading…"
-                  : assessments.length
-                    ? "Select assessment"
-                    : "No assessments"}
-              </option>
-              {assessments.map((a) => {
-                const id = String(a.id ?? "").trim();
-                const name = String(a.name ?? `Assessment ${id}`).trim();
-                return (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
-          <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-            View employee
-            <select
-              className="input-field px-3 py-2 text-sm"
-              value={viewEmployeeId}
-              onChange={(e) => setViewEmployeeId(e.target.value)}
-              disabled={!trainingId || !traineeRows.length}
-            >
-              <option value="">Select employee</option>
-              {traineeRows.map((row) => (
-                <option key={row.userId} value={row.userId}>
-                  {row.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Assessment"
+            required
+            value={assessmentId}
+            onChange={setAssessmentId}
+            disabled={!trainingId || assessmentsQ.isLoading}
+            placeholder={
+              assessmentsQ.isLoading
+                ? "Loading…"
+                : assessments.length
+                  ? "Select assessment"
+                  : "No assessments"
+            }
+            options={assessments.map((a) => {
+              const id = String(a.id ?? "").trim();
+              const name = String(a.name ?? `Assessment ${id}`).trim();
+              return { value: id, label: name || id };
+            })}
+          />
+          <SelectField
+            label="View employee"
+            value={viewEmployeeId}
+            onChange={setViewEmployeeId}
+            disabled={!trainingId || !traineeRows.length}
+            placeholder="Select employee"
+            options={traineeRows.map((row) => ({ value: row.userId, label: row.name }))}
+          />
         </div>
         <TraineeScoreAnalytics
           employeeUserId={viewEmployeeId}

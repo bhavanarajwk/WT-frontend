@@ -9,7 +9,7 @@ import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
 import { hrmsService } from "@/services/hrms.service";
-import { InputField, FieldLabel } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField } from "@/components/dashboard/ui/forms";
 import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { applyListSort, TIMELOG_SORT_OPTIONS } from "@/utils/listSort";
@@ -155,21 +155,17 @@ export function HrEmployeeTimelogPageClient() {
               value={logDate}
               onChange={setLogDate}
             />
-            <label className="flex min-w-[min(100%,280px)] flex-1 flex-col gap-1 text-xs text-wt-text-muted">
-              Employee
-              <select
-                className="input-field px-3 py-2 text-sm"
-                value={emailFilter}
-                onChange={(e) => setEmailFilter(e.target.value)}
-              >
-                <option value="ALL">All employees ({employeeOptions.length})</option>
-                {employeeOptions.map((opt) => (
-                  <option key={opt.email} value={opt.email}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label="Employee"
+              className="flex min-w-[min(100%,280px)] flex-1"
+              value={emailFilter}
+              onChange={setEmailFilter}
+              placeholder="Search employees…"
+              options={[
+                { value: "ALL", label: `All employees (${employeeOptions.length})` },
+                ...employeeOptions.map((opt) => ({ value: opt.email, label: opt.label })),
+              ]}
+            />
             <ListSortSelect
               value={sortId}
               onChange={setSortId}

@@ -8,7 +8,7 @@ export function isActiveUserStatus(status: unknown): boolean {
 
 export function isOffboardedUserStatus(status: unknown): boolean {
   const normalized = normalizeUserStatus(status);
-  return normalized === "OFFBOARDED" || normalized === "OFF_BOARDED";
+  return normalized === "INACTIVE";
 }
 
 /** Status from GET /profile (or session user). */

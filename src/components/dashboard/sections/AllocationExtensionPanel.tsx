@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/api/error";
 import { hrmsService, type AllocationExtensionRequestRow, type AllocationExtensionRequestStatus } from "@/services/hrms.service";
 import { useAuth } from "@/context/AuthContext";
-import { ApiDateField, FieldLabel } from "@/components/dashboard/ui/forms";
+import { ApiDateField, SelectField } from "@/components/dashboard/ui/forms";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { createEmptyAllocationExtensionForm } from "@/utils/allocationFormState";
 
@@ -230,55 +230,43 @@ export function AllocationExtensionPanel() {
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <label className="text-sm flex flex-col gap-1">
-              <FieldLabel label="Employee name" required />
-              <select
-                required
-                aria-required
-                value={createForm.userEmail}
-                onChange={(e) => setCreateForm((p) => ({ ...p, userEmail: e.target.value }))}
-                className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-                disabled={loadingCreateOptions || !managerEmployees.length}
-              >
-                <option value="">
-                  {loadingCreateOptions
-                    ? "Loading employees..."
-                    : managerEmployees.length
-                      ? "Select employee"
-                      : "No employees found"}
-                </option>
-                {managerEmployees.map((opt) => (
-                  <option key={opt.email} value={opt.email}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label="Employee name"
+              required
+              value={createForm.userEmail}
+              onChange={(userEmail) => setCreateForm((p) => ({ ...p, userEmail }))}
+              disabled={loadingCreateOptions || !managerEmployees.length}
+              placeholder={
+                loadingCreateOptions
+                  ? "Loading employees..."
+                  : managerEmployees.length
+                    ? "Select employee"
+                    : "No employees found"
+              }
+              options={managerEmployees.map((opt) => ({
+                value: opt.email,
+                label: opt.name,
+              }))}
+            />
 
-            <label className="text-sm flex flex-col gap-1">
-              <FieldLabel label="Project name" required />
-              <select
-                required
-                aria-required
-                value={createForm.projectCode}
-                onChange={(e) => setCreateForm((p) => ({ ...p, projectCode: e.target.value }))}
-                className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-                disabled={loadingCreateOptions || !managerProjects.length}
-              >
-                <option value="">
-                  {loadingCreateOptions
-                    ? "Loading projects..."
-                    : managerProjects.length
-                      ? "Select project"
-                      : "No projects found"}
-                </option>
-                {managerProjects.map((opt) => (
-                  <option key={opt.code} value={opt.code}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label="Project name"
+              required
+              value={createForm.projectCode}
+              onChange={(projectCode) => setCreateForm((p) => ({ ...p, projectCode }))}
+              disabled={loadingCreateOptions || !managerProjects.length}
+              placeholder={
+                loadingCreateOptions
+                  ? "Loading projects..."
+                  : managerProjects.length
+                    ? "Select project"
+                    : "No projects found"
+              }
+              options={managerProjects.map((opt) => ({
+                value: opt.code,
+                label: opt.name,
+              }))}
+            />
 
             <ApiDateField
               label="Requested end date"
@@ -349,22 +337,21 @@ export function AllocationExtensionPanel() {
           </label>
 
           {visibleMode === "hr" ? (
-            <label className="text-sm">
-              <span className="block text-xs text-wt-text-muted mb-1">Status</span>
-              <select
-                value={hrStatusFilter}
-                onChange={(e) => {
-                  setHrStatusFilter(normalizeStatus(e.target.value));
-                  setPage(0);
-                }}
-                className="rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-              >
-                <option value="">All</option>
-                <option value="PENDING">PENDING</option>
-                <option value="APPROVED">APPROVED</option>
-                <option value="REJECTED">REJECTED</option>
-              </select>
-            </label>
+            <SelectField
+              label="Status"
+              value={hrStatusFilter}
+              onChange={(v) => {
+                setHrStatusFilter(normalizeStatus(v));
+                setPage(0);
+              }}
+              placeholder="All"
+              options={[
+                { value: "", label: "All" },
+                { value: "PENDING", label: "PENDING" },
+                { value: "APPROVED", label: "APPROVED" },
+                { value: "REJECTED", label: "REJECTED" },
+              ]}
+            />
           ) : canViewManagerStatus ? (
             <label className="text-sm">
               <span className="block text-xs text-wt-text-muted mb-1">Project code</span>

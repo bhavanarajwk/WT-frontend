@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTrainingTrainers } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
-import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { SelectField } from "@/components/dashboard/ui/forms";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { DataTable } from "@/components/learning-development/ui/forms";
 import { PARTICIPANT_SORT_OPTIONS } from "@/utils/listSort";
@@ -97,23 +97,14 @@ export function TrainersPageClient() {
       {hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4 items-end">
-            <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-              <FieldLabel label="Assign trainer" required />
-              <select
-                className="input-field px-3 py-2 text-sm"
-                required
-                aria-required
-                value={trainerPick}
-                onChange={(e) => setTrainerPick(e.target.value)}
-              >
-                <option value="">Select trainer</option>
-                {trainerOptions.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label="Assign trainer"
+              required
+              value={trainerPick}
+              onChange={setTrainerPick}
+              placeholder="Select trainer"
+              options={trainerOptions.map((o) => ({ value: o.id, label: o.label }))}
+            />
             <div className="flex flex-wrap gap-2 pb-1">
               <button
                 type="button"
@@ -124,26 +115,24 @@ export function TrainersPageClient() {
                 Assign
               </button>
             </div>
-            <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-              Remove trainer
-              <select
-                className="input-field px-3 py-2 text-sm"
-                value={removeTrainerPick}
-                onChange={(e) => setRemoveTrainerPick(e.target.value)}
-              >
-                <option value="">Select assigned trainer</option>
-                {(trainersQ.data ?? []).map((row) => {
+            <SelectField
+              label="Remove trainer"
+              value={removeTrainerPick}
+              onChange={setRemoveTrainerPick}
+              placeholder="Select assigned trainer"
+              options={(trainersQ.data ?? [])
+                .map((row) => {
                   const uid = String(
                     row.trainer_user_id ?? row.trainerUserId ?? row.user_id ?? row.userId ?? ""
                   );
-                  return (
-                    <option key={uid} value={uid}>
-                      {`${row.name ?? "Trainer"} (${row.email ?? uid})`}
-                    </option>
-                  );
-                })}
-              </select>
-            </label>
+                  if (!uid) return null;
+                  return {
+                    value: uid,
+                    label: `${row.name ?? "Trainer"} (${row.email ?? uid})`,
+                  };
+                })
+                .filter((row): row is { value: string; label: string } => Boolean(row))}
+            />
             <div className="flex flex-wrap gap-2 pb-1">
               <button
                 type="button"

@@ -7,7 +7,7 @@ import {
   useTrainingSessions,
 } from "@/hooks/learning/useLearningTrainings";
 import { TraineeAttendanceAnalytics } from "@/components/learning-development/TraineeAttendanceAnalytics";
-import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { SelectField } from "@/components/dashboard/ui/forms";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { traineeTableRowsFromParticipants } from "@/utils/learning/participants";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
@@ -132,28 +132,19 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
       ) : null}
 
       <div className="grid md:grid-cols-2 gap-4 max-w-xl">
-        <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-          <FieldLabel label="Session" required />
-          <select
-            className="input-field px-3 py-2 text-sm"
-            required
-            aria-required
-            value={sessionId}
-            onChange={(e) => setSessionId(e.target.value)}
-            disabled={!trainingId}
-          >
-            <option value="">Select session</option>
-            {(sessionsQ.data ?? []).map((s) => {
-              const sid = String(s.id ?? "").trim();
-              const d = String(s.session_date ?? "").trim();
-              return (
-                <option key={sid} value={sid}>
-                  {[d, sid].filter(Boolean).join(" · ") || sid}
-                </option>
-              );
-            })}
-          </select>
-        </label>
+        <SelectField
+          label="Session"
+          required
+          value={sessionId}
+          onChange={setSessionId}
+          disabled={!trainingId}
+          placeholder="Select session"
+          options={(sessionsQ.data ?? []).map((s) => {
+            const sid = String(s.id ?? "").trim();
+            const d = String(s.session_date ?? "").trim();
+            return { value: sid, label: [d, sid].filter(Boolean).join(" · ") || sid };
+          })}
+        />
       </div>
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
@@ -218,22 +209,15 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <h2 className="font-semibold">Attendance analytics</h2>
-        <label className="text-xs text-wt-text-muted flex flex-col gap-1 max-w-md">
-          View employee
-          <select
-            className="input-field px-3 py-2 text-sm"
-            value={viewEmployeeId}
-            onChange={(e) => setViewEmployeeId(e.target.value)}
-            disabled={!trainingId || !traineeRows.length}
-          >
-            <option value="">Select employee</option>
-            {traineeRows.map((row) => (
-              <option key={row.userId} value={row.userId}>
-                {row.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="View employee"
+          className="max-w-md"
+          value={viewEmployeeId}
+          onChange={setViewEmployeeId}
+          disabled={!trainingId || !traineeRows.length}
+          placeholder="Select employee"
+          options={traineeRows.map((row) => ({ value: row.userId, label: row.name }))}
+        />
         <TraineeAttendanceAnalytics
           trainingId={trainingId}
           employeeUserId={viewEmployeeId}

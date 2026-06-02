@@ -6,6 +6,7 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useExitInterviewSubmissions } from "@/hooks/exit-interview/useExitInterviewSubmissions";
+import { SelectField } from "@/components/dashboard/ui/forms";
 import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { applyListSort, EXIT_INTERVIEW_SORT_OPTIONS } from "@/utils/listSort";
@@ -76,23 +77,16 @@ export function ExitInterviewSubmissionsPageClient() {
                 }}
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs text-wt-text-muted">
-              Status
-              <select
-                className="input-field px-3 py-2 text-sm w-[10.5rem]"
-                value={status}
-                onChange={(e) => {
-                  setPage(0);
-                  setStatus(e.target.value as "SUBMITTED" | "PENDING" | "ALL");
-                }}
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label="Status"
+              className="w-[10.5rem]"
+              value={status}
+              onChange={(v) => {
+                setPage(0);
+                setStatus(v as "SUBMITTED" | "PENDING" | "ALL");
+              }}
+              options={STATUS_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
+            />
             <button
               type="button"
               className="btn-primary px-3 py-2 text-sm"

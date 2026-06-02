@@ -1,6 +1,7 @@
 "use client";
 
-import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { useMemo } from "react";
+import { FieldLabel, SearchableSelectCombobox } from "@/components/dashboard/ui/forms";
 import { useHrTrainingsList } from "@/hooks/learning/useLearningTrainings";
 
 /** HR-only training picker (GET /api/v1/trainings). */
@@ -15,27 +16,30 @@ export function TrainingScopePicker({
 }) {
   const { data: trainings = [], isLoading } = useHrTrainingsList();
 
+  const options = useMemo(() => {
+    const rows = trainings.map((row) => {
+      const id = String(row.id ?? "").trim();
+      const name = String(row.name ?? id).trim();
+      return { value: id, label: name || id };
+    });
+    return [
+      { value: "", label: isLoading ? "Loading…" : "Select a training" },
+      ...rows.filter((row) => row.value),
+    ];
+  }, [trainings, isLoading]);
+
   return (
     <label className="text-xs text-wt-text-muted flex flex-col gap-1 max-w-xl">
       <FieldLabel label="Training name" required={required} />
-      <select
-        className="input-field px-3 py-2 text-sm"
+      <SearchableSelectCombobox
         value={trainingId}
-        onChange={(e) => onTrainingIdChange(e.target.value)}
+        onChange={onTrainingIdChange}
+        options={options}
+        placeholder="Search trainings…"
         required={required}
-        aria-required={required || undefined}
-      >
-        <option value="">{isLoading ? "Loading…" : "Select a training"}</option>
-        {trainings.map((row) => {
-          const id = String(row.id ?? "").trim();
-          const name = String(row.name ?? id).trim();
-          return (
-            <option key={id || name} value={id}>
-              {name}
-            </option>
-          );
-        })}
-      </select>
+        disabled={isLoading}
+        aria-label="Training name"
+      />
     </label>
   );
 }

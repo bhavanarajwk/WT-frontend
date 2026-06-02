@@ -85,7 +85,7 @@ export interface EmployeeAttendanceLeaveDateRow {
 export interface EmployeeAttendanceLeaveEmployeeRow {
   user_id: number;
   emp_id: string | null;
-  email: string;
+  name: string;
   leave_days_taken: number;
   leave_dates: EmployeeAttendanceLeaveDateRow[];
   total_attendance_days: number;
@@ -108,6 +108,9 @@ export interface EmployeeAttendanceLeaveQuery {
   toDate?: string;
   page?: number;
   size?: number;
+  search?: string;
+  type?: string;
+  band?: string;
 }
 
 export interface AllocationExtensionRequestRow {
@@ -122,6 +125,16 @@ export interface AllocationExtensionRequestRow {
   requested_by_name: string;
   status: AllocationExtensionRequestStatus;
   created_at: string;
+}
+
+export interface AnnualCalendarItem {
+  id: number;
+  year: number;
+  title: string;
+  document_link: string | null;
+  created_by_name: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export const hrmsService = {
@@ -406,6 +419,9 @@ export const hrmsService = {
     if (params.toDate?.trim()) query.toDate = params.toDate.trim();
     if (params.page != null) query.page = String(params.page);
     if (params.size != null) query.size = String(params.size);
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.type?.trim()) query.type = params.type.trim();
+    if (params.band?.trim()) query.band = params.band.trim();
     return apiClient.get<ApiEnvelope<EmployeeAttendanceLeaveData>>(
       endpoints.employeeAttendanceLeave,
       { query: applyApiDateQuery(query, ["fromDate", "toDate"]) }
@@ -710,6 +726,29 @@ export const hrmsService = {
 
   getBgvRecord(empId: string) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.hrReports.bgvByEmployee(empId));
+  },
+
+  uploadAnnualCalendar(payload: {
+    year: number;
+    title?: string | null;
+    document_link: string;
+  }) {
+    return apiClient.post<ApiEnvelope<AnnualCalendarItem>>(endpoints.annualCalendar.root, {
+      contentType: "application/json",
+      body: JSON.stringify({
+        year: payload.year,
+        title: payload.title ?? null,
+        document_link: payload.document_link,
+      }),
+    });
+  },
+
+  getAnnualCalendars() {
+    return apiClient.get<ApiEnvelope<{ items: AnnualCalendarItem[] }>>(endpoints.annualCalendar.root);
+  },
+
+  getAnnualCalendarByYear(year: number | string) {
+    return apiClient.get<ApiEnvelope<AnnualCalendarItem>>(endpoints.annualCalendar.byYear(year));
   },
 
   // Learning & Development

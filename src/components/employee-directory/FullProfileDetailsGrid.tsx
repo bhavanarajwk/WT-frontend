@@ -1,6 +1,5 @@
 "use client";
 
-import { ProfileField } from "@/components/dashboard/ui/profile";
 import { EmployeeResumeLink } from "@/components/resumes/EmployeeResumeLink";
 import {
   buildProfileDisplayEntries,
@@ -17,23 +16,29 @@ export function FullProfileDetailsGrid({
   const entries = buildProfileDisplayEntries(profile, resumeShareHref);
 
   return (
-    <dl className="grid grid-cols-1 gap-x-8 gap-y-4 text-sm sm:grid-cols-2">
-      {entries.map((entry) =>
-        entry.resumeShareHref !== undefined ? (
-          <div key={entry.label} className="contents">
-            <dt className="text-wt-text-muted">{entry.label}</dt>
-            <dd className="font-medium">
-              <EmployeeResumeLink href={entry.resumeShareHref} />
-            </dd>
-          </div>
-        ) : (
-          <ProfileField
-            key={entry.label}
-            label={entry.label}
-            value={formatProfileDisplayValue(entry.value)}
-          />
-        )
-      )}
-    </dl>
+    <div className="wt-scroll-both overflow-auto rounded-xl border border-wt-border">
+      <table className="min-w-full text-sm">
+        <thead className="bg-wt-surface-2 text-wt-text-muted">
+          <tr>
+            <th className="px-3 py-2 text-left font-medium whitespace-nowrap w-[32%]">Field</th>
+            <th className="px-3 py-2 text-left font-medium">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <tr key={entry.label} className="border-t border-wt-border">
+              <td className="px-3 py-2 text-wt-text-muted whitespace-nowrap">{entry.label}</td>
+              <td className="px-3 py-2 font-medium">
+                {entry.resumeShareHref !== undefined ? (
+                  <EmployeeResumeLink href={entry.resumeShareHref} />
+                ) : (
+                  formatProfileDisplayValue(entry.value)
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

@@ -7,7 +7,7 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
 import { hrmsService } from "@/services/hrms.service";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { SelectField } from "@/components/dashboard/ui/forms";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { EmployeeOnboardingSubNav } from "@/components/employee-onboarding/EmployeeOnboardingSubNav";
@@ -102,23 +102,17 @@ export function AssignAccountManagerPageClient() {
 
           {!isLoading && !isError ? (
             <div className="mt-6 max-w-xl space-y-4">
-              <label className="flex flex-col gap-1 text-xs text-wt-text-muted">
-                <FieldLabel label="Employee" required />
-                <select
-                  required
-                  aria-required
-                  className="input-field px-3 py-2.5 text-sm"
-                  value={selectedEmpId}
-                  onChange={(e) => setSelectedEmpId(e.target.value)}
-                >
-                  <option value="">Select an employee…</option>
-                  {options.map((opt) => (
-                    <option key={opt.empId} value={opt.empId}>
-                      {opt.name} ({opt.email}){opt.isAm ? " — already AM" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SelectField
+                label="Employee"
+                required
+                value={selectedEmpId}
+                onChange={setSelectedEmpId}
+                placeholder="Select an employee…"
+                options={options.map((opt) => ({
+                  value: opt.empId,
+                  label: `${opt.name} (${opt.email})${opt.isAm ? " — already AM" : ""}`,
+                }))}
+              />
 
               {selected ? (
                 <div className="rounded-lg border border-wt-border bg-wt-surface-2/50 p-4 text-sm">

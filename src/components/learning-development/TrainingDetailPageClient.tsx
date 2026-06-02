@@ -19,8 +19,8 @@ import { AttendancePageClient } from "@/components/learning-development/Attendan
 import { EmployeeTrainingMyMarks } from "@/components/learning-development/EmployeeTrainingMyMarks";
 import { ScoresPageClient } from "@/components/learning-development/ScoresPageClient";
 import { TrainingStatusControl } from "@/components/learning-development/TrainingStatusControl";
-import { FieldLabel } from "@/components/dashboard/ui/forms";
-import { DataTable, FileField, InputField, SelectField } from "@/components/learning-development/ui/forms";
+import { SelectField } from "@/components/dashboard/ui/forms";
+import { DataTable, FileField, InputField } from "@/components/learning-development/ui/forms";
 import { PARTICIPANT_SORT_OPTIONS, SESSION_SORT_OPTIONS, TITLE_SORT_OPTIONS } from "@/utils/listSort";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import {
@@ -135,6 +135,10 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   const [trainerPick, setTrainerPick] = useState("");
   const [removeTrainerPick, setRemoveTrainerPick] = useState("");
   const [participantPick, setParticipantPick] = useState("");
+  const [participantStatusUserId, setParticipantStatusUserId] = useState("");
+  const [participantStatusValue, setParticipantStatusValue] = useState<"COMPLETED" | "WITHDRAWN">(
+    "COMPLETED"
+  );
   const [materialForm, setMaterialForm] = useState(createEmptyMaterialForm);
   const [materialFile, setMaterialFile] = useState<File | null>(null);
   const [assessmentForm, setAssessmentForm] = useState(createEmptyAssessmentForm);
@@ -183,6 +187,37 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
       setParticipantPick("");
     },
   });
+
+  const updateParticipantStatusMut = useMutation({
+    mutationFn: async () => {
+      if (!participantStatusUserId.trim()) throw new Error("Please select a trainee.");
+      await hrmsService.updateTrainingParticipantStatus(
+        tid,
+        participantStatusUserId,
+        participantStatusValue
+      );
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["learning", "participants", tid] });
+      setParticipantStatusUserId("");
+      setParticipantStatusValue("COMPLETED");
+    },
+  });
+
+  const participantStatusOptions = useMemo(
+    () =>
+      (participantsQ.data ?? [])
+        .map((row) => {
+          const id = participantRowUserId(row);
+          if (!id) return null;
+          const name = String(row.name ?? "Employee").trim() || "Employee";
+          const email = String(row.email ?? "").trim();
+          const status = String(row.enrollment_status ?? row.enrollmentStatus ?? "ENROLLED").trim();
+          return { id, label: `${name}${email ? ` (${email})` : ""} — ${status}` };
+        })
+        .filter((row): row is { id: string; label: string } => Boolean(row)),
+    [participantsQ.data]
+  );
 
   const uploadMaterialMut = useMutation({
     mutationFn: async () => {
@@ -372,43 +407,37 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           <h2 className="font-semibold">Trainers</h2>
           {hasHrAccess ? (
             <div className="grid sm:grid-cols-2 gap-4 items-end">
-              <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                <FieldLabel label="Assign trainer" required />
-                <select className="input-field px-3 py-2 text-sm" required aria-required value={trainerPick} onChange={(e) => setTrainerPick(e.target.value)}>
-                  <option value="">Select trainer</option>
-                  {trainerOptions.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SelectField
+                label="Assign trainer"
+                required
+                value={trainerPick}
+                onChange={setTrainerPick}
+                placeholder="Select trainer"
+                options={trainerOptions.map((o) => ({ value: o.id, label: o.label }))}
+              />
               <div className="flex flex-wrap gap-2 pb-1">
                 <button type="button" className="btn-primary px-3 py-2 text-sm" disabled={!trainerPick} onClick={assignTrainer}>
                   Assign
                 </button>
               </div>
-              <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                Remove trainer
-                <select
-                  className="input-field px-3 py-2 text-sm"
-                  value={removeTrainerPick}
-                  onChange={(e) => setRemoveTrainerPick(e.target.value)}
-                >
-                  <option value="">Select assigned trainer</option>
-                  {(trainersQ.data ?? []).map((row) => {
+              <SelectField
+                label="Remove trainer"
+                value={removeTrainerPick}
+                onChange={setRemoveTrainerPick}
+                placeholder="Select assigned trainer"
+                options={(trainersQ.data ?? [])
+                  .map((row) => {
                     const uid = String(
                       row.trainer_user_id ?? row.trainerUserId ?? row.user_id ?? row.userId ?? ""
                     );
-                    const label = `${row.name ?? "Trainer"} (${row.email ?? uid})`;
-                    return (
-                      <option key={uid} value={uid}>
-                        {label}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
+                    if (!uid) return null;
+                    return {
+                      value: uid,
+                      label: `${row.name ?? "Trainer"} (${row.email ?? uid})`,
+                    };
+                  })
+                  .filter((row): row is { value: string; label: string } => Boolean(row))}
+              />
               <div className="flex flex-wrap gap-2 pb-1">
                 <button
                   type="button"
@@ -436,19 +465,42 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           <h2 className="font-semibold">Trainees</h2>
           {hasHrAccess ? (
             <div className="grid sm:grid-cols-2 gap-4 items-end">
-              <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                <FieldLabel label="Add trainee" required />
-                <select className="input-field px-3 py-2 text-sm" required aria-required value={participantPick} onChange={(e) => setParticipantPick(e.target.value)}>
-                  <option value="">Select trainee</option>
-                  {addTraineeOptions.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SelectField
+                label="Add trainee"
+                required
+                value={participantPick}
+                onChange={setParticipantPick}
+                placeholder="Select trainee"
+                options={addTraineeOptions.map((o) => ({ value: o.id, label: o.label }))}
+              />
               <button type="button" className="btn-primary px-3 py-2 text-sm sm:mb-0 disabled:opacity-40" disabled={addParticipantMut.isPending || !participantPick} onClick={() => addParticipantMut.mutate()}>
                 Add trainee
+              </button>
+              <SelectField
+                label="Update trainee status"
+                required
+                value={participantStatusUserId}
+                onChange={setParticipantStatusUserId}
+                placeholder="Select enrolled trainee"
+                options={participantStatusOptions.map((o) => ({ value: o.id, label: o.label }))}
+              />
+              <SelectField
+                label="Status"
+                value={participantStatusValue}
+                onChange={(v) => setParticipantStatusValue(v as "COMPLETED" | "WITHDRAWN")}
+                options={["COMPLETED", "WITHDRAWN"]}
+              />
+              <button
+                type="button"
+                className="btn-primary px-3 py-2 text-sm sm:mb-0 disabled:opacity-40"
+                disabled={updateParticipantStatusMut.isPending || !participantStatusUserId}
+                onClick={() =>
+                  updateParticipantStatusMut.mutate(undefined, {
+                    onError: (e) => alert(e instanceof Error ? e.message : "Failed"),
+                  })
+                }
+              >
+                Update status
               </button>
             </div>
           ) : null}

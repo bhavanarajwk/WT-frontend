@@ -46,45 +46,7 @@ export function InputField({
 
 export { ApiDateField as DatePickerField } from "@/components/dashboard/ui/forms";
 
-export function SelectField({
-  label,
-  value,
-  options,
-  onChange,
-  placeholder,
-  required = false,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
-  placeholder?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-      <FieldLabel label={label} required={required} />
-      <select
-        className="input-field px-3 py-2 text-sm"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        aria-required={required || undefined}
-      >
-        {placeholder ? (
-          <option value="" disabled={required}>
-            {placeholder}
-          </option>
-        ) : null}
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
+export { SelectField } from "@/components/dashboard/ui/forms";
 
 export function FileField({
   label,
