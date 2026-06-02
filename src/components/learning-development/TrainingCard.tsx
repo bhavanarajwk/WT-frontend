@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { StatusBadge } from "@/components/learning-development/ui/forms";
+import { formatApiDateDisplay } from "@/utils/apiDate";
 
 function formatLabel(value: unknown): string {
   return String(value ?? "—")
@@ -26,8 +27,8 @@ export function TrainingCard({
   const category = formatLabel(row.category);
   const type = formatLabel(row.type);
   const status = String(row.status ?? "—");
-  const start = String(row.start_date ?? row.training_start ?? "").slice(0, 10) || "—";
-  const end = String(row.end_date ?? row.training_end ?? "").slice(0, 10) || "—";
+  const start = formatApiDateDisplay(String(row.start_date ?? row.training_start ?? ""));
+  const end = formatApiDateDisplay(String(row.end_date ?? row.training_end ?? ""));
 
   return (
     <article className="group relative flex min-h-[168px] flex-col rounded-xl border border-wt-border bg-wt-surface-1 p-5 transition hover:border-indigo-500/40 hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)]">

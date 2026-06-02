@@ -7,6 +7,7 @@ import {
   useTrainingSessions,
 } from "@/hooks/learning/useLearningTrainings";
 import { TraineeAttendanceAnalytics } from "@/components/learning-development/TraineeAttendanceAnalytics";
+import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { traineeTableRowsFromParticipants } from "@/utils/learning/participants";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
@@ -125,15 +126,18 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
               setSessionId("");
               setViewEmployeeId("");
             }}
+            required
           />
         </>
       ) : null}
 
       <div className="grid md:grid-cols-2 gap-4 max-w-xl">
         <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-          Session
+          <FieldLabel label="Session" required />
           <select
             className="input-field px-3 py-2 text-sm"
+            required
+            aria-required
             value={sessionId}
             onChange={(e) => setSessionId(e.target.value)}
             disabled={!trainingId}

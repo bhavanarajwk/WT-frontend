@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/api/error";
 import { hrmsService, type AllocationExtensionRequestRow, type AllocationExtensionRequestStatus } from "@/services/hrms.service";
 import { useAuth } from "@/context/AuthContext";
+import { ApiDateField, FieldLabel } from "@/components/dashboard/ui/forms";
+import { formatApiDateDisplay } from "@/utils/apiDate";
+import { createEmptyAllocationExtensionForm } from "@/utils/allocationFormState";
 
 type Toast = { type: "success" | "error"; message: string } | null;
 type ManagerEmployeeOption = { email: string; name: string };
@@ -15,9 +18,8 @@ function normalizeStatus(value: string): AllocationExtensionRequestStatus | "" {
   return "";
 }
 
-function asDateInputValue(value: string) {
-  // Accepts ISO strings; keeps YYYY-MM-DD for <input type="date">
-  return String(value ?? "").slice(0, 10);
+function asDateDisplayValue(value: string) {
+  return formatApiDateDisplay(String(value ?? ""));
 }
 
 export function AllocationExtensionPanel() {
@@ -31,12 +33,7 @@ export function AllocationExtensionPanel() {
   const [toast, setToast] = useState<Toast>(null);
 
   // Manager create form
-  const [createForm, setCreateForm] = useState({
-    userEmail: "",
-    projectCode: "",
-    requestedEndDate: "",
-    reason: "",
-  });
+  const [createForm, setCreateForm] = useState(createEmptyAllocationExtensionForm);
   const [creating, setCreating] = useState(false);
   const [managerEmployees, setManagerEmployees] = useState<ManagerEmployeeOption[]>([]);
   const [managerProjects, setManagerProjects] = useState<ManagerProjectOption[]>([]);
@@ -101,11 +98,6 @@ export function AllocationExtensionPanel() {
       const nextEmployees = Array.from(employeeMap.values()).sort((a, b) => a.name.localeCompare(b.name));
       setManagerProjects(nextProjects);
       setManagerEmployees(nextEmployees);
-      setCreateForm((prev) => ({
-        ...prev,
-        userEmail: prev.userEmail || nextEmployees[0]?.email || "",
-        projectCode: prev.projectCode || nextProjects[0]?.code || "",
-      }));
     } catch {
       setManagerProjects([]);
       setManagerEmployees([]);
@@ -182,7 +174,7 @@ export function AllocationExtensionPanel() {
         requested_end_date: requestedEndDate,
       });
       setToast({ type: "success", message: `Extension request created (ID: ${res.data}).` });
-      setCreateForm((p) => ({ ...p, requestedEndDate: "", reason: "" }));
+      setCreateForm(createEmptyAllocationExtensionForm());
       setPage(0);
       void load();
     } catch (e) {
@@ -238,19 +230,23 @@ export function AllocationExtensionPanel() {
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <label className="text-sm">
-              <span className="block text-xs text-wt-text-muted mb-1">Employee name</span>
+            <label className="text-sm flex flex-col gap-1">
+              <FieldLabel label="Employee name" required />
               <select
+                required
+                aria-required
                 value={createForm.userEmail}
                 onChange={(e) => setCreateForm((p) => ({ ...p, userEmail: e.target.value }))}
                 className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
                 disabled={loadingCreateOptions || !managerEmployees.length}
               >
-                {!managerEmployees.length ? (
-                  <option value="">
-                    {loadingCreateOptions ? "Loading employees..." : "No employees found"}
-                  </option>
-                ) : null}
+                <option value="">
+                  {loadingCreateOptions
+                    ? "Loading employees..."
+                    : managerEmployees.length
+                      ? "Select employee"
+                      : "No employees found"}
+                </option>
                 {managerEmployees.map((opt) => (
                   <option key={opt.email} value={opt.email}>
                     {opt.name}
@@ -259,19 +255,23 @@ export function AllocationExtensionPanel() {
               </select>
             </label>
 
-            <label className="text-sm">
-              <span className="block text-xs text-wt-text-muted mb-1">Project name</span>
+            <label className="text-sm flex flex-col gap-1">
+              <FieldLabel label="Project name" required />
               <select
+                required
+                aria-required
                 value={createForm.projectCode}
                 onChange={(e) => setCreateForm((p) => ({ ...p, projectCode: e.target.value }))}
                 className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
                 disabled={loadingCreateOptions || !managerProjects.length}
               >
-                {!managerProjects.length ? (
-                  <option value="">
-                    {loadingCreateOptions ? "Loading projects..." : "No projects found"}
-                  </option>
-                ) : null}
+                <option value="">
+                  {loadingCreateOptions
+                    ? "Loading projects..."
+                    : managerProjects.length
+                      ? "Select project"
+                      : "No projects found"}
+                </option>
                 {managerProjects.map((opt) => (
                   <option key={opt.code} value={opt.code}>
                     {opt.name}
@@ -280,15 +280,17 @@ export function AllocationExtensionPanel() {
               </select>
             </label>
 
-            <label className="text-sm">
-              <span className="block text-xs text-wt-text-muted mb-1">Requested end date</span>
-              <input
-                type="date"
-                value={createForm.requestedEndDate}
-                onChange={(e) => setCreateForm((p) => ({ ...p, requestedEndDate: e.target.value }))}
-                className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-              />
-            </label>
+            <ApiDateField
+              label="Requested end date"
+              required
+              value={createForm.requestedEndDate}
+              onChange={(requestedEndDate) =>
+                setCreateForm((p) => ({
+                  ...p,
+                  requestedEndDate,
+                }))
+              }
+            />
 
             <label className="text-sm md:col-span-2">
               <span className="block text-xs text-wt-text-muted mb-1">Reason (optional)</span>
@@ -312,14 +314,7 @@ export function AllocationExtensionPanel() {
             </button>
             <button
               type="button"
-              onClick={() =>
-                setCreateForm({
-                  userEmail: "",
-                  projectCode: "",
-                  requestedEndDate: "",
-                  reason: "",
-                })
-              }
+              onClick={() => setCreateForm(createEmptyAllocationExtensionForm())}
               className="rounded-xl border border-wt-border bg-wt-surface-2 px-4 py-2 text-sm text-wt-text hover:bg-wt-surface-3"
             >
               Clear
@@ -425,8 +420,12 @@ export function AllocationExtensionPanel() {
                         <span className="font-medium">{r.project_code || "—"}</span>
                         <span className="text-wt-text-muted">{" · "}{r.project_name || "—"}</span>
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{r.current_end_date ? asDateInputValue(r.current_end_date) : "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{asDateInputValue(r.requested_end_date)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {r.current_end_date ? asDateDisplayValue(r.current_end_date) : "—"}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {asDateDisplayValue(r.requested_end_date)}
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap">{status}</td>
                       {visibleMode === "hr" ? (
                         <td className="px-3 py-2 whitespace-nowrap">{r.requested_by_name || "—"}</td>

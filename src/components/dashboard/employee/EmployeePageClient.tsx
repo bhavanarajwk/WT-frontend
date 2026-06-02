@@ -20,7 +20,6 @@ import { AccountManagerSelect } from "@/components/allocation/AccountManagerSele
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import {
-  HARDCODED_DEPARTMENT_OPTIONS,
   MAX_ONBOARD_FILE_BYTES,
   MAX_ONBOARD_TOTAL_BYTES,
 } from "@/constants/dashboard";
@@ -41,6 +40,20 @@ import {
   formatAllocatedHoursPercentLabel,
 } from "@/utils/dashboard/validation";
 import { applyTheme } from "@/utils/dashboard/theme";
+import { validatePersonalEmail } from "@/utils/personalEmail";
+import {
+  FALLBACK_ONBOARD_OPTIONS,
+  parseOnboardOptions,
+} from "@/utils/onboardFormOptions";
+import { createEmptyOnboardForm } from "@/utils/onboardFormState";
+import { createEmptyOffboardingForm } from "@/utils/offboardingFormState";
+import {
+  compareApiDates,
+  formatApiDate,
+  formatApiDateDisplay,
+  parseApiDate,
+} from "@/utils/apiDate";
+import type { OnboardOptionsResponse } from "@/types/onboard-options";
 import {
   isManagerFlagTruthy,
   isManagerRoleLabel,
@@ -62,7 +75,7 @@ import {
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
 import { MetricCard } from "@/components/dashboard/ui/MetricCard";
-import { InputField, SelectField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, FileField, UploadTile, FieldLabel } from "@/components/dashboard/ui/forms";
 import {
   ProfilePhotoAvatar,
   ProfileField,
@@ -71,6 +84,7 @@ import {
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { DesignationCombobox } from "@/components/employee-onboarding/DesignationCombobox";
 import { EmployeeOnboardingSubNav } from "@/components/employee-onboarding/EmployeeOnboardingSubNav";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
@@ -160,15 +174,7 @@ export function EmployeePageClient() {
   >([]);
   const [bgvRecords, setBgvRecords] = useState<Array<Record<string, unknown>>>([]);
   const [bgvDashboardRows, setBgvDashboardRows] = useState<Array<Record<string, unknown>>>([]);
-  const [offboardingForm, setOffboardingForm] = useState({
-    emp_id: "",
-    resignation_date: "",
-    last_working_day: "",
-    separation_type: "VOLUNTARY" as "VOLUNTARY" | "INVOLUNTARY",
-    reason: "",
-    critical_skill: "",
-    is_regretted: false,
-  });
+  const [offboardingForm, setOffboardingForm] = useState(createEmptyOffboardingForm);
   const [bgvForm, setBgvForm] = useState({
     emp_id: "",
     name: "",
@@ -237,23 +243,8 @@ export function EmployeePageClient() {
     requestType: "ALL",
   });
 
-  const [onboardForm, setOnboardForm] = useState({
-    emp_id: "",
-    email: "",
-    name: "",
-    user_type: "FULLTIME",
-    department: "",
-    phone_number: "",
-    work_mode: "WFO",
-    work_location_type: "OFFSHORE",
-    role: "",
-    band_id: 1,
-    delivery_status: "DELIVERABLE",
-    dob: "",
-    doj: "",
-    doi: "",
-    internship_duration: "",
-  });
+  const [onboardForm, setOnboardForm] = useState(createEmptyOnboardForm);
+  const [onboardFormKey, setOnboardFormKey] = useState(0);
 
   const [uploadFiles, setUploadFiles] = useState<Record<string, File | null>>({
     leave: null,
@@ -262,8 +253,8 @@ export function EmployeePageClient() {
     batch: null,
   });
   const [onboardBands, setOnboardBands] = useState<Array<Record<string, unknown>>>([]);
-  const [onboardDepartments, setOnboardDepartments] = useState<string[]>([]);
-  const [bandDeptRoleMap, setBandDeptRoleMap] = useState<Record<string, string[]>>({});
+  const [onboardOptions, setOnboardOptions] =
+    useState<OnboardOptionsResponse>(FALLBACK_ONBOARD_OPTIONS);
   const [selfOnboardForm, setSelfOnboardForm] = useState({
     full_name: "",
     phone_number: "",
@@ -467,132 +458,22 @@ export function EmployeePageClient() {
     const id = window.setTimeout(() => {
       void (async () => {
         try {
-          const [bandsRes, departmentsRes] = await Promise.all([
+          const [bandsRes, onboardOptionsRes] = await Promise.all([
             hrmsService.getBands(),
-            hrmsService.getDepartments(),
+            hrmsService.getOnboardOptions().catch(() => null),
           ]);
           const rows = toRows(bandsRes);
           setOnboardBands(rows);
 
-          let departments = Array.from(
-            new Set(
-              toPagedRows((departmentsRes as { data?: unknown }).data ?? departmentsRes)
-                .map((row) =>
-                  String(
-                    row.department ??
-                      row.department_name ??
-                      row.departmentName ??
-                      row.name ??
-                      row.value ??
-                      ""
-                  ).trim()
-                )
-                .filter((value) => Boolean(value))
-            )
-          ).sort();
-
-          // Fallback only if departments API returns nothing.
-          if (!departments.length) {
-            departments = Array.from(
-              new Set(
-                rows
-                  .map((row) => String(row.stream ?? row.department ?? "").trim())
-                  .filter((value) => Boolean(value))
-              )
-            ).sort();
-          }
-          if (!departments.length) {
-            const kpiRes = await hrmsService.getKpis({ limit: "200", offset: "0" });
-            const kpiRows = toRows((kpiRes as { data?: unknown }).data ?? kpiRes);
-            departments = Array.from(
-              new Set(
-                kpiRows
-                  .map((row) => String(row.department ?? "").trim())
-                  .filter((value) => Boolean(value))
-              )
-            ).sort();
-          }
-          setOnboardDepartments(
-            Array.from(
-              new Set([...HARDCODED_DEPARTMENT_OPTIONS, ...departments])
-            ).sort()
-          );
+          const parsedOnboardOptions = parseOnboardOptions(onboardOptionsRes);
+          setOnboardOptions(parsedOnboardOptions);
         } catch {
-          setOnboardDepartments(HARDCODED_DEPARTMENT_OPTIONS);
+          setOnboardOptions(FALLBACK_ONBOARD_OPTIONS);
         }
       })();
     }, 0);
     return () => window.clearTimeout(id);
   }, []);
-  useEffect(() => {
-    if (!onboardForm.band_id) {
-      return;
-    }
-    const id = window.setTimeout(() => {
-      void (async () => {
-        try {
-          const bandId = String(onboardForm.band_id);
-          const departmentsToQuery = onboardDepartments;
-          if (!departmentsToQuery.length) {
-            setBandDeptRoleMap({});
-            return;
-          }
-          const deptResults = await Promise.allSettled(
-            departmentsToQuery.map(async (department) => {
-              const response = await hrmsService.getDesignations({
-                band_id: bandId,
-                department,
-              });
-              const rows = toRows(response);
-              const roles = Array.from(
-                new Set(
-                  rows
-                    .map((row) =>
-                      String(row.designation ?? row.role ?? row.name ?? "").trim()
-                    )
-                    .filter((value) => Boolean(value))
-                )
-              ).sort();
-              return { department, roles };
-            })
-          );
-          const deptEntries = deptResults
-            .filter(
-              (
-                result
-              ): result is PromiseFulfilledResult<{ department: string; roles: string[] }> =>
-                result.status === "fulfilled"
-            )
-            .map((result) => result.value);
-
-          const nextMap = deptEntries.reduce<Record<string, string[]>>((acc, item) => {
-            acc[item.department] = item.roles;
-            return acc;
-          }, {});
-
-          setBandDeptRoleMap(nextMap);
-          const resolvedDepartment = departmentsToQuery.includes(onboardForm.department)
-            ? onboardForm.department
-            : departmentsToQuery[0] ?? "";
-          const resolvedRoles = nextMap[resolvedDepartment] ?? [];
-
-          if (
-            resolvedDepartment !== onboardForm.department ||
-            (onboardForm.role && !resolvedRoles.includes(onboardForm.role))
-          ) {
-            setOnboardForm((prev) => ({
-              ...prev,
-              department: resolvedDepartment,
-              role: resolvedRoles.includes(prev.role) ? prev.role : resolvedRoles[0] ?? "",
-            }));
-          }
-        } catch {
-          setBandDeptRoleMap({});
-        }
-      })();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [ onboardForm.band_id, onboardForm.department, onboardForm.role, onboardDepartments]);
   useEffect(() => {
         const hasAllocationAccess =
       (user?.roles ?? []).includes("ROLE_HR") || (user?.roles ?? []).includes("ROLE_ADMIN");
@@ -1268,7 +1149,6 @@ export function EmployeePageClient() {
       .filter((row) => row.employee !== "—" || row.email !== "—");
   }
 
-  const availableOnboardRoles = bandDeptRoleMap[onboardForm.department] ?? [];
   const internBandId = useMemo(() => resolveInternBandId(onboardBands), [onboardBands]);
   useEffect(() => {
     if (onboardForm.user_type !== "INTERN") return;
@@ -1691,7 +1571,7 @@ export function EmployeePageClient() {
           for (let i = -30; i < 90; i += 1) {
             const d = new Date(today);
             d.setDate(today.getDate() - i);
-            dates.push(d.toISOString().slice(0, 10));
+            dates.push(formatApiDate(d));
           }
           const legacyResponses = await Promise.allSettled(
             Array.from(teamEmailSet).flatMap((email) =>
@@ -1811,7 +1691,7 @@ export function EmployeePageClient() {
       for (let i = -3; i < 14; i += 1) {
         const d = new Date(today);
         d.setDate(today.getDate() - i);
-        dates.push(d.toISOString().slice(0, 10));
+        dates.push(formatApiDate(d));
       }
       const legacyResponses = await Promise.allSettled(
         Array.from(managerEmailSet).flatMap((email) =>
@@ -1879,8 +1759,8 @@ export function EmployeePageClient() {
     const today = new Date();
     const future = new Date(today);
     future.setFullYear(future.getFullYear() + 2);
-    const from = "2000-01-01";
-    const to = future.toISOString().slice(0, 10);
+    const from = formatApiDate(new Date(2000, 0, 1));
+    const to = formatApiDate(future);
     const types = [
       ...REQUEST_TYPE_ALIASES.LEAVE,
       ...REQUEST_TYPE_ALIASES.WFH,
@@ -1949,8 +1829,9 @@ export function EmployeePageClient() {
     const today = new Date();
     const future = new Date(today);
     future.setFullYear(future.getFullYear() + 2);
-    const from = employeeRequestFilters.fromDate || `${today.getFullYear()}-01-01`;
-    const to = employeeRequestFilters.toDate || future.toISOString().slice(0, 10);
+    const from =
+      employeeRequestFilters.fromDate || formatApiDate(new Date(today.getFullYear(), 0, 1));
+    const to = employeeRequestFilters.toDate || formatApiDate(future);
     const requestType = employeeRequestFilters.requestType || "ALL";
     const requestTypes =
       requestType === "ALL"
@@ -2164,7 +2045,7 @@ export function EmployeePageClient() {
       if (!from || !to) {
         throw new Error("From date and To date are required.");
       }
-      if (from > to) {
+      if (compareApiDates(from, to) > 0) {
         throw new Error("From date must be on or before To date.");
       }
 
@@ -2175,8 +2056,8 @@ export function EmployeePageClient() {
         size: "200",
       });
       const payload = ((res as { data?: unknown }).data ?? res) as Record<string, unknown>;
-      const respFrom = String(payload.from_date ?? "").trim().slice(0, 10);
-      const respTo = String(payload.to_date ?? "").trim().slice(0, 10);
+      const respFrom = formatApiDateDisplay(String(payload.from_date ?? "").trim());
+      const respTo = formatApiDateDisplay(String(payload.to_date ?? "").trim());
       const rawRows = toPagedRows(payload.items ?? payload);
       const filteredRows = filterInvitedRowsByCreatedAtRange(rawRows, from, to);
       const serverRangeMismatch =
@@ -2188,6 +2069,11 @@ export function EmployeePageClient() {
     },
     []
   );
+
+  const resetOnboardForm = useCallback(() => {
+    setOnboardForm(createEmptyOnboardForm());
+    setOnboardFormKey((key) => key + 1);
+  }, []);
 
   const loadAllocationsForHr = useCallback(async () => {
     let rows: Array<Record<string, unknown>> = [];
@@ -2646,22 +2532,7 @@ export function EmployeePageClient() {
             ).values()
           ).sort((a, b) => a.emp_id.localeCompare(b.emp_id));
           setBgvUsers(bgvRows);
-          setOffboardingForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setAttritionForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setBgvForm((prev) => {
-            const selected =
-              bgvRows.find((emp) => emp.emp_id === prev.emp_id) ??
-              bgvRows[0];
-            if (!selected) return prev;
-            return {
-              ...prev,
-              emp_id: prev.emp_id || selected.emp_id,
-              name: selected.name,
-              role: selected.role,
-              level: selected.level,
-              mail_id: selected.email,
-            };
-          });
+
         } catch {
           setOffboardingUsers([]);
           setBgvUsers([]);
@@ -2822,9 +2693,6 @@ export function EmployeePageClient() {
                 .filter(Boolean);
               if (!primarySkills.length) {
                 throw new Error("Please add at least one primary skill.");
-              }
-              if (!selfOnboardFiles.resume) {
-                throw new Error("Please upload resume.");
               }
               if (!selfOnboardFiles.profile_photo) {
                 throw new Error("Please upload profile photo.");
@@ -3196,14 +3064,34 @@ export function EmployeePageClient() {
             {hasHrAccess ? <EmployeeOnboardingSubNav /> : null}
                               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                                 <h3 className="font-semibold mb-4">Create New Employee</h3>
-                                <div className="grid sm:grid-cols-2 gap-3">
+                                <div key={onboardFormKey} className="grid sm:grid-cols-2 gap-3">
                                   <InputField label="Employee ID" value={onboardForm.emp_id} onChange={(v) => setOnboardForm((p) => ({ ...p, emp_id: v }))} />
-                                  <InputField label="Email" value={onboardForm.email} onChange={(v) => setOnboardForm((p) => ({ ...p, email: v }))} />
-                                  <InputField label="Name" value={onboardForm.name} onChange={(v) => setOnboardForm((p) => ({ ...p, name: v }))} />
+                                  <InputField
+                                    label="Work email"
+                                    type="email"
+                                    required
+                                    value={onboardForm.email}
+                                    onChange={(v) => setOnboardForm((p) => ({ ...p, email: v }))}
+                                  />
+                                  <InputField
+                                    label="Personal mail ID"
+                                    type="email"
+                                    required
+                                    value={onboardForm.personal_email}
+                                    onChange={(v) => setOnboardForm((p) => ({ ...p, personal_email: v }))}
+                                  />
+                                  <InputField
+                                    label="Name"
+                                    required
+                                    value={onboardForm.name}
+                                    onChange={(v) => setOnboardForm((p) => ({ ...p, name: v }))}
+                                  />
                                   <SelectField
                                     label="User Type"
+                                    required
+                                    placeholder="Select user type"
                                     value={onboardForm.user_type}
-                                    options={["FULLTIME", "INTERN", "CONSULTANT"]}
+                                    options={onboardOptions.user_types}
                                     onChange={(v) =>
                                       setOnboardForm((p) => {
                                         const ut = v as "FULLTIME" | "INTERN" | "CONSULTANT";
@@ -3216,34 +3104,38 @@ export function EmployeePageClient() {
                                   />
                                   <SelectField
                                     label="Department"
+                                    required
+                                    placeholder="Select department"
                                     value={onboardForm.department}
-                                    options={
-                                      onboardDepartments.length
-                                        ? onboardDepartments
-                                        : HARDCODED_DEPARTMENT_OPTIONS
-                                    }
+                                    options={onboardOptions.departments}
                                     onChange={(v) =>
                                       setOnboardForm((p) => ({
                                         ...p,
                                         department: v,
+                                        role: "",
                                       }))
                                     }
                                   />
                                   {onboardForm.user_type !== "CONSULTANT" ? (
                                     <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                      Band
+                                      <FieldLabel label="Band" required />
                                       <select
+                                        required
+                                        aria-required
                                         className="input-field px-3 py-2 text-sm"
-                                        value={String(onboardForm.band_id)}
+                                        value={onboardForm.band_id ? String(onboardForm.band_id) : ""}
                                         disabled={onboardForm.user_type === "INTERN"}
                                         onChange={(e) =>
                                           setOnboardForm((p) => ({
                                             ...p,
-                                            band_id: Number(e.target.value || "1"),
+                                            band_id: Number(e.target.value) || 0,
                                             role: "",
                                           }))
                                         }
                                       >
+                                        <option value="" disabled>
+                                          Select band
+                                        </option>
                                         {onboardBands.length ? (
                                           onboardBands.map((row) => (
                                             <option key={String(row.id)} value={String(row.id)}>
@@ -3251,7 +3143,9 @@ export function EmployeePageClient() {
                                             </option>
                                           ))
                                         ) : (
-                                          <option value="1">B1</option>
+                                          <option value="1" disabled>
+                                            B1
+                                          </option>
                                         )}
                                       </select>
                                     </label>
@@ -3259,49 +3153,91 @@ export function EmployeePageClient() {
                                   {onboardForm.user_type === "CONSULTANT" ? (
                                     <InputField
                                       label="Designation"
+                                      required
                                       value={onboardForm.role}
                                       onChange={(v) => setOnboardForm((p) => ({ ...p, role: v }))}
                                     />
                                   ) : (
-                                    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                      Designation
-                                      <select
-                                        className="input-field px-3 py-2 text-sm"
-                                        value={onboardForm.role}
-                                        onChange={(e) =>
-                                          setOnboardForm((p) => ({
-                                            ...p,
-                                            role: e.target.value,
-                                          }))
-                                        }
-                                      >
-                                        <option value="">
-                                          {onboardForm.department
-                                            ? availableOnboardRoles.length
-                                              ? "Select designation"
-                                              : "No designations for selected department"
-                                            : "Select band and department first"}
-                                        </option>
-                                        {availableOnboardRoles.map((roleOption) => (
-                                          <option key={roleOption} value={roleOption}>
-                                            {roleOption}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </label>
+                                    <DesignationCombobox
+                                      key={`onboard-designation-${onboardFormKey}`}
+                                      bandId={Number(onboardForm.band_id) || 0}
+                                      department={onboardForm.department}
+                                      value={onboardForm.role}
+                                      onChange={(role) => setOnboardForm((p) => ({ ...p, role }))}
+                                      required
+                                      canCreate={hasHrAccess}
+                                      onError={(message) =>
+                                        setToast({ type: "error", message })
+                                      }
+                                    />
                                   )}
-                                  <InputField label="Phone Number" value={onboardForm.phone_number} onChange={(v) => setOnboardForm((p) => ({ ...p, phone_number: v }))} />
-                                  <SelectField label="Work Mode" value={onboardForm.work_mode} options={["WFO", "WFH", "HYBRID"]} onChange={(v) => setOnboardForm((p) => ({ ...p, work_mode: v }))} />
-                                  <SelectField label="Work Location" value={onboardForm.work_location_type} options={["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"]} onChange={(v) => setOnboardForm((p) => ({ ...p, work_location_type: v }))} />
-                                  <SelectField label="Delivery Status" value={onboardForm.delivery_status} options={["DELIVERABLE", "NON_DELIVERABLE"]} onChange={(v) => setOnboardForm((p) => ({ ...p, delivery_status: v }))} />
-                                  <InputField label="Date of Birth" value={onboardForm.dob} onChange={(v) => setOnboardForm((p) => ({ ...p, dob: v }))} type="date" />
+                                  <InputField
+                                    label="Phone Number"
+                                    required
+                                    value={onboardForm.phone_number}
+                                    onChange={(v) => setOnboardForm((p) => ({ ...p, phone_number: v }))}
+                                  />
+                                  <SelectField
+                                    label="Work Mode"
+                                    required
+                                    placeholder="Select work mode"
+                                    value={onboardForm.work_mode}
+                                    options={onboardOptions.work_modes}
+                                    onChange={(v) => setOnboardForm((p) => ({ ...p, work_mode: v }))}
+                                  />
+                                  <SelectField
+                                    label="Work Location"
+                                    required
+                                    placeholder="Select work location"
+                                    value={onboardForm.work_location_type}
+                                    options={onboardOptions.work_location_types}
+                                    onChange={(v) =>
+                                      setOnboardForm((p) => ({ ...p, work_location_type: v }))
+                                    }
+                                  />
+                                  <SelectField
+                                    label="Delivery Status"
+                                    required
+                                    placeholder="Select delivery status"
+                                    value={onboardForm.delivery_status}
+                                    options={onboardOptions.delivery_statuses}
+                                    onChange={(v) =>
+                                      setOnboardForm((p) => ({ ...p, delivery_status: v }))
+                                    }
+                                  />
+                                  <InputField
+                                    label="Date of Birth"
+                                    required
+                                    value={onboardForm.dob}
+                                    onChange={(v) => setOnboardForm((p) => ({ ...p, dob: v }))}
+                                    type="date"
+                                  />
                                   {onboardForm.user_type === "INTERN" ? (
                                     <>
-                                      <InputField label="Date of Internship" value={onboardForm.doi} onChange={(v) => setOnboardForm((p) => ({ ...p, doi: v }))} type="date" />
-                                      <InputField label="Internship Duration (months)" value={onboardForm.internship_duration} onChange={(v) => setOnboardForm((p) => ({ ...p, internship_duration: v }))} />
+                                      <InputField
+                                        label="Date of Internship"
+                                        required
+                                        value={onboardForm.doi}
+                                        onChange={(v) => setOnboardForm((p) => ({ ...p, doi: v }))}
+                                        type="date"
+                                      />
+                                      <InputField
+                                        label="Internship Duration (months)"
+                                        required
+                                        value={onboardForm.internship_duration}
+                                        onChange={(v) =>
+                                          setOnboardForm((p) => ({ ...p, internship_duration: v }))
+                                        }
+                                      />
                                     </>
                                   ) : (
-                                    <InputField label="Date of Joining" value={onboardForm.doj} onChange={(v) => setOnboardForm((p) => ({ ...p, doj: v }))} type="date" />
+                                    <InputField
+                                      label="Date of Joining"
+                                      required
+                                      value={onboardForm.doj}
+                                      onChange={(v) => setOnboardForm((p) => ({ ...p, doj: v }))}
+                                      type="date"
+                                    />
                                   )}
                                 </div>
                                 <div className="mt-4 flex gap-2">
@@ -3311,6 +3247,13 @@ export function EmployeePageClient() {
                                     onClick={() =>
                                       runAction("Create employee", async () => {
                                         const email = onboardForm.email.trim();
+                                        const personalEmailRaw = onboardForm.personal_email.trim();
+                                        const personalEmailError = validatePersonalEmail(email, personalEmailRaw, {
+                                          required: true,
+                                        });
+                                        if (personalEmailError) {
+                                          throw new Error(personalEmailError);
+                                        }
                                         const name = onboardForm.name.trim();
                                         const department = onboardForm.department.trim();
                                         const role = onboardForm.role.trim();
@@ -3328,6 +3271,18 @@ export function EmployeePageClient() {
           
                                         if (!email || !name) {
                                           throw new Error("Email and Name are required.");
+                                        }
+                                        if (!onboardForm.user_type) {
+                                          throw new Error("User type is required.");
+                                        }
+                                        if (!onboardForm.work_mode) {
+                                          throw new Error("Work mode is required.");
+                                        }
+                                        if (!onboardForm.work_location_type) {
+                                          throw new Error("Work location is required.");
+                                        }
+                                        if (!onboardForm.delivery_status) {
+                                          throw new Error("Delivery status is required.");
                                         }
                                         if (!isValidPersonName(name)) {
                                           throw new Error(
@@ -3351,8 +3306,8 @@ export function EmployeePageClient() {
                                         if (!dob) {
                                           throw new Error("Date of Birth is required.");
                                         }
-                                        const dobDate = new Date(`${dob}T00:00:00`);
-                                        if (Number.isNaN(dobDate.getTime())) {
+                                        const dobDate = parseApiDate(dob);
+                                        if (!dobDate) {
                                           throw new Error("Date of Birth is invalid.");
                                         }
                                         const today = new Date();
@@ -3371,9 +3326,10 @@ export function EmployeePageClient() {
                                           throw new Error("Date of Joining is required.");
                                         }
           
-                                        const basePayload = {
+                                        const basePayload: Record<string, unknown> = {
                                           emp_id: onboardForm.emp_id.trim() || null,
                                           email,
+                                          personal_email: personalEmailRaw,
                                           name,
                                           user_type: onboardForm.user_type,
                                           department,
@@ -3402,6 +3358,7 @@ export function EmployeePageClient() {
                                           });
                                         }
                                         await loadInviteOnboardingPreview();
+                                        resetOnboardForm();
                                       })
                                     }
                                     disabled={actionLoading}
@@ -3414,6 +3371,7 @@ export function EmployeePageClient() {
                                     onClick={() =>
                                       runAction("Refresh onboarding list", async () => {
                                         await loadInviteOnboardingPreview();
+                                        resetOnboardForm();
                                       })
                                     }
                                     disabled={actionLoading}
@@ -3447,6 +3405,7 @@ export function EmployeePageClient() {
                                           from: invitedListFromDateRef.current,
                                           to: invitedListToDateRef.current,
                                         });
+                                        resetOnboardForm();
                                       })
                                     }
                                     disabled={actionLoading}
@@ -3462,6 +3421,7 @@ export function EmployeePageClient() {
                                         setInvitedListFromDate(from);
                                         setInvitedListToDate(to);
                                         await loadInviteOnboardingPreview({ from, to });
+                                        resetOnboardForm();
                                       })
                                     }
                                     disabled={actionLoading}
@@ -3487,6 +3447,7 @@ export function EmployeePageClient() {
                                     "emp_id",
                                     "name",
                                     "email",
+                                    "personal_email",
                                     "status",
                                     "user_type",
                                     "department",

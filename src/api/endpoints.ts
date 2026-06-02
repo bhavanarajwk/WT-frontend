@@ -144,6 +144,7 @@ export const endpoints = {
   masters: {
     bands: `${api}/masters/bands`,
     departments: `${api}/masters/departments`,
+    onboardOptions: `${api}/masters/onboard-options`,
     designations: `${api}/masters/designations`,
     kpiDefinitions: `${api}/masters/kpi-definitions`,
     kpiDefinitionById: (kpiId: string) =>

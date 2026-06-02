@@ -7,7 +7,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useTrainingSessions } from "@/hooks/learning/useLearningTrainings";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { DataTable, InputField, SelectField } from "@/components/learning-development/ui/forms";
+import { SESSION_SORT_OPTIONS } from "@/utils/listSort";
 import { hrmsService } from "@/services/hrms.service";
+import { createEmptySessionForm } from "@/utils/learningFormState";
 
 export function SessionsPageClient() {
   const { user } = useAuth();
@@ -18,14 +20,7 @@ export function SessionsPageClient() {
   const qc = useQueryClient();
   const sessionsQ = useTrainingSessions(trainingId, Boolean(trainingId.trim()));
 
-  const [sessionForm, setSessionForm] = useState({
-    session_date: "",
-    start_time: "",
-    end_time: "",
-    mode: "ONLINE",
-    venue: "",
-    meeting_link: "",
-  });
+  const [sessionForm, setSessionForm] = useState(createEmptySessionForm);
 
   const sessionMut = useMutation({
     mutationFn: () =>
@@ -36,14 +31,7 @@ export function SessionsPageClient() {
       }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["learning", "sessions", trainingId] });
-      setSessionForm({
-        session_date: "",
-        start_time: "",
-        end_time: "",
-        mode: "ONLINE",
-        venue: "",
-        meeting_link: "",
-      });
+      setSessionForm(createEmptySessionForm());
     },
   });
 
@@ -64,14 +52,21 @@ export function SessionsPageClient() {
         ) : null}
       </div>
 
-      <TrainingScopePicker trainingId={trainingId} onTrainingIdChange={setTrainingId} />
+      <TrainingScopePicker trainingId={trainingId} onTrainingIdChange={setTrainingId} required />
 
       {hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <h2 className="font-semibold">New session</h2>
           <div className="grid sm:grid-cols-2 gap-4">
-            <InputField label="Session date" type="date" value={sessionForm.session_date} onChange={(v) => setSessionForm((p) => ({ ...p, session_date: v }))} />
-            <SelectField label="Mode" value={sessionForm.mode} options={["ONLINE", "OFFLINE", "HYBRID"]} onChange={(v) => setSessionForm((p) => ({ ...p, mode: v }))} />
+            <InputField label="Session date" type="date" required value={sessionForm.session_date} onChange={(v) => setSessionForm((p) => ({ ...p, session_date: v }))} />
+            <SelectField
+              label="Mode"
+              placeholder="Select mode"
+              required
+              value={sessionForm.mode}
+              options={["ONLINE", "OFFLINE", "HYBRID"]}
+              onChange={(v) => setSessionForm((p) => ({ ...p, mode: v }))}
+            />
             <InputField label="Start time" type="time" value={sessionForm.start_time} onChange={(v) => setSessionForm((p) => ({ ...p, start_time: v }))} />
             <InputField label="End time" type="time" value={sessionForm.end_time} onChange={(v) => setSessionForm((p) => ({ ...p, end_time: v }))} />
             <InputField label="Venue" value={sessionForm.venue} onChange={(v) => setSessionForm((p) => ({ ...p, venue: v }))} />
@@ -96,6 +91,7 @@ export function SessionsPageClient() {
           columns={["session_date", "start_time", "end_time", "mode", "venue", "meeting_link"]}
           rows={sessionsQ.data ?? []}
           emptyLabel={trainingId.trim() ? "No sessions yet." : "Pick a training to load sessions."}
+          sortOptions={SESSION_SORT_OPTIONS}
         />
       </section>
     </div>

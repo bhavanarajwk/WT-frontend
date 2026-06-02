@@ -6,6 +6,8 @@ import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { compOffService } from "@/services/compOff.service";
 import { InputField, SelectField, DatePickerField } from "@/components/dashboard/ui/forms";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { useClientPagination } from "@/hooks/useClientPagination";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
@@ -54,16 +56,17 @@ import {
   compOffEmployeeDisplayName,
   resolveEmployeeNamesByEmail,
 } from "@/utils/compOff/resolveEmployeeDisplayNames";
+import { formatApiDate, todayApiDate } from "@/utils/apiDate";
 
 function todayYmd(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayApiDate();
 }
 
 function defaultRequestRange(): { from: string; to: string } {
   const to = new Date();
   const from = new Date();
   from.setFullYear(from.getFullYear() - 1);
-  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+  return { from: formatApiDate(from), to: formatApiDate(to) };
 }
 
 function requestTypeLabel(type: unknown): string {
@@ -198,6 +201,11 @@ export function CompOffPageClient() {
     });
   }, [myRequests, myRequestsFlowFilter]);
 
+  const myRequestsPagination = useClientPagination(filteredMyRequests, {
+    resetKeys: [myRequestsFlowFilter],
+  });
+  const teamRequestsPagination = useClientPagination(teamRequests);
+
   const selectedProject = useMemo(
     () => projectOptions.find((p) => p.code === earnForm.project_code.trim()),
     [projectOptions, earnForm.project_code]
@@ -298,8 +306,8 @@ export function CompOffPageClient() {
     }
     const future = new Date();
     future.setFullYear(future.getFullYear() + 2);
-    const from = "2000-01-01";
-    const to = future.toISOString().slice(0, 10);
+    const from = formatApiDate(new Date(2000, 0, 1));
+    const to = formatApiDate(future);
     const [earnRes, usageRes] = await Promise.all([
       compOffService.listEarnRequests({ fromDate: from, toDate: to }),
       compOffService.listRequests({
@@ -714,11 +722,13 @@ export function CompOffPageClient() {
                     </div>
                     <DatePickerField
                       label="Worked date"
+                      required
                       value={earnForm.worked_date}
                       onChange={(v) => setEarnForm((p) => ({ ...p, worked_date: v }))}
                     />
                     <ProjectSelectField
                       label="Project"
+                      required
                       value={earnForm.project_code}
                       options={projectOptions}
                       onChange={onEarnProjectChange}
@@ -770,6 +780,7 @@ export function CompOffPageClient() {
                     >
                       <DatePickerField
                         label="From date"
+                        required
                         value={usageForm.request_from_date}
                         onChange={(v) =>
                           setUsageForm((p) => ({ ...p, request_from_date: v }))
@@ -778,6 +789,7 @@ export function CompOffPageClient() {
                       />
                       <DatePickerField
                         label="To date"
+                        required
                         value={usageForm.request_to_date}
                         onChange={(v) =>
                           setUsageForm((p) => ({ ...p, request_to_date: v }))
@@ -836,6 +848,7 @@ export function CompOffPageClient() {
                     </div>
                   </div>
                   {filteredMyRequests.length ? (
+                    <>
                     <div className="wt-scroll-both max-h-[min(50vh,400px)] rounded-xl border border-wt-border">
                       <table className="min-w-full text-sm">
                         <thead className="bg-wt-surface-2 text-wt-text-muted">
@@ -848,7 +861,7 @@ export function CompOffPageClient() {
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredMyRequests.map((row, idx) => {
+                          {myRequestsPagination.pageItems.map((row, idx) => {
                             const id = requestRowId(row);
                             const status = requestRowStatus(row);
                             const isPending = isPendingRequestStatus(status);
@@ -937,6 +950,19 @@ export function CompOffPageClient() {
                         </tbody>
                       </table>
                     </div>
+                    <ListPagination
+                      className="mt-3"
+                      page={myRequestsPagination.page}
+                      totalPages={myRequestsPagination.totalPages}
+                      totalItems={myRequestsPagination.totalItems}
+                      rangeStart={myRequestsPagination.rangeStart}
+                      rangeEnd={myRequestsPagination.rangeEnd}
+                      pageSize={myRequestsPagination.pageSize}
+                      pageSizeOptions={myRequestsPagination.pageSizeOptions}
+                      onPageChange={myRequestsPagination.setPage}
+                      onPageSizeChange={myRequestsPagination.setPageSize}
+                    />
+                    </>
                   ) : (
                     <p className="text-sm text-wt-text-muted">No comp-off requests yet.</p>
                   )}
@@ -983,6 +1009,7 @@ export function CompOffPageClient() {
                 </div>
 
                 {teamRequests.length ? (
+                  <>
                   <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
                     <table className="min-w-full text-sm">
                       <thead className="bg-wt-surface-2 text-wt-text-muted">
@@ -999,7 +1026,7 @@ export function CompOffPageClient() {
                         </tr>
                       </thead>
                       <tbody>
-                        {teamRequests.map((row, idx) => {
+                        {teamRequestsPagination.pageItems.map((row, idx) => {
                           const id = requestRowId(row);
                           const status = effectiveRequestRowStatus(row, teamDecisions);
                           const rowEmail = requestRowEmail(row);
@@ -1121,6 +1148,19 @@ export function CompOffPageClient() {
                       </tbody>
                     </table>
                   </div>
+                  <ListPagination
+                    className="mt-3"
+                    page={teamRequestsPagination.page}
+                    totalPages={teamRequestsPagination.totalPages}
+                    totalItems={teamRequestsPagination.totalItems}
+                    rangeStart={teamRequestsPagination.rangeStart}
+                    rangeEnd={teamRequestsPagination.rangeEnd}
+                    pageSize={teamRequestsPagination.pageSize}
+                    pageSizeOptions={teamRequestsPagination.pageSizeOptions}
+                    onPageChange={teamRequestsPagination.setPage}
+                    onPageSizeChange={teamRequestsPagination.setPageSize}
+                  />
+                  </>
                 ) : (
                   <p className="text-sm text-wt-text-muted">
                     No requests loaded. Click <strong>Fetch requests</strong>.

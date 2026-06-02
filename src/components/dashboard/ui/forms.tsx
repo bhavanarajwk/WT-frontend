@@ -1,48 +1,25 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
+import {
+  API_DATE_PLACEHOLDER,
+  apiDateFieldValue,
+  apiDateToInputValue,
+  finalizeApiDateInput,
+  inputValueToApiDate,
+  maskApiDateInput,
+} from "@/utils/apiDate";
 
-export function InputField({
-  label,
-  value,
-  onChange,
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-}) {
+export function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
-    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-      {label}
-      <input className="input-field px-3 py-2 text-sm" value={value} onChange={(e) => onChange(e.target.value)} type={type} />
-    </label>
-  );
-}
-
-export function SelectField({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-      {label}
-      <select className="input-field px-3 py-2 text-sm" value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-    </label>
+    <span className="inline-flex items-baseline gap-0.5">
+      <span>{label}</span>
+      {required ? (
+        <span className="shrink-0 text-rose-600 leading-none" aria-hidden>
+          *
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -65,46 +42,66 @@ function CalendarIcon() {
   );
 }
 
-export function DatePickerField({
+export function ApiDateField({
   label,
   value,
   onChange,
+  required = false,
   disabled = false,
   min,
   max,
+  className,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  required?: boolean;
   disabled?: boolean;
   min?: string;
   max?: string;
+  className?: string;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const pickerRef = useRef<HTMLInputElement>(null);
 
   function openPicker() {
     if (disabled) return;
     try {
-      inputRef.current?.showPicker?.();
+      pickerRef.current?.showPicker?.();
     } catch {
-      inputRef.current?.focus();
+      pickerRef.current?.focus();
     }
   }
 
   return (
-    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-      {label}
+    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
+      <FieldLabel label={label} required={required} />
       <div className="relative">
         <input
-          ref={inputRef}
-          type="date"
-          className="input-field date-picker-field px-3 py-2 pr-10 text-sm w-full"
-          value={value}
-          min={min}
-          max={max}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          className="input-field api-date-field px-3 py-2 pr-10 text-sm w-full"
+          value={apiDateFieldValue(value)}
+          placeholder={API_DATE_PLACEHOLDER}
           disabled={disabled}
-          onChange={(e) => onChange(e.target.value)}
-          onClick={openPicker}
+          required={required}
+          aria-required={required || undefined}
+          pattern="\d{2}/\d{2}/\d{4}"
+          title={`Use ${API_DATE_PLACEHOLDER}`}
+          onChange={(e) => onChange(maskApiDateInput(e.target.value))}
+          onBlur={(e) => onChange(finalizeApiDateInput(e.target.value))}
+        />
+        <input
+          ref={pickerRef}
+          type="date"
+          tabIndex={-1}
+          aria-hidden
+          className="sr-only"
+          value={apiDateToInputValue(value)}
+          min={min ? apiDateToInputValue(min) : undefined}
+          max={max ? apiDateToInputValue(max) : undefined}
+          disabled={disabled}
+          onChange={(e) => onChange(inputValueToApiDate(e.target.value))}
         />
         <button
           type="button"
@@ -124,23 +121,185 @@ export function DatePickerField({
   );
 }
 
+export function InputField({
+  label,
+  value,
+  onChange,
+  type = "text",
+  required = false,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  if (type === "date") {
+    return (
+      <ApiDateField label={label} value={value} onChange={onChange} required={required} />
+    );
+  }
+
+  return (
+    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+      <FieldLabel label={label} required={required} />
+      <input
+        className="input-field px-3 py-2 text-sm"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        type={type}
+        placeholder={placeholder}
+        required={required}
+        aria-required={required || undefined}
+      />
+    </label>
+  );
+}
+
+export type SelectFieldOption = string | { value: string; label: string };
+
+function normalizeSelectOptions(options: SelectFieldOption[]): { value: string; label: string }[] {
+  return options.map((opt) =>
+    typeof opt === "string" ? { value: opt, label: opt } : { value: opt.value, label: opt.label }
+  );
+}
+
+export function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+  required = false,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  options: SelectFieldOption[];
+  onChange: (value: string) => void;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  const items = normalizeSelectOptions(options);
+  return (
+    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+      <FieldLabel label={label} required={required} />
+      <select
+        className="input-field px-3 py-2 text-sm"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        aria-required={required || undefined}
+      >
+        {placeholder ? (
+          <option value="" disabled={required}>
+            {placeholder}
+          </option>
+        ) : null}
+        {items.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+export function NativeSelectField({
+  label,
+  value,
+  onChange,
+  required = false,
+  placeholder,
+  disabled,
+  className,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
+      <FieldLabel label={label} required={required} />
+      <select
+        className="input-field px-3 py-2 text-sm"
+        value={value}
+        disabled={disabled}
+        required={required}
+        aria-required={required || undefined}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {placeholder ? (
+          <option value="" disabled={required}>
+            {placeholder}
+          </option>
+        ) : null}
+        {children}
+      </select>
+    </label>
+  );
+}
+
+export function DatePickerField({
+  label,
+  value,
+  onChange,
+  disabled = false,
+  min,
+  max,
+  className,
+  required = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  min?: string;
+  max?: string;
+  className?: string;
+  required?: boolean;
+}) {
+  return (
+    <ApiDateField
+      label={label}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      min={min}
+      max={max}
+      className={className}
+      required={required}
+    />
+  );
+}
+
 export function FileField({
   label,
   onPick,
   onPickFiles,
   accept,
   multiple,
+  required = false,
 }: {
   label: string;
   accept?: string;
   multiple?: boolean;
+  required?: boolean;
   onPick?: (file: File | null) => void;
   onPickFiles?: (files: File[]) => void;
 }) {
   const isMulti = Boolean(multiple);
   return (
     <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-      {label}
+      <FieldLabel label={label} required={required} />
       <input
         type="file"
         accept={accept}

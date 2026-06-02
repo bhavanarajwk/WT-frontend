@@ -63,7 +63,7 @@ import {
 } from "@/utils/dashboard/projects";
 import { fetchAllocationUserDirectory } from "@/utils/allocation/allocationUserDirectory";
 import { MetricCard } from "@/components/dashboard/ui/MetricCard";
-import { InputField, SelectField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, FileField, UploadTile, FieldLabel } from "@/components/dashboard/ui/forms";
 import {
   ProfilePhotoAvatar,
   ProfileField,
@@ -76,6 +76,7 @@ import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
+import { createEmptyRoleAssignForm } from "@/utils/roleAssignFormState";
 
 
 
@@ -217,10 +218,7 @@ export function MastersPageClient() {
     search: "",
     as_of: "",
   });
-  const [roleAssignForm, setRoleAssignForm] = useState({
-    target_email: "",
-    role: "ROLE_HR",
-  });
+  const [roleAssignForm, setRoleAssignForm] = useState(createEmptyRoleAssignForm);
   const [roleAssignUsers, setRoleAssignUsers] = useState<Array<{ name: string; email: string }>>([]);
 
   const [leaveRequestForm, setLeaveRequestForm] = useState({
@@ -2609,22 +2607,7 @@ export function MastersPageClient() {
             ).values()
           ).sort((a, b) => a.emp_id.localeCompare(b.emp_id));
           setBgvUsers(bgvRows);
-          setOffboardingForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setAttritionForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setBgvForm((prev) => {
-            const selected =
-              bgvRows.find((emp) => emp.emp_id === prev.emp_id) ??
-              bgvRows[0];
-            if (!selected) return prev;
-            return {
-              ...prev,
-              emp_id: prev.emp_id || selected.emp_id,
-              name: selected.name,
-              role: selected.role,
-              level: selected.level,
-              mail_id: selected.email,
-            };
-          });
+
         } catch {
           setOffboardingUsers([]);
           setBgvUsers([]);
@@ -2785,9 +2768,6 @@ export function MastersPageClient() {
                 .filter(Boolean);
               if (!primarySkills.length) {
                 throw new Error("Please add at least one primary skill.");
-              }
-              if (!selfOnboardFiles.resume) {
-                throw new Error("Please upload resume.");
               }
               if (!selfOnboardFiles.profile_photo) {
                 throw new Error("Please upload profile photo.");
@@ -3186,8 +3166,10 @@ export function MastersPageClient() {
                                 <p className="text-sm text-wt-text-muted">Select an employee and assign the required role.</p>
                                 <div className="grid sm:grid-cols-2 gap-3">
                                   <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                    Email
+                                    <FieldLabel label="Email" required />
                                     <select
+                                      required
+                                      aria-required
                                       className="input-field px-3 py-2 text-sm"
                                       value={roleAssignForm.target_email}
                                       onChange={(e) =>
@@ -3206,8 +3188,10 @@ export function MastersPageClient() {
                                     </select>
                                   </label>
                                   <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                                    Role
+                                    <FieldLabel label="Role" required />
                                     <select
+                                      required
+                                      aria-required
                                       className="input-field px-3 py-2 text-sm"
                                       value={roleAssignForm.role}
                                       onChange={(e) =>
@@ -3217,6 +3201,7 @@ export function MastersPageClient() {
                                         }))
                                       }
                                     >
+                                      <option value="">Select role</option>
                                       <option value="ROLE_HR">HR</option>
                                       <option value="ROLE_MANAGER">Manager</option>
                                       <option value="ROLE_AM">Account Manager</option>
@@ -3234,12 +3219,13 @@ export function MastersPageClient() {
                                     onClick={() =>
                                       runAction("Assign role", async () => {
                                         const targetEmail = roleAssignForm.target_email.trim();
-                                        if (!targetEmail) throw new Error("Email is required.");
+                                        if (!targetEmail) throw new Error("Please select an employee.");
+                                        if (!roleAssignForm.role) throw new Error("Please select a role.");
                                         await hrmsService.assignRole({
                                           target_email: targetEmail,
                                           role: roleAssignForm.role,
                                         });
-                                        setRoleAssignForm((prev) => ({ ...prev, target_email: "" }));
+                                        setRoleAssignForm(createEmptyRoleAssignForm());
                                       })
                                     }
                                   >

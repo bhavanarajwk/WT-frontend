@@ -1,6 +1,13 @@
 import { formatSecondarySkillsForProfile } from "@/components/dashboard/ui/profile";
 import type { OnboardListItem } from "@/types/onboard";
 import { pickResumeShareLink } from "@/utils/employeeResume";
+import { formatApiDateDisplay } from "@/utils/apiDate";
+
+function formatDirectoryDate(value: unknown): string {
+  const s = String(value ?? "").trim();
+  if (!s) return "—";
+  return formatApiDateDisplay(s);
+}
 
 type OnboardRowInput = OnboardListItem | Record<string, unknown>;
 
@@ -105,10 +112,10 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
     department: String(record.department ?? "").trim() || "—",
     role: String(record.role ?? "").trim() || "—",
     band: String(record.band ?? record.band_name ?? record.bandName ?? "").trim() || "—",
-    date_of_joining: String(
-      record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate ?? ""
-    ).trim() || "—",
-    date_of_birth: String(record.date_of_birth ?? record.dob ?? "").trim() || "—",
+    date_of_joining: formatDirectoryDate(
+      record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate
+    ),
+    date_of_birth: formatDirectoryDate(record.date_of_birth ?? record.dob),
     status: String(record.status ?? "").trim() || "—",
     user_type: String(record.user_type ?? record.userType ?? "").trim() || "—",
     work_mode: String(record.work_mode ?? record.workMode ?? "").trim() || "—",
@@ -123,6 +130,7 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
 
 export type EmployeeProfileEditForm = {
   name: string;
+  personal_email: string;
   department: string;
   user_status: string;
   work_mode: string;
@@ -149,6 +157,7 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
 
   return {
     name: String(pickProfileField(profile, ["name"]) ?? "").trim(),
+    personal_email: String(pickProfileField(profile, ["personal_email"]) ?? "").trim(),
     department: String(pickProfileField(profile, ["department"]) ?? "").trim(),
     user_status: String(
       pickProfileField(profile, ["user_status", "status", "userStatus"]) ?? ""
@@ -193,6 +202,9 @@ export function editFormToUpdatePayload(form: EmployeeProfileEditForm): Record<s
 
   const bandId = form.band_id.trim();
   if (bandId) payload.band_id = bandId;
+
+  const personalEmail = form.personal_email.trim();
+  if (personalEmail) payload.personal_email = personalEmail;
 
   return payload;
 }
@@ -294,7 +306,8 @@ export function buildProfileDisplayEntries(
       value: cleanEmployeeName(profile) || pickProfileField(profile, ["name"]),
     },
     { label: "Employee ID", value: pickProfileField(profile, ["emp_id", "empId", "employee_id"]) },
-    { label: "Email", value: pickProfileField(profile, ["email"]) },
+    { label: "Work email", value: pickProfileField(profile, ["email"]) },
+    { label: "Personal mail ID", value: pickProfileField(profile, ["personal_email"]) },
     { label: "User type", value: pickProfileField(profile, ["user_type", "userType"]) },
     { label: "Phone number", value: pickProfileField(profile, ["phone_number", "phoneNumber"]) },
     { label: "Department", value: pickProfileField(profile, ["department"]) },
@@ -302,9 +315,14 @@ export function buildProfileDisplayEntries(
     { label: "Band", value: pickProfileField(profile, ["band", "band_name", "bandName", "band_id", "bandId"]) },
     {
       label: "Date of joining",
-      value: pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate"]),
+      value: formatDirectoryDate(
+        pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate"])
+      ),
     },
-    { label: "Date of birth", value: pickProfileField(profile, ["date_of_birth", "dob"]) },
+    {
+      label: "Date of birth",
+      value: formatDirectoryDate(pickProfileField(profile, ["date_of_birth", "dob"])),
+    },
     { label: "Work location", value: pickProfileField(profile, ["work_location", "work_location_type", "workLocationType"]) },
     { label: "Work mode", value: pickProfileField(profile, ["work_mode", "workMode"]) },
     { label: "Primary skills", value: formatPrimarySkills(profile) },

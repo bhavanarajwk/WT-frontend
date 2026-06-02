@@ -19,12 +19,20 @@ import { AttendancePageClient } from "@/components/learning-development/Attendan
 import { EmployeeTrainingMyMarks } from "@/components/learning-development/EmployeeTrainingMyMarks";
 import { ScoresPageClient } from "@/components/learning-development/ScoresPageClient";
 import { TrainingStatusControl } from "@/components/learning-development/TrainingStatusControl";
+import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { DataTable, FileField, InputField, SelectField } from "@/components/learning-development/ui/forms";
+import { PARTICIPANT_SORT_OPTIONS, SESSION_SORT_OPTIONS, TITLE_SORT_OPTIONS } from "@/utils/listSort";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
+import {
+  createEmptyAssessmentForm,
+  createEmptyMaterialForm,
+  createEmptySessionForm,
+} from "@/utils/learningFormState";
 import { participantRowUserId } from "@/utils/learning/participants";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
+import { formatApiDateDisplay } from "@/utils/apiDate";
 
 const HR_TABS = [
   { id: "overview", label: "Overview" },
@@ -122,43 +130,28 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
 
   const training = detailQ.data ?? {};
 
-  const [sessionForm, setSessionForm] = useState({
-    session_date: "",
-    start_time: "",
-    end_time: "",
-    mode: "ONLINE",
-    venue: "",
-    meeting_link: "",
-  });
+  const [sessionForm, setSessionForm] = useState(createEmptySessionForm);
 
   const [trainerPick, setTrainerPick] = useState("");
   const [removeTrainerPick, setRemoveTrainerPick] = useState("");
   const [participantPick, setParticipantPick] = useState("");
-  const [materialForm, setMaterialForm] = useState<{ title: string; visibility: "EMPLOYEE" | "HR_ONLY" }>({
-    title: "",
-    visibility: "EMPLOYEE",
-  });
+  const [materialForm, setMaterialForm] = useState(createEmptyMaterialForm);
   const [materialFile, setMaterialFile] = useState<File | null>(null);
-  const [assessmentForm, setAssessmentForm] = useState({ name: "", description: "", weight_percent: "10" });
+  const [assessmentForm, setAssessmentForm] = useState(createEmptyAssessmentForm);
   const [assessmentFile, setAssessmentFile] = useState<File | null>(null);
 
   const sessionMut = useMutation({
-    mutationFn: () =>
-      hrmsService.createTrainingSession(tid, {
+    mutationFn: () => {
+      if (!sessionForm.mode) throw new Error("Please select mode.");
+      return hrmsService.createTrainingSession(tid, {
         ...sessionForm,
         venue: sessionForm.venue.trim() || null,
         meeting_link: sessionForm.meeting_link.trim() || null,
-      }),
+      });
+    },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["learning", "sessions", tid] });
-      setSessionForm({
-        session_date: "",
-        start_time: "",
-        end_time: "",
-        mode: "ONLINE",
-        venue: "",
-        meeting_link: "",
-      });
+      setSessionForm(createEmptySessionForm());
     },
   });
 
@@ -185,12 +178,16 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
       const idNum = await resolveLearningTrainerUserId(participantPick);
       await hrmsService.addTrainingParticipants(tid, { user_ids: [idNum], select_all: false });
     },
-    onSuccess: async () => qc.invalidateQueries({ queryKey: ["learning", "participants", tid] }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["learning", "participants", tid] });
+      setParticipantPick("");
+    },
   });
 
   const uploadMaterialMut = useMutation({
     mutationFn: async () => {
       if (!materialFile) throw new Error("Choose a PDF.");
+      if (!materialForm.visibility) throw new Error("Please select visibility.");
       await hrmsService.uploadTrainingMaterial(tid, {
         title: materialForm.title.trim(),
         visibility: materialForm.visibility,
@@ -199,6 +196,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["learning", "materials", tid] });
+      setMaterialForm(createEmptyMaterialForm());
       setMaterialFile(null);
     },
   });
@@ -215,6 +213,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["learning", "assessments", tid] });
+      setAssessmentForm(createEmptyAssessmentForm());
       setAssessmentFile(null);
     },
   });
@@ -312,8 +311,8 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               <div>
                 <dt className="text-wt-text-muted">Dates</dt>
                 <dd className="font-medium">
-                  {String(training.start_date ?? "").slice(0, 10)} →{" "}
-                  {String(training.end_date ?? "").slice(0, 10)}
+                  {formatApiDateDisplay(String(training.start_date ?? ""))} →{" "}
+                  {formatApiDateDisplay(String(training.end_date ?? ""))}
                 </dd>
               </div>
             </dl>
@@ -330,8 +329,15 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
             <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
               <h2 className="font-semibold">Add session</h2>
               <div className="grid sm:grid-cols-2 gap-4">
-                <InputField label="Session date" type="date" value={sessionForm.session_date} onChange={(v) => setSessionForm((p) => ({ ...p, session_date: v }))} />
-                <SelectField label="Mode" value={sessionForm.mode} options={["ONLINE", "OFFLINE", "HYBRID"]} onChange={(v) => setSessionForm((p) => ({ ...p, mode: v }))} />
+                <InputField label="Session date" type="date" required value={sessionForm.session_date} onChange={(v) => setSessionForm((p) => ({ ...p, session_date: v }))} />
+                <SelectField
+                  label="Mode"
+                  placeholder="Select mode"
+                  required
+                  value={sessionForm.mode}
+                  options={["ONLINE", "OFFLINE", "HYBRID"]}
+                  onChange={(v) => setSessionForm((p) => ({ ...p, mode: v }))}
+                />
                 <InputField label="Start time" type="time" value={sessionForm.start_time} onChange={(v) => setSessionForm((p) => ({ ...p, start_time: v }))} />
                 <InputField label="End time" type="time" value={sessionForm.end_time} onChange={(v) => setSessionForm((p) => ({ ...p, end_time: v }))} />
                 <InputField label="Venue" value={sessionForm.venue} onChange={(v) => setSessionForm((p) => ({ ...p, venue: v }))} />
@@ -355,6 +361,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               columns={["session_date", "start_time", "end_time", "mode", "venue", "meeting_link"]}
               rows={sessionsQ.data ?? []}
               emptyLabel={sessionsQ.isLoading ? "Loading sessions…" : "No sessions yet."}
+              sortOptions={SESSION_SORT_OPTIONS}
             />
           </section>
         </div>
@@ -366,8 +373,8 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           {hasHrAccess ? (
             <div className="grid sm:grid-cols-2 gap-4 items-end">
               <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                Assign trainer
-                <select className="input-field px-3 py-2 text-sm" value={trainerPick} onChange={(e) => setTrainerPick(e.target.value)}>
+                <FieldLabel label="Assign trainer" required />
+                <select className="input-field px-3 py-2 text-sm" required aria-required value={trainerPick} onChange={(e) => setTrainerPick(e.target.value)}>
                   <option value="">Select trainer</option>
                   {trainerOptions.map((o) => (
                     <option key={o.id} value={o.id}>
@@ -419,6 +426,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
             columns={["name", "email"]}
             rows={trainersQ.data ?? []}
             emptyLabel={trainersQ.isLoading ? "Loading trainers…" : "No trainers assigned."}
+            sortOptions={PARTICIPANT_SORT_OPTIONS}
           />
         </section>
       ) : null}
@@ -429,8 +437,8 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           {hasHrAccess ? (
             <div className="grid sm:grid-cols-2 gap-4 items-end">
               <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                Add trainee
-                <select className="input-field px-3 py-2 text-sm" value={participantPick} onChange={(e) => setParticipantPick(e.target.value)}>
+                <FieldLabel label="Add trainee" required />
+                <select className="input-field px-3 py-2 text-sm" required aria-required value={participantPick} onChange={(e) => setParticipantPick(e.target.value)}>
                   <option value="">Select trainee</option>
                   {addTraineeOptions.map((o) => (
                     <option key={o.id} value={o.id}>
@@ -448,6 +456,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
             columns={["name", "email", "enrollment_status"]}
             rows={participantsQ.data ?? []}
             emptyLabel="No trainees enrolled."
+            sortOptions={PARTICIPANT_SORT_OPTIONS}
           />
         </section>
       ) : null}
@@ -457,9 +466,21 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           <h2 className="font-semibold">Materials</h2>
           {hasHrAccess ? (
             <div className="grid sm:grid-cols-2 gap-4">
-              <InputField label="Title" value={materialForm.title} onChange={(v) => setMaterialForm((p) => ({ ...p, title: v }))} />
-              <SelectField label="Visibility" value={materialForm.visibility} options={["EMPLOYEE", "HR_ONLY"]} onChange={(v) => setMaterialForm((p) => ({ ...p, visibility: v as "EMPLOYEE" | "HR_ONLY" }))} />
-              <FileField label="PDF" accept=".pdf,application/pdf" onPick={setMaterialFile} />
+              <InputField label="Title" required value={materialForm.title} onChange={(v) => setMaterialForm((p) => ({ ...p, title: v }))} />
+              <SelectField
+                label="Visibility"
+                placeholder="Select visibility"
+                required
+                value={materialForm.visibility}
+                options={["EMPLOYEE", "HR_ONLY"]}
+                onChange={(v) =>
+                  setMaterialForm((p) => ({
+                    ...p,
+                    visibility: v === "EMPLOYEE" || v === "HR_ONLY" ? v : "",
+                  }))
+                }
+              />
+              <FileField label="PDF" required accept=".pdf,application/pdf" onPick={setMaterialFile} />
               <div className="flex items-end">
                 <button type="button" className="btn-primary px-4 py-2 text-sm" disabled={uploadMaterialMut.isPending || !materialFile} onClick={() => uploadMaterialMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
                   Upload
@@ -467,7 +488,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               </div>
             </div>
           ) : null}
-          <DataTable columns={["title", "material_url", "visibility"]} rows={materialsQ.data ?? []} emptyLabel="No materials." />
+          <DataTable columns={["title", "material_url", "visibility"]} rows={materialsQ.data ?? []} emptyLabel="No materials." sortOptions={TITLE_SORT_OPTIONS} />
         </section>
       ) : null}
 
@@ -476,12 +497,12 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           <h2 className="font-semibold">Assessments</h2>
           {hasHrAccess ? (
             <div className="grid sm:grid-cols-2 gap-4">
-              <InputField label="Name" value={assessmentForm.name} onChange={(v) => setAssessmentForm((p) => ({ ...p, name: v }))} />
+              <InputField label="Name" required value={assessmentForm.name} onChange={(v) => setAssessmentForm((p) => ({ ...p, name: v }))} />
               <InputField label="Weight %" value={assessmentForm.weight_percent} onChange={(v) => setAssessmentForm((p) => ({ ...p, weight_percent: v }))} />
               <div className="sm:col-span-2">
                 <InputField label="Description" value={assessmentForm.description} onChange={(v) => setAssessmentForm((p) => ({ ...p, description: v }))} />
               </div>
-              <FileField label="Assessment PDF" accept=".pdf,application/pdf" onPick={setAssessmentFile} />
+              <FileField label="Assessment PDF" required accept=".pdf,application/pdf" onPick={setAssessmentFile} />
               <div className="flex items-end">
                 <button type="button" className="btn-primary px-4 py-2 text-sm" disabled={uploadAssessmentMut.isPending || !assessmentFile} onClick={() => uploadAssessmentMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
                   Upload
@@ -489,7 +510,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               </div>
             </div>
           ) : null}
-          <DataTable columns={["name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." />
+          <DataTable columns={["name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." sortOptions={TITLE_SORT_OPTIONS} />
         </section>
       ) : null}
 
