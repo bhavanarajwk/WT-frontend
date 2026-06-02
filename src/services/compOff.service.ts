@@ -3,6 +3,7 @@ import { ApiError } from "@/api/error";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { hrmsService } from "@/services/hrms.service";
 import type { CompOffBalanceData, CompOffGrant } from "@/types/compOff";
+import { applyApiDateFields, applyApiDateQuery, toApiDateParam } from "@/utils/apiDate";
 import { dedupeCompOffRequestRows, isAlreadyActedOnRequestError } from "@/utils/compOff";
 import { toPagedRows, toRows } from "@/utils/apiRows";
 import { emailFromOnboardRow } from "@/utils/learning/onboardOptions";
@@ -31,9 +32,15 @@ async function listRequestsByTypes(params: {
 
 export const compOffService = {
   createEarnRequest(body: Record<string, unknown>) {
+    const payload = applyApiDateFields(body, [
+      "request_from_date",
+      "request_to_date",
+      "from_date",
+      "to_date",
+    ]);
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.compOff.earn, {
       contentType: "application/json",
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
   },
 
@@ -45,19 +52,25 @@ export const compOffService = {
   }) {
     const { fromDate, toDate, page = 0, size = 200 } = params;
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.compOff.earn, {
-      query: {
-        page: String(page),
-        size: String(size),
-        fromDate,
-        toDate,
-      },
+      query: applyApiDateQuery(
+        {
+          page: String(page),
+          size: String(size),
+          fromDate,
+          toDate,
+        },
+        ["fromDate", "toDate"]
+      ),
     });
   },
 
   getBalance(asOfDate?: string) {
+    const normalized = toApiDateParam(asOfDate);
     const query: Record<string, string> = {};
-    if (asOfDate?.trim()) query.asOfDate = asOfDate.trim();
-    if (asOfDate?.trim()) query.as_of_date = asOfDate.trim();
+    if (normalized) {
+      query.asOfDate = normalized;
+      query.as_of_date = normalized;
+    }
     return apiClient.get<ApiEnvelope<CompOffBalanceData>>(endpoints.compOff.balance, {
       query: Object.keys(query).length ? query : undefined,
     });
@@ -98,21 +111,31 @@ export const compOffService = {
     size?: number;
   }) {
     const { fromDate, toDate, requestType, empEmails, page = 0, size = 200 } = params;
+    const normalizedFrom = toApiDateParam(fromDate) ?? fromDate.trim();
+    const normalizedTo = toApiDateParam(toDate) ?? toDate.trim();
     return apiClient
       .get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
-        query: {
-          fromDate,
-          toDate,
-          requestType,
-          page: String(page),
-          size: String(size),
-        },
+        query: applyApiDateQuery(
+          {
+            fromDate: normalizedFrom,
+            toDate: normalizedTo,
+            requestType,
+            page: String(page),
+            size: String(size),
+          },
+          ["fromDate", "toDate"]
+        ),
       })
       .catch((error) => {
         if (!(error instanceof ApiError) || error.status !== 405) throw error;
         const path = empEmails?.trim()
-          ? endpoints.userRequest.getByEmployees(empEmails, fromDate, toDate, requestType)
-          : endpoints.userRequest.getRange(fromDate, toDate, requestType);
+          ? endpoints.userRequest.getByEmployees(
+              empEmails,
+              normalizedFrom,
+              normalizedTo,
+              requestType
+            )
+          : endpoints.userRequest.getRange(normalizedFrom, normalizedTo, requestType);
         return apiClient.get<ApiEnvelope<unknown>>(path, {
           query: { page: String(page), size: String(size) },
         });

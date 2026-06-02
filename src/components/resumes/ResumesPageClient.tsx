@@ -13,6 +13,10 @@ import {
   tableColumnsForResumeRows,
 } from "@/utils/employeeResume";
 import { EmployeeResumeLinkFromRow } from "@/components/resumes/EmployeeResumeLink";
+import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { useClientPagination } from "@/hooks/useClientPagination";
+import { applyListSort, resumeSortOptions } from "@/utils/listSort";
 
 function labelizeKey(key: string): string {
   return key
@@ -25,6 +29,7 @@ export function ResumesPageClient() {
   const { user, status: authStatus } = useAuth();
   const [search, setSearch] = useState("");
   const [showRawJson, setShowRawJson] = useState(false);
+  const [sortId, setSortId] = useState("name_asc");
 
   const roles = user?.roles ?? [];
   const canView = canViewEmployeeResumes(roles);
@@ -39,11 +44,19 @@ export function ResumesPageClient() {
 
   const columns = useMemo(() => tableColumnsForResumeRows(rows), [rows]);
 
+  const sortOptions = useMemo(() => resumeSortOptions(columns), [columns]);
+
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return rows;
-    return rows.filter((row) => JSON.stringify(row).toLowerCase().includes(needle));
-  }, [rows, search]);
+    const filtered = !needle
+      ? rows
+      : rows.filter((row) => JSON.stringify(row).toLowerCase().includes(needle));
+    return applyListSort(filtered, sortId, sortOptions);
+  }, [rows, search, sortId, sortOptions]);
+
+  const pagination = useClientPagination(filteredRows, {
+    resetKeys: [search, sortId],
+  });
 
   if (authStatus === "loading") {
     return (
@@ -79,16 +92,25 @@ export function ResumesPageClient() {
           <p className="mt-1 text-sm text-wt-text-muted">
             Employee resume share links. Click <strong>resume</strong> to open the document.
           </p>
-          <label className="mt-4 flex max-w-md flex-col gap-1 text-xs text-wt-text-muted">
-            Search
-            <input
-              className="input-field px-3 py-2.5 text-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Name, email, employee ID…"
-              aria-label="Search resumes"
-            />
-          </label>
+          <div className="mt-4 flex flex-wrap items-end gap-3">
+            <label className="flex min-w-[min(100%,280px)] flex-1 flex-col gap-1 text-xs text-wt-text-muted">
+              Search
+              <input
+                className="input-field px-3 py-2.5 text-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Name, email, employee ID…"
+                aria-label="Search resumes"
+              />
+            </label>
+            {sortOptions.length ? (
+              <ListSortSelect
+                value={sortId}
+                onChange={setSortId}
+                options={sortOptionMeta(sortOptions)}
+              />
+            ) : null}
+          </div>
         </div>
 
         <div className="space-y-4 p-5 md:p-7">
@@ -140,7 +162,7 @@ export function ResumesPageClient() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-wt-border">
-                  {filteredRows.map((row, idx) => {
+                  {pagination.pageItems.map((row, idx) => {
                     const empId = resumeRowEmpId(row);
                     return (
                       <tr key={empId || `resume-row-${idx}`}>
@@ -158,6 +180,20 @@ export function ResumesPageClient() {
                 </tbody>
               </table>
             </div>
+          ) : null}
+
+          {!isLoading && !isError && filteredRows.length > 0 ? (
+            <ListPagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              totalItems={pagination.totalItems}
+              rangeStart={pagination.rangeStart}
+              rangeEnd={pagination.rangeEnd}
+              pageSize={pagination.pageSize}
+              pageSizeOptions={pagination.pageSizeOptions}
+              onPageChange={pagination.setPage}
+              onPageSizeChange={pagination.setPageSize}
+            />
           ) : null}
 
           {!isLoading && !isError && !filteredRows.length ? (

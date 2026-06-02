@@ -2,6 +2,12 @@ import { endpoints } from "@/api/endpoints";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
 import { toPagedRows } from "@/utils/apiRows";
+import {
+  ONBOARD_DATE_FIELDS,
+  applyApiDateFields,
+  applyApiDateQuery,
+  toApiDateParam,
+} from "@/utils/apiDate";
 
 export type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
 
@@ -132,7 +138,9 @@ export const hrmsService = {
     if (params.toDate?.trim()) query.toDate = params.toDate.trim();
     if (params.page != null) query.page = String(params.page);
     if (params.size != null) query.size = String(params.size);
-    return apiClient.get<ApiEnvelope<InvitedUsersListData>>(endpoints.user.invited, { query });
+    return apiClient.get<ApiEnvelope<InvitedUsersListData>>(endpoints.user.invited, {
+      query: applyApiDateQuery(query, ["fromDate", "toDate"]),
+    });
   },
 
   /** GET /user?email= or empId= — contract: fetch user profile */
@@ -146,9 +154,10 @@ export const hrmsService = {
   },
 
   createOnboard(payload: Record<string, unknown>) {
+    const body = applyApiDateFields(payload, ONBOARD_DATE_FIELDS);
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.user.onboard, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
@@ -169,9 +178,13 @@ export const hrmsService = {
       is_regretted?: boolean;
     }
   ) {
+    const body = applyApiDateFields(payload as Record<string, unknown>, [
+      "last_working_day",
+      "resignation_date",
+    ]);
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.user.offboard(empId), {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
@@ -227,10 +240,11 @@ export const hrmsService = {
     });
   },
 
-  /** GET /api/v1/timelog/get/{empEmail}/{logDate} */
+  /** GET /api/v1/timelog/get/{empEmail}/{logDate} — logDate is dd/mm/yyyy */
   getTimelogByEmployeeAndDate(empEmail: string, logDate: string) {
+    const normalized = toApiDateParam(logDate) ?? logDate.trim();
     return apiClient.get<ApiEnvelope<unknown>>(
-      endpoints.timelog.legacyGetByDate(empEmail, logDate),
+      endpoints.timelog.legacyGetByDate(empEmail, normalized),
       { query: { page: "0", size: "200" } }
     );
   },
@@ -394,7 +408,7 @@ export const hrmsService = {
     if (params.size != null) query.size = String(params.size);
     return apiClient.get<ApiEnvelope<EmployeeAttendanceLeaveData>>(
       endpoints.employeeAttendanceLeave,
-      { query }
+      { query: applyApiDateQuery(query, ["fromDate", "toDate"]) }
     );
   },
 
@@ -422,9 +436,34 @@ export const hrmsService = {
     return apiClient.get<unknown>(endpoints.masters.departments);
   },
 
+  /** GET /masters/onboard-options — bare object (enum labels + defaults). */
+  getOnboardOptions() {
+    return apiClient.get<unknown>(endpoints.masters.onboardOptions);
+  },
+
+  /** GET /masters/designations — bare array, optional `search`. */
+  searchDesignations(params: { band_id: number; department: string; search?: string }) {
+    const query: Record<string, string> = {
+      band_id: String(params.band_id),
+      department: params.department,
+    };
+    if (params.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<unknown>(endpoints.masters.designations, { query });
+  },
+
+  /** POST /masters/designations — bare object (HR/Admin). */
+  createDesignation(body: { band_id: number; department: string; name: string }) {
+    return apiClient.post<unknown>(endpoints.masters.designations, {
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  },
+
+  /** @deprecated Use searchDesignations — kept for legacy callers */
   getDesignations(params: { band_id: string; department: string }) {
-    return apiClient.get<unknown>(endpoints.masters.designations, {
-      query: params,
+    return this.searchDesignations({
+      band_id: Number(params.band_id),
+      department: params.department,
     });
   },
 
@@ -532,8 +571,14 @@ export const hrmsService = {
     search?: string;
     as_of?: string;
   } = {}) {
+    const query = applyApiDateQuery(
+      Object.fromEntries(
+        Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
+      ) as Record<string, string>,
+      ["as_of"]
+    );
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.hrReports.utilizationByDepartment, {
-      query: params,
+      query,
     });
   },
 
@@ -543,8 +588,14 @@ export const hrmsService = {
     search?: string;
     as_of?: string;
   } = {}) {
+    const query = applyApiDateQuery(
+      Object.fromEntries(
+        Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
+      ) as Record<string, string>,
+      ["as_of"]
+    );
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.hrReports.benchAging, {
-      query: params,
+      query,
     });
   },
 
@@ -663,16 +714,18 @@ export const hrmsService = {
 
   // Learning & Development
   createTraining(payload: Record<string, unknown>) {
+    const body = applyApiDateFields(payload, ["start_date", "end_date"]);
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.learning.trainings, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
   updateTraining(trainingId: string, payload: Record<string, unknown>) {
+    const body = applyApiDateFields(payload, ["start_date", "end_date"]);
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.learning.trainingById(trainingId), {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
@@ -700,9 +753,10 @@ export const hrmsService = {
   },
 
   createTrainingSession(trainingId: string, payload: Record<string, unknown>) {
+    const body = applyApiDateFields(payload, ["session_date"]);
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.learning.sessions(trainingId), {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 

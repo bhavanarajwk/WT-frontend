@@ -6,8 +6,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTrainingParticipants } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
+import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { DataTable } from "@/components/learning-development/ui/forms";
+import { PARTICIPANT_SORT_OPTIONS } from "@/utils/listSort";
 import { participantRowUserId } from "@/utils/learning/participants";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { hrmsService } from "@/services/hrms.service";
@@ -68,15 +70,17 @@ export function ParticipantsPageClient() {
         ) : null}
       </div>
 
-      <TrainingScopePicker trainingId={trainingId} onTrainingIdChange={setTrainingId} />
+      <TrainingScopePicker trainingId={trainingId} onTrainingIdChange={setTrainingId} required />
 
       {hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <label className="text-xs text-wt-text-muted flex flex-col gap-1 min-w-[min(100%,280px)] flex-1 max-w-md">
-              Add trainee
+              <FieldLabel label="Add trainee" required />
               <select
                 className="input-field px-3 py-2 text-sm"
+                required
+                aria-required
                 value={traineePick}
                 onChange={(e) => setTraineePick(e.target.value)}
               >
@@ -111,6 +115,7 @@ export function ParticipantsPageClient() {
           columns={["name", "email", "enrollment_status"]}
           rows={traineesQ.data ?? []}
           emptyLabel={trainingId ? "No trainees enrolled for this training." : "Select a training to view trainees."}
+          sortOptions={PARTICIPANT_SORT_OPTIONS}
         />
       </section>
     </div>

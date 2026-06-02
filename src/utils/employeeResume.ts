@@ -53,6 +53,31 @@ export function pickResumeShareLink(row: Record<string, unknown>): string | null
   return null;
 }
 
+/** Validate employee onboarding `resume_share_link` (HTTPS Google Docs / Drive). */
+export function validateResumeShareLink(url: string): string | null {
+  const trimmed = url.trim();
+  if (!trimmed) return "Resume Google Docs link is required.";
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return "Enter a valid Google Docs share link (HTTPS).";
+  }
+  if (parsed.protocol !== "https:") {
+    return "Resume link must use HTTPS.";
+  }
+  const host = parsed.hostname.toLowerCase();
+  const isGoogleDoc =
+    host === "docs.google.com" ||
+    host.endsWith(".docs.google.com") ||
+    host === "drive.google.com" ||
+    host.endsWith(".drive.google.com");
+  if (!isGoogleDoc) {
+    return "Enter a Google Docs or Google Drive share link.";
+  }
+  return null;
+}
+
 function collectRowsWithResumeShareLink(input: unknown): Array<Record<string, unknown>> {
   const found: Array<Record<string, unknown>> = [];
   const walk = (node: unknown) => {

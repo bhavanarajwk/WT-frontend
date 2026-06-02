@@ -62,7 +62,7 @@ import {
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
 import { MetricCard } from "@/components/dashboard/ui/MetricCard";
-import { InputField, SelectField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, FileField, UploadTile, NativeSelectField } from "@/components/dashboard/ui/forms";
 import {
   ProfilePhotoAvatar,
   ProfileField,
@@ -74,6 +74,7 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { createEmptyBgvForm } from "@/utils/bgvFormState";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 
 
@@ -168,20 +169,8 @@ export function BackgroundVerificationPageClient() {
     critical_skill: "",
     is_regretted: false,
   });
-  const [bgvForm, setBgvForm] = useState({
-    emp_id: "",
-    name: "",
-    role: "",
-    level: "",
-    consent_form_signed: "NO",
-    identity: "",
-    employment: "N/A",
-    reference: "N/A",
-    mail_id: "",
-    onboarding_form: "PENDING",
-    overall_status: "IN_PROGRESS",
-    remarks: "",
-  });
+  const [bgvForm, setBgvForm] = useState(createEmptyBgvForm);
+  const [bgvFormKey, setBgvFormKey] = useState(0);
   const [attritionFyStartYear, setAttritionFyStartYear] = useState<string>(() => {
     const now = new Date();
     const year = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
@@ -2635,22 +2624,7 @@ export function BackgroundVerificationPageClient() {
             ).values()
           ).sort((a, b) => a.emp_id.localeCompare(b.emp_id));
           setBgvUsers(bgvRows);
-          setOffboardingForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setAttritionForm((prev) => ({ ...prev, emp_id: prev.emp_id || users[0]?.emp_id || "" }));
-          setBgvForm((prev) => {
-            const selected =
-              bgvRows.find((emp) => emp.emp_id === prev.emp_id) ??
-              bgvRows[0];
-            if (!selected) return prev;
-            return {
-              ...prev,
-              emp_id: prev.emp_id || selected.emp_id,
-              name: selected.name,
-              role: selected.role,
-              level: selected.level,
-              mail_id: selected.email,
-            };
-          });
+
         } catch {
           setOffboardingUsers([]);
           setBgvUsers([]);
@@ -2811,9 +2785,6 @@ export function BackgroundVerificationPageClient() {
                 .filter(Boolean);
               if (!primarySkills.length) {
                 throw new Error("Please add at least one primary skill.");
-              }
-              if (!selfOnboardFiles.resume) {
-                throw new Error("Please upload resume.");
               }
               if (!selfOnboardFiles.profile_photo) {
                 throw new Error("Please upload profile photo.");
@@ -3183,40 +3154,45 @@ export function BackgroundVerificationPageClient() {
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                           <h3 className="font-semibold mb-4">Background Verification</h3>
-                          <div className="grid md:grid-cols-2 gap-3">
-                            <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-                              ID (Employee ID)
-                              <select
-                                className="input-field px-3 py-2 text-sm"
-                                value={bgvForm.emp_id}
-                                onChange={(e) =>
-                                  setBgvForm((prev) => {
-                                    const selected = bgvUsers.find((u) => u.emp_id === e.target.value);
-                                    if (!selected) return { ...prev, emp_id: e.target.value };
-                                    return {
-                                      ...prev,
-                                      emp_id: selected.emp_id,
-                                      name: selected.name,
-                                      role: selected.role,
-                                      level: selected.level,
-                                      mail_id: selected.email,
-                                    };
-                                  })
-                                }
-                              >
-                                {!bgvUsers.length ? <option value="">No employees found</option> : null}
-                                {bgvUsers.map((emp) => (
-                                  <option key={emp.emp_id} value={emp.emp_id}>
-                                    {emp.emp_id} - {emp.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                          <div key={bgvFormKey} className="grid md:grid-cols-2 gap-3">
+                            <NativeSelectField
+                              label="ID (Employee ID)"
+                              required
+                              placeholder={
+                                bgvUsers.length ? "Select employee" : "No employees found"
+                              }
+                              value={bgvForm.emp_id}
+                              onChange={(value) =>
+                                setBgvForm((prev) => {
+                                  if (!value) {
+                                    return createEmptyBgvForm();
+                                  }
+                                  const selected = bgvUsers.find((u) => u.emp_id === value);
+                                  if (!selected) return { ...prev, emp_id: value };
+                                  return {
+                                    ...prev,
+                                    emp_id: selected.emp_id,
+                                    name: selected.name,
+                                    role: selected.role,
+                                    level: selected.level,
+                                    mail_id: selected.email,
+                                  };
+                                })
+                              }
+                            >
+                              {bgvUsers.map((emp) => (
+                                <option key={emp.emp_id} value={emp.emp_id}>
+                                  {emp.emp_id} - {emp.name}
+                                </option>
+                              ))}
+                            </NativeSelectField>
                             <InputField label="Name" value={bgvForm.name} onChange={(v) => setBgvForm((p) => ({ ...p, name: v }))} />
                             <InputField label="Role" value={bgvForm.role} onChange={(v) => setBgvForm((p) => ({ ...p, role: v }))} />
                             <InputField label="Level" value={bgvForm.level} onChange={(v) => setBgvForm((p) => ({ ...p, level: v }))} />
                             <SelectField
                               label="Consent Form Signed"
+                              required
+                              placeholder="Select consent status"
                               value={bgvForm.consent_form_signed}
                               options={["YES", "NO"]}
                               onChange={(v) => setBgvForm((p) => ({ ...p, consent_form_signed: v }))}
@@ -3228,12 +3204,16 @@ export function BackgroundVerificationPageClient() {
                             />
                             <SelectField
                               label="Employment"
+                              required
+                              placeholder="Select employment status"
                               value={bgvForm.employment}
                               options={["VERIFIED", "PENDING", "NOT_VERIFIED", "N/A"]}
                               onChange={(v) => setBgvForm((p) => ({ ...p, employment: v }))}
                             />
                             <SelectField
                               label="Reference"
+                              required
+                              placeholder="Select reference status"
                               value={bgvForm.reference}
                               options={["COMPLETED", "PENDING", "N/A"]}
                               onChange={(v) => setBgvForm((p) => ({ ...p, reference: v }))}
@@ -3245,12 +3225,16 @@ export function BackgroundVerificationPageClient() {
                             />
                             <SelectField
                               label="Onboarding Form"
+                              required
+                              placeholder="Select onboarding form status"
                               value={bgvForm.onboarding_form}
                               options={["FILLED", "PENDING"]}
                               onChange={(v) => setBgvForm((p) => ({ ...p, onboarding_form: v }))}
                             />
                             <SelectField
                               label="Overall Status"
+                              required
+                              placeholder="Select overall status"
                               value={bgvForm.overall_status}
                               options={["CLEAR", "IN_PROGRESS", "FLAGGED"]}
                               onChange={(v) => setBgvForm((p) => ({ ...p, overall_status: v }))}
@@ -3269,7 +3253,22 @@ export function BackgroundVerificationPageClient() {
                               onClick={() =>
                                 runAction("Save BGV record", async () => {
                                   const empId = bgvForm.emp_id.trim();
-                                  if (!empId) throw new Error("Please select employee ID.");
+                                  if (!empId) throw new Error("Please select an employee.");
+                                  if (!bgvForm.consent_form_signed) {
+                                    throw new Error("Please select consent form status.");
+                                  }
+                                  if (!bgvForm.employment) {
+                                    throw new Error("Please select employment status.");
+                                  }
+                                  if (!bgvForm.reference) {
+                                    throw new Error("Please select reference status.");
+                                  }
+                                  if (!bgvForm.onboarding_form) {
+                                    throw new Error("Please select onboarding form status.");
+                                  }
+                                  if (!bgvForm.overall_status) {
+                                    throw new Error("Please select overall status.");
+                                  }
                                   const result = await hrmsService.upsertBgvRecord(empId, {
                                     consent_form_signed: bgvForm.consent_form_signed === "YES",
                                     identity: bgvForm.identity.trim(),
@@ -3297,6 +3296,8 @@ export function BackgroundVerificationPageClient() {
                                     remarks: row.remarks ?? "",
                                   }]);
                                   await loadBgvDashboardReport();
+                                  setBgvForm(createEmptyBgvForm());
+                                  setBgvFormKey((key) => key + 1);
                                 })
                               }
                             >

@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import type { TraineeTableRow } from "@/utils/learning/participants";
 import { toPagedRows } from "@/utils/apiRows";
 import { hrmsService } from "@/services/hrms.service";
+import { formatApiDateDisplay } from "@/utils/apiDate";
 
 function isPresentStatus(status: string): boolean {
   return status.trim().toUpperCase() === "PRESENT";
@@ -49,7 +50,9 @@ export function TraineeAttendanceAnalytics({
           ).trim();
           return {
             sessionId,
-            sessionDate: String(session.session_date ?? session.sessionDate ?? "—"),
+            sessionDate: formatApiDateDisplay(
+              String(session.session_date ?? session.sessionDate ?? "")
+            ),
             status,
           };
         },
