@@ -1,6 +1,5 @@
 "use client";
 
-import { FieldLabel, SearchableSelectCombobox } from "@/components/dashboard/ui/forms";
 import type { CompOffProjectOption } from "@/utils/compOffProjects";
 
 export function ProjectSelectField({
@@ -9,32 +8,29 @@ export function ProjectSelectField({
   options,
   onChange,
   disabled,
-  required = false,
 }: {
   label: string;
   value: string;
   options: CompOffProjectOption[];
   onChange: (projectCode: string) => void;
   disabled?: boolean;
-  required?: boolean;
 }) {
-  const selectOptions = [
-    { value: "", label: "Select project" },
-    ...options.map((opt) => ({ value: opt.code, label: opt.label })),
-  ];
-
   return (
     <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-      <FieldLabel label={label} required={required} />
-      <SearchableSelectCombobox
+      {label}
+      <select
+        className="input-field px-3 py-2 text-sm"
         value={value}
-        onChange={onChange}
-        options={selectOptions}
-        placeholder="Search projects…"
-        required={required}
         disabled={disabled}
-        aria-label={label}
-      />
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">Select project</option>
+        {options.map((opt) => (
+          <option key={opt.code} value={opt.code}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }

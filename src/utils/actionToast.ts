@@ -19,6 +19,34 @@ export function userRequestTypePhrase(type: unknown): string {
   return "leave";
 }
 
+/** User-facing label for tables, filters, and selects (API values unchanged). */
+export function formatUserRequestTypeLabel(type: unknown): string {
+  const raw = String(type ?? "").trim();
+  if (!raw) return "—";
+  const upper = raw.toUpperCase().replace(/[\s-]+/g, "_");
+  if (upper === "ALL") return "All types";
+  if (upper === "WFH" || upper === "WORK_FROM_HOME") return "Work from home";
+  if (upper === "COMP_OFF" || upper === "COMPOFF") return "Comp off";
+  if (upper === "COMP_OFF_EARN" || upper === "COMPOFF_EARN") return "Comp off (earn)";
+  if (upper === "LEAVE") return "Leave";
+  return raw
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export const USER_REQUEST_TYPE_SELECT_OPTIONS = [
+  { value: "LEAVE", label: "Leave" },
+  { value: "WFH", label: "Work from home" },
+] as const;
+
+export const USER_REQUEST_FILTER_TYPE_OPTIONS = [
+  { value: "ALL", label: "All types" },
+  { value: "LEAVE", label: "Leave" },
+  { value: "WFH", label: "Work from home" },
+  { value: "COMP_OFF", label: "Comp off (usage)" },
+] as const;
+
 export function userRequestActionLabel(
   type: unknown,
   action: "submit" | "update" | "revoke" | "approve" | "reject"

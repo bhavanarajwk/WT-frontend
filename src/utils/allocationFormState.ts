@@ -1,6 +1,7 @@
 export type ProjectFormState = {
   project_name: string;
-  project_type: "" | "IN_HOUSE" | "STAFFING" | "PRODUCT";
+  /** Project type code from GET /project/types */
+  project_type: string;
   client_name: string;
   account_manager_email: string;
 };
@@ -10,12 +11,12 @@ export type AllocationFormState = {
   employee_email: string;
   project_code: string;
   role: string;
-  allocated_hours: string;
+  /** Allocation percent code from GET /allocation/percentages (e.g. "50", "100") */
+  allocated_percent: string;
   start_date: string;
   end_date: string;
   allocation_type: string;
   billing_status: "" | "BILLED" | "BUFFER" | "INVESTMENT";
-  is_manager: boolean;
 };
 
 export function createEmptyProjectForm(): ProjectFormState {
@@ -33,12 +34,11 @@ export function createEmptyAllocationForm(): AllocationFormState {
     employee_email: "",
     project_code: "",
     role: "",
-    allocated_hours: "",
+    allocated_percent: "",
     start_date: "",
     end_date: "",
     allocation_type: "",
     billing_status: "",
-    is_manager: false,
   };
 }
 

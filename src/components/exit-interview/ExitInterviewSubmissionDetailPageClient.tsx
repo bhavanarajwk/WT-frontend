@@ -79,8 +79,10 @@ export function ExitInterviewSubmissionDetailPageClient({ empId }: { empId: stri
                   <dd className="font-medium tabular-nums">{formatDateTime(detail.submitted_at)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-wt-text-muted">Separation type</dt>
-                  <dd className="font-medium">{detail.separation_type ?? "—"}</dd>
+                  <dt className="text-xs text-wt-text-muted">Exit type</dt>
+                  <dd className="font-medium">
+                    {detail.exit_type ?? detail.separation_type ?? "—"}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-xs text-wt-text-muted">Employee ID</dt>

@@ -14,6 +14,7 @@ export const endpoints = {
   user: {
     onboard: `${api}/user/onboard`,
     invited: `${api}/user/invited`,
+    offboardList: `${api}/user/offboard`,
     offboard: (empId: string) => `${api}/user/offboard/${encodeURIComponent(empId)}`,
     lookup: `${api}/user`,
     batch: `${api}/user/batch`,
@@ -47,6 +48,9 @@ export const endpoints = {
     byId: (allocationId: string) => `${api}/allocation/${encodeURIComponent(allocationId)}`,
     updateLegacy: `${api}/allocation/update`,
     roles: `${api}/allocation/roles`,
+    percentages: `${api}/allocation/percentages`,
+    employees: `${api}/allocation/employees`,
+    projectEmployees: `${api}/allocation/project-employees`,
     user: `${api}/allocation/user`,
     forecasting: `${api}/allocation/forecasting`,
     benchForecast: `${api}/allocation/bench-forecast`,
@@ -57,6 +61,7 @@ export const endpoints = {
 
   project: {
     createOne: `${api}/project`,
+    types: `${api}/project/types`,
     createBulk: `${api}/projects`,
     list: `${api}/projects`,
     listAll: `${api}/projects/all`,
@@ -93,7 +98,8 @@ export const endpoints = {
   compOff: {
     earn: `${api}/comp-off/earn`,
     earnStatus: `${api}/comp-off/earn/status`,
-    balance: `${api}/comp-off/balance`,
+    /** @deprecated Backend uses expiry for balance; kept for reference only. */
+    balance: `${api}/comp-off/expiry`,
     expiry: `${api}/comp-off/expiry`,
     grants: `${api}/comp-off/grants`,
     grantsForEmployee: (empId: string) =>
@@ -162,6 +168,7 @@ export const endpoints = {
   roleAdmin: {
     assignRole: `${api}/roles/assign`,
     assignRoleLegacy: `${api}/assign-role`,
+    assignProjectManager: `${api}/roles/assign-project-manager`,
     schedulerRunAll: `${api}/scheduler/run-all`,
   },
 

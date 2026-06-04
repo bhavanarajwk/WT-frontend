@@ -1,3 +1,5 @@
+import { resolveAllocatedPercentFromRow } from "@/utils/allocationPercent";
+
 /** Letters, spaces, common punctuation; 2–120 chars */
 export function isValidPersonName(name: string): boolean {
   const t = name.trim();
@@ -63,12 +65,16 @@ export function designationAllowsFlexibleHours(designation: string): boolean {
 export const FLEXIBLE_ALLOCATION_HOUR_OPTIONS = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
 export const RESTRICTED_ALLOCATION_HOUR_OPTIONS = ["4", "8"] as const;
 
-/** Full-time day = 8h → percentage of capacity (for display). */
+/** Display allocation as percent (supports allocatedPercent or legacy 4/8 hours). */
 export function formatAllocatedHoursPercentLabel(hoursRaw: unknown): string {
   const raw = String(hoursRaw ?? "").trim();
   if (!raw || raw === "—") return "—";
-  const n = Number.parseFloat(raw.replace(/[^\d.-]/g, ""));
-  if (!Number.isFinite(n) || n <= 0) return raw;
-  const pct = Math.min(100, Math.round((n / 8) * 100));
-  return `${pct}% (${n}h)`;
+  const pct = resolveAllocatedPercentFromRow({
+    allocatedPercent: hoursRaw,
+    allocated_percent: hoursRaw,
+    allocatedHours: hoursRaw,
+    allocated_hours: hoursRaw,
+  });
+  if (pct != null) return `${pct}%`;
+  return raw;
 }

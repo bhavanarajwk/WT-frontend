@@ -83,12 +83,6 @@ export const dashboardNavigation: NavItem[] = [
         roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
         icon: "clock",
       },
-      {
-        id: "comp-off-team",
-        label: "Comp off",
-        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
-        icon: "gift",
-      },
     ],
   },
   {
@@ -134,12 +128,6 @@ export const dashboardNavigation: NavItem[] = [
         label: "Leave request",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
-      },
-      {
-        id: "comp-off",
-        label: "Comp off",
-        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
-        icon: "gift",
       },
       {
         id: "annual-calendar",

@@ -102,6 +102,28 @@ export function requestRowStatus(row: Record<string, unknown>): string {
   );
 }
 
+export function requestEarnManagerStatus(row: Record<string, unknown>): string {
+  return normalizeRequestStatus(
+    pickRowField(row, "manager_status", "managerStatus") ?? requestRowStatus(row)
+  );
+}
+
+export function mapEarnListRow(row: Record<string, unknown>): Record<string, unknown> {
+  const worked = String(pickRowField(row, "worked_date", "workedDate") ?? "").trim();
+  return {
+    ...row,
+    request_type: COMP_OFF_EARN_LIST_TYPE,
+    request_from_date: worked || (pickRowField(row, "request_from_date", "requestFromDate") ?? ""),
+    request_to_date: worked || (pickRowField(row, "request_to_date", "requestToDate") ?? ""),
+    comments:
+      pickRowField(row, "work_description", "workDescription", "comments", "comment") ?? "",
+    emp_email: pickRowField(row, "emp_email", "empEmail") ?? "",
+    status: pickRowField(row, "status") ?? "PENDING",
+    manager_status: pickRowField(row, "manager_status", "managerStatus") ?? "PENDING",
+    manager_reason: pickRowField(row, "manager_reason", "managerReason") ?? null,
+  };
+}
+
 export function isPendingRequestStatus(status: unknown): boolean {
   return normalizeRequestStatus(status) === "PENDING";
 }
