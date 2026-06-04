@@ -20,6 +20,12 @@ import { EmployeeAttendancePanel } from "@/components/dashboard/sections/Employe
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
+import { BenchAgingReportTable } from "@/components/reports/BenchAgingReportTable";
+import {
+  countPeopleOnBench,
+  mergeBenchAgingWithInvestment,
+} from "@/utils/reports/benchAgingRows";
+import { parseBenchAgingPage } from "@/utils/reports/parseBenchAgingPage";
 import {
   HARDCODED_DEPARTMENT_OPTIONS,
   MAX_ONBOARD_FILE_BYTES,
@@ -155,6 +161,8 @@ export function ReportsPageClient() {
   const [experienceBandRows, setExperienceBandRows] = useState<Array<Record<string, unknown>>>([]);
   const [utilizationByDepartmentRows, setUtilizationByDepartmentRows] = useState<Array<Record<string, unknown>>>([]);
   const [benchAgingRows, setBenchAgingRows] = useState<Array<Record<string, unknown>>>([]);
+  const [benchAgingTotalElements, setBenchAgingTotalElements] = useState<number | null>(null);
+  const [benchReportLoading, setBenchReportLoading] = useState(false);
   const [offboardingUsers, setOffboardingUsers] = useState<Array<{ emp_id: string; name: string; email: string }>>([]);
   const [bgvUsers, setBgvUsers] = useState<
     Array<{ emp_id: string; name: string; email: string; role: string; level: string }>
@@ -1332,30 +1340,21 @@ export function ReportsPageClient() {
       })),
     [profileAssignedProjects]
   );
-  const utilizationBenchRowsWithInvestment = useMemo(() => {
-    const seen = new Set(
-      benchAgingRows.map((r) => String(r.email ?? "").trim().toLowerCase()).filter(Boolean)
-    );
-    const extras: Array<Record<string, unknown>> = [];
-    for (const row of allocations) {
-      if (String(row.billing_status ?? row.billingStatus ?? "").toUpperCase() !== "INVESTMENT") continue;
-      const email = String(
-        row.employee_email ?? row.email ?? row.user_email ?? row.userEmail ?? ""
-      )
-        .trim()
-        .toLowerCase();
-      if (!email || seen.has(email)) continue;
-      seen.add(email);
-      extras.push({
-        emp_id: String(row.emp_id ?? row.employee_id ?? row.employeeId ?? row.id ?? "—"),
-        email,
-        name: String(row.employee_name ?? row.name ?? "—"),
-        department: String(row.department ?? row.role ?? row.designation ?? "—"),
-        bench_days: "Investment allocation",
-      });
-    }
-    return [...benchAgingRows, ...extras];
-  }, [benchAgingRows, allocations]);  useEffect(() => {
+  const utilizationBenchRowsWithInvestment = useMemo(
+    () => mergeBenchAgingWithInvestment(benchAgingRows, allocations),
+    [benchAgingRows, allocations]
+  );
+  const benchPeopleOnBench = useMemo(
+    () =>
+      countPeopleOnBench(
+        benchAgingRows,
+        utilizationBenchRowsWithInvestment,
+        benchAgingTotalElements
+      ),
+    [benchAgingRows, benchAgingTotalElements, utilizationBenchRowsWithInvestment]
+  );
+
+  useEffect(() => {
     const code = allocationForm.project_code.trim();
     if (!code) return;
     const fromProjects = projects.find(
@@ -2424,9 +2423,31 @@ export function ReportsPageClient() {
     ]);
     const utilizationPayload = ((utilizationRes as { data?: unknown }).data ?? {}) as Record<string, unknown>;
     const benchPayload = ((benchRes as { data?: unknown }).data ?? {}) as Record<string, unknown>;
+    const benchPage = parseBenchAgingPage(benchPayload);
     setUtilizationByDepartmentRows(toRows(utilizationPayload.data ?? (utilizationPayload as { data?: unknown }).data));
-    setBenchAgingRows(toRows(benchPayload.data ?? (benchPayload as { data?: unknown }).data));
+    setBenchAgingRows(benchPage.rows);
+    setBenchAgingTotalElements(benchPage.totalElements);
   }, [utilizationFilters.as_of, utilizationFilters.page, utilizationFilters.search, utilizationFilters.size]);
+
+  const loadBenchAgingReport = useCallback(async () => {
+    setBenchReportLoading(true);
+    try {
+      const params = {
+        page: 0,
+        size: 500,
+        search: utilizationFilters.search.trim() || undefined,
+        as_of: utilizationFilters.as_of.trim() || undefined,
+      };
+      const benchRes = await hrmsService.getBenchAging(params);
+      const benchPayload = ((benchRes as { data?: unknown }).data ?? {}) as Record<string, unknown>;
+      const benchPage = parseBenchAgingPage(benchPayload);
+      setBenchAgingRows(benchPage.rows);
+      setBenchAgingTotalElements(benchPage.totalElements);
+    } finally {
+      setBenchReportLoading(false);
+    }
+  }, [utilizationFilters.as_of, utilizationFilters.search]);
+
   const loadAttritionReports = useCallback(async () => {
     const parsedFy = Number.parseInt(attritionFyStartYear, 10);
     const fy_start_year =
@@ -2564,13 +2585,37 @@ export function ReportsPageClient() {
   }, [activeSection, hasHrAccess, loadWorkforceOverviewReports]);  useEffect(() => {
     if (activeSection !== "reports-section-2" || !hasHrAccess) return;
     const id = window.setTimeout(() => {
-      void loadUtilizationReports().catch(() => {
-        setUtilizationByDepartmentRows([]);
-        setBenchAgingRows([]);
-      });
+      void Promise.all([
+        loadUtilizationReports().catch(() => {
+          setUtilizationByDepartmentRows([]);
+          setBenchAgingRows([]);
+          setBenchAgingTotalElements(null);
+        }),
+        loadAllocationsForHr().catch(() => {
+          setAllocations([]);
+        }),
+      ]);
     }, 0);
     return () => window.clearTimeout(id);
-  }, [activeSection, hasHrAccess, loadUtilizationReports]);  useEffect(() => {
+  }, [activeSection, hasHrAccess, loadAllocationsForHr, loadUtilizationReports]);
+
+  useEffect(() => {
+    if (activeSection !== "reports-bench" || !hasHrAccess) return;
+    const id = window.setTimeout(() => {
+      void Promise.all([
+        loadBenchAgingReport().catch(() => {
+          setBenchAgingRows([]);
+          setBenchAgingTotalElements(null);
+        }),
+        loadAllocationsForHr().catch(() => {
+          setAllocations([]);
+        }),
+      ]);
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [activeSection, hasHrAccess, loadAllocationsForHr, loadBenchAgingReport]);
+
+  useEffect(() => {
     if (activeSection !== "reports-section-3" || !hasHrAccess) return;
     const id = window.setTimeout(() => {
       void loadAttritionReports().catch(() => {
@@ -3205,7 +3250,17 @@ export function ReportsPageClient() {
                                 onClick={() =>
                                   runAction("Refresh reports", async () => {
                                     if (activeSection === "reports-section-2") {
-                                      await loadUtilizationReports();
+                                      await Promise.all([
+                                        loadUtilizationReports(),
+                                        loadAllocationsForHr().catch(() => setAllocations([])),
+                                      ]);
+                                      return;
+                                    }
+                                    if (activeSection === "reports-bench") {
+                                      await Promise.all([
+                                        loadBenchAgingReport(),
+                                        loadAllocationsForHr().catch(() => setAllocations([])),
+                                      ]);
                                       return;
                                     }
                                     if (activeSection === "reports-section-3") {
@@ -3227,7 +3282,7 @@ export function ReportsPageClient() {
                                     await loadWorkforceOverviewReports();
                                   })
                                 }
-                                disabled={actionLoading || !(activeSection === "reports-workforce" || activeSection === "reports-section-2" || activeSection === "reports-section-3" || activeSection === "reports-section-4" || activeSection === "reports-section-6" || activeSection === "reports-section-7")}
+                                disabled={actionLoading || !(activeSection === "reports-workforce" || activeSection === "reports-section-2" || activeSection === "reports-bench" || activeSection === "reports-section-3" || activeSection === "reports-section-4" || activeSection === "reports-section-6" || activeSection === "reports-section-7")}
                               >
                                 Refresh
                               </button>
@@ -3290,14 +3345,17 @@ export function ReportsPageClient() {
                                   emptyLabel="No utilization by department rows."
                                   compact
                                 />
-                                <DataTable
-                                  title="Bench aging and size (includes investment allocations)"
-                                  columns={["emp_id", "email", "name", "department", "bench_days"]}
+                                <BenchAgingReportTable
                                   rows={utilizationBenchRowsWithInvestment}
-                                  emptyLabel="No bench aging rows."
-                                  compact
+                                  peopleOnBench={benchPeopleOnBench}
                                 />
                               </div>
+                            ) : activeSection === "reports-bench" ? (
+                              <BenchAgingReportTable
+                                rows={utilizationBenchRowsWithInvestment}
+                                peopleOnBench={benchPeopleOnBench}
+                                loading={benchReportLoading}
+                              />
                             ) : activeSection === "reports-section-3" ? (
                               <AttritionRetentionReports
                                 fyStartYear={attritionFyStartYear}

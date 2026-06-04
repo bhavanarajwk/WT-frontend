@@ -10,7 +10,7 @@ import { SelectField } from "@/components/dashboard/ui/forms";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { DataTable } from "@/components/learning-development/ui/forms";
 import { PARTICIPANT_SORT_OPTIONS } from "@/utils/listSort";
-import { participantRowUserId } from "@/utils/learning/participants";
+import { participantRowDisplayLabel, participantRowUserId } from "@/utils/learning/participants";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { hrmsService } from "@/services/hrms.service";
 
@@ -53,12 +53,10 @@ export function ParticipantsPageClient() {
         .map((row) => {
           const id = participantRowUserId(row);
           if (!id) return null;
-          const name = String(row.name ?? "Employee").trim() || "Employee";
-          const email = String(row.email ?? "").trim();
           const status = String(row.enrollment_status ?? row.enrollmentStatus ?? "ENROLLED").trim();
           return {
             id,
-            label: `${name}${email ? ` (${email})` : ""} — ${status}`,
+            label: `${participantRowDisplayLabel(row, id)} — ${status}`,
           };
         })
         .filter((row): row is { id: string; label: string } => Boolean(row)),

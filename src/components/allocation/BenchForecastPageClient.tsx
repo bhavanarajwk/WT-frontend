@@ -1,51 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { useBenchForecast } from "@/hooks/allocation/useBenchForecast";
-import { formatResumeCellValue } from "@/utils/employeeResume";
+import { useBenchForecastList } from "@/hooks/allocation/useBenchForecastList";
+import { buildAllocateHref, formatTalentPoolDate } from "@/utils/talentPool";
 
-const HIDDEN_COLUMNS = new Set([
-  "manager_names",
-  "managerNames",
-  "manager_name",
-  "managerName",
-]);
-
-function labelizeKey(key: string): string {
-  return key
-    .replace(/_/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
+const PAGE_SIZE = 50;
+const DEFAULT_DAYS = 30;
 
 export function BenchForecastPageClient() {
   const { user, status: authStatus } = useAuth();
-  const [days, setDays] = useState("10");
-  const [appliedDays, setAppliedDays] = useState(10);
-
   const roles = user?.roles ?? [];
   const canView = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
   const queriesEnabled = authStatus === "authenticated" && canView;
 
-  const { data, isLoading, isError, error, refetch, isFetching } = useBenchForecast(
-    appliedDays,
-    queriesEnabled
+  const [daysInput, setDaysInput] = useState(String(DEFAULT_DAYS));
+  const [days, setDays] = useState(DEFAULT_DAYS);
+  const [page, setPage] = useState(0);
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+
+  const { data, isLoading, isError, error, refetch, isFetching } = useBenchForecastList(
+    queriesEnabled,
+    { days, page, size: PAGE_SIZE, search }
   );
 
-  const rows = data?.rows ?? [];
-  const columns = useMemo(() => {
-    const keys = new Set<string>();
-    for (const row of rows) {
-      Object.keys(row).forEach((k) => {
-        if (!HIDDEN_COLUMNS.has(k)) keys.add(k);
-      });
-    }
-    return [...keys].sort();
-  }, [rows]);
+  const items = data?.items ?? [];
+  const totalPages = Math.max(1, data?.total_pages ?? 1);
 
   if (authStatus === "loading") {
     return (
@@ -62,8 +46,13 @@ export function BenchForecastPageClient() {
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
           <h3 className="text-lg font-semibold">Access restricted</h3>
-          <p className="mt-2 text-sm text-wt-text-muted">Bench forecast is available to HR and admin only.</p>
-          <Link href={DASHBOARD_ROUTES.overview} className="mt-4 inline-block text-sm text-blue-600 hover:underline">
+          <p className="mt-2 text-sm text-wt-text-muted">
+            Bench forecast is available to HR and admin only.
+          </p>
+          <Link
+            href={DASHBOARD_ROUTES.overview}
+            className="mt-4 inline-block text-sm text-blue-600 hover:underline"
+          >
             Back to overview
           </Link>
         </div>
@@ -74,78 +63,169 @@ export function BenchForecastPageClient() {
   return (
     <DashboardPageShell>
       <div className="rounded-xl border border-wt-border bg-wt-surface-1 shadow-sm">
-        <div className="border-b border-wt-border px-5 py-5 md:px-7">
-          <h3 className="text-lg font-semibold">Bench days forecasting</h3>
-        </div>
-
-        <div className="space-y-4 p-5 md:p-7">
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-xs text-wt-text-muted">
-              Forecast window (days)
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-wt-border px-5 py-5 md:px-7">
+          <div>
+            <h3 className="text-lg font-semibold">Bench forecast</h3>
+            <p className="mt-1 text-sm text-wt-text-muted">
+              Upcoming project roll-offs who may need BENCH capacity (not the current talent pool
+              list).
+            </p>
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-sm">
+              <span className="block text-xs text-wt-text-muted mb-1">Days ahead</span>
               <input
                 type="number"
                 min={1}
-                max={365}
-                className="input-field w-32 px-3 py-2 text-sm"
-                value={days}
-                onChange={(e) => setDays(e.target.value)}
+                max={3650}
+                value={daysInput}
+                onChange={(e) => setDaysInput(e.target.value)}
+                className="w-24 rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="block text-xs text-wt-text-muted mb-1">Search</span>
+              <input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-52 rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm"
+                placeholder="Name, email, emp id"
               />
             </label>
             <button
               type="button"
+              className="rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm"
+              onClick={() => {
+                const n = Math.max(1, Math.min(3650, Number(daysInput) || DEFAULT_DAYS));
+                setDays(n);
+                setSearch(searchInput.trim());
+                setPage(0);
+              }}
+            >
+              Apply
+            </button>
+            <button
+              type="button"
               className="btn-primary px-4 py-2 text-sm"
               disabled={isFetching}
-              onClick={() => setAppliedDays(Math.max(1, Number(days) || 10))}
+              onClick={() => void refetch()}
             >
-              Load forecast
-            </button>
-            <button type="button" className="btn-ghost px-3 py-2 text-sm" onClick={() => void refetch()}>
               Refresh
             </button>
           </div>
+        </div>
 
-          {isLoading || isFetching ? (
-            <p className="text-sm text-wt-text-muted">Loading bench forecast…</p>
-          ) : null}
+        <div className="space-y-4 p-5 md:p-7">
+          <p className="text-xs text-wt-text-muted">
+            {isLoading || isFetching
+              ? "Loading…"
+              : `${data?.total_elements ?? items.length} upcoming roll-off(s) in ${days} days`}
+          </p>
 
           {isError ? (
             <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-              Could not load forecast.{error instanceof Error ? ` ${error.message}` : ""}
+              Could not load bench forecast.
+              {error instanceof Error ? ` ${error.message}` : ""}
             </div>
-          ) : null}
-
-          {!isLoading && !isError && rows.length > 0 ? (
-            <div className="wt-scroll-both max-h-[min(65vh,560px)] overflow-auto rounded-lg border border-wt-border">
-              <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-[1] bg-wt-surface-2 text-wt-text-muted">
-                  <tr>
-                    {columns.map((col) => (
-                      <th key={col} className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium uppercase">
-                        {labelizeKey(col)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-wt-border">
-                  {rows.map((row, idx) => (
-                    <tr key={idx}>
-                      {columns.map((col) => (
-                        <td key={col} className="whitespace-nowrap px-4 py-3">
-                          {formatResumeCellValue(row[col])}
-                        </td>
-                      ))}
+          ) : items.length ? (
+            <>
+              <div className="wt-scroll-both max-h-[min(70vh,560px)] rounded-xl border border-wt-border">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-wt-surface-2 text-wt-text-muted">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium">Name</th>
+                      <th className="text-left px-3 py-2 font-medium">Project</th>
+                      <th className="text-left px-3 py-2 font-medium">Role</th>
+                      <th className="text-left px-3 py-2 font-medium">End date</th>
+                      <th className="text-left px-3 py-2 font-medium">Expected BENCH %</th>
+                      <th className="text-left px-3 py-2 font-medium">Managers</th>
+                      <th className="text-right px-3 py-2 font-medium">Allocate</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
-          {!isLoading && !isError && !rows.length ? (
-            <p className="text-sm text-wt-text-muted">No bench forecast data for the selected window.</p>
-          ) : null}
+                  </thead>
+                  <tbody>
+                    {items.map((row) => (
+                      <tr key={`${row.email}-${row.allocation_end_date}`} className="border-t border-wt-border">
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <span className="font-medium">{row.name || "—"}</span>
+                          {row.emp_id ? (
+                            <span className="block text-xs text-wt-text-muted">{row.emp_id}</span>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">{row.project_name ?? "—"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{row.role ?? "—"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {formatTalentPoolDate(row.allocation_end_date)}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {row.expected_bench_hours != null ? `${row.expected_bench_hours}%` : "—"}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {row.manager_names.length ? row.manager_names.join(", ") : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <Link
+                            href={buildAllocateHref({
+                              employee_email: row.email,
+                              allocate_employee_email: row.allocate_employee_email,
+                            })}
+                            className="inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 p-2 text-indigo-700 hover:bg-indigo-100"
+                            title={`Allocate ${row.name || row.email}`}
+                            aria-label={`Allocate ${row.name || row.email}`}
+                          >
+                            <AllocateIcon />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-wt-text-muted">
+                  Page {page + 1} of {totalPages}
+                </p>
+                <div className="inline-flex gap-2">
+                  <button
+                    type="button"
+                    disabled={page <= 0 || isFetching}
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    className="rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-1.5 text-sm disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    disabled={page + 1 >= totalPages || isFetching}
+                    onClick={() => setPage((p) => p + 1)}
+                    className="rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-1.5 text-sm disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-wt-text-muted">
+              {isLoading ? "Loading…" : "No upcoming roll-offs in this window."}
+            </p>
+          )}
         </div>
       </div>
     </DashboardPageShell>
+  );
+}
+
+function AllocateIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
+      <path d="M19 8v6M22 11h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }

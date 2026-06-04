@@ -104,6 +104,12 @@ export const dashboardNavigation: NavItem[] = [
         icon: "calendarRange",
       },
       {
+        id: "talent-pool",
+        label: "Talent Pool",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        icon: "users",
+      },
+      {
         id: "bench-forecast",
         label: "Bench forecast",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
@@ -175,6 +181,7 @@ export const dashboardNavigation: NavItem[] = [
     children: [
       { id: "reports-workforce", label: "Workforce Overview" },
       { id: "reports-section-2", label: "Utilization vs Effort" },
+      { id: "reports-bench", label: "Bench" },
       { id: "reports-section-3", label: "Attrition & Retention" },
       { id: "reports-section-4", label: "Skill & Capacity Report" },
       { id: "reports-section-5", label: "Engagement & Culture Metrics" },

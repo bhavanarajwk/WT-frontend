@@ -11,6 +11,7 @@ import { TrainingScopePicker } from "@/components/learning-development/TrainingS
 import { DataTable } from "@/components/learning-development/ui/forms";
 import { PARTICIPANT_SORT_OPTIONS } from "@/utils/listSort";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
+import { cleanEmployeeName } from "@/utils/employeeDirectory";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
@@ -128,7 +129,9 @@ export function TrainersPageClient() {
                   if (!uid) return null;
                   return {
                     value: uid,
-                    label: `${row.name ?? "Trainer"} (${row.email ?? uid})`,
+                    label: cleanEmployeeName({
+                      name: String(row.name ?? row.employee_name ?? "Trainer").trim() || "Trainer",
+                    }),
                   };
                 })
                 .filter((row): row is { value: string; label: string } => Boolean(row))}

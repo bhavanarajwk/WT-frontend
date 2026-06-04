@@ -11,7 +11,7 @@ export function useBenchForecast(days: number, enabled: boolean) {
     queryKey: ["allocation", "bench-forecast", safeDays],
     enabled,
     queryFn: async () => {
-      const res = await hrmsService.getBenchForecast(safeDays);
+      const res = await hrmsService.getBenchForecast({ days: safeDays });
       const envelope = res as { data?: unknown };
       const raw = envelope?.data ?? res;
       let rows = toPagedRows(raw);

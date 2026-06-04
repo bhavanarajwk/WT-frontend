@@ -180,7 +180,6 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
               <thead className="bg-wt-surface-2 text-wt-text-muted">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium">Trainee</th>
-                  <th className="text-left px-3 py-2 font-medium">Email</th>
                   <th className="text-left px-3 py-2 font-medium">Status</th>
                   <th className="text-left px-3 py-2 font-medium">Attendance</th>
                 </tr>
@@ -189,7 +188,6 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
                 {traineeRows.map((row) => (
                   <tr key={row.key} className="border-t border-wt-border">
                     <td className="px-3 py-2 whitespace-nowrap">{row.name}</td>
-                    <td className="px-3 py-2 text-wt-text-muted">{row.email || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{row.enrollmentStatus}</td>
                     <td className="px-3 py-2">
                       <AttendanceToggle

@@ -255,7 +255,6 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
               <thead className="bg-wt-surface-2 text-wt-text-muted">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium">Trainee</th>
-                  <th className="text-left px-3 py-2 font-medium">Email</th>
                   <th className="text-left px-3 py-2 font-medium w-28">Score (%)</th>
                   <th className="text-left px-3 py-2 font-medium w-28">Overall (%)</th>
                   <th className="text-left px-3 py-2 font-medium">Completed</th>
@@ -273,7 +272,6 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
                   return (
                     <tr key={row.key} className="border-t border-wt-border">
                       <td className="px-3 py-2 whitespace-nowrap">{row.name}</td>
-                      <td className="px-3 py-2 text-wt-text-muted">{row.email || "—"}</td>
                       <td className="px-3 py-2">
                         <input
                           type="number"

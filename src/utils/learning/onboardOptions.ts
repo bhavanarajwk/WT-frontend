@@ -131,7 +131,8 @@ export function onboardRowsToEmployeeOptions(
             "Employee";
           const userId = rawId || (email ? `email:${email.toLowerCase()}` : "");
           if (!userId) return null;
-          const label = email ? `${name} (${email})` : name;
+          const empId = String(r.emp_id ?? r.empId ?? "").trim();
+          const label = empId ? `${name} (${empId})` : name;
           return [userId, { id: userId, label, name, email }] as const;
         })
         .filter((item): item is readonly [string, OnboardEmployeeOption] => Boolean(item))
