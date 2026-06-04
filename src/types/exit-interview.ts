@@ -70,7 +70,9 @@ export type ExitInterviewListItem = {
   submitted_at: string | null;
   last_working_day: string | null;
   resignation_date: string | null;
-  separation_type: string | null;
+  exit_type?: string | null;
+  /** @deprecated API legacy field; prefer exit_type */
+  separation_type?: string | null;
   submission_status: ExitInterviewSubmissionStatus;
 };
 
@@ -89,7 +91,9 @@ export type ExitInterviewSubmissionDetail = {
   submitted_at: string | null;
   last_working_day: string | null;
   resignation_date: string | null;
-  separation_type: string | null;
+  exit_type?: string | null;
+  /** @deprecated API legacy field; prefer exit_type */
+  separation_type?: string | null;
   responses: Record<string, unknown>;
 };
 

@@ -1,7 +1,9 @@
 import { endpoints } from "@/api/endpoints";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
+import type { OffboardListData, OffboardListQuery } from "@/types/offboard";
 import { toPagedRows } from "@/utils/apiRows";
+import { parseAllocationListRows } from "@/utils/allocationList";
 import {
   ONBOARD_DATE_FIELDS,
   applyApiDateFields,
@@ -144,6 +146,20 @@ export const hrmsService = {
     });
   },
 
+  /** GET /user/offboard — paginated list of offboarded employees. */
+  getOffboardList(params: OffboardListQuery = {}) {
+    const query: Record<string, string> = {};
+    if (params.page != null) query.page = String(params.page);
+    if (params.size != null) query.size = String(params.size);
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.type?.trim()) query.type = params.type.trim();
+    if (params.fromDate?.trim()) query.fromDate = params.fromDate.trim();
+    if (params.toDate?.trim()) query.toDate = params.toDate.trim();
+    return apiClient.get<ApiEnvelope<OffboardListData>>(endpoints.user.offboardList, {
+      query: applyApiDateQuery(query, ["fromDate", "toDate"]),
+    });
+  },
+
   /** GET /user/invited — invited employees in a date range (default last 7 days on backend). */
   getInvitedUsers(params: InvitedUsersQuery) {
     const query: Record<string, string> = {};
@@ -183,11 +199,11 @@ export const hrmsService = {
   offboardEmployee(
     empId: string,
     payload: {
-      last_working_day: string;
-      separation_type: "VOLUNTARY" | "INVOLUNTARY";
-      resignation_date?: string;
-      reason?: string;
-      critical_skill?: string;
+      resignation_date: string;
+      exit_type: "VOLUNTARY" | "INVOLUNTARY";
+      last_working_day?: string;
+      reason?: string | null;
+      critical_skill?: string | null;
       is_regretted?: boolean;
     }
   ) {
@@ -195,7 +211,24 @@ export const hrmsService = {
       "last_working_day",
       "resignation_date",
     ]);
-    return apiClient.post<ApiEnvelope<unknown>>(endpoints.user.offboard(empId), {
+    return apiClient.post<
+      ApiEnvelope<{
+        emp_id: string;
+        status: string;
+        employee_name: string;
+        exit_type: string;
+        reason: string | null;
+        critical_skill: string | null;
+        is_regretted: boolean;
+        resignation_date: string;
+        last_working_day: string;
+        notice_period_days: number;
+        designation: string | null;
+        band_name: string | null;
+        band_role: string | null;
+        project_manager: string | null;
+      }>
+    >(endpoints.user.offboard(empId), {
       contentType: "application/json",
       body: JSON.stringify(body),
     });
@@ -286,9 +319,9 @@ export const hrmsService = {
         size: String(pageSize),
       });
       const payload = ((res as { data?: unknown }).data ?? res) as Record<string, unknown>;
-      const rows = toPagedRows(payload);
+      const rows = parseAllocationListRows(payload);
       all.push(...rows);
-      const tp = Number(payload.total_pages);
+      const tp = Number(payload.total_pages ?? payload.totalPages);
       totalPages = Number.isFinite(tp) && tp > 0 ? tp : page + 1;
       if (!rows.length) break;
       page += 1;
@@ -304,12 +337,67 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.allocation.roles, { query: params });
   },
 
-  /** ROLE_HR */
-  getAllocationForecasting(params: { days?: number } = {}) {
-    const days = Number.isFinite(params.days) ? String(params.days) : "14";
-    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.forecasting, {
-      query: { days },
+  /** GET /allocation/percentages — ROLE_HR | ROLE_ADMIN */
+  getAllocationPercentages() {
+    return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.allocation.percentages);
+  },
+
+  /** GET /allocation/employees — paginated directory for allocate form */
+  getAllocationEmployees(params: { page?: string; size?: string; search?: string } = {}) {
+    const query: Record<string, string> = {
+      page: params.page ?? "0",
+      size: params.size ?? "200",
+    };
+    if (params.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<{ items?: unknown[] }>>(endpoints.allocation.employees, {
+      query,
     });
+  },
+
+  /** GET /allocation/project-employees — projectId or projectCode (required) */
+  getAllocationProjectEmployees(
+    params: { projectCode?: string; projectId?: string | number; search?: string } = {}
+  ) {
+    const query: Record<string, string> = {};
+    const id =
+      params.projectId !== undefined && params.projectId !== null && params.projectId !== ""
+        ? String(params.projectId).trim()
+        : "";
+    const code = params.projectCode?.trim() ?? "";
+    if (id) query.projectId = id;
+    else if (code) {
+      if (/^\d+$/.test(code)) query.projectId = code;
+      else query.projectCode = code;
+    }
+    if (params.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<
+      ApiEnvelope<{
+        items?: unknown[];
+        projectId?: number;
+        projectCode?: string;
+        projectName?: string;
+      }>
+    >(endpoints.allocation.projectEmployees, { query });
+  },
+
+  /** GET /allocation/forecasting — ROLE_HR */
+  getAllocationForecasting(
+    params: {
+      days?: number;
+      page?: number;
+      size?: number;
+      projectCode?: string;
+      search?: string;
+    } = {}
+  ) {
+    const query: Record<string, string> = {
+      days: Number.isFinite(params.days) ? String(params.days) : "90",
+      page: String(params.page ?? 0),
+      size: String(params.size ?? 50),
+    };
+    if (params.projectCode?.trim()) query.projectCode = params.projectCode.trim();
+    if (params.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.forecasting, { query });
   },
 
   createAllocation(payload: Record<string, unknown>) {
@@ -340,6 +428,15 @@ export const hrmsService = {
 
   getAssignedProjects() {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.project.assignedToUser);
+  },
+
+  /** GET /project/types — ROLE_HR | ROLE_ADMIN | ROLE_MANAGER */
+  getProjectTypes(params: { activeOnly?: boolean } = {}) {
+    const query: Record<string, string> = {};
+    if (params.activeOnly !== undefined) {
+      query.activeOnly = String(params.activeOnly);
+    }
+    return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.project.types, { query });
   },
 
   createProject(payload: Record<string, unknown>) {
@@ -487,8 +584,27 @@ export const hrmsService = {
     return apiClient.get<unknown>(endpoints.masters.kpiDefinitions, { query: params });
   },
 
-  assignRole(payload: { target_email: string; role: string }) {
+  assignRole(payload: {
+    target_email?: string;
+    role?: string;
+    userEmail?: string;
+    roleName?: string;
+  }) {
+    const body = {
+      userEmail: payload.userEmail ?? payload.target_email,
+      roleName: payload.roleName ?? payload.role,
+      target_email: payload.target_email ?? payload.userEmail,
+      role: payload.role ?? payload.roleName,
+    };
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.roleAdmin.assignRole, {
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  },
+
+  /** POST /roles/assign-project-manager — ROLE_HR | ROLE_ADMIN */
+  assignProjectManager(payload: { userEmail: string; projectCode: string }) {
+    return apiClient.post<unknown>(endpoints.roleAdmin.assignProjectManager, {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });

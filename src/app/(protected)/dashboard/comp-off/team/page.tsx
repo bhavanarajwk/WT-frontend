@@ -1,5 +1,5 @@
-import { CompOffPageClient } from "@/components/comp-off/CompOffPageClient";
+import { redirect } from "next/navigation";
 
 export default function DashboardCompOffTeamPage() {
-  return <CompOffPageClient />;
+  redirect("/dashboard/leave/team");
 }
