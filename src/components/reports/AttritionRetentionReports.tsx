@@ -1,7 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useMemo } from "react";
 import { SelectField } from "@/components/dashboard/ui/forms";
+import { prepareTableForDisplay } from "@/utils/tableDisplay";
 
 const COLUMN_LABELS: Record<string, string> = {
   fy_start_year: "FY start year",
@@ -100,20 +102,25 @@ function ReportTableCard({
   rows: Array<Record<string, unknown>>;
   emptyLabel: string;
 }) {
+  const { columns: displayColumns, rows: displayRows } = useMemo(
+    () => prepareTableForDisplay(columns, rows),
+    [columns, rows]
+  );
+
   return (
     <section className="rounded-2xl border border-wt-border bg-wt-surface-1 overflow-hidden shadow-sm">
       <div className="border-b border-wt-border bg-wt-surface-2/80 px-4 py-3 sm:px-5">
         <h4 className="font-semibold text-sm">{title}</h4>
         {description ? <p className="text-xs text-wt-text-muted mt-0.5">{description}</p> : null}
       </div>
-      {!rows.length ? (
+      {!displayRows.length ? (
         <p className="px-4 py-8 text-sm text-wt-text-muted text-center sm:px-5">{emptyLabel}</p>
       ) : (
         <div className="wt-scroll-both max-h-[min(360px,50vh)] overflow-auto">
           <table className="min-w-full text-sm">
             <thead className="sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted">
               <tr>
-                {columns.map((col) => (
+                {displayColumns.map((col) => (
                   <th
                     key={col}
                     className="text-left px-4 py-2.5 font-medium whitespace-nowrap text-xs uppercase tracking-wide"
@@ -124,12 +131,12 @@ function ReportTableCard({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, idx) => (
+              {displayRows.map((row, idx) => (
                 <tr
                   key={idx}
                   className="border-t border-wt-border hover:bg-wt-surface-2/50 transition-colors"
                 >
-                  {columns.map((col) => (
+                  {displayColumns.map((col) => (
                     <td key={col} className="px-4 py-2.5 whitespace-nowrap text-wt-text">
                       {formatCell(col, row[col])}
                     </td>

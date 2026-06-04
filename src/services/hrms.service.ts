@@ -1,5 +1,6 @@
 import { endpoints } from "@/api/endpoints";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
+import { parseAllocationExtensionListResponse } from "@/utils/allocationExtension";
 import type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
 import type { OffboardListData, OffboardListQuery } from "@/types/offboard";
 import { toPagedRows } from "@/utils/apiRows";
@@ -123,10 +124,16 @@ export interface AllocationExtensionRequestRow {
   project_name: string;
   current_end_date: string | null;
   requested_end_date: string;
+  extension_days: number | null;
+  current_allocated_percent: number;
+  requested_allocated_percent: number;
   reason: string | null;
   requested_by_name: string;
   status: AllocationExtensionRequestStatus;
+  reviewed_by_name: string | null;
+  reviewed_at: string | null;
   created_at: string;
+  updated_at: string | null;
 }
 
 export interface AnnualCalendarItem {
@@ -280,10 +287,20 @@ export const hrmsService = {
   },
 
   /** GET /api/v1/allocation/bench-forecast?days=N */
-  getBenchForecast(days: number) {
-    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.benchForecast, {
-      query: { days: String(Math.max(1, days)) },
-    });
+  /** GET /allocation/bench-forecast — upcoming roll-offs (separate from talent pool list). */
+  getBenchForecast(params: {
+    days: number;
+    page?: number;
+    size?: number;
+    search?: string;
+  }) {
+    const query: Record<string, string | number> = {
+      days: Math.max(1, Math.min(3650, params.days)),
+      page: params.page ?? 0,
+      size: params.size ?? 50,
+    };
+    if (params.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.benchForecast, { query });
   },
 
   /** GET /api/v1/timelog/get/{empEmail}/{logDate} — logDate is dd/mm/yyyy */
@@ -297,6 +314,100 @@ export const hrmsService = {
 
   getAllocations(params: Record<string, string>) {
     return apiClient.get<ApiEnvelope<PagedData<unknown>>>(endpoints.allocation.root, { query: params });
+  },
+
+  /** GET /allocation/talent-pool — Table 1: on talent pool (active BENCH). */
+  getTalentPool(params: { page?: number; size?: number; search?: string } = {}) {
+    const query: Record<string, string | number> = {
+      page: params.page ?? 0,
+      size: params.size ?? 50,
+    };
+    if (params.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.talentPool, { query });
+  },
+
+  /** GET /allocation/talent-pool/unallocated — Table 2. */
+  getTalentPoolUnallocated(params: { page?: number; size?: number; search?: string } = {}) {
+    const query: Record<string, string | number> = {
+      page: params.page ?? 0,
+      size: params.size ?? 50,
+    };
+    if (params.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.talentPoolUnallocated, {
+      query,
+    });
+  },
+
+  /** GET /allocation/talent-pool/non-billable — Table 3. */
+  getTalentPoolNonBillable(
+    params: {
+      page?: number;
+      size?: number;
+      search?: string;
+      allocationType?: string;
+    } = {}
+  ) {
+    const query: Record<string, string | number> = {
+      page: params.page ?? 0,
+      size: params.size ?? 50,
+    };
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.allocationType?.trim()) query.allocationType = params.allocationType.trim();
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.talentPoolNonBillable, {
+      query,
+    });
+  },
+
+  /** GET /allocation/talent-pool/dashboard — all three tables (first load). */
+  getTalentPoolDashboard(
+    params: {
+      search?: string;
+      allocationType?: string;
+      onBenchPage?: number;
+      onBenchSize?: number;
+      unallocatedPage?: number;
+      unallocatedSize?: number;
+      nonBillablePage?: number;
+      nonBillableSize?: number;
+    } = {}
+  ) {
+    const query: Record<string, string | number> = {
+      onBenchPage: params.onBenchPage ?? 0,
+      onBenchSize: params.onBenchSize ?? 50,
+      unallocatedPage: params.unallocatedPage ?? 0,
+      unallocatedSize: params.unallocatedSize ?? 50,
+      nonBillablePage: params.nonBillablePage ?? 0,
+      nonBillableSize: params.nonBillableSize ?? 50,
+    };
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.allocationType?.trim()) query.allocationType = params.allocationType.trim();
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.talentPoolDashboard, {
+      query,
+    });
+  },
+
+  /** GET /allocation/deallocated — soft-deleted allocation history (ROLE_HR | ROLE_ADMIN) */
+  getDeallocatedAllocations(
+    params: {
+      page?: string;
+      size?: string;
+      projectCode?: string;
+      userEmail?: string;
+      search?: string;
+      fromDate?: string;
+      toDate?: string;
+    } = {}
+  ) {
+    const query: Record<string, string> = {
+      page: params.page ?? "0",
+      size: params.size ?? "50",
+    };
+    if (params.projectCode?.trim()) query.projectCode = params.projectCode.trim();
+    if (params.userEmail?.trim()) query.userEmail = params.userEmail.trim();
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.fromDate?.trim()) query.fromDate = params.fromDate.trim();
+    if (params.toDate?.trim()) query.toDate = params.toDate.trim();
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.deallocated, { query });
   },
 
   getActiveNonBenchAllocations(params: { page?: string; size?: string } = {}) {
@@ -414,8 +525,11 @@ export const hrmsService = {
     });
   },
 
+  /** Soft-deletes allocation; response data is the deallocated row. */
   deleteAllocation(allocationId: string) {
-    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.allocation.byId(allocationId));
+    return apiClient.delete<ApiEnvelope<Record<string, unknown>>>(
+      endpoints.allocation.byId(allocationId)
+    );
   },
 
   getProjects(params: Record<string, string>) {
@@ -615,13 +729,10 @@ export const hrmsService = {
   },
 
   createAllocationExtensionRequest(payload: {
-    userEmail?: string;
-    projectCode?: string;
-    requestedEndDate?: string;
+    userEmail: string;
+    projectCode: string;
+    requestedEndDate: string;
     reason?: string;
-    user_email?: string;
-    project_code?: string;
-    requested_end_date?: string;
   }) {
     return apiClient.post<ApiEnvelope<number>>(endpoints.allocation.extensionRequest, {
       contentType: "application/json",
@@ -629,42 +740,70 @@ export const hrmsService = {
     });
   },
 
+  /** Active allocation context for extension request form (manager). */
+  getAllocationExtensionContext(params: {
+    userEmail: string;
+    projectCode?: string;
+    projectId?: number;
+  }) {
+    const query: Record<string, string | number> = {
+      userEmail: params.userEmail.trim(),
+    };
+    if (params.projectId != null && Number.isFinite(params.projectId)) {
+      query.projectId = params.projectId;
+    } else if (params.projectCode?.trim()) {
+      query.projectCode = params.projectCode.trim();
+    }
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.extensionContext, {
+      query,
+    });
+  },
+
   /** ROLE_HR / ROLE_ADMIN */
-  listAllocationExtensionRequests(params: {
+  async listAllocationExtensionRequests(params: {
     page?: number;
     size?: number;
     search?: string;
     status?: AllocationExtensionRequestStatus;
   }) {
-    return apiClient.get<ApiEnvelope<ApiPage<AllocationExtensionRequestRow>>>(
-      endpoints.allocation.extensionRequest,
-      { query: params }
-    );
+    const query: Record<string, string | number> = {};
+    if (params.page != null) query.page = params.page;
+    if (params.size != null) query.size = params.size;
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.status) query.status = params.status;
+
+    const res = await apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.extensionRequest, {
+      query,
+    });
+    const page = parseAllocationExtensionListResponse(res);
+    return { ...res, data: page } as ApiEnvelope<ApiPage<AllocationExtensionRequestRow>>;
   },
 
   /** ROLE_HR / ROLE_ADMIN */
-  updateAllocationExtensionRequestStatus(payload: {
-    requestId?: number;
-    request_id?: number;
+  async updateAllocationExtensionRequestStatus(payload: {
+    requestId: number;
     status: Exclude<AllocationExtensionRequestStatus, "PENDING">;
   }) {
-    return apiClient.put<ApiEnvelope<number>>(endpoints.allocation.extensionStatus, {
+    const res = await apiClient.put<ApiEnvelope<unknown>>(endpoints.allocation.extensionStatus, {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
+    return res;
   },
 
   /** ROLE_MANAGER (also allowed for HR/Admin per backend contract) */
-  listManagerAllocationExtensionStatus(params: {
+  async listManagerAllocationExtensionStatus(params: {
     page?: number;
     size?: number;
     search?: string;
     projectCode?: string;
   }) {
-    return apiClient.get<ApiEnvelope<ApiPage<AllocationExtensionRequestRow>>>(
+    const res = await apiClient.get<ApiEnvelope<unknown>>(
       endpoints.allocation.managerExtensionStatus,
       { query: params }
     );
+    const page = parseAllocationExtensionListResponse(res);
+    return { ...res, data: page } as ApiEnvelope<ApiPage<AllocationExtensionRequestRow>>;
   },
 
   getWorkforceHeadcountDistribution(params: {

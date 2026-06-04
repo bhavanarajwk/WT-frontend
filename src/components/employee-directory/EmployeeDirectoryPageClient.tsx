@@ -6,15 +6,10 @@ import { useMemo, useState } from "react";
 import { DASHBOARD_ROUTES, employeeDirectoryProfilePath } from "@/constants/routes";
 import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmployeeDirectoryAccess";
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
-import { useEmployeeResumes } from "@/hooks/resumes/useEmployeeResumes";
-import { EmployeeResumeLink } from "@/components/resumes/EmployeeResumeLink";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { buildResumeShareLinkIndex, lookupResumeShareLink } from "@/utils/employeeResume";
-import { canFetchEmployeeResumeApi } from "@/utils/roles";
 import {
   cleanEmployeeName,
   onboardRowToListRow,
-  rowEmail,
   rowEmpId,
 } from "@/utils/employeeDirectory";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
@@ -28,7 +23,6 @@ import {
 
 const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "name", label: "Employee Name" },
-  { key: "email", label: "Email" },
   { key: "department", label: "Department" },
   { key: "role", label: "Role" },
   { key: "band", label: "Band" },
@@ -38,26 +32,17 @@ const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "user_type", label: "User Type" },
   { key: "work_mode", label: "Work Mode" },
   { key: "phone_number", label: "Phone" },
-  { key: "primary_skills", label: "Primary Skills" },
 ];
 
 export function EmployeeDirectoryPageClient() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [sortId, setSortId] = useState("doj_desc");
-  const { authStatus, canView: canViewDirectory, queriesEnabled, roles } =
+  const { authStatus, canView: canViewDirectory, queriesEnabled } =
     useEmployeeDirectoryAccess();
   const { data: rows = [], isLoading, isError, error, refetch } = useEmployeeDirectoryList({
     enabled: queriesEnabled,
   });
-  const { data: resumePayload } = useEmployeeResumes({
-    enabled: queriesEnabled && canFetchEmployeeResumeApi(roles),
-  });
-
-  const resumeLinkIndex = useMemo(
-    () => buildResumeShareLinkIndex(resumePayload?.rows ?? []),
-    [resumePayload]
-  );
 
   const tableRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -167,13 +152,10 @@ export function EmployeeDirectoryPageClient() {
                           {col.label}
                         </th>
                       ))}
-                      <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                        Resume
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-wt-border">
-                    {pagination.pageItems.map(({ empId, display, record }) => (
+                    {pagination.pageItems.map(({ empId, display }) => (
                       <tr
                         key={empId}
                         className="cursor-pointer transition hover:bg-blue-50/50 dark:hover:bg-wt-surface-2"
@@ -189,14 +171,7 @@ export function EmployeeDirectoryPageClient() {
                         aria-label={`View profile for ${display.name}`}
                       >
                         {LIST_COLUMNS.map((col) => (
-                          <td
-                            key={col.key}
-                            className={`px-4 py-3 ${
-                              col.key === "primary_skills"
-                                ? "max-w-[14rem] whitespace-normal text-xs"
-                                : "whitespace-nowrap"
-                            }`}
-                          >
+                          <td key={col.key} className="whitespace-nowrap px-4 py-3">
                             {col.key === "status" ? (
                               <EmployeeStatusBadge status={display.status} />
                             ) : col.key === "name" ? (
@@ -206,18 +181,6 @@ export function EmployeeDirectoryPageClient() {
                             )}
                           </td>
                         ))}
-                        <td
-                          className="whitespace-nowrap px-4 py-3"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <EmployeeResumeLink
-                            href={lookupResumeShareLink(resumeLinkIndex, {
-                              empId,
-                              userId: String(record.user_id ?? record.userId ?? "").trim(),
-                              email: rowEmail(record),
-                            })}
-                          />
-                        </td>
                       </tr>
                     ))}
                   </tbody>

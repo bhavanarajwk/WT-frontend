@@ -28,7 +28,8 @@ import {
   createEmptyMaterialForm,
   createEmptySessionForm,
 } from "@/utils/learningFormState";
-import { participantRowUserId } from "@/utils/learning/participants";
+import { participantRowDisplayLabel, participantRowUserId } from "@/utils/learning/participants";
+import { cleanEmployeeName } from "@/utils/employeeDirectory";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
@@ -210,10 +211,8 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         .map((row) => {
           const id = participantRowUserId(row);
           if (!id) return null;
-          const name = String(row.name ?? "Employee").trim() || "Employee";
-          const email = String(row.email ?? "").trim();
           const status = String(row.enrollment_status ?? row.enrollmentStatus ?? "ENROLLED").trim();
-          return { id, label: `${name}${email ? ` (${email})` : ""} — ${status}` };
+          return { id, label: `${participantRowDisplayLabel(row, id)} — ${status}` };
         })
         .filter((row): row is { id: string; label: string } => Boolean(row)),
     [participantsQ.data]
@@ -433,7 +432,9 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                     if (!uid) return null;
                     return {
                       value: uid,
-                      label: `${row.name ?? "Trainer"} (${row.email ?? uid})`,
+                      label: cleanEmployeeName({
+                        name: String(row.name ?? row.employee_name ?? "Trainer").trim() || "Trainer",
+                      }),
                     };
                   })
                   .filter((row): row is { value: string; label: string } => Boolean(row))}

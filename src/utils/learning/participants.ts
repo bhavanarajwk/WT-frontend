@@ -1,4 +1,33 @@
 import { extractFirstObjectArray, toPagedRows } from "@/utils/apiRows";
+import { cleanEmployeeName } from "@/utils/employeeDirectory";
+
+function participantRowName(row: Record<string, unknown>): string {
+  const nested =
+    (row.user as Record<string, unknown> | undefined) ??
+    (row.employee as Record<string, unknown> | undefined);
+  return String(
+    row.name ??
+      row.full_name ??
+      row.fullName ??
+      row.display_name ??
+      row.displayName ??
+      row.employee_name ??
+      row.employeeName ??
+      nested?.name ??
+      nested?.full_name ??
+      nested?.fullName ??
+      ""
+  ).trim();
+}
+
+function participantRowEmpId(row: Record<string, unknown>): string {
+  const nested =
+    (row.user as Record<string, unknown> | undefined) ??
+    (row.employee as Record<string, unknown> | undefined);
+  return String(
+    row.emp_id ?? row.empId ?? row.employee_id ?? row.employeeId ?? nested?.emp_id ?? nested?.empId ?? ""
+  ).trim();
+}
 
 function rowLooksLikeTrainingParticipant(row: Record<string, unknown>): boolean {
   if (
@@ -185,42 +214,15 @@ export function participantRowUserId(row: Record<string, unknown>): string {
   return "";
 }
 
-/** Human-readable label for a participant row (name, email, or fallback). */
+/** Human-readable label for UI (employee name only — never email). */
 export function participantRowDisplayLabel(row: Record<string, unknown>, userId: string): string {
-  if (userId.startsWith("email:")) {
-    return userId.slice("email:".length) || "Trainee";
-  }
-  const nested =
-    (row.user as Record<string, unknown> | undefined) ??
-    (row.employee as Record<string, unknown> | undefined);
-  const name = String(
-    row.name ??
-      row.full_name ??
-      row.fullName ??
-      row.display_name ??
-      row.displayName ??
-      row.employee_name ??
-      row.employeeName ??
-      nested?.name ??
-      nested?.full_name ??
-      nested?.fullName ??
-      ""
-  ).trim();
-  const email = String(
-    row.email ??
-      row.user_email ??
-      row.userEmail ??
-      row.employee_email ??
-      row.employeeEmail ??
-      nested?.email ??
-      nested?.user_email ??
-      nested?.userEmail ??
-      ""
-  ).trim();
-  if (name && email) return `${name} (${email})`;
-  if (name) return name;
-  if (email) return email;
-  return `User #${userId}`;
+  const name = cleanEmployeeName({ name: participantRowName(row) || "Employee" });
+  if (name && name !== "Employee") return name;
+  const empId = participantRowEmpId(row);
+  if (empId) return empId;
+  if (userId.startsWith("email:")) return "—";
+  const id = String(userId).trim();
+  return id ? `User #${id}` : "—";
 }
 
 /**

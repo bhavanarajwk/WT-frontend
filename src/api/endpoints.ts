@@ -44,6 +44,7 @@ export const endpoints = {
 
   allocation: {
     root: `${api}/allocation`,
+    deallocated: `${api}/allocation/deallocated`,
     activeNonBench: `${api}/allocation/active-non-bench`,
     byId: (allocationId: string) => `${api}/allocation/${encodeURIComponent(allocationId)}`,
     updateLegacy: `${api}/allocation/update`,
@@ -54,7 +55,13 @@ export const endpoints = {
     user: `${api}/allocation/user`,
     forecasting: `${api}/allocation/forecasting`,
     benchForecast: `${api}/allocation/bench-forecast`,
+    talentPool: `${api}/allocation/talent-pool`,
+    talentPoolUnallocated: `${api}/allocation/talent-pool/unallocated`,
+    talentPoolNonBillable: `${api}/allocation/talent-pool/non-billable`,
+    talentPoolDashboard: `${api}/allocation/talent-pool/dashboard`,
+    benchUsers: `${api}/allocation/bench-users`,
     extensionRequest: `${api}/allocation-extension-request`,
+    extensionContext: `${api}/allocation-extension-request/context`,
     extensionStatus: `${api}/allocation-extension-request/status`,
     managerExtensionStatus: `${api}/manager/allocation-extension-status`,
   },

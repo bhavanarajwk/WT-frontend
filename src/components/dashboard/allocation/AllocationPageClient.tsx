@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
@@ -28,6 +29,8 @@ import {
   ALLOCATION_FORECAST_DAYS,
   ALLOCATION_FORECAST_PAGE,
   ALLOCATION_FORECAST_SIZE,
+  ALLOCATION_DEALLOCATED_PAGE,
+  ALLOCATION_DEALLOCATED_SIZE,
   ALLOCATION_LIST_PAGE,
   ALLOCATION_LIST_SIZE,
 } from "@/constants/allocationApi";
@@ -115,9 +118,19 @@ import {
   createEmptyProjectForm,
 } from "@/utils/allocationFormState";
 import {
+  allocationRowId,
+  isEditableAllocationRow,
+  isSupersededAllocationRow,
+  mergeAllocationListAfterUpdate,
   parseAllocationForecastRows,
   parseAllocationListRows,
+  parseAllocationUpdateResponse,
+  parseDeallocatedAllocationDeleteResponse,
+  parseDeallocatedAllocationListRows,
+  sortAllocationListRows,
 } from "@/utils/allocationList";
+import { TALENT_POOL_QUERY_KEY } from "@/hooks/allocation/useTalentPool";
+import { BENCH_FORECAST_QUERY_KEY } from "@/hooks/allocation/useBenchForecastList";
 
 
 
@@ -136,6 +149,8 @@ export function AllocationPageClient() {
   const { user, signOut, refresh: refreshSession } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const talentPoolPrefillHandled = useRef<string | null>(null);
   const { metrics, loading, refresh } = useOverviewData();
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -156,6 +171,11 @@ export function AllocationPageClient() {
   invitedListFromDateRef.current = invitedListFromDate;
   invitedListToDateRef.current = invitedListToDate;
   const [allocations, setAllocations] = useState<Array<Record<string, unknown>>>([]);
+  const [deallocatedAllocations, setDeallocatedAllocations] = useState<
+    Array<Record<string, unknown>>
+  >([]);
+  const [deallocatedLoading, setDeallocatedLoading] = useState(false);
+  const [deallocatedLoadError, setDeallocatedLoadError] = useState<string | null>(null);
   const [allocationsLoading, setAllocationsLoading] = useState(false);
   const [allocationsLoadError, setAllocationsLoadError] = useState<string | null>(null);
   const [allocationForecastRows, setAllocationForecastRows] = useState<Array<Record<string, unknown>>>([]);
@@ -2182,18 +2202,8 @@ export function AllocationPageClient() {
     []
   );
 
-  const loadAllocationsForHr = useCallback(async () => {
-    setAllocationsLoading(true);
-    setAllocationsLoadError(null);
-    let rows: Array<Record<string, unknown>> = [];
-    try {
-      const res = await hrmsService.getAllocations({
-        page: ALLOCATION_LIST_PAGE,
-        size: ALLOCATION_LIST_SIZE,
-      });
-      rows = parseAllocationListRows((res as { data?: unknown }).data ?? res);
-
-      let onboardUsers: Array<Record<string, unknown>> = [];
+  const buildAllocationDisplayContext = useCallback(async () => {
+    let onboardUsers: Array<Record<string, unknown>> = [];
     let projectRows: Array<Record<string, unknown>> = [];
     await Promise.all([
       (async () => {
@@ -2213,53 +2223,71 @@ export function AllocationPageClient() {
         }
       })(),
     ]);
-
     const userIdToName = buildUserIdToNameMap(onboardUsers);
     const emailToName = buildEmailToNameMap(onboardUsers);
     const projectDisplayByCode = buildProjectCodeDisplayMap(projectRows);
+    return { userIdToName, emailToName, projectDisplayByCode, onboardUsers };
+  }, [loadAllProjectsForHr]);
 
-    const emailsToResolve = [
-      ...new Set(
-        rows.flatMap((r) => {
-          const em = allocationRowEmail(r);
-          if (!em) return [];
-          const uid = String(r.user_id ?? r.userId ?? r.userID ?? "").trim();
-          if (uid && userIdToName[uid]) return [];
-          if (emailToName[em]) return [];
-          return [em];
-        })
-      ),
-    ];
-
-    await Promise.all(
-      emailsToResolve.map(async (email) => {
-        try {
-          const userRes = await hrmsService.getUser({ email });
-          const raw = (userRes as { data?: unknown })?.data;
-          const payload =
-            raw && typeof raw === "object"
-              ? (raw as Record<string, unknown>)
-              : userRes && typeof userRes === "object"
-                ? (userRes as unknown as Record<string, unknown>)
-                : null;
-          const nested =
-            (payload?.user as Record<string, unknown> | undefined)?.name ??
-            (payload?.profile as Record<string, unknown> | undefined)?.name;
-          const name = String(payload?.name ?? nested ?? "").trim();
-          if (name) emailToName[email] = name;
-        } catch {
-          /* ignore */
-        }
-      })
-    );
-
-      setAllocations(
-        enrichAllocationRowsForDisplay(rows, {
-          userIdToName,
-          emailToName,
-          projectDisplayByCode,
+  const enrichAllocationRowsWithContext = useCallback(
+    async (rows: Array<Record<string, unknown>>) => {
+      const { userIdToName, emailToName, projectDisplayByCode } =
+        await buildAllocationDisplayContext();
+      const emailsToResolve = [
+        ...new Set(
+          rows.flatMap((r) => {
+            const em = allocationRowEmail(r);
+            if (!em) return [];
+            const uid = String(r.user_id ?? r.userId ?? r.userID ?? "").trim();
+            if (uid && userIdToName[uid]) return [];
+            if (emailToName[em]) return [];
+            return [em];
+          })
+        ),
+      ];
+      await Promise.all(
+        emailsToResolve.map(async (email) => {
+          try {
+            const userRes = await hrmsService.getUser({ email });
+            const raw = (userRes as { data?: unknown })?.data;
+            const payload =
+              raw && typeof raw === "object"
+                ? (raw as Record<string, unknown>)
+                : userRes && typeof userRes === "object"
+                  ? (userRes as unknown as Record<string, unknown>)
+                  : null;
+            const nested =
+              (payload?.user as Record<string, unknown> | undefined)?.name ??
+              (payload?.profile as Record<string, unknown> | undefined)?.name;
+            const name = String(payload?.name ?? nested ?? "").trim();
+            if (name) emailToName[email] = name;
+          } catch {
+            /* ignore */
+          }
         })
       );
+      return enrichAllocationRowsForDisplay(rows, {
+        userIdToName,
+        emailToName,
+        projectDisplayByCode,
+      });
+    },
+    [buildAllocationDisplayContext]
+  );
+
+  const loadAllocationsForHr = useCallback(async () => {
+    setAllocationsLoading(true);
+    setAllocationsLoadError(null);
+    try {
+      const res = await hrmsService.getAllocations({
+        page: ALLOCATION_LIST_PAGE,
+        size: ALLOCATION_LIST_SIZE,
+        includeSuperseded: "true",
+      });
+      const rows = sortAllocationListRows(
+        parseAllocationListRows((res as { data?: unknown }).data ?? res)
+      );
+      setAllocations(await enrichAllocationRowsWithContext(rows));
     } catch (err) {
       setAllocations([]);
       setAllocationsLoadError(
@@ -2268,7 +2296,45 @@ export function AllocationPageClient() {
     } finally {
       setAllocationsLoading(false);
     }
-  }, [loadAllProjectsForHr]);
+  }, [enrichAllocationRowsWithContext]);
+
+  const loadDeallocatedAllocationsForHr = useCallback(async () => {
+    setDeallocatedLoading(true);
+    setDeallocatedLoadError(null);
+    try {
+      const res = await hrmsService.getDeallocatedAllocations({
+        page: ALLOCATION_DEALLOCATED_PAGE,
+        size: ALLOCATION_DEALLOCATED_SIZE,
+      });
+      const rows = parseDeallocatedAllocationListRows((res as { data?: unknown }).data ?? res);
+      setDeallocatedAllocations(await enrichAllocationRowsWithContext(rows));
+    } catch (err) {
+      setDeallocatedAllocations([]);
+      setDeallocatedLoadError(
+        err instanceof Error ? err.message : "Could not load deallocated allocation records."
+      );
+    } finally {
+      setDeallocatedLoading(false);
+    }
+  }, [enrichAllocationRowsWithContext]);
+
+  const prependDeallocatedRowFromDelete = useCallback(
+    async (res: unknown) => {
+      const row = parseDeallocatedAllocationDeleteResponse(res);
+      if (!row) {
+        await loadDeallocatedAllocationsForHr();
+        return;
+      }
+      const [enriched] = await enrichAllocationRowsWithContext([row]);
+      if (!enriched) return;
+      const id = allocationRowId(enriched);
+      setDeallocatedAllocations((prev) => {
+        const without = id ? prev.filter((r) => allocationRowId(r) !== id) : prev;
+        return [enriched, ...without];
+      });
+    },
+    [enrichAllocationRowsWithContext, loadDeallocatedAllocationsForHr]
+  );
 
   const loadAllocationForecasting = useCallback(async () => {
     setAllocationForecastLoading(true);
@@ -2324,15 +2390,24 @@ export function AllocationPageClient() {
     if (!hasHrAccess || requiresSelfOnboarding) return;
     const id = window.setTimeout(() => {
       void loadAllocationsForHr();
+      void loadDeallocatedAllocationsForHr();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [user, userRoles, hasHrAccess, requiresSelfOnboarding, loadAllocationsForHr]);
+  }, [
+    user,
+    userRoles,
+    hasHrAccess,
+    requiresSelfOnboarding,
+    loadAllocationsForHr,
+    loadDeallocatedAllocationsForHr,
+  ]);
   useEffect(() => {
     if (!user) return;
     if (!hasHrAccess || requiresSelfOnboarding) return;
     if (allocationHrSubTab !== "list") return;
     const id = window.setTimeout(() => {
       void loadAllocationsForHr();
+      void loadDeallocatedAllocationsForHr();
       void loadAllocationForecasting();
     }, 0);
     return () => window.clearTimeout(id);
@@ -2343,8 +2418,30 @@ export function AllocationPageClient() {
     hasHrAccess,
     requiresSelfOnboarding,
     loadAllocationsForHr,
+    loadDeallocatedAllocationsForHr,
     loadAllocationForecasting,
   ]);
+
+  useEffect(() => {
+    if (!hasHrAccess) return;
+    const email =
+      searchParams.get("employeeEmail")?.trim() ||
+      searchParams.get("userEmail")?.trim() ||
+      "";
+    if (!email) {
+      talentPoolPrefillHandled.current = null;
+      return;
+    }
+    if (talentPoolPrefillHandled.current === email) return;
+    talentPoolPrefillHandled.current = email;
+    setAllocationForm((prev) => ({ ...prev, employee_email: email }));
+    setAllocationHrSubTab("allocate");
+    void loadAllocationProjectsForPickers().then(setAllocationProjects);
+    requestAnimationFrame(() => {
+      allocationFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [hasHrAccess, searchParams, loadAllocationProjectsForPickers]);
+
   const filteredProjects = useMemo(() => {
     const search = projectFilters.search.trim().toLowerCase();
     const filtered = projects.filter((project) => {
@@ -2364,6 +2461,7 @@ export function AllocationPageClient() {
     resetKeys: [projectFilters.search, projectFilters.project_type, projectSortId],
   });
   const allocationPagination = useClientPagination(allocations);
+  const deallocatedPagination = useClientPagination(deallocatedAllocations);
   const normalizedManagerProjects = useMemo(() => {
     const sourceRows = managerProjects.length ? managerProjects : managerPortfolioRows;
     return Array.from(
@@ -3279,6 +3377,7 @@ export function AllocationPageClient() {
                                   onClick={() => {
                                     setAllocationHrSubTab("list");
                                     void loadAllocationsForHr();
+                                    void loadDeallocatedAllocationsForHr();
                                     void loadAllocationForecasting();
                                   }}
                                   className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -3704,8 +3803,24 @@ export function AllocationPageClient() {
                                             : allocationForm.allocation_type,
                                           billingStatus: allocationForm.billing_status,
                                         };
-                                        if (editingAllocationId) {
-                                          await hrmsService.updateAllocation(editingAllocationId, payload);
+                                        const savedEditingId = editingAllocationId;
+                                        if (savedEditingId) {
+                                          const updateRes = await hrmsService.updateAllocation(
+                                            savedEditingId,
+                                            payload
+                                          );
+                                          const supersede = parseAllocationUpdateResponse(updateRes);
+                                          if (supersede) {
+                                            setAllocations((prev) =>
+                                              sortAllocationListRows(
+                                                mergeAllocationListAfterUpdate(
+                                                  prev,
+                                                  supersede,
+                                                  savedEditingId
+                                                )
+                                              )
+                                            );
+                                          }
                                         } else {
                                           await hrmsService.createAllocation(payload);
                                           setPmAssignPrefill({
@@ -3715,8 +3830,17 @@ export function AllocationPageClient() {
                                         }
                                         setAllocationForm(createEmptyAllocationForm());
                                         setEditingAllocationId("");
+                                        void queryClient.invalidateQueries({
+                                          queryKey: TALENT_POOL_QUERY_KEY,
+                                        });
+                                        void queryClient.invalidateQueries({
+                                          queryKey: BENCH_FORECAST_QUERY_KEY,
+                                        });
                                         await loadAllocationsForHr();
-                                        if (!editingAllocationId) {
+                                        if (savedEditingId) {
+                                          await loadDeallocatedAllocationsForHr();
+                                        }
+                                        if (!savedEditingId) {
                                           setAllocationHrSubTab("assign-pm");
                                         } else {
                                           setAllocationHrSubTab("list");
@@ -3732,7 +3856,10 @@ export function AllocationPageClient() {
                                     className="rounded-lg p-2 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
                                     onClick={() =>
                                       runAction("Load allocations", async () => {
-                                        await loadAllocationsForHr();
+                                        await Promise.all([
+                                          loadAllocationsForHr(),
+                                          loadDeallocatedAllocationsForHr(),
+                                        ]);
                                         setAllocationHrSubTab("list");
                                         requestAnimationFrame(() => {
                                           allocationRecordsRef.current?.scrollIntoView({
@@ -3769,7 +3896,12 @@ export function AllocationPageClient() {
                                   className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2"
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-sm font-medium">Allocation Records</p>
+                                    <div>
+                                      <p className="text-sm font-medium">Allocation records</p>
+                                      <p className="text-xs text-wt-text-muted">
+                                        Grey rows are superseded history; edit the active row only.
+                                      </p>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs text-wt-text-muted">
                                         {allocationsLoading
@@ -3780,7 +3912,10 @@ export function AllocationPageClient() {
                                         type="button"
                                         className="rounded-lg border border-wt-border bg-wt-surface-1 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
                                         disabled={allocationsLoading || actionLoading}
-                                        onClick={() => void loadAllocationsForHr()}
+                                        onClick={() => {
+                                          void loadAllocationsForHr();
+                                          void loadDeallocatedAllocationsForHr();
+                                        }}
                                       >
                                         Refresh
                                       </button>
@@ -3841,8 +3976,17 @@ export function AllocationPageClient() {
                                             const billingStatus = String(
                                               row.billing_status ?? row.billingStatus ?? "BILLED"
                                             ).trim();
+                                            const superseded = isSupersededAllocationRow(row);
+                                            const editable = isEditableAllocationRow(row);
                                             return (
-                                              <tr key={`${allocationId || "alloc"}-${idx}`} className="border-t border-wt-border">
+                                              <tr
+                                                key={`${allocationId || "alloc"}-${idx}`}
+                                                className={`border-t border-wt-border ${
+                                                  superseded
+                                                    ? "bg-wt-surface-2/60 text-wt-text-muted opacity-75"
+                                                    : ""
+                                                }`}
+                                              >
                                                 <td className="px-3 py-2 whitespace-nowrap">{String(row.allocated_project ?? "—")}</td>
                                                 <td className="px-3 py-2 whitespace-nowrap">{String(row.employee_name ?? "—")}</td>
                                                 <td className="px-3 py-2 whitespace-nowrap">{String(row.role ?? "—")}</td>
@@ -3860,10 +4004,14 @@ export function AllocationPageClient() {
                                                   <div className="inline-flex items-center justify-end gap-1">
                                                     <button
                                                       type="button"
-                                                      className="rounded-lg p-2 text-wt-text-muted hover:bg-wt-surface-1 hover:text-wt-text"
+                                                      className="rounded-lg p-2 text-wt-text-muted hover:bg-wt-surface-1 hover:text-wt-text disabled:opacity-40 disabled:pointer-events-none"
                                                       aria-label={`Edit allocation ${allocationId || idx}`}
-                                                      title="Edit allocation"
-                                                      disabled={actionLoading}
+                                                      title={
+                                                        editable
+                                                          ? "Edit allocation"
+                                                          : "Superseded — edit the active row"
+                                                      }
+                                                      disabled={actionLoading || !editable}
                                                       onClick={(e) => {
                                                         e.stopPropagation();
                                                         setAllocationForm((prev) => ({
@@ -3914,15 +4062,30 @@ export function AllocationPageClient() {
                                                     </button>
                                                     <button
                                                       type="button"
-                                                      className="rounded-lg p-2 text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600"
-                                                      aria-label={`Delete allocation ${allocationId || idx}`}
-                                                      title="Delete allocation"
-                                                      disabled={actionLoading || !allocationId}
+                                                      className="rounded-lg p-2 text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 disabled:pointer-events-none"
+                                                      aria-label={`Deallocate ${allocationId || idx}`}
+                                                      title={
+                                                        editable
+                                                          ? "Deallocate from project"
+                                                          : "Superseded row cannot be deallocated here"
+                                                      }
+                                                      disabled={actionLoading || !allocationId || !editable}
                                                       onClick={(e) => {
                                                         e.stopPropagation();
-                                                        runAction("Delete allocation", async () => {
-                                                          await hrmsService.deleteAllocation(allocationId);
-                                                          await loadAllocationsForHr();
+                                                        runAction("Deallocate", async () => {
+                                                          const res =
+                                                            await hrmsService.deleteAllocation(
+                                                              allocationId
+                                                            );
+                                                          setAllocations((prev) =>
+                                                            prev.filter(
+                                                              (r) =>
+                                                                allocationRowId(r) !== allocationId
+                                                            )
+                                                          );
+                                                          await prependDeallocatedRowFromDelete(
+                                                            res
+                                                          );
                                                         });
                                                       }}
                                                     >
@@ -3953,7 +4116,117 @@ export function AllocationPageClient() {
                                     <p className="text-sm text-wt-text-muted">
                                       {allocationsLoadError
                                         ? "Allocation list could not be loaded."
-                                        : "No allocation records found. Create one under Project allocation, then refresh."}
+                                        : "No active allocations. Create one under Project allocation, then refresh."}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2">
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <p className="text-sm font-medium">
+                                      Deallocated employees &amp; managers
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-wt-text-muted">
+                                        {deallocatedLoading
+                                          ? "Loading…"
+                                          : `${deallocatedAllocations.length} row(s)`}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        className="rounded-lg border border-wt-border bg-wt-surface-1 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
+                                        disabled={deallocatedLoading || actionLoading}
+                                        onClick={() => void loadDeallocatedAllocationsForHr()}
+                                      >
+                                        Refresh
+                                      </button>
+                                    </div>
+                                  </div>
+                                  {deallocatedLoadError ? (
+                                    <p className="text-sm text-rose-700">{deallocatedLoadError}</p>
+                                  ) : null}
+                                  {deallocatedLoading && !deallocatedAllocations.length ? (
+                                    <p className="text-sm text-wt-text-muted">Loading deallocated records…</p>
+                                  ) : deallocatedAllocations.length ? (
+                                    <>
+                                      <div className="wt-scroll-both max-h-[min(60vh,480px)] rounded-xl border border-wt-border">
+                                        <table className="min-w-full text-sm">
+                                          <thead className="bg-wt-surface-2 text-wt-text-muted">
+                                            <tr>
+                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                PROJECT
+                                              </th>
+                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                NAME
+                                              </th>
+                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                PROJECT ROLE
+                                              </th>
+                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                ALLOCATION %
+                                              </th>
+                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                END DATE
+                                              </th>
+                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                DEALLOCATED AT
+                                              </th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {deallocatedPagination.pageItems.map((row, idx) => (
+                                                <tr
+                                                  key={`dealloc-${String(row.id ?? row.allocation_id ?? idx)}-${idx}`}
+                                                  className="border-t border-wt-border"
+                                                >
+                                                  <td className="px-3 py-2 whitespace-nowrap">
+                                                    {String(row.allocated_project ?? "—")}
+                                                  </td>
+                                                  <td className="px-3 py-2 whitespace-nowrap">
+                                                    {String(
+                                                      row.employee_name ?? row.employeeName ?? "—"
+                                                    )}
+                                                  </td>
+                                                  <td className="px-3 py-2 whitespace-nowrap">
+                                                    {String(row.role ?? "—")}
+                                                  </td>
+                                                  <td className="px-3 py-2 whitespace-nowrap">
+                                                    {formatAllocatedPercentDisplay(
+                                                      row as Record<string, unknown>,
+                                                      allocationPercentLabels
+                                                    )}
+                                                  </td>
+                                                  <td className="px-3 py-2 whitespace-nowrap">
+                                                    {String(row.end_date ?? row.endDate ?? "—")}
+                                                  </td>
+                                                  <td className="px-3 py-2 whitespace-nowrap">
+                                                    {String(
+                                                      row.deallocatedAt ?? row.deallocated_at ?? "—"
+                                                    )}
+                                                  </td>
+                                                </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                      <ListPagination
+                                        className="mt-3 px-1"
+                                        page={deallocatedPagination.page}
+                                        totalPages={deallocatedPagination.totalPages}
+                                        totalItems={deallocatedPagination.totalItems}
+                                        rangeStart={deallocatedPagination.rangeStart}
+                                        rangeEnd={deallocatedPagination.rangeEnd}
+                                        pageSize={deallocatedPagination.pageSize}
+                                        pageSizeOptions={deallocatedPagination.pageSizeOptions}
+                                        onPageChange={deallocatedPagination.setPage}
+                                        onPageSizeChange={deallocatedPagination.setPageSize}
+                                      />
+                                    </>
+                                  ) : (
+                                    <p className="text-sm text-wt-text-muted">
+                                      {deallocatedLoadError
+                                        ? "Deallocated history could not be loaded."
+                                        : "No deallocated employees or managers on record."}
                                     </p>
                                   )}
                                 </div>

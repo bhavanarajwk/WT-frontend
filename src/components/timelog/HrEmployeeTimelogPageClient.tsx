@@ -17,9 +17,10 @@ import { useClientPagination } from "@/hooks/useClientPagination";
 import { toPagedRows } from "@/utils/apiRows";
 import { cleanEmployeeName, rowEmail } from "@/utils/employeeDirectory";
 import { formatResumeCellValue } from "@/utils/employeeResume";
+import { prepareTableForDisplay, sanitizeTableColumns } from "@/utils/tableDisplay";
 import { todayApiDate } from "@/utils/apiDate";
 
-const LOG_COLUMNS = [
+const LOG_COLUMNS = sanitizeTableColumns([
   "employee_name",
   "employee_email",
   "email",
@@ -28,7 +29,7 @@ const LOG_COLUMNS = [
   "hours",
   "description",
   "status",
-];
+]);
 
 export function HrEmployeeTimelogPageClient() {
   const { user, status: authStatus } = useAuth();
@@ -62,12 +63,17 @@ export function HrEmployeeTimelogPageClient() {
     for (const row of rows) {
       Object.keys(row).forEach((k) => keys.add(k));
     }
-    return [...keys];
+    return sanitizeTableColumns([...keys]);
   }, [rows]);
 
+  const tableDisplay = useMemo(
+    () => prepareTableForDisplay(tableColumns, rows),
+    [tableColumns, rows]
+  );
+
   const sortedRows = useMemo(
-    () => applyListSort(rows, sortId, TIMELOG_SORT_OPTIONS),
-    [rows, sortId]
+    () => applyListSort(tableDisplay.rows, sortId, TIMELOG_SORT_OPTIONS),
+    [tableDisplay.rows, sortId]
   );
 
   const pagination = useClientPagination(sortedRows, {
@@ -193,7 +199,7 @@ export function HrEmployeeTimelogPageClient() {
                 <table className="min-w-full text-sm">
                   <thead className="sticky top-0 z-[1] bg-wt-surface-2 text-wt-text-muted">
                     <tr>
-                      {tableColumns.map((col) => (
+                      {tableDisplay.columns.map((col) => (
                         <th
                           key={col}
                           className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase"
@@ -206,7 +212,7 @@ export function HrEmployeeTimelogPageClient() {
                   <tbody className="divide-y divide-wt-border">
                     {pagination.pageItems.map((row, idx) => (
                       <tr key={idx}>
-                        {tableColumns.map((col) => (
+                        {tableDisplay.columns.map((col) => (
                           <td key={col} className="whitespace-nowrap px-4 py-3">
                             {formatResumeCellValue(row[col])}
                           </td>

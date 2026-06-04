@@ -5,6 +5,7 @@ import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { applyListSort, type ListSortOption } from "@/utils/listSort";
+import { prepareTableForDisplay } from "@/utils/tableDisplay";
 
 export function DataTable({
   title,
@@ -39,10 +40,15 @@ export function DataTable({
   const sortId = controlledSortId ?? internalSortId;
   const setSortId = onSortIdChange ?? setInternalSortId;
 
+  const { columns: displayColumns, rows: displaySourceRows } = useMemo(
+    () => prepareTableForDisplay(columns, rows),
+    [columns, rows]
+  );
+
   const sortedRows = useMemo(() => {
-    if (!sortOptions?.length) return rows;
-    return applyListSort(rows, sortId, sortOptions);
-  }, [rows, sortId, sortOptions]);
+    if (!sortOptions?.length) return displaySourceRows;
+    return applyListSort(displaySourceRows, sortId, sortOptions);
+  }, [displaySourceRows, sortId, sortOptions]);
 
   const pagination = useClientPagination(sortedRows, {
     pageSize: initialPageSize,
@@ -51,7 +57,7 @@ export function DataTable({
 
   const displayRows = paginate ? pagination.pageItems : sortedRows;
 
-  if (!rows.length) {
+  if (!displaySourceRows.length) {
     return (
       <div className="space-y-1">
         {title ? <p className="text-sm font-medium">{title}</p> : null}
@@ -84,7 +90,7 @@ export function DataTable({
         <table className="min-w-full text-sm">
           <thead className="bg-wt-surface-2 text-wt-text-muted">
             <tr>
-              {columns.map((col) => (
+              {displayColumns.map((col) => (
                 <th key={col} className={headCellClass}>
                   {col.replaceAll("_", " ")}
                 </th>
@@ -94,7 +100,7 @@ export function DataTable({
           <tbody>
             {displayRows.map((row, idx) => (
               <tr key={idx} className="border-t border-wt-border">
-                {columns.map((col) => (
+                {displayColumns.map((col) => (
                   <td key={col} className={cellClass}>
                     {row[col] === null || row[col] === undefined ? "—" : String(row[col])}
                   </td>
