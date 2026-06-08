@@ -47,6 +47,7 @@ export const endpoints = {
     deallocated: `${api}/allocation/deallocated`,
     activeNonBench: `${api}/allocation/active-non-bench`,
     byId: (allocationId: string) => `${api}/allocation/${encodeURIComponent(allocationId)}`,
+    employee: `${api}/allocation/employee`,
     updateLegacy: `${api}/allocation/update`,
     roles: `${api}/allocation/roles`,
     percentages: `${api}/allocation/percentages`,
@@ -54,10 +55,8 @@ export const endpoints = {
     projectEmployees: `${api}/allocation/project-employees`,
     user: `${api}/allocation/user`,
     forecasting: `${api}/allocation/forecasting`,
-    benchForecast: `${api}/allocation/bench-forecast`,
     talentPool: `${api}/allocation/talent-pool`,
     talentPoolUnallocated: `${api}/allocation/talent-pool/unallocated`,
-    talentPoolNonBillable: `${api}/allocation/talent-pool/non-billable`,
     talentPoolDashboard: `${api}/allocation/talent-pool/dashboard`,
     benchUsers: `${api}/allocation/bench-users`,
     extensionRequest: `${api}/allocation-extension-request`,
@@ -81,6 +80,8 @@ export const endpoints = {
 
   timelog: {
     root: `${api}/timelog`,
+    options: `${api}/timelog/options`,
+    week: `${api}/timelog/week`,
     byId: (timelogId: string) => `${api}/timelog/${encodeURIComponent(timelogId)}`,
     legacyGetByDate: (empEmail: string, logDate: string) =>
       `${api}/timelog/get/${encodeURIComponent(empEmail)}/${encodeURIComponent(logDate)}`,

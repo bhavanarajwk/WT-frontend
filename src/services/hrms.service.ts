@@ -595,6 +595,23 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<PagedData<unknown>>>(endpoints.timelog.root, { query: params });
   },
 
+  getTimelogOptions() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.options);
+  },
+
+  getTimelogWeek(params: { weekStart: string; employeeEmail?: string }) {
+    const query: Record<string, string> = { weekStart: params.weekStart };
+    if (params.employeeEmail?.trim()) query.employeeEmail = params.employeeEmail.trim();
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.week, { query });
+  },
+
+  saveTimelogWeek(payload: Record<string, unknown>) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.week, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   updateTimelogStatus(payload: {
     timelog_id: number;
     status: "APPROVED" | "REJECTED";
