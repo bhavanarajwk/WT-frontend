@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
   useCreateTraining,
@@ -10,10 +11,15 @@ import {
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
 import { InputField, SelectField, Sheet } from "@/components/learning-development/ui/forms";
-import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useClientPagination } from "@/hooks/useClientPagination";
-import { applyListSort, TRAINING_SORT_OPTIONS } from "@/utils/listSort";
+import {
+  activeSortDirectionForColumn,
+  applyListSort,
+  TRAINING_SORT_OPTIONS,
+  toggleColumnSort,
+} from "@/utils/listSort";
 import { trainingDurationDaysFromRange } from "@/utils/learning/trainingDates";
 import { normalizeToApiDate } from "@/utils/apiDate";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
@@ -36,6 +42,8 @@ function EmployeeTrainingsView() {
 }
 
 function HrTrainingsView() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: rows = [], isLoading, refetch } = useHrTrainingsList();
   const { data: trainerOptions = [] } = useLearningTrainerDirectory();
   const createMut = useCreateTraining();
@@ -76,6 +84,15 @@ function HrTrainingsView() {
     setCreateTrainerId("");
     setSheetOpen(true);
   }
+
+  useEffect(() => {
+    if (!searchParams.get("create")) return;
+    setEditingId(null);
+    setForm(createEmptyTrainingForm());
+    setCreateTrainerId("");
+    setSheetOpen(true);
+    router.replace("/dashboard/learning-development/trainings", { scroll: false });
+  }, [searchParams, router]);
 
   function openEdit(row: Record<string, unknown>) {
     const id = String(row.id ?? "").trim();
@@ -139,9 +156,6 @@ function HrTrainingsView() {
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-wt-border pb-4">
           <div className="min-w-0">
             <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Trainings</h1>
-            <p className="text-sm text-wt-text-muted mt-1">
-              Open a training card to manage sessions, trainers, trainees, attendance, scores, and analytics.
-            </p>
           </div>
           <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
             <button
@@ -157,29 +171,38 @@ function HrTrainingsView() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-          <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="min-w-0 w-full sm:max-w-md sm:flex-1">
-              <InputField label="Search" value={search} onChange={setSearch} />
-            </div>
-            <div className="w-full sm:w-52 sm:flex-shrink-0">
-              <SelectField
-                label="Status"
-                value={statusFilter}
-                options={["ALL", "DRAFT", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]}
-                onChange={setStatusFilter}
-              />
-            </div>
-            <ListSortSelect
-              value={sortId}
-              onChange={setSortId}
-              options={sortOptionMeta(TRAINING_SORT_OPTIONS)}
-              className="w-full sm:w-52 sm:flex-shrink-0"
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="min-w-0 w-full sm:max-w-md sm:flex-1">
+            <InputField label="Search" value={search} onChange={setSearch} />
+          </div>
+          <div className="w-full sm:w-52 sm:flex-shrink-0">
+            <SelectField
+              label="Status"
+              value={statusFilter}
+              options={["ALL", "DRAFT", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]}
+              onChange={setStatusFilter}
             />
           </div>
-          <p className="text-sm text-wt-text-muted sm:whitespace-nowrap sm:pb-2 sm:text-right">
-            {isLoading ? "Loading…" : `${filtered.length} result(s)`}
-          </p>
+          <div className="flex flex-wrap items-center gap-3 pb-2">
+            <TableSortHeader
+              label="Date"
+              activeDirection={activeSortDirectionForColumn(
+                "start_date",
+                sortId,
+                TRAINING_SORT_OPTIONS
+              )}
+              sortable
+              onSort={() =>
+                setSortId(toggleColumnSort("start_date", sortId, TRAINING_SORT_OPTIONS))
+              }
+            />
+            <TableSortHeader
+              label="Name"
+              activeDirection={activeSortDirectionForColumn("name", sortId, TRAINING_SORT_OPTIONS)}
+              sortable
+              onSort={() => setSortId(toggleColumnSort("name", sortId, TRAINING_SORT_OPTIONS))}
+            />
+          </div>
         </div>
 
         {isLoading ? (

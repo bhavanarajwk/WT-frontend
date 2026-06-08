@@ -7,7 +7,7 @@ import {
   normalizeParticipantRows,
   participantListFromApiEnvelope,
 } from "@/utils/learning/participants";
-import { normalizeTrainingTrainerRows } from "@/utils/learning/trainers";
+import { normalizeTrainingTrainerRows, trainerListFromApiEnvelope } from "@/utils/learning/trainers";
 import {
   normalizeMyTrainingMarks,
   normalizeTrainingScoresHrSnapshot,
@@ -166,6 +166,7 @@ export function useTrainingAnalytics(trainingId: string | undefined, enabled: bo
   });
 }
 
+/** GET /api/v1/trainings/{training_id}/trainers — list trainers for a training. */
 export function useTrainingTrainers(trainingId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: ["learning", "trainers", trainingId],
@@ -173,7 +174,11 @@ export function useTrainingTrainers(trainingId: string | undefined, enabled: boo
     staleTime: 30_000,
     queryFn: async () => {
       const res = await hrmsService.getTrainingTrainers(trainingId!);
-      return normalizeTrainingTrainerRows((res as { data?: unknown }).data ?? res);
+      const fromEnvelope = trainerListFromApiEnvelope(res);
+      const raw = fromEnvelope.length
+        ? fromEnvelope
+        : toPagedRows((res as { data?: unknown }).data ?? res);
+      return normalizeTrainingTrainerRows(raw);
     },
   });
 }

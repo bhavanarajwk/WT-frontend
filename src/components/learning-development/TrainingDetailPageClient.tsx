@@ -20,16 +20,22 @@ import { EmployeeTrainingMyMarks } from "@/components/learning-development/Emplo
 import { ScoresPageClient } from "@/components/learning-development/ScoresPageClient";
 import { TrainingStatusControl } from "@/components/learning-development/TrainingStatusControl";
 import { SelectField } from "@/components/dashboard/ui/forms";
+import { AssignedTrainersList } from "@/components/learning-development/AssignedTrainersList";
+import { MaterialVisibilityBadge } from "@/components/learning-development/MaterialVisibilityBadge";
+import { TrainingParticipantsList } from "@/components/learning-development/TrainingParticipantsList";
 import { DataTable, FileField, InputField } from "@/components/learning-development/ui/forms";
-import { PARTICIPANT_SORT_OPTIONS, SESSION_SORT_OPTIONS, TITLE_SORT_OPTIONS } from "@/utils/listSort";
+import { SESSION_SORT_OPTIONS, TITLE_SORT_OPTIONS } from "@/utils/listSort";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import {
   createEmptyAssessmentForm,
   createEmptyMaterialForm,
   createEmptySessionForm,
 } from "@/utils/learningFormState";
-import { participantRowDisplayLabel, participantRowUserId } from "@/utils/learning/participants";
-import { cleanEmployeeName } from "@/utils/employeeDirectory";
+import { participantRowUserId } from "@/utils/learning/participants";
+import {
+  isMaterialVisibility,
+  MATERIAL_VISIBILITY_OPTIONS,
+} from "@/utils/learning/materialVisibility";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
@@ -50,7 +56,7 @@ const EMPLOYEE_TABS = [
   { id: "overview", label: "Overview" },
   { id: "materials", label: "Materials" },
   { id: "assessments", label: "Assessments" },
-  { id: "scored", label: "Scored" },
+  { id: "scores", label: "Scores" },
 ] as const;
 
 const ANALYTICS_LABELS: Record<string, string> = {
@@ -66,7 +72,11 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   const searchParams = useSearchParams();
   const rawTab = searchParams.get("tab") ?? "overview";
   const tab =
-    rawTab === "analytics" ? "overview" : rawTab === "marks" ? "scored" : rawTab;
+    rawTab === "analytics"
+      ? "overview"
+      : rawTab === "marks" || rawTab === "scored"
+        ? "scores"
+        : rawTab;
 
   const { user } = useAuth();
   const roles = user?.roles ?? [];
@@ -134,12 +144,9 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   const [sessionForm, setSessionForm] = useState(createEmptySessionForm);
 
   const [trainerPick, setTrainerPick] = useState("");
-  const [removeTrainerPick, setRemoveTrainerPick] = useState("");
+  const [removingTrainerId, setRemovingTrainerId] = useState<string | null>(null);
   const [participantPick, setParticipantPick] = useState("");
-  const [participantStatusUserId, setParticipantStatusUserId] = useState("");
-  const [participantStatusValue, setParticipantStatusValue] = useState<"COMPLETED" | "WITHDRAWN">(
-    "COMPLETED"
-  );
+  const [updatingParticipantId, setUpdatingParticipantId] = useState<string | null>(null);
   const [materialForm, setMaterialForm] = useState(createEmptyMaterialForm);
   const [materialFile, setMaterialFile] = useState<File | null>(null);
   const [assessmentForm, setAssessmentForm] = useState(createEmptyAssessmentForm);
@@ -169,13 +176,17 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
       await qc.invalidateQueries({ queryKey: ["learning", "training", tid] });
     });
 
-  const removeTrainer = () =>
+  const removeTrainerById = (trainerUserId: string) =>
     void runAction("Remove trainer", async () => {
-      const idNum = await resolveLearningTrainerUserId(removeTrainerPick);
-      await hrmsService.removeTrainer(tid, String(idNum));
-      setRemoveTrainerPick("");
-      await qc.invalidateQueries({ queryKey: ["learning", "trainers", tid] });
-      await qc.invalidateQueries({ queryKey: ["learning", "training", tid] });
+      setRemovingTrainerId(trainerUserId);
+      try {
+        const idNum = await resolveLearningTrainerUserId(trainerUserId);
+        await hrmsService.removeTrainer(tid, String(idNum));
+        await qc.invalidateQueries({ queryKey: ["learning", "trainers", tid] });
+        await qc.invalidateQueries({ queryKey: ["learning", "training", tid] });
+      } finally {
+        setRemovingTrainerId(null);
+      }
     });
 
   const addParticipantMut = useMutation({
@@ -189,34 +200,16 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
     },
   });
 
-  const updateParticipantStatusMut = useMutation({
-    mutationFn: async () => {
-      if (!participantStatusUserId.trim()) throw new Error("Please select a trainee.");
-      await hrmsService.updateTrainingParticipantStatus(
-        tid,
-        participantStatusUserId,
-        participantStatusValue
-      );
-    },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["learning", "participants", tid] });
-      setParticipantStatusUserId("");
-      setParticipantStatusValue("COMPLETED");
-    },
-  });
-
-  const participantStatusOptions = useMemo(
-    () =>
-      (participantsQ.data ?? [])
-        .map((row) => {
-          const id = participantRowUserId(row);
-          if (!id) return null;
-          const status = String(row.enrollment_status ?? row.enrollmentStatus ?? "ENROLLED").trim();
-          return { id, label: `${participantRowDisplayLabel(row, id)} — ${status}` };
-        })
-        .filter((row): row is { id: string; label: string } => Boolean(row)),
-    [participantsQ.data]
-  );
+  const updateParticipantStatus = (userId: string, status: "COMPLETED" | "WITHDRAWN") =>
+    void runAction("Update trainee status", async () => {
+      setUpdatingParticipantId(userId);
+      try {
+        await hrmsService.updateTrainingParticipantStatus(tid, userId, status);
+        await qc.invalidateQueries({ queryKey: ["learning", "participants", tid] });
+      } finally {
+        setUpdatingParticipantId(null);
+      }
+    });
 
   const uploadMaterialMut = useMutation({
     mutationFn: async () => {
@@ -256,18 +249,54 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
 
   const analyticsCards = useMemo(() => {
     const a = analyticsQ.data ?? {};
-    return Object.entries(a).slice(0, 8);
+    return Object.entries(a).filter(([key]) => key !== "training_id");
   }, [analyticsQ.data]);
+
+  const materialDisplayRows = useMemo(
+    () =>
+      (materialsQ.data ?? []).map((row) => ({
+        ...row,
+        visibility: <MaterialVisibilityBadge value={row.visibility} />,
+      })),
+    [materialsQ.data]
+  );
 
   return (
     <>
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link href="/dashboard/learning-development" className="text-xs font-medium text-indigo-600 hover:underline">
-            ← Dashboard
-          </Link>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
+        <div className="min-w-0">
+          <nav
+            className="flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
+            aria-label="Breadcrumb"
+          >
+            <Link
+              href="/dashboard/learning-development"
+              className="hover:text-wt-text transition"
+            >
+              Learning &amp; Development
+            </Link>
+            <span aria-hidden className="text-wt-text-muted/60">
+              /
+            </span>
+            {hasHrAccess ? (
+              <>
+                <Link
+                  href="/dashboard/learning-development/trainings"
+                  className="hover:text-wt-text transition"
+                >
+                  Trainings
+                </Link>
+                <span aria-hidden className="text-wt-text-muted/60">
+                  /
+                </span>
+              </>
+            ) : null}
+            <span className="text-wt-text truncate max-w-[14rem] sm:max-w-xs" title={title}>
+              {title}
+            </span>
+          </nav>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
             <TrainingStatusControl
               trainingId={tid}
@@ -310,7 +339,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
             {analyticsQ.isLoading ? (
               <p className="text-sm text-wt-text-muted">Loading analytics…</p>
             ) : analyticsCards.length ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
                 {analyticsCards.map(([k, v]) => (
                   <article key={k} className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
                     <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
@@ -405,58 +434,32 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <h2 className="font-semibold">Trainers</h2>
           {hasHrAccess ? (
-            <div className="grid sm:grid-cols-2 gap-4 items-end">
+            <div className="flex flex-wrap items-end gap-3">
               <SelectField
                 label="Assign trainer"
                 required
+                className="min-w-[min(100%,280px)] flex-1 max-w-md"
                 value={trainerPick}
                 onChange={setTrainerPick}
                 placeholder="Select trainer"
                 options={trainerOptions.map((o) => ({ value: o.id, label: o.label }))}
               />
-              <div className="flex flex-wrap gap-2 pb-1">
-                <button type="button" className="btn-primary px-3 py-2 text-sm" disabled={!trainerPick} onClick={assignTrainer}>
-                  Assign
-                </button>
-              </div>
-              <SelectField
-                label="Remove trainer"
-                value={removeTrainerPick}
-                onChange={setRemoveTrainerPick}
-                placeholder="Select assigned trainer"
-                options={(trainersQ.data ?? [])
-                  .map((row) => {
-                    const uid = String(
-                      row.trainer_user_id ?? row.trainerUserId ?? row.user_id ?? row.userId ?? ""
-                    );
-                    if (!uid) return null;
-                    return {
-                      value: uid,
-                      label: cleanEmployeeName({
-                        name: String(row.name ?? row.employee_name ?? "Trainer").trim() || "Trainer",
-                      }),
-                    };
-                  })
-                  .filter((row): row is { value: string; label: string } => Boolean(row))}
-              />
-              <div className="flex flex-wrap gap-2 pb-1">
-                <button
-                  type="button"
-                  className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg"
-                  disabled={!removeTrainerPick}
-                  onClick={removeTrainer}
-                >
-                  Remove
-                </button>
-              </div>
+              <button
+                type="button"
+                className="btn-primary px-4 py-2 text-sm shrink-0"
+                disabled={!trainerPick}
+                onClick={assignTrainer}
+              >
+                Assign
+              </button>
             </div>
           ) : null}
-          <DataTable
-            title="Assigned trainers"
-            columns={["name", "email"]}
+          <AssignedTrainersList
             rows={trainersQ.data ?? []}
-            emptyLabel={trainersQ.isLoading ? "Loading trainers…" : "No trainers assigned."}
-            sortOptions={PARTICIPANT_SORT_OPTIONS}
+            loading={trainersQ.isLoading}
+            canManage={hasHrAccess}
+            removingUserId={removingTrainerId}
+            onRemove={hasHrAccess ? removeTrainerById : undefined}
           />
         </section>
       ) : null}
@@ -465,51 +468,41 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <h2 className="font-semibold">Trainees</h2>
           {hasHrAccess ? (
-            <div className="grid sm:grid-cols-2 gap-4 items-end">
+            <div className="flex flex-wrap items-end gap-3">
               <SelectField
                 label="Add trainee"
                 required
+                className="min-w-[min(100%,280px)] flex-1 max-w-md"
                 value={participantPick}
                 onChange={setParticipantPick}
                 placeholder="Select trainee"
                 options={addTraineeOptions.map((o) => ({ value: o.id, label: o.label }))}
               />
-              <button type="button" className="btn-primary px-3 py-2 text-sm sm:mb-0 disabled:opacity-40" disabled={addParticipantMut.isPending || !participantPick} onClick={() => addParticipantMut.mutate()}>
-                Add trainee
-              </button>
-              <SelectField
-                label="Update trainee status"
-                required
-                value={participantStatusUserId}
-                onChange={setParticipantStatusUserId}
-                placeholder="Select enrolled trainee"
-                options={participantStatusOptions.map((o) => ({ value: o.id, label: o.label }))}
-              />
-              <SelectField
-                label="Status"
-                value={participantStatusValue}
-                onChange={(v) => setParticipantStatusValue(v as "COMPLETED" | "WITHDRAWN")}
-                options={["COMPLETED", "WITHDRAWN"]}
-              />
               <button
                 type="button"
-                className="btn-primary px-3 py-2 text-sm sm:mb-0 disabled:opacity-40"
-                disabled={updateParticipantStatusMut.isPending || !participantStatusUserId}
+                className="btn-primary px-4 py-2 text-sm shrink-0 disabled:opacity-40"
+                disabled={addParticipantMut.isPending || !participantPick}
                 onClick={() =>
-                  updateParticipantStatusMut.mutate(undefined, {
+                  addParticipantMut.mutate(undefined, {
                     onError: (e) => alert(e instanceof Error ? e.message : "Failed"),
                   })
                 }
               >
-                Update status
+                {addParticipantMut.isPending ? "Adding…" : "Add trainee"}
               </button>
             </div>
           ) : null}
-          <DataTable
-            columns={["name", "email", "enrollment_status"]}
+          <TrainingParticipantsList
             rows={participantsQ.data ?? []}
-            emptyLabel="No trainees enrolled."
-            sortOptions={PARTICIPANT_SORT_OPTIONS}
+            loading={participantsQ.isLoading}
+            canManage={hasHrAccess}
+            updatingUserId={updatingParticipantId}
+            onMarkCompleted={
+              hasHrAccess ? (userId) => updateParticipantStatus(userId, "COMPLETED") : undefined
+            }
+            onMarkWithdrawn={
+              hasHrAccess ? (userId) => updateParticipantStatus(userId, "WITHDRAWN") : undefined
+            }
           />
         </section>
       ) : null}
@@ -518,30 +511,48 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <h2 className="font-semibold">Materials</h2>
           {hasHrAccess ? (
-            <div className="grid sm:grid-cols-2 gap-4">
-              <InputField label="Title" required value={materialForm.title} onChange={(v) => setMaterialForm((p) => ({ ...p, title: v }))} />
-              <SelectField
-                label="Visibility"
-                placeholder="Select visibility"
-                required
-                value={materialForm.visibility}
-                options={["EMPLOYEE", "HR_ONLY"]}
-                onChange={(v) =>
-                  setMaterialForm((p) => ({
-                    ...p,
-                    visibility: v === "EMPLOYEE" || v === "HR_ONLY" ? v : "",
-                  }))
-                }
-              />
-              <FileField label="PDF" required accept=".pdf,application/pdf" onPick={setMaterialFile} />
-              <div className="flex items-end">
-                <button type="button" className="btn-primary px-4 py-2 text-sm" disabled={uploadMaterialMut.isPending || !materialFile} onClick={() => uploadMaterialMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
-                  Upload
-                </button>
+            <div className="flex flex-wrap lg:flex-nowrap items-end gap-3">
+              <div className="min-w-[140px] flex-1">
+                <InputField label="Title" required value={materialForm.title} onChange={(v) => setMaterialForm((p) => ({ ...p, title: v }))} />
               </div>
+              <div className="w-full sm:w-44 shrink-0">
+                <SelectField
+                  label="Visibility"
+                  placeholder="Select visibility"
+                  required
+                  value={materialForm.visibility}
+                  options={MATERIAL_VISIBILITY_OPTIONS.map((opt) => ({
+                    value: opt.value,
+                    label: opt.label,
+                  }))}
+                  onChange={(v) =>
+                    setMaterialForm((p) => ({
+                      ...p,
+                      visibility: isMaterialVisibility(v) ? v : "",
+                    }))
+                  }
+                />
+              </div>
+              <div className="min-w-[160px] flex-1">
+                <FileField label="PDF" required accept=".pdf,application/pdf" onPick={setMaterialFile} />
+              </div>
+              <button
+                type="button"
+                className="btn-primary px-4 py-2 text-sm shrink-0"
+                disabled={uploadMaterialMut.isPending || !materialFile}
+                onClick={() => uploadMaterialMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+              >
+                Upload
+              </button>
             </div>
           ) : null}
-          <DataTable columns={["title", "material_url", "visibility"]} rows={materialsQ.data ?? []} emptyLabel="No materials." sortOptions={TITLE_SORT_OPTIONS} />
+          <DataTable
+            title="List of materials"
+            columns={["title", "material_url", "visibility"]}
+            rows={materialDisplayRows}
+            emptyLabel="No materials."
+            sortOptions={TITLE_SORT_OPTIONS}
+          />
         </section>
       ) : null}
 
@@ -549,35 +560,52 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <h2 className="font-semibold">Assessments</h2>
           {hasHrAccess ? (
-            <div className="grid sm:grid-cols-2 gap-4">
-              <InputField label="Name" required value={assessmentForm.name} onChange={(v) => setAssessmentForm((p) => ({ ...p, name: v }))} />
-              <InputField label="Weight %" value={assessmentForm.weight_percent} onChange={(v) => setAssessmentForm((p) => ({ ...p, weight_percent: v }))} />
-              <div className="sm:col-span-2">
-                <InputField label="Description" value={assessmentForm.description} onChange={(v) => setAssessmentForm((p) => ({ ...p, description: v }))} />
-              </div>
-              <FileField label="Assessment PDF" required accept=".pdf,application/pdf" onPick={setAssessmentFile} />
-              <div className="flex items-end">
-                <button type="button" className="btn-primary px-4 py-2 text-sm" disabled={uploadAssessmentMut.isPending || !assessmentFile} onClick={() => uploadAssessmentMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
+            <div className="space-y-3">
+              <div className="flex flex-wrap lg:flex-nowrap items-end gap-3">
+                <div className="min-w-[140px] flex-1">
+                  <InputField label="Name" required value={assessmentForm.name} onChange={(v) => setAssessmentForm((p) => ({ ...p, name: v }))} />
+                </div>
+                <div className="w-28 shrink-0">
+                  <InputField label="Weight %" value={assessmentForm.weight_percent} onChange={(v) => setAssessmentForm((p) => ({ ...p, weight_percent: v }))} />
+                </div>
+                <div className="min-w-[160px] flex-1">
+                  <FileField label="Assessment PDF" required accept=".pdf,application/pdf" onPick={setAssessmentFile} />
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary px-4 py-2 text-sm shrink-0"
+                  disabled={uploadAssessmentMut.isPending || !assessmentFile}
+                  onClick={() => uploadAssessmentMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+                >
                   Upload
                 </button>
               </div>
+              <div className="w-full">
+                <InputField label="Description" value={assessmentForm.description} onChange={(v) => setAssessmentForm((p) => ({ ...p, description: v }))} />
+              </div>
             </div>
           ) : null}
-          <DataTable columns={["name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." sortOptions={TITLE_SORT_OPTIONS} />
+          <DataTable
+            title="List of assessments"
+            columns={["name", "description", "file_url", "weight_percent"]}
+            rows={assessmentsQ.data ?? []}
+            emptyLabel="No assessments."
+            sortOptions={TITLE_SORT_OPTIONS}
+          />
         </section>
       ) : null}
 
       {safeTab === "attendance" ? <AttendancePageClient fixedTrainingId={tid} /> : null}
       {safeTab === "scores" && hasHrAccess ? <ScoresPageClient fixedTrainingId={tid} /> : null}
-      {safeTab === "scored" && !hasHrAccess ? (
+      {safeTab === "scores" && !hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <div>
-            <h2 className="font-semibold">Scored</h2>
+            <h2 className="font-semibold">Scores</h2>
             <p className="text-sm text-wt-text-muted mt-1">
               Your published assessment scores for this training.
             </p>
           </div>
-          <EmployeeTrainingMyMarks trainingId={tid} enabled={safeTab === "scored"} />
+          <EmployeeTrainingMyMarks trainingId={tid} enabled={safeTab === "scores"} />
         </section>
       ) : null}
     </div>

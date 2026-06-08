@@ -279,8 +279,8 @@ export function traineeTableRowsFromParticipants(
         name: participantRowDisplayLabel(row, userId),
         email,
         enrollmentStatus: String(
-          row.enrollment_status ?? row.enrollmentStatus ?? "—"
-        ).trim(),
+          row.enrollment_status ?? row.enrollmentStatus ?? "ENROLLED"
+        ).trim() || "ENROLLED",
       };
     })
     .filter((r): r is TraineeTableRow => Boolean(r));

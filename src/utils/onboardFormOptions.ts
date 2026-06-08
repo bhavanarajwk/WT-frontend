@@ -16,7 +16,7 @@ function parseOptionItems(raw: unknown): OnboardOptionItem[] {
 
 function isCompleteOptions(parsed: OnboardOptionsResponse): boolean {
   return Boolean(
-    parsed.delivery_statuses.length &&
+    parsed.categories.length &&
       parsed.work_modes.length &&
       parsed.work_location_types.length &&
       parsed.user_types.length &&
@@ -24,58 +24,41 @@ function isCompleteOptions(parsed: OnboardOptionsResponse): boolean {
   );
 }
 
-/** GET /masters/onboard-options — bare object (no wrapper). */
+function unwrapOnboardOptionsPayload(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const envelope = raw as Record<string, unknown>;
+  const nested = envelope.data;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>;
+  }
+  return envelope;
+}
+
+/** GET /masters/onboard-options — `{ message, data: { ... } }` or bare options object. */
 export function parseOnboardOptions(raw: unknown): OnboardOptionsResponse {
-  const row =
-    raw && typeof raw === "object" && !Array.isArray(raw)
-      ? (raw as Record<string, unknown>)
-      : {};
-  const defaultsRaw =
-    row.defaults && typeof row.defaults === "object" && !Array.isArray(row.defaults)
-      ? (row.defaults as Record<string, unknown>)
-      : {};
+  const row = unwrapOnboardOptionsPayload(raw);
 
   const parsed: OnboardOptionsResponse = {
-    delivery_statuses: parseOptionItems(row.delivery_statuses),
+    categories: parseOptionItems(row.categories ?? row.delivery_statuses),
     work_modes: parseOptionItems(row.work_modes),
     work_location_types: parseOptionItems(row.work_location_types),
     user_types: parseOptionItems(row.user_types),
     departments: parseOptionItems(row.departments),
-    defaults: {
-      delivery_status: String(defaultsRaw.delivery_status ?? "").trim(),
-      work_mode: String(defaultsRaw.work_mode ?? "").trim(),
-      work_location_type: String(defaultsRaw.work_location_type ?? "").trim(),
-      user_type: String(defaultsRaw.user_type ?? "").trim(),
-    },
+    genders: parseOptionItems(row.genders),
+    marital_statuses: parseOptionItems(row.marital_statuses),
+    blood_groups: parseOptionItems(row.blood_groups),
   };
 
   if (!isCompleteOptions(parsed)) {
     return FALLBACK_ONBOARD_OPTIONS;
   }
 
-  const fallback = FALLBACK_ONBOARD_OPTIONS.defaults;
-  return {
-    ...parsed,
-    defaults: {
-      delivery_status:
-        parsed.defaults.delivery_status ||
-        parsed.delivery_statuses[0]?.value ||
-        fallback.delivery_status,
-      work_mode:
-        parsed.defaults.work_mode || parsed.work_modes[0]?.value || fallback.work_mode,
-      work_location_type:
-        parsed.defaults.work_location_type ||
-        parsed.work_location_types[0]?.value ||
-        fallback.work_location_type,
-      user_type:
-        parsed.defaults.user_type || parsed.user_types[0]?.value || fallback.user_type,
-    },
-  };
+  return parsed;
 }
 
 /** Used when GET /masters/onboard-options fails or returns invalid data. */
 export const FALLBACK_ONBOARD_OPTIONS: OnboardOptionsResponse = {
-  delivery_statuses: [
+  categories: [
     { value: "DELIVERY", label: "Delivery" },
     { value: "NON_DELIVERY", label: "Non delivery" },
   ],
@@ -110,10 +93,24 @@ export const FALLBACK_ONBOARD_OPTIONS: OnboardOptionsResponse = {
     { value: "Quality Assurance", label: "Quality Assurance" },
     { value: "UI/UX", label: "UI/UX" },
   ],
-  defaults: {
-    delivery_status: "DELIVERY",
-    work_mode: "WFO",
-    work_location_type: "OFFSHORE",
-    user_type: "FULLTIME",
-  },
+  genders: [
+    { value: "MALE", label: "Male" },
+    { value: "FEMALE", label: "Female" },
+    { value: "OTHER", label: "Other" },
+    { value: "PREFER_NOT_TO_SAY", label: "Prefer not to say" },
+  ],
+  marital_statuses: [
+    { value: "SINGLE", label: "Single" },
+    { value: "MARRIED", label: "Married" },
+  ],
+  blood_groups: [
+    { value: "A+", label: "A+" },
+    { value: "A-", label: "A-" },
+    { value: "B+", label: "B+" },
+    { value: "B-", label: "B-" },
+    { value: "AB+", label: "AB+" },
+    { value: "AB-", label: "AB-" },
+    { value: "O+", label: "O+" },
+    { value: "O-", label: "O-" },
+  ],
 };

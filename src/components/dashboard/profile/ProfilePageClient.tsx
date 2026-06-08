@@ -71,7 +71,9 @@ import {
   ProfilePhotoAvatar,
   ProfileField,
   formatSecondarySkillsForProfile,
+  readProfileField,
 } from "@/components/dashboard/ui/profile";
+import { formatApiDateDisplay } from "@/utils/apiDate";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
@@ -2753,13 +2755,34 @@ export function ProfilePageClient() {
     </div>
   );
 
-  const renderProfileDetailsGrid = () => (
+  const profileCategory =
+    readProfileField(employeeProfile, "category") ||
+    readProfileField(employeeProfile, "delivery_status", "deliveryStatus");
+
+  const renderProfileDetailsGrid = (extraFields?: React.ReactNode) => (
     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
+      {extraFields}
       <ProfileField label="Name" value={employeeProfile?.name ?? user?.name} />
       <ProfileField label="Work email" value={employeeProfile?.email ?? user?.email} />
-      <ProfileField label="Personal mail ID" value={employeeProfile?.personal_email} />
+      <ProfileField label="Personal mail ID" value={readProfileField(employeeProfile, "personal_email", "personalEmail")} />
       <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
-      <ProfileField label="Phone Number" value={employeeProfile?.phone_number ?? employeeProfile?.phoneNumber} />
+      <ProfileField label="Department" value={readProfileField(employeeProfile, "department")} />
+      <ProfileField label="Designation" value={readProfileField(employeeProfile, "role")} />
+      <ProfileField label="User Type" value={readProfileField(employeeProfile, "user_type", "userType") ?? user?.user_type} />
+      <ProfileField label="Category" value={profileCategory} />
+      <ProfileField label="Work Mode" value={readProfileField(employeeProfile, "work_mode", "workMode")} />
+      <ProfileField label="Work Location" value={readProfileField(employeeProfile, "work_location_type", "workLocationType")} />
+      <ProfileField label="Band" value={readProfileField(employeeProfile, "band_name", "bandName")} />
+      <ProfileField label="Date of Joining" value={formatApiDateDisplay(readProfileField(employeeProfile, "doj"))} />
+      <ProfileField label="Phone Number" value={readProfileField(employeeProfile, "phone_number", "phoneNumber")} />
+      <ProfileField label="Date of Birth" value={formatApiDateDisplay(readProfileField(employeeProfile, "date_of_birth", "dateOfBirth"))} />
+      <ProfileField label="Gender" value={readProfileField(employeeProfile, "gender")} />
+      <ProfileField label="Marital Status" value={readProfileField(employeeProfile, "marital_status", "maritalStatus")} />
+      <ProfileField label="Blood Group" value={readProfileField(employeeProfile, "blood_group", "bloodGroup")} />
+      <ProfileField label="Emergency Contact" value={readProfileField(employeeProfile, "emergency_contact_name", "emergencyContactName")} />
+      <ProfileField label="Emergency Number" value={readProfileField(employeeProfile, "emergency_contact_number", "emergencyContactNumber")} />
+      <ProfileField label="Local Address" value={readProfileField(employeeProfile, "local_address", "localAddress")} fullWidth />
+      <ProfileField label="Permanent Address" value={readProfileField(employeeProfile, "permanent_address", "permanentAddress")} fullWidth />
       <ProfileField
         label="Primary Skills"
         value={
@@ -2774,6 +2797,9 @@ export function ProfilePageClient() {
         fullWidth
       />
       <ProfileField label="Years of Experience" value={employeeProfile?.yoe} />
+      <ProfileField label="Webknot Experience" value={readProfileField(employeeProfile, "webknot_experience", "webknotExperience")} />
+      <ProfileField label="Total Experience" value={readProfileField(employeeProfile, "total_experience", "totalExperience")} />
+      <ProfileField label="Resume Link" value={readProfileField(employeeProfile, "resume_share_link", "resumeShareLink")} fullWidth />
     </dl>
   );
 
@@ -3007,39 +3033,12 @@ export function ProfilePageClient() {
                                   </p>
                                 </div>
                               </div>
-                              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
-                                <ProfileField label="Name" value={employeeProfile?.name ?? user?.name} />
-                                <ProfileField label="Work email" value={employeeProfile?.email ?? user?.email} />
-                                <ProfileField
-                                  label="Personal mail ID"
-                                  value={employeeProfile?.personal_email}
-                                />
-                                <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
-                                <ProfileField label="Department" value={employeeProfile?.department} />
+                              {renderProfileDetailsGrid(
                                 <ProfileField
                                   label="Roles"
                                   value={(user?.roles ?? []).length ? (user?.roles ?? []).join(", ") : "—"}
                                 />
-                                <ProfileField
-                                  label="User Type"
-                                  value={employeeProfile?.user_type ?? user?.user_type}
-                                />
-                                <ProfileField label="Phone Number" value={employeeProfile?.phone_number ?? employeeProfile?.phoneNumber} />
-                                <ProfileField
-                                  label="Primary Skills"
-                                  value={
-                                    Array.isArray(employeeProfile?.primary_skills)
-                                      ? (employeeProfile?.primary_skills as Array<unknown>).map((s) => String(s)).join(", ")
-                                      : employeeProfile?.primary_skills
-                                  }
-                                />
-                                <ProfileField
-                                  label="Secondary Skills"
-                                  value={formatSecondarySkillsForProfile(employeeProfile)}
-                                  fullWidth
-                                />
-                                <ProfileField label="Years of Experience" value={employeeProfile?.yoe} />
-                              </dl>
+                              )}
                               {!requiresSelfOnboarding ? renderProfileAssignedProjectsSection() : null}
                               {!requiresSelfOnboarding ? (
                                 <div className="mt-8 border-t border-wt-border pt-6">
