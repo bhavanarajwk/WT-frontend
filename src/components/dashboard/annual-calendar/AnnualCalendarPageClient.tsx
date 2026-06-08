@@ -92,13 +92,6 @@ export function AnnualCalendarPageClient() {
     <>
       <DashboardPageShell>
         <div className="space-y-5">
-          <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-            <h3 className="text-lg font-semibold">Annual calendar</h3>
-            <p className="mt-1 text-sm text-wt-text-muted">
-              HR/Admin can upload annual calendar by year. All employees can view.
-            </p>
-          </div>
-
           {hasHrAccess ? (
             <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
               <h4 className="font-semibold">Upload / replace calendar</h4>
@@ -167,8 +160,8 @@ export function AnnualCalendarPageClient() {
                     <tr>
                       <th className="px-3 py-2 text-left font-medium">Year</th>
                       <th className="px-3 py-2 text-left font-medium">Title</th>
+                      <th className="px-3 py-2 text-left font-medium">Created by</th>
                       <th className="px-3 py-2 text-left font-medium">Updated</th>
-                      <th className="px-3 py-2 text-left font-medium">Open</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -176,24 +169,26 @@ export function AnnualCalendarPageClient() {
                       const resolvedUrl = resolveAnnualCalendarUrl(row.document_link);
                       return (
                         <tr key={String(row.id)} className="border-t border-wt-border">
-                          <td className="px-3 py-2 whitespace-nowrap">{String(row.year ?? "—")}</td>
-                          <td className="px-3 py-2">{String(row.title ?? "—")}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            {String(row.updated_at ?? row.created_at ?? "—")}
-                          </td>
                           <td className="px-3 py-2 whitespace-nowrap">
                             {resolvedUrl ? (
                               <a
                                 href={resolvedUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-indigo-600 hover:underline"
+                                className="text-indigo-600 hover:underline font-medium"
                               >
-                                Open
+                                {String(row.year ?? "—")}
                               </a>
                             ) : (
-                              <span className="text-wt-text-muted">—</span>
+                              String(row.year ?? "—")
                             )}
+                          </td>
+                          <td className="px-3 py-2">{String(row.title ?? "—")}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            {String(row.created_by_name ?? "—")}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            {String(row.updated_at ?? row.created_at ?? "—")}
                           </td>
                         </tr>
                       );

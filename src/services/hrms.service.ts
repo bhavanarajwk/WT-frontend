@@ -663,7 +663,7 @@ export const hrmsService = {
     return apiClient.get<unknown>(endpoints.masters.departments);
   },
 
-  /** GET /masters/onboard-options — bare object (enum labels + defaults). */
+  /** GET /masters/onboard-options — `{ message, data: { categories, ... } }`. */
   getOnboardOptions() {
     return apiClient.get<unknown>(endpoints.masters.onboardOptions);
   },
