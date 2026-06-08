@@ -79,10 +79,15 @@ import {
   formatSecondarySkillsForProfile,
 } from "@/components/dashboard/ui/profile";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
-import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useClientPagination } from "@/hooks/useClientPagination";
-import { applyListSort, LEAVE_REQUEST_SORT_OPTIONS } from "@/utils/listSort";
+import {
+  activeSortDirectionForColumn,
+  applyListSort,
+  LEAVE_REQUEST_SORT_OPTIONS,
+  toggleColumnSort,
+} from "@/utils/listSort";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
@@ -3556,11 +3561,6 @@ export function LeavePageClient() {
                                     onChange={(e) => setMyLeaveSearch(e.target.value)}
                                     aria-label="Search my leave requests"
                                   />
-                                  <ListSortSelect
-                                    value={myLeaveSortId}
-                                    onChange={setMyLeaveSortId}
-                                    options={sortOptionMeta(LEAVE_REQUEST_SORT_OPTIONS)}
-                                  />
                                   <button
                                     type="button"
                                     className="btn-primary px-3 py-2"
@@ -3577,7 +3577,26 @@ export function LeavePageClient() {
                                     <thead className="bg-wt-surface-2 text-wt-text-muted">
                                       <tr>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Request Type</th>
-                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">From</th>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                          <TableSortHeader
+                                            label="From"
+                                            activeDirection={activeSortDirectionForColumn(
+                                              "from",
+                                              myLeaveSortId,
+                                              LEAVE_REQUEST_SORT_OPTIONS
+                                            )}
+                                            sortable
+                                            onSort={() =>
+                                              setMyLeaveSortId(
+                                                toggleColumnSort(
+                                                  "from",
+                                                  myLeaveSortId,
+                                                  LEAVE_REQUEST_SORT_OPTIONS
+                                                )
+                                              )
+                                            }
+                                          />
+                                        </th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager status</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager reason</th>
@@ -3753,11 +3772,6 @@ export function LeavePageClient() {
                               onChange={(e) => setTeamLeaveSearch(e.target.value)}
                               aria-label="Search team leave requests"
                             />
-                            <ListSortSelect
-                              value={teamLeaveSortId}
-                              onChange={setTeamLeaveSortId}
-                              options={sortOptionMeta(LEAVE_REQUEST_SORT_OPTIONS)}
-                            />
                           </div>
 
                           {sortedEmployeeRequests.length ? (
@@ -3765,9 +3779,47 @@ export function LeavePageClient() {
                               <table className="min-w-full text-sm">
                                 <thead className="bg-wt-surface-2 text-wt-text-muted">
                                   <tr>
-                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Employee</th>
+                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                      <TableSortHeader
+                                        label="Employee"
+                                        activeDirection={activeSortDirectionForColumn(
+                                          "employee",
+                                          teamLeaveSortId,
+                                          LEAVE_REQUEST_SORT_OPTIONS
+                                        )}
+                                        sortable
+                                        onSort={() =>
+                                          setTeamLeaveSortId(
+                                            toggleColumnSort(
+                                              "employee",
+                                              teamLeaveSortId,
+                                              LEAVE_REQUEST_SORT_OPTIONS
+                                            )
+                                          )
+                                        }
+                                      />
+                                    </th>
                                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Type</th>
-                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">From</th>
+                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                      <TableSortHeader
+                                        label="From"
+                                        activeDirection={activeSortDirectionForColumn(
+                                          "from",
+                                          teamLeaveSortId,
+                                          LEAVE_REQUEST_SORT_OPTIONS
+                                        )}
+                                        sortable
+                                        onSort={() =>
+                                          setTeamLeaveSortId(
+                                            toggleColumnSort(
+                                              "from",
+                                              teamLeaveSortId,
+                                              LEAVE_REQUEST_SORT_OPTIONS
+                                            )
+                                          )
+                                        }
+                                      />
+                                    </th>
                                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
                                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                       {hasHrAccess ? "Final status" : "Status"}

@@ -114,26 +114,27 @@ export function onboardRowsToEmployeeOptions(
       rows
         .map((row) => {
           const r = onboardRowRecord(row);
-          const rawId = String(
-            r.user_id ??
-              r.userId ??
-              r.emp_id ??
-              r.empId ??
-              r.id ??
-              (r.user as Record<string, unknown> | undefined)?.id ??
-              ""
-          ).trim();
           const email = emailFromOnboardRow(r);
           const nameRaw = String(r.name ?? "Employee").trim();
           const name =
             nameRaw.replace(/\s*\([^()@\s]+@[^()@\s]+\.[^()@\s]+\)\s*$/, "").trim() ||
             nameRaw ||
             "Employee";
-          const userId = rawId || (email ? `email:${email.toLowerCase()}` : "");
+          const numericUserId = Number(
+            r.user_id ??
+              r.userId ??
+              (r.user as Record<string, unknown> | undefined)?.id ??
+              (r.user as Record<string, unknown> | undefined)?.user_id ??
+              ""
+          );
+          const userId =
+            Number.isFinite(numericUserId) && numericUserId > 0
+              ? String(numericUserId)
+              : email
+                ? `email:${email.toLowerCase()}`
+                : "";
           if (!userId) return null;
-          const empId = String(r.emp_id ?? r.empId ?? "").trim();
-          const label = empId ? `${name} (${empId})` : name;
-          return [userId, { id: userId, label, name, email }] as const;
+          return [userId, { id: userId, label: name, name, email }] as const;
         })
         .filter((item): item is readonly [string, OnboardEmployeeOption] => Boolean(item))
     ).values()

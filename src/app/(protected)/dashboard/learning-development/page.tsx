@@ -34,7 +34,10 @@ function HrLearningDashboard() {
             Open a training card to manage sessions, trainers, trainees, attendance, and scores.
           </p>
         </div>
-        <Link href="/dashboard/learning-development/trainings" className="btn-primary px-4 py-2 text-sm">
+        <Link
+          href="/dashboard/learning-development/trainings?create=1"
+          className="btn-primary px-4 py-2 text-sm"
+        >
           New training
         </Link>
       </div>

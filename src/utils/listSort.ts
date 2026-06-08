@@ -9,8 +9,52 @@ export type ListSortOption<T> = {
   label: string;
   direction: SortDirection;
   type?: SortValueType;
+  /** Table column keys this sort option applies to (snake_case). */
+  columnKeys?: string[];
   getValue: (row: T) => unknown;
 };
+
+function normalizeSortColumnKey(column: string): string {
+  return column.trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+export function sortOptionsForColumn<T>(
+  column: string,
+  options: ListSortOption<T>[]
+): ListSortOption<T>[] {
+  const key = normalizeSortColumnKey(column);
+  return options.filter((opt) =>
+    opt.columnKeys?.some((columnKey) => normalizeSortColumnKey(columnKey) === key)
+  );
+}
+
+export function activeSortDirectionForColumn<T>(
+  column: string,
+  sortId: string,
+  options: ListSortOption<T>[]
+): SortDirection | null {
+  const opt = options.find((o) => o.id === sortId);
+  if (!opt || !sortOptionsForColumn(column, options).some((o) => o.id === sortId)) {
+    return null;
+  }
+  return opt.direction;
+}
+
+export function toggleColumnSort<T>(
+  column: string,
+  currentSortId: string,
+  options: ListSortOption<T>[]
+): string {
+  const columnOpts = sortOptionsForColumn(column, options);
+  if (!columnOpts.length) return currentSortId;
+  const current = columnOpts.find((o) => o.id === currentSortId);
+  const asc = columnOpts.find((o) => o.direction === "asc");
+  const desc = columnOpts.find((o) => o.direction === "desc");
+  if (!current) return desc?.id ?? asc?.id ?? currentSortId;
+  if (current.direction === "asc" && desc) return desc.id;
+  if (current.direction === "desc" && asc) return asc.id;
+  return current.id;
+}
 
 export type ListSortOptionMeta = {
   id: string;
@@ -97,15 +141,32 @@ function employeeNameValue(row: Record<string, unknown>): unknown {
 export const LEAVE_REQUEST_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
     id: "from_desc",
-    label: "Date",
+    label: "From",
+    columnKeys: ["from", "request_from_date"],
     direction: "desc",
     type: "date",
     getValue: (row) => pickRowField(row, ["request_from_date", "requestFromDate"]),
   },
   {
-    id: "employee_asc",
-    label: "Name",
+    id: "from_asc",
+    label: "From",
+    columnKeys: ["from", "request_from_date"],
     direction: "asc",
+    type: "date",
+    getValue: (row) => pickRowField(row, ["request_from_date", "requestFromDate"]),
+  },
+  {
+    id: "employee_asc",
+    label: "Employee",
+    columnKeys: ["employee", "employee_name", "name"],
+    direction: "asc",
+    getValue: employeeNameValue,
+  },
+  {
+    id: "employee_desc",
+    label: "Employee",
+    columnKeys: ["employee", "employee_name", "name"],
+    direction: "desc",
     getValue: employeeNameValue,
   },
 ];
@@ -113,15 +174,32 @@ export const LEAVE_REQUEST_SORT_OPTIONS: ListSortOption<Record<string, unknown>>
 export const TIMELOG_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
     id: "date_desc",
-    label: "Date",
+    label: "Log date",
+    columnKeys: ["log_date", "date"],
     direction: "desc",
     type: "date",
     getValue: (row) => pickRowField(row, ["log_date", "logDate"]),
   },
   {
-    id: "employee_asc",
-    label: "Name",
+    id: "date_asc",
+    label: "Log date",
+    columnKeys: ["log_date", "date"],
     direction: "asc",
+    type: "date",
+    getValue: (row) => pickRowField(row, ["log_date", "logDate"]),
+  },
+  {
+    id: "employee_asc",
+    label: "Employee",
+    columnKeys: ["employee", "employee_name", "name"],
+    direction: "asc",
+    getValue: employeeNameValue,
+  },
+  {
+    id: "employee_desc",
+    label: "Employee",
+    columnKeys: ["employee", "employee_name", "name"],
+    direction: "desc",
     getValue: employeeNameValue,
   },
 ];
@@ -129,23 +207,33 @@ export const TIMELOG_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
 export const PROJECT_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
     id: "name_asc",
-    label: "Name",
+    label: "Project name",
+    columnKeys: ["project_name", "name"],
     direction: "asc",
     getValue: (row) => pickRowField(row, ["project_name", "projectName"]),
   },
   {
-    id: "code_asc",
-    label: "Code",
-    direction: "asc",
-    getValue: (row) => pickRowField(row, ["project_code", "projectCode"]),
+    id: "name_desc",
+    label: "Project name",
+    columnKeys: ["project_name", "name"],
+    direction: "desc",
+    getValue: (row) => pickRowField(row, ["project_name", "projectName"]),
   },
 ];
 
 export const EXIT_INTERVIEW_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
     id: "name_asc",
-    label: "Name",
+    label: "Employee",
+    columnKeys: ["employee", "employee_name", "name"],
     direction: "asc",
+    getValue: (row) => pickRowField(row, ["employee_name"]),
+  },
+  {
+    id: "name_desc",
+    label: "Employee",
+    columnKeys: ["employee", "employee_name", "name"],
+    direction: "desc",
     getValue: (row) => pickRowField(row, ["employee_name"]),
   },
 ];
@@ -154,14 +242,31 @@ export const TRAINING_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = 
   {
     id: "start_desc",
     label: "Date",
+    columnKeys: ["start_date", "date"],
     direction: "desc",
+    type: "date",
+    getValue: (row) => pickRowField(row, ["start_date", "training_start"]),
+  },
+  {
+    id: "start_asc",
+    label: "Date",
+    columnKeys: ["start_date", "date"],
+    direction: "asc",
     type: "date",
     getValue: (row) => pickRowField(row, ["start_date", "training_start"]),
   },
   {
     id: "name_asc",
     label: "Name",
+    columnKeys: ["name"],
     direction: "asc",
+    getValue: (row) => row.name,
+  },
+  {
+    id: "name_desc",
+    label: "Name",
+    columnKeys: ["name"],
+    direction: "desc",
     getValue: (row) => row.name,
   },
 ];
@@ -169,8 +274,17 @@ export const TRAINING_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = 
 export const SESSION_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
     id: "date_desc",
-    label: "Date",
+    label: "Session date",
+    columnKeys: ["session_date"],
     direction: "desc",
+    type: "date",
+    getValue: (row) => pickRowField(row, ["session_date"]),
+  },
+  {
+    id: "date_asc",
+    label: "Session date",
+    columnKeys: ["session_date"],
+    direction: "asc",
     type: "date",
     getValue: (row) => pickRowField(row, ["session_date"]),
   },
@@ -180,7 +294,15 @@ export const PARTICIPANT_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[]
   {
     id: "name_asc",
     label: "Name",
+    columnKeys: ["name", "employee_name"],
     direction: "asc",
+    getValue: (row) => pickRowField(row, ["name", "employee_name", "email"]),
+  },
+  {
+    id: "name_desc",
+    label: "Name",
+    columnKeys: ["name", "employee_name"],
+    direction: "desc",
     getValue: (row) => pickRowField(row, ["name", "employee_name", "email"]),
   },
 ];
@@ -188,8 +310,16 @@ export const PARTICIPANT_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[]
 export const TITLE_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
     id: "title_asc",
-    label: "Name",
+    label: "Title",
+    columnKeys: ["title", "name"],
     direction: "asc",
+    getValue: (row) => pickRowField(row, ["title", "name"]),
+  },
+  {
+    id: "title_desc",
+    label: "Title",
+    columnKeys: ["title", "name"],
+    direction: "desc",
     getValue: (row) => pickRowField(row, ["title", "name"]),
   },
 ];
@@ -197,14 +327,30 @@ export const TITLE_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
 export const ALLOCATION_FORECAST_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
     id: "employee_asc",
-    label: "Name",
+    label: "Employee",
+    columnKeys: ["employee_name", "employee", "name"],
     direction: "asc",
+    getValue: (row) => pickRowField(row, ["employee_name", "employeeName"]),
+  },
+  {
+    id: "employee_desc",
+    label: "Employee",
+    columnKeys: ["employee_name", "employee", "name"],
+    direction: "desc",
     getValue: (row) => pickRowField(row, ["employee_name", "employeeName"]),
   },
   {
     id: "project_asc",
     label: "Project",
+    columnKeys: ["project_name", "project"],
     direction: "asc",
+    getValue: (row) => pickRowField(row, ["project_name", "projectName"]),
+  },
+  {
+    id: "project_desc",
+    label: "Project",
+    columnKeys: ["project_name", "project"],
+    direction: "desc",
     getValue: (row) => pickRowField(row, ["project_name", "projectName"]),
   },
 ];
@@ -221,7 +367,15 @@ export function resumeSortOptions(
     {
       id: "name_asc",
       label: "Name",
+      columnKeys: [nameKey, "name", "employee_name"],
       direction: "asc",
+      getValue: (row) => row[nameKey],
+    },
+    {
+      id: "name_desc",
+      label: "Name",
+      columnKeys: [nameKey, "name", "employee_name"],
+      direction: "desc",
       getValue: (row) => row[nameKey],
     },
   ];
@@ -247,15 +401,32 @@ export function employeeDirectorySortDate(row: EmployeeDirectoryRow): string {
 export const EMPLOYEE_DIRECTORY_SORT_OPTIONS: ListSortOption<EmployeeDirectoryRow>[] = [
   {
     id: "doj_desc",
-    label: "Date",
+    label: "Date of joining",
+    columnKeys: ["date_of_joining", "doj"],
     direction: "desc",
     type: "date",
     getValue: employeeDirectorySortDate,
   },
   {
-    id: "name_asc",
-    label: "Name",
+    id: "doj_asc",
+    label: "Date of joining",
+    columnKeys: ["date_of_joining", "doj"],
     direction: "asc",
+    type: "date",
+    getValue: employeeDirectorySortDate,
+  },
+  {
+    id: "name_asc",
+    label: "Employee name",
+    columnKeys: ["name", "employee_name"],
+    direction: "asc",
+    getValue: (row) => row.display.name,
+  },
+  {
+    id: "name_desc",
+    label: "Employee name",
+    columnKeys: ["name", "employee_name"],
+    direction: "desc",
     getValue: (row) => row.display.name,
   },
 ];

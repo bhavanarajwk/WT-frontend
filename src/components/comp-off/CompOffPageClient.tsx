@@ -5,13 +5,14 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { compOffService } from "@/services/compOff.service";
-import { InputField, SelectField, DatePickerField } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, TextAreaField } from "@/components/dashboard/ui/forms";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { ProjectSelectField } from "@/components/comp-off/ProjectSelectField";
+import { WeekendMultiDateField } from "@/components/comp-off/WeekendMultiDateField";
 import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
 import { useManagerPortfolioEmails } from "@/hooks/comp-off/useManagerPortfolioEmails";
 import { requestRowEmail } from "@/utils/learning/onboardOptions";
@@ -26,9 +27,11 @@ import type { CompOffGrant } from "@/types/compOff";
 import {
   COMP_OFF_EARN_LIST_TYPE,
   COMP_OFF_USAGE_LIST_TYPE,
-  addDaysIso,
   availableUnitsFromGrants,
   calendarDaysInclusive,
+  grantExpiryDate,
+  grantRemainingUnits,
+  grantStatus,
   isCompOffRequestType,
   mapEarnListRow,
   patchRequestRowStatus,
@@ -53,6 +56,7 @@ import {
   requestHrStatus,
   requestManagerStatus,
 } from "@/utils/userRequest";
+import { compareApiDates, formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import {
   compOffEarnActionLabel,
@@ -155,7 +159,7 @@ export function CompOffPageClient({
   const [managerEmailResolving, setManagerEmailResolving] = useState(false);
 
   const [earnForm, setEarnForm] = useState({
-    worked_date: "",
+    worked_dates: [] as string[],
     project_code: "",
     manager_comp_off_email: "",
     comments: "",
@@ -240,6 +244,19 @@ export function CompOffPageClient({
   }, [balanceUnits, computedBalance, derivedBalanceFromRequests]);
   const usingDerivedBalance = displayBalance === derivedBalanceFromRequests && displayBalance > 0;
   const canUseCompOff = displayBalance > 0;
+  const nearestExpiryDate = useMemo(() => {
+    const asOf = normalizeToApiDate(balanceAsOf) || balanceAsOf;
+    const active = grants.filter((grant) => {
+      if (grantStatus(grant) !== "ACTIVE") return false;
+      if (grantRemainingUnits(grant) <= 0) return false;
+      const expiry = normalizeToApiDate(grantExpiryDate(grant));
+      if (!expiry) return true;
+      return compareApiDates(expiry, asOf) >= 0;
+    });
+    const nearest = sortGrantsFifo(active)[0];
+    if (!nearest) return "";
+    return normalizeToApiDate(grantExpiryDate(nearest)) || grantExpiryDate(nearest);
+  }, [grants, balanceAsOf]);
   const filteredMyRequests = useMemo(() => {
     if (myRequestsFlowFilter === "ALL") return myRequests;
     return myRequests.filter((row) => {
@@ -252,6 +269,16 @@ export function CompOffPageClient({
   const selectedProject = useMemo(
     () => projectOptions.find((p) => p.code === earnForm.project_code.trim()),
     [projectOptions, earnForm.project_code]
+  );
+
+  const earnProjectLabel = useCallback(
+    (row: Record<string, unknown>) => {
+      const code = String(pickRowField(row, "project_code", "projectCode") ?? "").trim();
+      if (!code) return "—";
+      const option = projectOptions.find((p) => p.code === code);
+      return option?.label ?? code;
+    },
+    [projectOptions]
   );
 
   const loadBalanceAndGrants = useCallback(async () => {
@@ -386,9 +413,17 @@ export function CompOffPageClient({
       return true;
     });
     deduped.sort((a, b) => {
-      const da = String(pickRowField(a, "request_from_date", "requestFromDate") ?? "");
-      const db = String(pickRowField(b, "request_from_date", "requestFromDate") ?? "");
-      return db.localeCompare(da);
+      const da = normalizeToApiDate(
+        String(
+          pickRowField(a, "worked_date", "workedDate", "request_from_date", "requestFromDate") ?? ""
+        )
+      );
+      const db = normalizeToApiDate(
+        String(
+          pickRowField(b, "worked_date", "workedDate", "request_from_date", "requestFromDate") ?? ""
+        )
+      );
+      return compareApiDates(db, da);
     });
     setMyRequests(deduped);
     const hasApprovedEarn = deduped.some((row) => {
@@ -699,7 +734,7 @@ export function CompOffPageClient({
   }, [mainTab, canApplyCompOff, loadMyRequests, loadBalanceAndGrants]);
 
   async function submitEarn() {
-    const workedDate = earnForm.worked_date.trim();
+    const workedDates = earnForm.worked_dates.map((d) => normalizeToApiDate(d.trim())).filter(Boolean);
     const projectCode = earnForm.project_code.trim();
     let managerEmail = earnForm.manager_comp_off_email.trim().toLowerCase();
     if (!managerEmail && selectedProject?.managerEmail) {
@@ -709,15 +744,19 @@ export function CompOffPageClient({
       managerEmail = await resolveCompOffManagerEmail(projectCode, projectCatalog);
     }
     const comments = earnForm.comments.trim();
-    if (!workedDate) throw new Error("Worked date is required.");
-    if (!isWeekendYmd(workedDate)) {
-      throw new Error("Worked date must be a weekend (Saturday or Sunday).");
-    }
     if (!projectCode) throw new Error("Project is required.");
-    if (comments.length > 2000) throw new Error("Work description must be 2000 characters or less.");
+    if (!workedDates.length) throw new Error("At least one weekend worked date is required.");
+    for (const workedDate of workedDates) {
+      if (!isWeekendYmd(workedDate)) {
+        throw new Error("Worked dates must be weekends (Saturday or Sunday).");
+      }
+    }
+    if (!comments) throw new Error("Comments are required.");
+    if (comments.length > 2000) throw new Error("Comments must be 2000 characters or less.");
     if (editingRequestId) {
       throw new Error("Editing earn requests is not supported. Revoke and submit a new earn request.");
-    } else {
+    }
+    for (const workedDate of workedDates) {
       await compOffService.createEarnRequest({
         worked_date: workedDate,
         workedDate,
@@ -727,7 +766,7 @@ export function CompOffPageClient({
         workDescription: comments,
       });
     }
-    setEarnForm({ worked_date: "", project_code: "", manager_comp_off_email: "", comments: "" });
+    setEarnForm({ worked_dates: [], project_code: "", manager_comp_off_email: "", comments: "" });
     setEditingRequestId("");
     await Promise.all([loadMyRequests(), loadBalanceAndGrants()]);
   }
@@ -819,20 +858,35 @@ export function CompOffPageClient({
 
             {showMyCompOff ? (
               <div className="space-y-4">
-                <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold">Comp-off balance</h3>
-                      {earnOnly && canApplyCompOff ? (
-                        <p className="text-xs text-wt-text-muted mt-1">
-                          To use balance, submit a <strong>Comp off</strong> request under{" "}
-                          <strong>My leave requests</strong>.
-                        </p>
-                      ) : null}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-sm">Comp-off balance</h3>
+                        {earnOnly && canApplyCompOff ? (
+                          <p className="text-xs text-wt-text-muted mt-1">
+                            To use balance, submit a <strong>Comp off</strong> request under{" "}
+                            <strong>Leave requests</strong>.
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-2xl font-semibold text-wt-text">{displayBalance}</p>
+                        <p className="text-xs text-wt-text-muted">unit{displayBalance === 1 ? "" : "s"}</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-3xl font-semibold text-wt-text">{displayBalance}</p>
-                      <p className="text-xs text-wt-text-muted">unit{displayBalance === 1 ? "" : "s"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-sm">Next expiry</h3>
+                        <p className="text-xs text-wt-text-muted mt-1">Nearest credit expiry date</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-2xl font-semibold text-wt-text">
+                          {nearestExpiryDate ? formatApiDateDisplay(nearestExpiryDate) : "—"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -842,34 +896,36 @@ export function CompOffPageClient({
                     <div>
                       <h3 className="font-semibold">Earn credit</h3>
                     </div>
-                    <DatePickerField
-                      label="Worked date"
-                      value={earnForm.worked_date}
-                      onChange={(v) => setEarnForm((p) => ({ ...p, worked_date: v }))}
-                    />
-                    <ProjectSelectField
-                      label="Project"
-                      value={earnForm.project_code}
-                      options={projectOptions}
-                      onChange={onEarnProjectChange}
-                    />
-                    <InputField
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <ProjectSelectField
+                        label="Project"
+                        required
+                        value={earnForm.project_code}
+                        options={projectOptions}
+                        onChange={onEarnProjectChange}
+                      />
+                      <WeekendMultiDateField
+                        label="Worked date"
+                        required
+                        value={earnForm.worked_dates}
+                        onChange={(dates) => setEarnForm((p) => ({ ...p, worked_dates: dates }))}
+                        maxDates={2}
+                      />
+                    </div>
+                    <TextAreaField
                       label="Comments"
+                      required
                       value={earnForm.comments}
                       onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
                     />
-                    {earnForm.worked_date.trim() ? (
-                      <p className="text-xs text-wt-text-muted">
-                        Expires on {addDaysIso(earnForm.worked_date.trim(), 60)} (60 days after
-                        worked date).
-                      </p>
-                    ) : null}
                     <button
                       type="button"
                       className="btn-primary px-3 py-2"
                       disabled={
                         actionLoading ||
                         !earnForm.project_code.trim() ||
+                        !earnForm.worked_dates.length ||
+                        !earnForm.comments.trim() ||
                         managerEmailResolving
                       }
                       onClick={() =>
@@ -926,14 +982,25 @@ export function CompOffPageClient({
                       <table className="min-w-full text-sm">
                         <thead className="bg-wt-surface-2 text-wt-text-muted">
                           <tr>
-                            <th className="text-left px-3 py-2 font-medium">Type</th>
-                            <th className="text-left px-3 py-2 font-medium">From</th>
-                            <th className="text-left px-3 py-2 font-medium">To</th>
+                            {earnOnly ? (
+                              <>
+                                <th className="text-left px-3 py-2 font-medium">Project</th>
+                                <th className="text-left px-3 py-2 font-medium">Worked date</th>
+                              </>
+                            ) : (
+                              <>
+                                <th className="text-left px-3 py-2 font-medium">Type</th>
+                                <th className="text-left px-3 py-2 font-medium">From</th>
+                                <th className="text-left px-3 py-2 font-medium">To</th>
+                              </>
+                            )}
                             <th className="text-left px-3 py-2 font-medium">Status</th>
                             <th className="text-left px-3 py-2 font-medium">Manager status</th>
-                            <th className="text-left px-3 py-2 font-medium">Manager reason</th>
                             {!earnOnly ? (
-                              <th className="text-left px-3 py-2 font-medium">HR status</th>
+                              <>
+                                <th className="text-left px-3 py-2 font-medium">Manager reason</th>
+                                <th className="text-left px-3 py-2 font-medium">HR status</th>
+                              </>
                             ) : null}
                             <th className="text-left px-3 py-2 font-medium">Comments</th>
                             <th className="text-right px-3 py-2 font-medium">Actions</th>
@@ -962,34 +1029,62 @@ export function CompOffPageClient({
                               !earnOnly && flow === "COMP_OFF" ? requestHrStatus(row) : "—";
                             return (
                               <tr key={`${id || idx}`} className="border-t border-wt-border">
-                                <td className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</td>
-                                <td className="px-3 py-2 whitespace-nowrap">
-                                  {String(
-                                    pickRowField(row, "request_from_date", "requestFromDate") ?? "—"
-                                  )}
-                                </td>
-                                <td className="px-3 py-2 whitespace-nowrap">
-                                  {String(
-                                    pickRowField(row, "request_to_date", "requestToDate") ?? "—"
-                                  )}
-                                </td>
+                                {earnOnly ? (
+                                  <>
+                                    <td className="px-3 py-2 whitespace-nowrap">{earnProjectLabel(row)}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
+                                      {String(
+                                        pickRowField(
+                                          row,
+                                          "worked_date",
+                                          "workedDate",
+                                          "request_from_date",
+                                          "requestFromDate"
+                                        ) ?? "—"
+                                      )}
+                                    </td>
+                                  </>
+                                ) : (
+                                  <>
+                                    <td className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
+                                      {String(
+                                        pickRowField(row, "request_from_date", "requestFromDate") ?? "—"
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
+                                      {String(
+                                        pickRowField(row, "request_to_date", "requestToDate") ?? "—"
+                                      )}
+                                    </td>
+                                  </>
+                                )}
                                 <td className="px-3 py-2 whitespace-nowrap">{status}</td>
                                 <td className="px-3 py-2 whitespace-nowrap">{mgrStatus}</td>
-                                <td
-                                  className="px-3 py-2 max-w-[140px] truncate"
-                                  title={mgrReason !== "—" ? mgrReason : undefined}
-                                >
-                                  {mgrReason}
-                                </td>
                                 {!earnOnly ? (
-                                  <td className="px-3 py-2 whitespace-nowrap">
-                                    {flow === "COMP_OFF" ? hrSt : "—"}
-                                  </td>
+                                  <>
+                                    <td
+                                      className="px-3 py-2 max-w-[140px] truncate"
+                                      title={mgrReason !== "—" ? mgrReason : undefined}
+                                    >
+                                      {mgrReason}
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
+                                      {flow === "COMP_OFF" ? hrSt : "—"}
+                                    </td>
+                                  </>
                                 ) : null}
                                 <td className="px-3 py-2 max-w-[200px] truncate">
                                   {String(
-                                    pickRowField(row, "comments", "comment", "description", "remarks") ??
-                                      "—"
+                                    pickRowField(
+                                      row,
+                                      "comments",
+                                      "comment",
+                                      "description",
+                                      "remarks",
+                                      "work_description",
+                                      "workDescription"
+                                    ) ?? "—"
                                   )}
                                 </td>
                                 <td className="px-3 py-2 text-right">

@@ -356,7 +356,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               {activeSection === "resumes" && !isLearningRoute ? "Resumes" : null}
               {activeSection === "annual-calendar" && !isLearningRoute ? "Annual calendar" : null}
               {activeSection === "talent-pool" && !isLearningRoute ? "Talent Pool" : null}
-              {activeSection === "bench-forecast" && !isLearningRoute ? "Bench forecast" : null}
               {activeSection === "employee" && !isLearningRoute ? "Employee Onboarding" : null}
               {activeSection === "exit-interview" && !isLearningRoute ? "Exit survey" : null}
               {activeSection === "exit-interview-submissions" && !isLearningRoute
@@ -367,7 +366,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               activeSection !== "resumes" &&
               activeSection !== "annual-calendar" &&
               activeSection !== "talent-pool" &&
-              activeSection !== "bench-forecast" &&
               activeSection !== "employee" &&
               activeSection !== "exit-interview" &&
               activeSection !== "exit-interview-submissions" &&
