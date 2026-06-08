@@ -12,7 +12,6 @@ import { toRows, toPagedRows } from "@/utils/apiRows";
 import {
   formatActionErrorMessage,
   formatActionSuccessMessage,
-  userRequestActionLabel,
 } from "@/utils/actionToast";
 import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
 import { EmployeeAttendancePanel } from "@/components/dashboard/sections/EmployeeAttendancePanel";
@@ -32,7 +31,6 @@ import {
 import {
   isValidPersonName,
   isValidIndiaMobile,
-  resolveInternBandId,
   generateAutomaticProjectCode,
   designationAllowsFlexibleHours,
   FLEXIBLE_ALLOCATION_HOUR_OPTIONS,
@@ -40,7 +38,6 @@ import {
   formatAllocatedHoursPercentLabel,
 } from "@/utils/dashboard/validation";
 import { applyTheme } from "@/utils/dashboard/theme";
-import { validatePersonalEmail } from "@/utils/personalEmail";
 import {
   FALLBACK_ONBOARD_OPTIONS,
   parseOnboardOptions,
@@ -80,12 +77,13 @@ import {
   ProfilePhotoAvatar,
   ProfileField,
   formatSecondarySkillsForProfile,
+  readProfileField,
 } from "@/components/dashboard/ui/profile";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { DesignationCombobox } from "@/components/employee-onboarding/DesignationCombobox";
 import { EmployeeOnboardingSubNav } from "@/components/employee-onboarding/EmployeeOnboardingSubNav";
+import { HrOnboardForm } from "@/components/employee-onboarding/HrOnboardForm";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -99,12 +97,6 @@ export function EmployeePageClient() {
       .trim()
       .toLowerCase()
       .includes("manager");
-  const REQUEST_TYPE_ALIASES: Record<string, string[]> = {
-    LEAVE: ["LEAVE"],
-    WFH: ["WFH"],
-    COMP_OFF: ["COMP_OFF", "COMPOFF", "COMP-OFF", "COMP OFF"],
-  };
-
   const { user, signOut, refresh: refreshSession } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -160,8 +152,6 @@ export function EmployeePageClient() {
     /** HR/Admin: optional — submit timelog for this employee when the API accepts it */
     subject_employee_email: "",
   });
-  const [myLeaveRequests, setMyLeaveRequests] = useState<Array<Record<string, unknown>>>([]);
-  const [employeeRequests, setEmployeeRequests] = useState<Array<Record<string, unknown>>>([]);
   const [kpis, setKpis] = useState<Array<Record<string, unknown>>>([]);
   const [headcountBreakdown, setHeadcountBreakdown] = useState<Array<Record<string, unknown>>>([]);
   const [roleBillingRows, setRoleBillingRows] = useState<Array<Record<string, unknown>>>([]);
@@ -237,12 +227,6 @@ export function EmployeePageClient() {
     is_half_day: false,
   });
   const [editingLeaveRequestId, setEditingLeaveRequestId] = useState<string>("");
-  const [employeeRequestFilters, setEmployeeRequestFilters] = useState({
-    fromDate: "",
-    toDate: "",
-    requestType: "ALL",
-  });
-
   const [onboardForm, setOnboardForm] = useState(createEmptyOnboardForm);
   const [onboardFormKey, setOnboardFormKey] = useState(0);
 
@@ -255,30 +239,6 @@ export function EmployeePageClient() {
   const [onboardBands, setOnboardBands] = useState<Array<Record<string, unknown>>>([]);
   const [onboardOptions, setOnboardOptions] =
     useState<OnboardOptionsResponse>(FALLBACK_ONBOARD_OPTIONS);
-  const [selfOnboardForm, setSelfOnboardForm] = useState({
-    full_name: "",
-    phone_number: "",
-    yoe: "",
-    primary_skills: "",
-    secondary_skill: "",
-    secondary_rating: "3",
-    work_location_type: "OFFSHORE",
-  });
-  const [selfOnboardFiles, setSelfOnboardFiles] = useState<{
-    resume: File | null;
-    profile_photo: File | null;
-    aadhaar: File | null;
-    pan_card: File | null;
-    reliving_letter: File | null;
-    salary_slips: File | null;
-  }>({
-    resume: null,
-    profile_photo: null,
-    aadhaar: null,
-    pan_card: null,
-    reliving_letter: null,
-    salary_slips: null,
-  });
   const [selfProfileForm, setSelfProfileForm] = useState({
     phone_number: "",
     primary_skills: "",
@@ -400,12 +360,6 @@ export function EmployeePageClient() {
     return toRows(fallback.data ?? fallback);
   }, []);
 
-  const priorEmploymentDocsRequired = useMemo(() => {
-    const raw = String(selfOnboardForm.yoe ?? "").trim().replace(",", ".");
-    if (!raw) return false;
-    const n = Number.parseFloat(raw);
-    return Number.isFinite(n) && n > 0;
-  }, [selfOnboardForm.yoe]);
   useEffect(() => {
     if (!toast) return;
     const id = window.setTimeout(() => setToast(null), 2800);
@@ -692,25 +646,6 @@ export function EmployeePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ timelogSubTab, hasManagerAccess, selectedManagerProjectCode]);
-  useEffect(() => {
-        const id = window.setTimeout(() => {
-      void (async () => {
-        try {
-          await loadMyLeaveRequests();
-        } catch {
-          setMyLeaveRequests([]);
-        }
-      })();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [ user]);  useEffect(() => {
-        const timer = window.setInterval(() => {
-      void loadMyLeaveRequests().catch(() => {
-        /* ignore periodic refresh errors */
-      });
-    }, 15000);
-    return () => window.clearInterval(timer);
-  }, [ user]);
   function applyTheme(nextTheme: "light" | "dark" | "system") {
     const root = document.documentElement;
     if (nextTheme === "system") {
@@ -1149,18 +1084,6 @@ export function EmployeePageClient() {
       .filter((row) => row.employee !== "—" || row.email !== "—");
   }
 
-  const internBandId = useMemo(() => resolveInternBandId(onboardBands), [onboardBands]);
-  useEffect(() => {
-    if (onboardForm.user_type !== "INTERN") return;
-    setOnboardForm((prev) =>
-      prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }
-    );
-  }, [onboardForm.user_type, internBandId]);
-  const defaultConsultantBandId = useMemo(() => {
-    const first = onboardBands[0];
-    const id = first?.id != null ? Number(first.id) : NaN;
-    return Number.isFinite(id) && id > 0 ? id : 1;
-  }, [onboardBands]);
   const allocationEmployeesPickerFiltered = useMemo(() => {
     const q = allocationEmployeePickerQuery.trim().toLowerCase();
     if (!q) return allocationUsers;
@@ -1750,294 +1673,6 @@ export function EmployeePageClient() {
     setTimelogs(normalizedRows);
     return normalizedRows;
   }, [hasHrAccess, hasManagerAccess, loadManagerData]);
-  async function loadMyLeaveRequests() {
-    const email = String((user as { email?: string } | null)?.email ?? "").trim();
-    if (!email) {
-      setMyLeaveRequests([]);
-      return;
-    }
-    const today = new Date();
-    const future = new Date(today);
-    future.setFullYear(future.getFullYear() + 2);
-    const from = formatApiDate(new Date(2000, 0, 1));
-    const to = formatApiDate(future);
-    const types = [
-      ...REQUEST_TYPE_ALIASES.LEAVE,
-      ...REQUEST_TYPE_ALIASES.WFH,
-      ...REQUEST_TYPE_ALIASES.COMP_OFF,
-    ] as const;
-    let merged: Array<Record<string, unknown>> = [];
-    const requestTs = Date.now();
-    const responses = await Promise.allSettled(
-      types.map((type) =>
-        apiClient.get(endpoints.userRequest.getByEmployees(email, from, to, type), {
-          query: { page: "0", size: "200", _ts: requestTs },
-        })
-      )
-    );
-    merged = responses
-      .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled")
-      .flatMap((r) => toPagedRows((r.value as { data?: unknown }).data ?? r.value));
-
-    // If employee-specific endpoint yields nothing (or fails), fall back to range + filter.
-    if (!merged.length) {
-      const rangeResponses = await Promise.allSettled(
-        types.map((type) =>
-          apiClient.get(endpoints.userRequest.getRange(from, to, type), {
-            query: { page: "0", size: "200", _ts: requestTs },
-          })
-        )
-      );
-      const rows = rangeResponses
-        .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled")
-        .flatMap((r) => toPagedRows((r.value as { data?: unknown }).data ?? r.value));
-      merged = rows.filter((row) => {
-        const rowEmail = String(
-          row.email ??
-            row.user_email ??
-            row.userEmail ??
-            row.emp_email ??
-            row.empEmail ??
-            row.employee_email ??
-            row.employeeEmail ??
-            row.requester_email ??
-            row.requesterEmail ??
-            row.requested_by_email ??
-            row.requestedByEmail ??
-            row.created_by_email ??
-            row.createdByEmail ??
-            row.requested_by ??
-            row.requestedBy ??
-            ""
-        )
-          .trim()
-          .toLowerCase();
-        return rowEmail === email.toLowerCase();
-      });
-    }
-    const deduped = Array.from(
-      new Map(
-        merged.map((row) => {
-          const key = String(row.user_request_id ?? row.userRequestId ?? row.id ?? Math.random());
-          return [key, row] as const;
-        })
-      ).values()
-    );
-    setMyLeaveRequests(deduped);
-  }
-  const loadEmployeeRequestsForApprover = useCallback(async () => {
-    const today = new Date();
-    const future = new Date(today);
-    future.setFullYear(future.getFullYear() + 2);
-    const from =
-      employeeRequestFilters.fromDate || formatApiDate(new Date(today.getFullYear(), 0, 1));
-    const to = employeeRequestFilters.toDate || formatApiDate(future);
-    const requestType = employeeRequestFilters.requestType || "ALL";
-    const requestTypes =
-      requestType === "ALL"
-        ? [
-            ...REQUEST_TYPE_ALIASES.LEAVE,
-            ...REQUEST_TYPE_ALIASES.WFH,
-            ...REQUEST_TYPE_ALIASES.COMP_OFF,
-          ]
-        : REQUEST_TYPE_ALIASES[requestType] ?? [requestType];
-    let onboardRows: Array<Record<string, unknown>> = [];
-    let scopedManagerRows: Array<Record<string, unknown>> = [];
-    if (hasHrAccess) {
-      const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "200" });
-      onboardRows = toPagedRows(onboardRes.data ?? onboardRes);
-    } else if (hasManagerAccess) {
-      if (managerPortfolioRows.length) {
-        scopedManagerRows = managerPortfolioRows;
-      } else {
-        const loaded = await loadManagerData();
-        scopedManagerRows = loaded.detailRows;
-      }
-    }
-    const scopeRows = hasHrAccess ? onboardRows : scopedManagerRows;
-    const expandedScopeRows = scopeRows.flatMap((row) => {
-      const nestedEmployees = Array.isArray(row.employees)
-        ? (row.employees as Array<Record<string, unknown>>)
-        : [];
-      if (!nestedEmployees.length) return [row];
-      return nestedEmployees.map((emp) => ({
-        ...row,
-        email: emp.email ?? emp.user_email ?? emp.userEmail ?? row.email,
-        user_email: emp.email ?? emp.user_email ?? emp.userEmail ?? row.user_email,
-        name: emp.name ?? emp.employee_name ?? emp.employeeName ?? row.name,
-        employee_name: emp.name ?? emp.employee_name ?? emp.employeeName ?? row.employee_name,
-        user_id: emp.user_id ?? emp.userId ?? emp.emp_id ?? row.user_id,
-        emp_id: emp.emp_id ?? emp.user_id ?? row.emp_id,
-      }));
-    });
-    const idToName = buildUserIdToNameMap(expandedScopeRows);
-    const emailToName = buildEmailToNameMap(expandedScopeRows);
-    const userIdToEmail: Record<string, string> = {};
-    for (const row of expandedScopeRows) {
-      const uid = String(row.user_id ?? row.userId ?? row.userID ?? row.id ?? row.emp_id ?? "").trim();
-      const email = String(
-        row.email ?? row.user_email ?? row.userEmail ?? row.employee_email ?? row.employeeEmail ?? ""
-      )
-        .trim()
-        .toLowerCase();
-      if (uid && email) userIdToEmail[uid] = email;
-    }
-    const emailCsv = expandedScopeRows
-      .map((r) =>
-        String(
-          r.email ?? r.user_email ?? r.userEmail ?? r.employee_email ?? r.employeeEmail ?? ""
-        ).trim()
-      )
-      .filter(Boolean)
-      .join(",");
-    const collectedRows: Array<Record<string, unknown>> = [];
-    if (emailCsv) {
-      try {
-        const responses = await Promise.all(
-          requestTypes.map((type) =>
-            apiClient.get(endpoints.userRequest.getByEmployees(emailCsv, from, to, type), {
-              query: { page: "0", size: "200" },
-            })
-          )
-        );
-        collectedRows.push(
-          ...responses.flatMap((res) => toPagedRows((res as { data?: unknown }).data ?? res))
-        );
-      } catch {
-        /* ignore and continue with range endpoint */
-      }
-    }
-    if (hasHrAccess) {
-      try {
-        const rangeResponses = await Promise.all(
-          requestTypes.map((type) =>
-            apiClient.get(endpoints.userRequest.getRange(from, to, type), {
-              query: { page: "0", size: "200" },
-            })
-          )
-        );
-        collectedRows.push(
-          ...rangeResponses.flatMap((res) => toPagedRows((res as { data?: unknown }).data ?? res))
-        );
-      } catch {
-        /* ignore if one source already succeeded */
-      }
-    }
-    let rows = collectedRows;
-    rows = Array.from(
-      new Map(
-        rows.map((row) => {
-          const key = String(
-            row.user_request_id ?? row.userRequestId ?? row.request_id ?? row.requestId ?? row.id ?? Math.random()
-          );
-          return [key, row] as const;
-        })
-      ).values()
-    );
-    const unresolvedEmails = [
-      ...new Set(
-        rows
-          .map((row) =>
-            String(
-              row.emp_email ??
-                row.empEmail ??
-                row.email ??
-                row.user_email ??
-                row.userEmail ??
-                row.employee_email ??
-                row.employeeEmail ??
-                ""
-            )
-              .trim()
-              .toLowerCase()
-          )
-          .filter((email) => Boolean(email) && !emailToName[email])
-      ),
-    ];
-    await Promise.all(
-      unresolvedEmails.map(async (email) => {
-        try {
-          const userRes = await hrmsService.getUser({ email });
-          const payload = ((userRes as { data?: unknown }).data ?? userRes) as
-            | Record<string, unknown>
-            | null;
-          if (!payload || typeof payload !== "object") return;
-          const nested =
-            (payload.user as Record<string, unknown> | undefined)?.name ??
-            (payload.profile as Record<string, unknown> | undefined)?.name;
-          const name = String(payload.name ?? nested ?? "").trim();
-          if (name) emailToName[email] = name;
-        } catch {
-          /* ignore lookup misses */
-        }
-      })
-    );
-    const enriched = rows.map((row) => {
-      const email = String(
-        row.email ??
-          row.user_email ??
-          row.userEmail ??
-          row.emp_email ??
-          row.empEmail ??
-          row.employee_email ??
-          row.employeeEmail ??
-          row.requested_by ??
-          row.requestedBy ??
-          ""
-      )
-        .trim()
-        .toLowerCase();
-      const uid = String(row.user_id ?? row.userId ?? row.emp_id ?? row.empId ?? "").trim();
-      const nameFromRow = String(
-        row.name ??
-          row.employee_name ??
-          row.employeeName ??
-          row.user_name ??
-          row.userName ??
-          row.emp_name ??
-          row.empName ??
-          row.requested_by_name ??
-          row.requestedByName ??
-          ""
-      ).trim();
-      const emailFromUid = uid ? userIdToEmail[uid] ?? "" : "";
-      const employee_display =
-        nameFromRow ||
-        (email && emailToName[email]) ||
-        (emailFromUid && emailToName[emailFromUid]) ||
-        (uid && idToName[uid]) ||
-        email ||
-        emailFromUid ||
-        (uid ? `User #${uid}` : "—");
-      return { ...row, employee_display };
-    });
-    setEmployeeRequests(enriched);
-  }, [employeeRequestFilters, hasHrAccess, hasManagerAccess, managerPortfolioRows, loadManagerData]);  async function updateEmployeeRequestStatus(requestId: string, status: "APPROVED" | "REJECTED") {
-    const idNum = Number(requestId);
-    if (!Number.isFinite(idNum) || idNum <= 0) {
-      throw new Error("Invalid request id.");
-    }
-    const message = status === "REJECTED" ? "Rejected by HR" : null;
-    try {
-      await apiClient.put(endpoints.userRequest.status, {
-        contentType: "application/json",
-        body: JSON.stringify({
-          user_request_id: idNum,
-          user_request_status: status,
-          message,
-        }),
-      });
-    } catch {
-      await apiClient.put(endpoints.userRequest.status, {
-        contentType: "application/json",
-        body: JSON.stringify({
-          user_request_id: idNum,
-          user_request_status: status === "APPROVED" ? "APPROVE" : "REJECT",
-          message,
-        }),
-      });
-    }
-  }
   const loadInviteOnboardingPreview = useCallback(
     async (range?: { from?: string; to?: string }) => {
       const from = (range?.from ?? invitedListFromDateRef.current).trim();
@@ -2594,207 +2229,7 @@ export function EmployeePageClient() {
     if (!exists) {
       setSelectedManagerProjectCode(String(normalizedManagerProjects[0].project_code ?? ""));
     }
-  }, [normalizedManagerProjects, selectedManagerProjectCode]);  useEffect(() => {
-    if (!hasHrAccess) return;
-  }, [ hasHrAccess]);
-  const renderSelfOnboardingPanel = () => (
-    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-      <h3 className="font-semibold mb-1">Complete Your Onboarding</h3>
-      <p className="text-sm text-wt-text-muted mb-4">
-        Employees must complete onboarding before full portal access. Your legal name and phone here replace what HR
-        entered when you were invited.
-      </p>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <InputField
-          label="Full name (as per ID)"
-          value={selfOnboardForm.full_name}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, full_name: v }))}
-        />
-        <InputField
-          label="Phone number"
-          value={selfOnboardForm.phone_number}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, phone_number: v }))}
-        />
-        <InputField label="Years of Experience" value={selfOnboardForm.yoe} onChange={(v) => setSelfOnboardForm((p) => ({ ...p, yoe: v }))} />
-        <InputField
-          label="Primary Skills (comma separated)"
-          value={selfOnboardForm.primary_skills}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, primary_skills: v }))}
-        />
-        <InputField
-          label="Secondary Skill"
-          value={selfOnboardForm.secondary_skill}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, secondary_skill: v }))}
-        />
-        <SelectField
-          label="Secondary Skill Rating"
-          value={selfOnboardForm.secondary_rating}
-          options={["1", "2", "3", "4", "5"]}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, secondary_rating: v }))}
-        />
-        <SelectField
-          label="Work Location"
-          value={selfOnboardForm.work_location_type}
-          options={["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"]}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, work_location_type: v }))}
-        />
-      </div>
-      <div className="grid sm:grid-cols-2 gap-3 mt-3">
-        <FileField label="Resume" accept=".pdf,.doc,.docx,image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, resume: file }))} />
-        <FileField label="Profile Photo" accept="image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, profile_photo: file }))} />
-        <FileField label="Aadhaar" accept=".pdf,image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, aadhaar: file }))} />
-        <FileField label="PAN Card" accept=".pdf,image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, pan_card: file }))} />
-      </div>
-      {priorEmploymentDocsRequired ? (
-        <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4">
-          <p className="text-sm font-medium text-wt-text mb-2">Prior employment (YoE &gt; 0)</p>
-          <p className="text-xs text-wt-text-muted mb-3">
-            Relieving letter and a payslip are required when years of experience is greater than zero.
-          </p>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <FileField
-              label="Relieving letter (previous company)"
-              accept=".pdf,image/*"
-              onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, reliving_letter: file }))}
-            />
-            <FileField
-              label="Upload last 3 months's payslip"
-              accept=".pdf,image/*"
-              onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, salary_slips: file }))}
-            />
-          </div>
-        </div>
-      ) : (
-        <p className="mt-3 text-xs text-wt-text-muted">
-          If your years of experience is above zero, add relieving letter and upload last 3 months&apos;s payslip (field appears when YoE &gt; 0).
-        </p>
-      )}
-      <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
-            runAction("Submit onboarding", async () => {
-              if (!user?.email) {
-                throw new Error("Unable to resolve logged-in email.");
-              }
-              const legalName = selfOnboardForm.full_name.trim();
-              const phone = selfOnboardForm.phone_number.trim();
-              if (!legalName || !isValidPersonName(legalName)) {
-                throw new Error("Enter your full name as per ID (letters and spaces, 2–120 characters).");
-              }
-              if (!phone || !isValidIndiaMobile(phone)) {
-                throw new Error("Enter a valid Indian mobile number (10 digits, optional +91).");
-              }
-              const fd = new FormData();
-              const primarySkills = selfOnboardForm.primary_skills
-                .split(",")
-                .map((item) => item.trim())
-                .filter(Boolean);
-              if (!primarySkills.length) {
-                throw new Error("Please add at least one primary skill.");
-              }
-              if (!selfOnboardFiles.profile_photo) {
-                throw new Error("Please upload profile photo.");
-              }
-              if (!selfOnboardFiles.aadhaar) {
-                throw new Error("Please upload Aadhaar.");
-              }
-              if (!selfOnboardFiles.pan_card) {
-                throw new Error("Please upload PAN card.");
-              }
-              if (priorEmploymentDocsRequired) {
-                if (!selfOnboardFiles.reliving_letter) {
-                  throw new Error(
-                    "Please upload your relieving letter from the previous company."
-                  );
-                }
-                if (!selfOnboardFiles.salary_slips) {
-                  throw new Error("Please upload a payslip file in the payslip field.");
-                }
-              }
-              if (
-                selfOnboardFiles.profile_photo.type &&
-                !selfOnboardFiles.profile_photo.type.startsWith("image/")
-              ) {
-                throw new Error("Profile photo must be an image file (jpg/png/webp).");
-              }
-              const selectedFiles: Array<[string, File]> = [];
-              for (const [key, val] of Object.entries(selfOnboardFiles)) {
-                if (val) selectedFiles.push([key, val as File]);
-              }
-              for (const [key, file] of selectedFiles) {
-                if (file.size > MAX_ONBOARD_FILE_BYTES) {
-                  throw new Error(
-                    `${key.replaceAll("_", " ")} exceeds 2 MB. Please upload a smaller file.`
-                  );
-                }
-              }
-              const totalBytes = selectedFiles.reduce((sum, [, file]) => sum + file.size, 0);
-              if (totalBytes > MAX_ONBOARD_TOTAL_BYTES) {
-                throw new Error("Total upload size exceeds 6 MB. Compress files and retry.");
-              }
-              const yoeValue = selfOnboardForm.yoe ? Number(selfOnboardForm.yoe) : null;
-              fd.append(
-                "user_data",
-                JSON.stringify({
-                  email: user.email,
-                  name: legalName,
-                  phone_number: phone,
-                  yoe: yoeValue,
-                  experience: yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
-                  primary_skills: primarySkills,
-                  secondary_skills: selfOnboardForm.secondary_skill
-                    ? [
-                        {
-                          skill: selfOnboardForm.secondary_skill.trim(),
-                          rating: Number(selfOnboardForm.secondary_rating),
-                        },
-                      ]
-                    : [],
-                  work_location_type: selfOnboardForm.work_location_type,
-                })
-              );
-              Object.entries(selfOnboardFiles).forEach(([key, file]) => {
-                if (key === "salary_slips") {
-                  if (file) fd.append("salary_slips[]", file as File);
-                  return;
-                }
-                if (!file) return;
-                fd.append(key, file as File);
-              });
-              await hrmsService.completeMyOnboarding(fd);
-              setSelfOnboardForm({
-                full_name: "",
-                phone_number: "",
-                yoe: "",
-                primary_skills: "",
-                secondary_skill: "",
-                secondary_rating: "3",
-                work_location_type: "OFFSHORE",
-              });
-              setSelfOnboardFiles({
-                resume: null,
-                profile_photo: null,
-                aadhaar: null,
-                pan_card: null,
-                reliving_letter: null,
-                salary_slips: null,
-              });
-              setIsSelfOnboarded(true);
-              await refreshSession();
-              await loadMyProfile();
-              router.replace("/dashboard", { scroll: false });
-              router.replace("/dashboard/overview", { scroll: false });
-            })
-          }
-          disabled={actionLoading}
-        >
-          Submit Onboarding Form
-        </button>
-      </div>
-    </div>
-  );
+  }, [normalizedManagerProjects, selectedManagerProjectCode]);
 
   const openOwnProfileEditor = () => {
     const profile = employeeProfile ?? {};
@@ -2854,9 +2289,22 @@ export function EmployeePageClient() {
   const renderProfileDetailsGrid = () => (
     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
       <ProfileField label="Name" value={employeeProfile?.name ?? user?.name} />
-      <ProfileField label="Email" value={employeeProfile?.email ?? user?.email} />
+      <ProfileField label="Work email" value={employeeProfile?.email ?? user?.email} />
+      <ProfileField label="Personal mail ID" value={readProfileField(employeeProfile, "personal_email", "personalEmail")} />
       <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
-      <ProfileField label="Phone Number" value={employeeProfile?.phone_number ?? employeeProfile?.phoneNumber} />
+      <ProfileField label="Department" value={readProfileField(employeeProfile, "department")} />
+      <ProfileField label="Designation" value={readProfileField(employeeProfile, "role")} />
+      <ProfileField
+        label="Category"
+        value={
+          readProfileField(employeeProfile, "category") ||
+          readProfileField(employeeProfile, "delivery_status", "deliveryStatus")
+        }
+      />
+      <ProfileField label="Phone Number" value={readProfileField(employeeProfile, "phone_number", "phoneNumber")} />
+      <ProfileField label="Gender" value={readProfileField(employeeProfile, "gender")} />
+      <ProfileField label="Marital Status" value={readProfileField(employeeProfile, "marital_status", "maritalStatus")} />
+      <ProfileField label="Blood Group" value={readProfileField(employeeProfile, "blood_group", "bloodGroup")} />
       <ProfileField
         label="Primary Skills"
         value={
@@ -3062,329 +2510,35 @@ export function EmployeePageClient() {
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className="space-y-4">
             {hasHrAccess ? <EmployeeOnboardingSubNav /> : null}
-                              <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                                <h3 className="font-semibold mb-4">Create New Employee</h3>
-                                <div key={onboardFormKey} className="grid sm:grid-cols-2 gap-3">
-                                  <InputField
-                                    label="Employee ID"
-                                    required
-                                    value={onboardForm.emp_id}
-                                    onChange={(v) => setOnboardForm((p) => ({ ...p, emp_id: v }))}
-                                  />
-                                  <InputField
-                                    label="Work email"
-                                    type="email"
-                                    required
-                                    value={onboardForm.email}
-                                    onChange={(v) => setOnboardForm((p) => ({ ...p, email: v }))}
-                                  />
-                                  <InputField
-                                    label="Personal mail ID"
-                                    type="email"
-                                    required
-                                    value={onboardForm.personal_email}
-                                    onChange={(v) => setOnboardForm((p) => ({ ...p, personal_email: v }))}
-                                  />
-                                  <InputField
-                                    label="Name"
-                                    required
-                                    value={onboardForm.name}
-                                    onChange={(v) => setOnboardForm((p) => ({ ...p, name: v }))}
-                                  />
-                                  <SelectField
-                                    label="User Type"
-                                    required
-                                    placeholder="Select user type"
-                                    value={onboardForm.user_type}
-                                    options={onboardOptions.user_types}
-                                    onChange={(v) =>
-                                      setOnboardForm((p) => {
-                                        const ut = v as "FULLTIME" | "INTERN" | "CONSULTANT";
-                                        if (ut === "INTERN") {
-                                          return { ...p, user_type: ut, band_id: internBandId, role: "" };
-                                        }
-                                        return { ...p, user_type: ut, role: ut === "CONSULTANT" ? p.role : "" };
-                                      })
-                                    }
-                                  />
-                                  <SelectField
-                                    label="Department"
-                                    required
-                                    placeholder="Select department"
-                                    value={onboardForm.department}
-                                    options={onboardOptions.departments}
-                                    onChange={(v) =>
-                                      setOnboardForm((p) => ({
-                                        ...p,
-                                        department: v,
-                                        role: "",
-                                      }))
-                                    }
-                                  />
-                                  {onboardForm.user_type !== "CONSULTANT" ? (
-                                    <SelectField
-                                      label="Band"
-                                      required
-                                      value={onboardForm.band_id ? String(onboardForm.band_id) : ""}
-                                      disabled={onboardForm.user_type === "INTERN"}
-                                      placeholder="Select band"
-                                      options={
-                                        onboardBands.length
-                                          ? onboardBands.map((row) => ({
-                                              value: String(row.id),
-                                              label: String(row.name ?? row.id ?? ""),
-                                            }))
-                                          : [{ value: "1", label: "B1" }]
-                                      }
-                                      onChange={(v) =>
-                                        setOnboardForm((p) => ({
-                                          ...p,
-                                          band_id: Number(v) || 0,
-                                          role: "",
-                                        }))
-                                      }
-                                    />
-                                  ) : null}
-                                  {onboardForm.user_type === "CONSULTANT" ? (
-                                    <InputField
-                                      label="Designation"
-                                      required
-                                      value={onboardForm.role}
-                                      onChange={(v) => setOnboardForm((p) => ({ ...p, role: v }))}
-                                    />
-                                  ) : (
-                                    <DesignationCombobox
-                                      key={`onboard-designation-${onboardFormKey}`}
-                                      bandId={Number(onboardForm.band_id) || 0}
-                                      department={onboardForm.department}
-                                      value={onboardForm.role}
-                                      onChange={(role) => setOnboardForm((p) => ({ ...p, role }))}
-                                      required
-                                      canCreate={hasHrAccess}
-                                      onError={(message) =>
-                                        setToast({ type: "error", message })
-                                      }
-                                    />
-                                  )}
-                                  <InputField
-                                    label="Phone Number"
-                                    required
-                                    value={onboardForm.phone_number}
-                                    onChange={(v) => setOnboardForm((p) => ({ ...p, phone_number: v }))}
-                                  />
-                                  <SelectField
-                                    label="Work Mode"
-                                    required
-                                    placeholder="Select work mode"
-                                    value={onboardForm.work_mode}
-                                    options={onboardOptions.work_modes}
-                                    onChange={(v) => setOnboardForm((p) => ({ ...p, work_mode: v }))}
-                                  />
-                                  <SelectField
-                                    label="Work Location"
-                                    required
-                                    placeholder="Select work location"
-                                    value={onboardForm.work_location_type}
-                                    options={onboardOptions.work_location_types}
-                                    onChange={(v) =>
-                                      setOnboardForm((p) => ({ ...p, work_location_type: v }))
-                                    }
-                                  />
-                                  <SelectField
-                                    label="Delivery Status"
-                                    required
-                                    placeholder="Select delivery status"
-                                    value={onboardForm.delivery_status}
-                                    options={onboardOptions.delivery_statuses}
-                                    onChange={(v) =>
-                                      setOnboardForm((p) => ({ ...p, delivery_status: v }))
-                                    }
-                                  />
-                                  <InputField
-                                    label="Date of Birth"
-                                    required
-                                    value={onboardForm.dob}
-                                    onChange={(v) => setOnboardForm((p) => ({ ...p, dob: v }))}
-                                    type="date"
-                                  />
-                                  {onboardForm.user_type === "INTERN" ? (
-                                    <>
-                                      <InputField
-                                        label="Date of Internship"
-                                        required
-                                        value={onboardForm.doi}
-                                        onChange={(v) => setOnboardForm((p) => ({ ...p, doi: v }))}
-                                        type="date"
-                                      />
-                                      <InputField
-                                        label="Internship Duration (months)"
-                                        required
-                                        value={onboardForm.internship_duration}
-                                        onChange={(v) =>
-                                          setOnboardForm((p) => ({ ...p, internship_duration: v }))
-                                        }
-                                      />
-                                    </>
-                                  ) : (
-                                    <InputField
-                                      label="Date of Joining"
-                                      required
-                                      value={onboardForm.doj}
-                                      onChange={(v) => setOnboardForm((p) => ({ ...p, doj: v }))}
-                                      type="date"
-                                    />
-                                  )}
-                                </div>
-                                <div className="mt-4 flex gap-2">
-                                  <button
-                                    type="button"
-                                    className="btn-primary px-3 py-2"
-                                    onClick={() =>
-                                      runAction("Create employee", async () => {
-                                        const empId = onboardForm.emp_id.trim();
-                                        const email = onboardForm.email.trim().toLowerCase();
-                                        const personalEmailRaw = onboardForm.personal_email.trim();
-                                        const personalEmailError = validatePersonalEmail(email, personalEmailRaw, {
-                                          required: false,
-                                        });
-                                        if (personalEmailError) {
-                                          throw new Error(personalEmailError);
-                                        }
-                                        const name = onboardForm.name.trim();
-                                        const department = onboardForm.department.trim();
-                                        const role = onboardForm.role.trim();
-                                        const phoneNumber = onboardForm.phone_number.trim();
-                                        const dob = onboardForm.dob.trim();
-                                        const doj = onboardForm.doj.trim();
-                                        const doi = onboardForm.doi.trim();
-                                        const internshipDurationRaw = onboardForm.internship_duration.trim();
-                                        const bandId =
-                                          onboardForm.user_type === "CONSULTANT"
-                                            ? defaultConsultantBandId
-                                            : onboardForm.user_type === "INTERN"
-                                              ? internBandId
-                                              : Number(onboardForm.band_id);
-          
-                                        if (!empId) {
-                                          throw new Error("Employee ID is required.");
-                                        }
-                                        if (empId.length > 50) {
-                                          throw new Error("Employee ID must be at most 50 characters.");
-                                        }
-                                        if (!email || !name) {
-                                          throw new Error("Email and Name are required.");
-                                        }
-                                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                                        if (!emailRegex.test(email)) {
-                                          throw new Error("Please enter a valid work email.");
-                                        }
-                                        if (!onboardForm.user_type) {
-                                          throw new Error("User type is required.");
-                                        }
-                                        if (!onboardForm.work_mode) {
-                                          throw new Error("Work mode is required.");
-                                        }
-                                        if (!onboardForm.work_location_type) {
-                                          throw new Error("Work location is required.");
-                                        }
-                                        if (!onboardForm.delivery_status) {
-                                          throw new Error("Delivery status is required.");
-                                        }
-                                        if (!isValidPersonName(name)) {
-                                          throw new Error(
-                                            "Name should be 2–120 characters and contain letters (and spaces) only."
-                                          );
-                                        }
-                                        if (!department) {
-                                          throw new Error("Department is required.");
-                                        }
-                                        if (!role) {
-                                          throw new Error("Designation is required.");
-                                        }
-                                        if (!phoneNumber || !isValidIndiaMobile(phoneNumber)) {
-                                          throw new Error(
-                                            "Phone number must be a valid Indian mobile (10 digits, optional +91)."
-                                          );
-                                        }
-                                        if (!Number.isFinite(bandId) || bandId <= 0) {
-                                          throw new Error("Please select a valid Band.");
-                                        }
-                                        if (!dob) {
-                                          throw new Error("Date of Birth is required.");
-                                        }
-                                        const dobDate = parseApiDate(dob);
-                                        if (!dobDate) {
-                                          throw new Error("Date of Birth is invalid.");
-                                        }
-                                        const today = new Date();
-                                        today.setHours(0, 0, 0, 0);
-                                        if (dobDate > today) {
-                                          throw new Error("Date of Birth cannot be in the future.");
-                                        }
-                                        if (onboardForm.user_type === "INTERN") {
-                                          if (!doi) {
-                                            throw new Error("Date of Internship is required for interns.");
-                                          }
-                                          if (!internshipDurationRaw) {
-                                            throw new Error("Internship Duration is required for interns.");
-                                          }
-                                        } else if (!doj) {
-                                          throw new Error("Date of Joining is required.");
-                                        }
-          
-                                        const basePayload: Record<string, unknown> = {
-                                          emp_id: empId,
-                                          email,
-                                          personal_email: personalEmailRaw || null,
-                                          name,
-                                          user_type: onboardForm.user_type,
-                                          department,
-                                          phone_number: phoneNumber || null,
-                                          work_mode: onboardForm.work_mode,
-                                          work_location_type: onboardForm.work_location_type,
-                                          delivery_status: onboardForm.delivery_status,
-                                          role,
-                                          band_id: bandId,
-                                          date_of_birth: dob,
-                                        };
-          
-                                        if (onboardForm.user_type === "INTERN") {
-                                          await hrmsService.createOnboard({
-                                            ...basePayload,
-                                            doj: null,
-                                            doi,
-                                            internship_duration: Number(internshipDurationRaw),
-                                          });
-                                        } else {
-                                          await hrmsService.createOnboard({
-                                            ...basePayload,
-                                            doj,
-                                            doi: null,
-                                            internship_duration: null,
-                                          });
-                                        }
-                                        await loadInviteOnboardingPreview();
-                                        resetOnboardForm();
-                                      })
-                                    }
-                                    disabled={actionLoading}
-                                  >
-                                    Create Employee
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-ghost px-3 py-2"
-                                    onClick={() =>
-                                      runAction("Refresh onboarding list", async () => {
-                                        await loadInviteOnboardingPreview();
-                                        resetOnboardForm();
-                                      })
-                                    }
-                                    disabled={actionLoading}
-                                  >
-                                    Refresh Employee List
-                                  </button>
-                                </div>
+                              <HrOnboardForm
+                                formKey={onboardFormKey}
+                                form={onboardForm}
+                                setForm={setOnboardForm}
+                                options={onboardOptions}
+                                bands={onboardBands}
+                                hasHrAccess={hasHrAccess}
+                                actionLoading={actionLoading}
+                                runAction={runAction}
+                                onError={(message) => setToast({ type: "error", message })}
+                                onSubmitSuccess={async () => {
+                                  await loadInviteOnboardingPreview();
+                                  resetOnboardForm();
+                                }}
+                              />
+                              <div className="flex justify-end">
+                                <button
+                                  type="button"
+                                  className="btn-ghost px-3 py-2"
+                                  onClick={() =>
+                                    runAction("Refresh onboarding list", async () => {
+                                      await loadInviteOnboardingPreview();
+                                      resetOnboardForm();
+                                    })
+                                  }
+                                  disabled={actionLoading}
+                                >
+                                  Refresh employee list
+                                </button>
                               </div>
           
                               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
