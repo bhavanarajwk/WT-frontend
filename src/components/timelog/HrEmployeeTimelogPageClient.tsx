@@ -10,14 +10,20 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
 import { hrmsService } from "@/services/hrms.service";
 import { InputField, SelectField } from "@/components/dashboard/ui/forms";
-import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import { applyListSort, TIMELOG_SORT_OPTIONS } from "@/utils/listSort";
+import {
+  activeSortDirectionForColumn,
+  applyListSort,
+  sortOptionsForColumn,
+  TIMELOG_SORT_OPTIONS,
+  toggleColumnSort,
+} from "@/utils/listSort";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { toPagedRows } from "@/utils/apiRows";
 import { cleanEmployeeName, rowEmail } from "@/utils/employeeDirectory";
 import { formatResumeCellValue } from "@/utils/employeeResume";
-import { prepareTableForDisplay, sanitizeTableColumns } from "@/utils/tableDisplay";
+import { formatTableColumnHeader, prepareTableForDisplay, sanitizeTableColumns } from "@/utils/tableDisplay";
 import { todayApiDate } from "@/utils/apiDate";
 
 const LOG_COLUMNS = sanitizeTableColumns([
@@ -172,12 +178,6 @@ export function HrEmployeeTimelogPageClient() {
                 ...employeeOptions.map((opt) => ({ value: opt.email, label: opt.label })),
               ]}
             />
-            <ListSortSelect
-              value={sortId}
-              onChange={setSortId}
-              options={sortOptionMeta(TIMELOG_SORT_OPTIONS)}
-              disabled={!rows.length}
-            />
             <button
               type="button"
               className="btn-primary px-4 py-2 text-sm"
@@ -199,14 +199,32 @@ export function HrEmployeeTimelogPageClient() {
                 <table className="min-w-full text-sm">
                   <thead className="sticky top-0 z-[1] bg-wt-surface-2 text-wt-text-muted">
                     <tr>
-                      {tableDisplay.columns.map((col) => (
-                        <th
-                          key={col}
-                          className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase"
-                        >
-                          {col.replace(/_/g, " ")}
-                        </th>
-                      ))}
+                      {tableDisplay.columns.map((col) => {
+                        const columnSortOpts = sortOptionsForColumn(col, TIMELOG_SORT_OPTIONS);
+                        const activeDir = columnSortOpts.length
+                          ? activeSortDirectionForColumn(col, sortId, TIMELOG_SORT_OPTIONS)
+                          : null;
+                        return (
+                          <th
+                            key={col}
+                            className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold tracking-wide"
+                          >
+                            <TableSortHeader
+                              label={formatTableColumnHeader(col)}
+                              activeDirection={activeDir}
+                              sortable={columnSortOpts.length > 0}
+                              onSort={
+                                columnSortOpts.length
+                                  ? () =>
+                                      setSortId(
+                                        toggleColumnSort(col, sortId, TIMELOG_SORT_OPTIONS)
+                                      )
+                                  : undefined
+                              }
+                            />
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-wt-border">

@@ -3,10 +3,16 @@
 import { isValidElement, type ReactNode, useMemo, useState } from "react";
 import { ApiDateField, FieldLabel } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { useClientPagination } from "@/hooks/useClientPagination";
-import { applyListSort, type ListSortOption } from "@/utils/listSort";
-import { prepareTableForDisplay } from "@/utils/tableDisplay";
+import {
+  activeSortDirectionForColumn,
+  applyListSort,
+  sortOptionsForColumn,
+  toggleColumnSort,
+  type ListSortOption,
+} from "@/utils/listSort";
+import { formatTableColumnHeader, prepareTableForDisplay } from "@/utils/tableDisplay";
 
 export function InputField({
   label,
@@ -141,28 +147,32 @@ export function DataTable({
     : "text-left px-3 py-2 font-medium whitespace-nowrap sticky top-0 z-[1] bg-wt-surface-2 shadow-[0_1px_0_var(--wt-border)]";
   return (
     <div className="space-y-2">
-      {title || sortOptions?.length ? (
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          {title ? <p className="text-sm font-medium">{title}</p> : <span />}
-          {sortOptions?.length ? (
-            <ListSortSelect
-              value={sortId}
-              onChange={setSortId}
-              options={sortOptionMeta(sortOptions)}
-              className="ml-auto"
-            />
-          ) : null}
-        </div>
-      ) : null}
+      {title ? <p className="text-sm font-medium">{title}</p> : null}
       <div className="wt-scroll-both max-h-[min(70vh,560px)] rounded-xl border border-wt-border overflow-auto">
         <table className="min-w-full text-sm">
           <thead className="text-wt-text-muted">
             <tr>
-              {displayColumns.map((col) => (
-                <th key={col} className={headCellClass}>
-                  {col.replaceAll("_", " ")}
-                </th>
-              ))}
+              {displayColumns.map((col) => {
+                const columnSortOpts = sortOptions?.length ? sortOptionsForColumn(col, sortOptions) : [];
+                const activeDir =
+                  sortOptions?.length && columnSortOpts.length
+                    ? activeSortDirectionForColumn(col, sortId, sortOptions)
+                    : null;
+                return (
+                  <th key={col} className={headCellClass}>
+                    <TableSortHeader
+                      label={formatTableColumnHeader(col)}
+                      activeDirection={activeDir}
+                      sortable={columnSortOpts.length > 0}
+                      onSort={
+                        columnSortOpts.length && sortOptions
+                          ? () => setSortId(toggleColumnSort(col, sortId, sortOptions))
+                          : undefined
+                      }
+                    />
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody className="[&_tr:hover]:bg-wt-surface-2/60">

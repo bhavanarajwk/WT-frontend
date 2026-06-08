@@ -90,9 +90,23 @@ export function buildProjectCodeDisplayMap(projectRows: Array<Record<string, unk
     const code = String(p.project_code ?? p.projectCode ?? "").trim();
     if (!code) continue;
     const name = String(p.project_name ?? p.projectName ?? "").trim();
-    map[code] = name ? `${code} — ${name}` : code;
+    map[code] = name || code;
   }
   return map;
+}
+
+export function allocationProjectDisplayName(row: Record<string, unknown>): string {
+  const title = allocationProjectTitleFromRow(row);
+  if (title) return title;
+  const code = allocationProjectCode(row);
+  if (code.toUpperCase() === "BENCH") return "Bench";
+  const allocated = String(row.allocated_project ?? "").trim();
+  if (allocated.includes("—")) {
+    const name = allocated.split("—").slice(1).join("—").trim();
+    if (name) return name;
+  }
+  if (allocated && !allocated.includes("—")) return allocated;
+  return code || "—";
 }
 
 export function enrichAllocationRowsForDisplay(
@@ -127,8 +141,7 @@ export function enrichAllocationRowsForDisplay(
     const titleOnRow = allocationProjectTitleFromRow(row);
     let allocated_project = "";
     if (code) {
-      allocated_project =
-        projectDisplayByCode[code] ?? (titleOnRow ? `${code} — ${titleOnRow}` : code);
+      allocated_project = projectDisplayByCode[code] ?? (titleOnRow || code);
     } else if (titleOnRow) {
       allocated_project = titleOnRow;
     } else {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
 import type { OffboardListItem } from "@/types/offboard";
@@ -41,8 +42,8 @@ export function OffboardingPanel() {
   const [listPage, setListPage] = useState(0);
   const [listPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const [searchInput, setSearchInput] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [filterFromDate, setFilterFromDate] = useState("");
   const [filterToDate, setFilterToDate] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -58,7 +59,7 @@ export function OffboardingPanel() {
       const res = await hrmsService.getOffboardList({
         page: listPage,
         size: listPageSize,
-        search: appliedSearch.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         type: filterType.trim() || undefined,
         fromDate: filterFromDate.trim() || undefined,
         toDate: filterToDate.trim() || undefined,
@@ -79,7 +80,7 @@ export function OffboardingPanel() {
     } finally {
       setLoadingList(false);
     }
-  }, [listPage, listPageSize, appliedSearch, filterType, filterFromDate, filterToDate]);
+  }, [listPage, listPageSize, debouncedSearch, filterType, filterFromDate, filterToDate]);
 
   const loadOffboardCandidates = useCallback(async () => {
     setLoadingCandidates(true);
@@ -124,6 +125,10 @@ export function OffboardingPanel() {
   }, [loadOffboardList]);
 
   useEffect(() => {
+    setListPage(0);
+  }, [debouncedSearch]);
+
+  useEffect(() => {
     if (!toast) return;
     const id = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(id);
@@ -154,11 +159,6 @@ export function OffboardingPanel() {
     const days = Math.round((b.getTime() - a.getTime()) / 86400000);
     return `Notice period (resignation → last working day): ${Math.max(0, days)} calendar day(s).`;
   }, [offboardingForm.resignation_date, offboardingForm.last_working_day]);
-
-  function applyListFilters() {
-    setListPage(0);
-    setAppliedSearch(searchInput.trim());
-  }
 
   async function submitOffboarding() {
     const empIdValue = offboardingForm.emp_id.trim();
@@ -194,7 +194,7 @@ export function OffboardingPanel() {
       const res = await hrmsService.getOffboardList({
         page: 0,
         size: listPageSize,
-        search: appliedSearch.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         type: filterType.trim() || undefined,
         fromDate: filterFromDate.trim() || undefined,
         toDate: filterToDate.trim() || undefined,
@@ -324,31 +324,37 @@ export function OffboardingPanel() {
             id="offboard-list-search"
             type="search"
             className="input-field min-w-[200px] flex-1 px-3 py-2 text-sm"
-            placeholder="Search by name, emp id, or email…"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applyListFilters();
-            }}
-            aria-label="Search offboarded employees"
+            placeholder="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search"
           />
           <DatePickerField
             label="LWD from"
             value={filterFromDate}
-            onChange={setFilterFromDate}
+            onChange={(v) => {
+              setFilterFromDate(v);
+              setListPage(0);
+            }}
             className="w-[10.5rem] shrink-0"
           />
           <DatePickerField
             label="LWD to"
             value={filterToDate}
-            onChange={setFilterToDate}
+            onChange={(v) => {
+              setFilterToDate(v);
+              setListPage(0);
+            }}
             className="w-[10.5rem] shrink-0"
           />
           <SelectField
             label="User type"
             className="w-[10.5rem] shrink-0"
             value={filterType}
-            onChange={setFilterType}
+            onChange={(v) => {
+              setFilterType(v);
+              setListPage(0);
+            }}
             placeholder="All types"
             options={[
               { value: "", label: "All types" },
@@ -358,14 +364,6 @@ export function OffboardingPanel() {
               })),
             ]}
           />
-          <button
-            type="button"
-            className="btn-primary px-3 py-2 text-sm h-10"
-            onClick={applyListFilters}
-            disabled={loadingList}
-          >
-            Apply
-          </button>
           <button
             type="button"
             className="btn-ghost px-3 py-2 text-sm h-10 border border-wt-border rounded-lg"

@@ -57,24 +57,41 @@ export function AssessmentsPageClient() {
 
       {hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <InputField label="Name" required value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} />
-            <InputField label="Weight %" value={form.weight_percent} onChange={(v) => setForm((p) => ({ ...p, weight_percent: v }))} />
-            <div className="sm:col-span-2">
-              <InputField label="Description" value={form.description} onChange={(v) => setForm((p) => ({ ...p, description: v }))} />
-            </div>
-            <FileField label="Assessment PDF" required accept=".pdf,application/pdf" onPick={setFile} />
-            <div className="flex items-end">
-              <button type="button" className="btn-primary px-4 py-2 text-sm" disabled={uploadMut.isPending || !trainingId || !file} onClick={() => uploadMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
+          <div className="space-y-3">
+            <div className="flex flex-wrap lg:flex-nowrap items-end gap-3">
+              <div className="min-w-[140px] flex-1">
+                <InputField label="Name" required value={form.name} onChange={(v) => setForm((p) => ({ ...p, name: v }))} />
+              </div>
+              <div className="w-28 shrink-0">
+                <InputField label="Weight %" value={form.weight_percent} onChange={(v) => setForm((p) => ({ ...p, weight_percent: v }))} />
+              </div>
+              <div className="min-w-[160px] flex-1">
+                <FileField label="Assessment PDF" required accept=".pdf,application/pdf" onPick={setFile} />
+              </div>
+              <button
+                type="button"
+                className="btn-primary px-4 py-2 text-sm shrink-0"
+                disabled={uploadMut.isPending || !trainingId || !file}
+                onClick={() => uploadMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+              >
                 Upload
               </button>
+            </div>
+            <div className="w-full">
+              <InputField label="Description" value={form.description} onChange={(v) => setForm((p) => ({ ...p, description: v }))} />
             </div>
           </div>
         </section>
       ) : null}
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        <DataTable columns={["name", "description", "file_url", "weight_percent"]} rows={assessmentsQ.data ?? []} emptyLabel="No assessments." sortOptions={TITLE_SORT_OPTIONS} />
+        <DataTable
+          title="List of assessments"
+          columns={["name", "description", "file_url", "weight_percent"]}
+          rows={assessmentsQ.data ?? []}
+          emptyLabel="No assessments."
+          sortOptions={TITLE_SORT_OPTIONS}
+        />
       </section>
     </div>
   );

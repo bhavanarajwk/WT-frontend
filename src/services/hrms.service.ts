@@ -286,23 +286,6 @@ export const hrmsService = {
     }
   },
 
-  /** GET /api/v1/allocation/bench-forecast?days=N */
-  /** GET /allocation/bench-forecast — upcoming roll-offs (separate from talent pool list). */
-  getBenchForecast(params: {
-    days: number;
-    page?: number;
-    size?: number;
-    search?: string;
-  }) {
-    const query: Record<string, string | number> = {
-      days: Math.max(1, Math.min(3650, params.days)),
-      page: params.page ?? 0,
-      size: params.size ?? 50,
-    };
-    if (params.search?.trim()) query.search = params.search.trim();
-    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.benchForecast, { query });
-  },
-
   /** GET /api/v1/timelog/get/{empEmail}/{logDate} — logDate is dd/mm/yyyy */
   getTimelogByEmployeeAndDate(empEmail: string, logDate: string) {
     const normalized = toApiDateParam(logDate) ?? logDate.trim();
@@ -316,7 +299,23 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<PagedData<unknown>>>(endpoints.allocation.root, { query: params });
   },
 
-  /** GET /allocation/talent-pool — Table 1: on talent pool (active BENCH). */
+  /** GET /allocation/employee — all allocations for one employee (ROLE_HR | ROLE_ADMIN). */
+  getEmployeeAllocations(params: { userEmail?: string; userId?: number }) {
+    const query: Record<string, string> = {};
+    if (params.userId != null && Number.isFinite(params.userId)) {
+      query.userId = String(params.userId);
+    } else if (params.userEmail?.trim()) {
+      query.userEmail = params.userEmail.trim();
+    }
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.employee, { query });
+  },
+
+  /** GET /allocation/{allocationId} — single allocation detail. */
+  getAllocationById(allocationId: string) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.byId(allocationId));
+  },
+
+  /** GET /allocation/talent-pool — alias of unallocated list (ROLE_HR | ROLE_ADMIN). */
   getTalentPool(params: { page?: number; size?: number; search?: string } = {}) {
     const query: Record<string, string | number> = {
       page: params.page ?? 0,
@@ -326,7 +325,7 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.talentPool, { query });
   },
 
-  /** GET /allocation/talent-pool/unallocated — Table 2. */
+  /** GET /allocation/talent-pool/unallocated — pagination / search. */
   getTalentPoolUnallocated(params: { page?: number; size?: number; search?: string } = {}) {
     const query: Record<string, string | number> = {
       page: params.page ?? 0,
@@ -338,49 +337,19 @@ export const hrmsService = {
     });
   },
 
-  /** GET /allocation/talent-pool/non-billable — Table 3. */
-  getTalentPoolNonBillable(
-    params: {
-      page?: number;
-      size?: number;
-      search?: string;
-      allocationType?: string;
-    } = {}
-  ) {
-    const query: Record<string, string | number> = {
-      page: params.page ?? 0,
-      size: params.size ?? 50,
-    };
-    if (params.search?.trim()) query.search = params.search.trim();
-    if (params.allocationType?.trim()) query.allocationType = params.allocationType.trim();
-    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.talentPoolNonBillable, {
-      query,
-    });
-  },
-
-  /** GET /allocation/talent-pool/dashboard — all three tables (first load). */
+  /** GET /allocation/talent-pool/dashboard — initial load; read data.unallocated.items. */
   getTalentPoolDashboard(
     params: {
       search?: string;
-      allocationType?: string;
-      onBenchPage?: number;
-      onBenchSize?: number;
       unallocatedPage?: number;
       unallocatedSize?: number;
-      nonBillablePage?: number;
-      nonBillableSize?: number;
     } = {}
   ) {
     const query: Record<string, string | number> = {
-      onBenchPage: params.onBenchPage ?? 0,
-      onBenchSize: params.onBenchSize ?? 50,
       unallocatedPage: params.unallocatedPage ?? 0,
       unallocatedSize: params.unallocatedSize ?? 50,
-      nonBillablePage: params.nonBillablePage ?? 0,
-      nonBillableSize: params.nonBillableSize ?? 50,
     };
     if (params.search?.trim()) query.search = params.search.trim();
-    if (params.allocationType?.trim()) query.allocationType = params.allocationType.trim();
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.talentPoolDashboard, {
       query,
     });
@@ -449,8 +418,11 @@ export const hrmsService = {
   },
 
   /** GET /allocation/percentages — ROLE_HR | ROLE_ADMIN */
-  getAllocationPercentages() {
-    return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.allocation.percentages);
+  getAllocationPercentages(params: { designation?: string; role?: string } = {}) {
+    const query: Record<string, string> = {};
+    const designation = params.designation?.trim() || params.role?.trim();
+    if (designation) query.designation = designation;
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.percentages, { query });
   },
 
   /** GET /allocation/employees — paginated directory for allocate form */
@@ -553,10 +525,18 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.project.types, { query });
   },
 
+  /** POST /project — body uses snake_case (project_code, project_name, project_type, …). */
   createProject(payload: Record<string, unknown>) {
+    const body: Record<string, unknown> = {
+      project_code: payload.project_code ?? payload.projectCode,
+      project_name: payload.project_name ?? payload.projectName,
+      project_type: payload.project_type ?? payload.projectType,
+      client_name: payload.client_name ?? payload.clientName ?? null,
+      account_manager_email: payload.account_manager_email ?? payload.accountManagerEmail,
+    };
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.project.createOne, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
@@ -663,7 +643,7 @@ export const hrmsService = {
     return apiClient.get<unknown>(endpoints.masters.departments);
   },
 
-  /** GET /masters/onboard-options — bare object (enum labels + defaults). */
+  /** GET /masters/onboard-options — `{ message, data: { categories, ... } }`. */
   getOnboardOptions() {
     return apiClient.get<unknown>(endpoints.masters.onboardOptions);
   },
@@ -1038,6 +1018,7 @@ export const hrmsService = {
     });
   },
 
+  /** GET /api/v1/trainings/{training_id}/trainers — list trainers for a training. */
   getTrainingTrainers(trainingId: string) {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.learning.trainers(trainingId));
   },

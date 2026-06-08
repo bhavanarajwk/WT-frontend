@@ -164,6 +164,39 @@ export function InputField({
   );
 }
 
+export function TextAreaField({
+  label,
+  value,
+  onChange,
+  required = false,
+  placeholder,
+  rows = 4,
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  placeholder?: string;
+  rows?: number;
+  className?: string;
+}) {
+  return (
+    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
+      <FieldLabel label={label} required={required} />
+      <textarea
+        className="input-field min-h-[100px] w-full px-3 py-2 text-sm resize-y"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        required={required}
+        aria-required={required || undefined}
+        rows={rows}
+      />
+    </label>
+  );
+}
+
 export type SelectFieldOption = string | { value: string; label: string };
 
 function normalizeSelectOptions(options: SelectFieldOption[]): SearchableSelectOption[] {
