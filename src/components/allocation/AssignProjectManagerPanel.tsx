@@ -72,7 +72,7 @@ export function AssignProjectManagerPanel({
         .filter((p) => p.code.trim())
         .map((p) => ({
           value: p.code.trim(),
-          label: p.name ? `${p.name} (${p.code})` : p.code,
+          label: p.name.trim() || p.code.trim(),
         })),
     [projects]
   );
@@ -89,13 +89,7 @@ export function AssignProjectManagerPanel({
 
   return (
     <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-      <div>
-        <h3 className="font-semibold">Assign project manager</h3>
-        <p className="mt-1 text-sm text-wt-text-muted">
-          The employee must already have an active allocation on the project. This assigns
-          project-scoped ROLE_MANAGER (separate from account manager).
-        </p>
-      </div>
+      <h3 className="font-semibold">Assign project manager</h3>
       <div className="grid sm:grid-cols-2 gap-3">
         <SelectField
           label="Project"

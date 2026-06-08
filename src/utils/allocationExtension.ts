@@ -3,7 +3,8 @@ import type {
   AllocationExtensionRequestStatus,
 } from "@/services/hrms.service";
 import type { ApiEnvelope } from "@/api/httpClient";
-import { formatApiDate, inputValueToApiDate, parseApiDate } from "@/utils/apiDate";
+import { formatApiDate, inputValueToApiDate, normalizeToApiDate, parseApiDate } from "@/utils/apiDate";
+import { allocationProjectCode } from "@/utils/dashboard/allocationDisplay";
 import { cleanEmployeeName } from "@/utils/employeeDirectory";
 
 export type AllocationExtensionContext = {
@@ -67,15 +68,40 @@ export function resolveExtensionProjectCodeForSubmit(
   return trimmed;
 }
 
+function unwrapExtensionContextPayload(raw: Record<string, unknown>): Record<string, unknown> {
+  const nestedKeys = [
+    "allocation",
+    "active_allocation",
+    "activeAllocation",
+    "allocation_detail",
+    "allocationDetail",
+    "context",
+  ] as const;
+  for (const key of nestedKeys) {
+    const nested = raw[key];
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      return { ...raw, ...(nested as Record<string, unknown>) };
+    }
+  }
+  return raw;
+}
+
 function readAllocationEndDate(raw: Record<string, unknown>): string | null {
-  const value = String(
-    raw.current_end_date ??
-      raw.currentEndDate ??
-      raw.end_date ??
-      raw.endDate ??
-      ""
-  ).trim();
-  return value && value !== "—" ? value : null;
+  const sources = [unwrapExtensionContextPayload(raw)];
+  for (const source of sources) {
+    const value = String(
+      source.current_end_date ??
+        source.currentEndDate ??
+        source.end_date ??
+        source.endDate ??
+        source.allocation_end_date ??
+        source.allocationEndDate ??
+        ""
+    ).trim();
+    if (!value || value === "—" || value.toLowerCase() === "null") continue;
+    return normalizeToApiDate(value) || value;
+  }
+  return null;
 }
 
 function readStartDate(raw: Record<string, unknown>): string | null {
@@ -172,6 +198,74 @@ function findManagerExtensionProject(
   return projects.find((p) => p.code.toLowerCase() === code);
 }
 
+/** Match active allocation row for extension context (by project code or id). */
+export function findActiveAllocationForExtension(
+  allocations: Array<Record<string, unknown>>,
+  projectValue: string
+): Record<string, unknown> | null {
+  const needle = projectValue.trim().toLowerCase();
+  if (!needle) return null;
+
+  const activeRows = allocations.filter((row) => {
+    const isActive = row.is_active ?? row.isActive;
+    return !(
+      isActive === false ||
+      isActive === "false" ||
+      isActive === 0 ||
+      isActive === "0"
+    );
+  });
+  const pool = activeRows.length ? activeRows : allocations;
+
+  return (
+    pool.find((row) => {
+      const code = allocationProjectCode(row).toLowerCase();
+      const projectId = String(row.project_id ?? row.projectId ?? "").trim().toLowerCase();
+      return code === needle || projectId === needle;
+    }) ?? null
+  );
+}
+
+export function mergeExtensionContextWithAllocationRow(
+  base: AllocationExtensionContext | null,
+  row: Record<string, unknown>,
+  params: { userEmail: string; projectValue: string },
+  managerProjects: ManagerExtensionProject[] = []
+): AllocationExtensionContext {
+  const currentEnd = readAllocationEndDate(row);
+  const minExtensionDays = base?.min_extension_days ?? DEFAULT_MIN_EXTENSION_DAYS;
+  const minimum =
+    base?.minimum_requested_end_date ||
+    (currentEnd ? addCalendarDaysToApiDate(currentEnd, minExtensionDays) : null);
+  const projectCode =
+    allocationProjectCode(row) || base?.project_code || params.projectValue.trim();
+  const projectName =
+    String(row.project_name ?? row.projectName ?? "").trim() ||
+    base?.project_name ||
+    findManagerExtensionProject(managerProjects, params.projectValue)?.name ||
+    projectCode;
+
+  return {
+    allocation_id: (() => {
+      const id = Number(row.id ?? row.allocation_id ?? row.allocationId ?? base?.allocation_id ?? 0);
+      return Number.isFinite(id) && id > 0 ? id : null;
+    })(),
+    employee_name:
+      String(row.employee_name ?? row.employeeName ?? "").trim() ||
+      base?.employee_name ||
+      "",
+    employee_email: params.userEmail.trim().toLowerCase(),
+    project_code: projectCode,
+    project_name: projectName,
+    start_date: readStartDate(row) ?? base?.start_date ?? null,
+    current_end_date: currentEnd,
+    current_allocated_percent: readAllocatedPercent(row) ?? base?.current_allocated_percent ?? null,
+    minimum_requested_end_date: minimum,
+    min_extension_days: minExtensionDays,
+    extension_allowed: Boolean(currentEnd),
+  };
+}
+
 export function findExtensionAllocationContext(
   projects: ManagerExtensionProject[],
   userEmail: string,
@@ -207,22 +301,28 @@ export function findExtensionAllocationContext(
 export function normalizeAllocationExtensionContext(
   raw: Record<string, unknown>
 ): AllocationExtensionContext {
-  const currentEnd = readAllocationEndDate(raw);
-  const minDaysRaw = Number(raw.min_extension_days ?? raw.minExtensionDays ?? DEFAULT_MIN_EXTENSION_DAYS);
+  const unwrapped = unwrapExtensionContextPayload(raw);
+  const currentEnd = readAllocationEndDate(unwrapped);
+  const minDaysRaw = Number(
+    unwrapped.min_extension_days ?? unwrapped.minExtensionDays ?? DEFAULT_MIN_EXTENSION_DAYS
+  );
   const minExtensionDays =
     Number.isFinite(minDaysRaw) && minDaysRaw > 0 ? minDaysRaw : DEFAULT_MIN_EXTENSION_DAYS;
   const minimumFromApi = String(
-    raw.minimum_requested_end_date ??
-      raw.minimumRequestedEndDate ??
-      raw.earliest_requested_end_date ??
-      raw.earliestRequestedEndDate ??
+    unwrapped.minimum_requested_end_date ??
+      unwrapped.minimumRequestedEndDate ??
+      unwrapped.earliest_requested_end_date ??
+      unwrapped.earliestRequestedEndDate ??
       ""
   ).trim();
   const minimum =
     minimumFromApi ||
     (currentEnd ? addCalendarDaysToApiDate(currentEnd, minExtensionDays) : null);
   const extensionAllowedRaw =
-    raw.extension_allowed ?? raw.extensionAllowed ?? raw.can_request_extension ?? raw.canRequestExtension;
+    unwrapped.extension_allowed ??
+    unwrapped.extensionAllowed ??
+    unwrapped.can_request_extension ??
+    unwrapped.canRequestExtension;
   const extension_allowed =
     extensionAllowedRaw === undefined || extensionAllowedRaw === null
       ? Boolean(currentEnd)
@@ -230,14 +330,14 @@ export function normalizeAllocationExtensionContext(
 
   return {
     allocation_id: (() => {
-      const id = Number(raw.allocation_id ?? raw.allocationId ?? 0);
+      const id = Number(unwrapped.allocation_id ?? unwrapped.allocationId ?? 0);
       return Number.isFinite(id) && id > 0 ? id : null;
     })(),
-    employee_name: String(raw.employee_name ?? raw.employeeName ?? "").trim(),
-    employee_email: String(raw.employee_email ?? raw.employeeEmail ?? "").trim(),
-    project_code: String(raw.project_code ?? raw.projectCode ?? "").trim(),
-    project_name: String(raw.project_name ?? raw.projectName ?? "").trim(),
-    start_date: readStartDate(raw),
+    employee_name: String(unwrapped.employee_name ?? unwrapped.employeeName ?? "").trim(),
+    employee_email: String(unwrapped.employee_email ?? unwrapped.employeeEmail ?? "").trim(),
+    project_code: String(unwrapped.project_code ?? unwrapped.projectCode ?? "").trim(),
+    project_name: String(unwrapped.project_name ?? unwrapped.projectName ?? "").trim(),
+    start_date: readStartDate(unwrapped),
     current_end_date: currentEnd,
     current_allocated_percent: readAllocatedPercent(raw),
     minimum_requested_end_date: minimum,

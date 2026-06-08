@@ -1,15 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useExitInterviewSubmissions } from "@/hooks/exit-interview/useExitInterviewSubmissions";
 import { SelectField } from "@/components/dashboard/ui/forms";
-import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import { applyListSort, EXIT_INTERVIEW_SORT_OPTIONS } from "@/utils/listSort";
+import {
+  activeSortDirectionForColumn,
+  applyListSort,
+  EXIT_INTERVIEW_SORT_OPTIONS,
+  toggleColumnSort,
+} from "@/utils/listSort";
 const STATUS_OPTIONS: Array<{ value: "SUBMITTED" | "PENDING" | "ALL"; label: string }> = [
   { value: "SUBMITTED", label: "Submitted" },
   { value: "PENDING", label: "Pending" },
@@ -23,12 +29,16 @@ export function ExitInterviewSubmissionsPageClient() {
   const [page, setPage] = useState(0);
   const [size] = useState(10);
   const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [status, setStatus] = useState<"SUBMITTED" | "PENDING" | "ALL">("SUBMITTED");
   const [sortId, setSortId] = useState(EXIT_INTERVIEW_SORT_OPTIONS[0].id);
 
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch]);
+
   const listQ = useExitInterviewSubmissions(
-    { page, size, search, status },
+    { page, size, search: debouncedSearch.trim(), status },
     { enabled: canView }
   );
 
@@ -62,21 +72,18 @@ export function ExitInterviewSubmissionsPageClient() {
         <div className="border-b border-wt-border px-5 py-5 md:px-7 md:py-6">
           <h3 className="text-lg font-semibold">Exit interview submissions</h3>
           <div className="mt-4 flex flex-wrap items-end gap-3">
-            <label className="flex min-w-[min(100%,240px)] flex-1 flex-col gap-1 text-xs text-wt-text-muted">
+            <label className="sr-only" htmlFor="exit-interview-search">
               Search
-              <input
-                className="input-field px-3 py-2 text-sm"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Name, email, or employee ID"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setPage(0);
-                    setSearch(searchInput.trim());
-                  }
-                }}
-              />
             </label>
+            <input
+              id="exit-interview-search"
+              type="search"
+              className="input-field min-w-[min(100%,240px)] flex-1 px-3 py-2 text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search"
+              aria-label="Search"
+            />
             <SelectField
               label="Status"
               className="w-[10.5rem]"
@@ -86,21 +93,6 @@ export function ExitInterviewSubmissionsPageClient() {
                 setStatus(v as "SUBMITTED" | "PENDING" | "ALL");
               }}
               options={STATUS_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
-            />
-            <button
-              type="button"
-              className="btn-primary px-3 py-2 text-sm"
-              onClick={() => {
-                setPage(0);
-                setSearch(searchInput.trim());
-              }}
-            >
-              Apply
-            </button>
-            <ListSortSelect
-              value={sortId}
-              onChange={setSortId}
-              options={sortOptionMeta(EXIT_INTERVIEW_SORT_OPTIONS)}
             />
           </div>
         </div>
@@ -125,7 +117,22 @@ export function ExitInterviewSubmissionsPageClient() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-wt-surface-2 text-wt-text-muted">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Employee</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold tracking-wide">
+                        <TableSortHeader
+                          label="Employee"
+                          activeDirection={activeSortDirectionForColumn(
+                            "employee",
+                            sortId,
+                            EXIT_INTERVIEW_SORT_OPTIONS
+                          )}
+                          sortable
+                          onSort={() =>
+                            setSortId(
+                              toggleColumnSort("employee", sortId, EXIT_INTERVIEW_SORT_OPTIONS)
+                            )
+                          }
+                        />
+                      </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Department</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Status</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase" />

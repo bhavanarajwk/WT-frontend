@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
 import {
   hrmsService,
@@ -36,8 +37,8 @@ export function EmployeeAttendancePanel() {
   const defaults = useMemo(() => defaultAttendanceDateRange(), []);
   const [fromDate, setFromDate] = useState(defaults.from);
   const [toDate, setToDate] = useState(defaults.to);
-  const [searchInput, setSearchInput] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [page, setPage] = useState(0);
   const [payload, setPayload] = useState<EmployeeAttendanceLeaveData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,7 +63,7 @@ export function EmployeeAttendancePanel() {
         toDate: to,
         page,
         size: DEFAULT_PAGE_SIZE,
-        search: appliedSearch.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
       });
       setPayload(res.data ?? null);
     } catch (error) {
@@ -77,11 +78,15 @@ export function EmployeeAttendancePanel() {
     } finally {
       setLoading(false);
     }
-  }, [fromDate, toDate, page, appliedSearch]);
+  }, [fromDate, toDate, page, debouncedSearch]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch]);
 
   useEffect(() => {
     if (!toast) return;
@@ -96,11 +101,6 @@ export function EmployeeAttendancePanel() {
   const currentPage = payload?.current_page ?? page;
   const rangeStart = totalItems === 0 ? 0 : currentPage * DEFAULT_PAGE_SIZE + 1;
   const rangeEnd = Math.min(totalItems, (currentPage + 1) * DEFAULT_PAGE_SIZE);
-
-  function applyFilters() {
-    setPage(0);
-    setAppliedSearch(searchInput.trim());
-  }
 
   return (
     <section className="space-y-4">
@@ -150,22 +150,11 @@ export function EmployeeAttendancePanel() {
             id="attendance-search"
             type="search"
             className="input-field min-w-[200px] flex-1 px-3 py-2 text-sm"
-            placeholder="Search by name, emp id, or email…"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applyFilters();
-            }}
-            aria-label="Search employees"
+            placeholder="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search"
           />
-          <button
-            type="button"
-            className="btn-primary px-3 py-2 text-sm h-10"
-            onClick={applyFilters}
-            disabled={loading}
-          >
-            {loading ? "Loading…" : "Apply"}
-          </button>
         </div>
         {payload ? (
           <p className="text-xs text-wt-text-muted">

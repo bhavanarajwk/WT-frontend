@@ -13,12 +13,15 @@ import {
   rowEmpId,
 } from "@/utils/employeeDirectory";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
-import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import {
+  activeSortDirectionForColumn,
   applyListSort,
   EMPLOYEE_DIRECTORY_SORT_OPTIONS,
+  sortOptionsForColumn,
+  toggleColumnSort,
 } from "@/utils/listSort";
 
 const LIST_COLUMNS: Array<{ key: string; label: string }> = [
@@ -97,20 +100,17 @@ export function EmployeeDirectoryPageClient() {
         <div className="border-b border-wt-border px-5 py-5 md:px-7 md:py-6">
           <h3 className="text-lg font-semibold">All employees</h3>
           <div className="mt-4 flex flex-wrap items-end gap-3">
-            <label className="flex min-w-[min(100%,280px)] flex-1 flex-col gap-1 text-xs text-wt-text-muted">
-              Search employees
-              <input
-                className="input-field px-3 py-2.5 text-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name"
-                aria-label="Search name"
-              />
+            <label className="sr-only" htmlFor="employee-directory-search">
+              Search
             </label>
-            <ListSortSelect
-              value={sortId}
-              onChange={setSortId}
-              options={sortOptionMeta(EMPLOYEE_DIRECTORY_SORT_OPTIONS)}
+            <input
+              id="employee-directory-search"
+              type="search"
+              className="input-field min-w-[min(100%,280px)] flex-1 px-3 py-2.5 text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search"
+              aria-label="Search"
             />
           </div>
         </div>
@@ -144,14 +144,43 @@ export function EmployeeDirectoryPageClient() {
                 <table className="min-w-full text-sm">
                   <thead className="sticky top-0 z-[1] bg-wt-surface-2 text-wt-text-muted">
                     <tr>
-                      {LIST_COLUMNS.map((col) => (
-                        <th
-                          key={col.key}
-                          className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                        >
-                          {col.label}
-                        </th>
-                      ))}
+                      {LIST_COLUMNS.map((col) => {
+                        const columnSortOpts = sortOptionsForColumn(
+                          col.key,
+                          EMPLOYEE_DIRECTORY_SORT_OPTIONS
+                        );
+                        const activeDir = columnSortOpts.length
+                          ? activeSortDirectionForColumn(
+                              col.key,
+                              sortId,
+                              EMPLOYEE_DIRECTORY_SORT_OPTIONS
+                            )
+                          : null;
+                        return (
+                          <th
+                            key={col.key}
+                            className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold tracking-wide"
+                          >
+                            <TableSortHeader
+                              label={col.label}
+                              activeDirection={activeDir}
+                              sortable={columnSortOpts.length > 0}
+                              onSort={
+                                columnSortOpts.length
+                                  ? () =>
+                                      setSortId(
+                                        toggleColumnSort(
+                                          col.key,
+                                          sortId,
+                                          EMPLOYEE_DIRECTORY_SORT_OPTIONS
+                                        )
+                                      )
+                                  : undefined
+                              }
+                            />
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-wt-border">
