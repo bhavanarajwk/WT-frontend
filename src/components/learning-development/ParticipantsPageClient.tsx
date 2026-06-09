@@ -7,10 +7,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useTrainingParticipants } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
 import { SelectField } from "@/components/dashboard/ui/forms";
+import { TrainingParticipantsList } from "@/components/learning-development/TrainingParticipantsList";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
-import { DataTable } from "@/components/learning-development/ui/forms";
-import { PARTICIPANT_SORT_OPTIONS } from "@/utils/listSort";
-import { participantRowDisplayLabel, participantRowUserId } from "@/utils/learning/participants";
+import { participantRowUserId } from "@/utils/learning/participants";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { hrmsService } from "@/services/hrms.service";
 
@@ -21,8 +20,7 @@ export function ParticipantsPageClient() {
 
   const [trainingId, setTrainingId] = useState("");
   const [traineePick, setTraineePick] = useState("");
-  const [statusUserId, setStatusUserId] = useState("");
-  const [statusValue, setStatusValue] = useState<"COMPLETED" | "WITHDRAWN">("COMPLETED");
+  const [updatingParticipantId, setUpdatingParticipantId] = useState<string | null>(null);
   const qc = useQueryClient();
   const traineesQ = useTrainingParticipants(trainingId, Boolean(trainingId.trim()));
   const onboardQ = useLearningTrainerDirectory();
@@ -43,25 +41,7 @@ export function ParticipantsPageClient() {
 
   useEffect(() => {
     setTraineePick("");
-    setStatusUserId("");
-    setStatusValue("COMPLETED");
   }, [trainingId]);
-
-  const enrolledOptions = useMemo(
-    () =>
-      (traineesQ.data ?? [])
-        .map((row) => {
-          const id = participantRowUserId(row);
-          if (!id) return null;
-          const status = String(row.enrollment_status ?? row.enrollmentStatus ?? "ENROLLED").trim();
-          return {
-            id,
-            label: `${participantRowDisplayLabel(row, id)} — ${status}`,
-          };
-        })
-        .filter((row): row is { id: string; label: string } => Boolean(row)),
-    [traineesQ.data]
-  );
 
   const addMut = useMutation({
     mutationFn: async () => {
@@ -70,20 +50,19 @@ export function ParticipantsPageClient() {
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["learning", "participants", trainingId] });
+      setTraineePick("");
     },
   });
 
-  const statusMut = useMutation({
-    mutationFn: async () => {
-      if (!statusUserId.trim()) throw new Error("Select a trainee.");
-      await hrmsService.updateTrainingParticipantStatus(trainingId, statusUserId, statusValue);
-    },
-    onSuccess: async () => {
+  const updateParticipantStatus = async (userId: string, status: "COMPLETED" | "WITHDRAWN") => {
+    setUpdatingParticipantId(userId);
+    try {
+      await hrmsService.updateTrainingParticipantStatus(trainingId, userId, status);
       await qc.invalidateQueries({ queryKey: ["learning", "participants", trainingId] });
-      setStatusUserId("");
-      setStatusValue("COMPLETED");
-    },
-  });
+    } finally {
+      setUpdatingParticipantId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -122,50 +101,38 @@ export function ParticipantsPageClient() {
               disabled={addMut.isPending || !traineePick || !trainingId}
               onClick={() => addMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
             >
-              Add trainee
+              {addMut.isPending ? "Adding…" : "Add trainee"}
             </button>
           </div>
           {onboardQ.isLoading ? (
             <p className="text-xs text-wt-text-muted">Loading employees from onboard list…</p>
           ) : null}
-          <div className="grid sm:grid-cols-3 gap-3 items-end">
-            <SelectField
-              label="Update trainee status"
-              required
-              value={statusUserId}
-              onChange={setStatusUserId}
-              placeholder="Select enrolled trainee"
-              options={enrolledOptions.map((o) => ({ value: o.id, label: o.label }))}
-            />
-            <SelectField
-              label="Status"
-              value={statusValue}
-              onChange={(v) => setStatusValue(v as "COMPLETED" | "WITHDRAWN")}
-              options={["COMPLETED", "WITHDRAWN"]}
-            />
-            <button
-              type="button"
-              className="btn-primary px-4 py-2 text-sm"
-              disabled={statusMut.isPending || !statusUserId || !trainingId}
-              onClick={() => statusMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
-            >
-              Update status
-            </button>
-          </div>
+          <TrainingParticipantsList
+            rows={traineesQ.data ?? []}
+            loading={traineesQ.isLoading}
+            canManage={hasHrAccess}
+            updatingUserId={updatingParticipantId}
+            onMarkCompleted={
+              trainingId
+                ? (userId) =>
+                    void updateParticipantStatus(userId, "COMPLETED").catch((e) =>
+                      alert(e instanceof Error ? e.message : "Failed")
+                    )
+                : undefined
+            }
+            onMarkWithdrawn={
+              trainingId
+                ? (userId) =>
+                    void updateParticipantStatus(userId, "WITHDRAWN").catch((e) =>
+                      alert(e instanceof Error ? e.message : "Failed")
+                    )
+                : undefined
+            }
+          />
         </section>
       ) : (
         <p className="text-sm text-wt-text-muted">Trainee management requires HR/Admin.</p>
       )}
-
-      <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        <DataTable
-          title="Enrolled trainees"
-          columns={["name", "email", "enrollment_status"]}
-          rows={traineesQ.data ?? []}
-          emptyLabel={trainingId ? "No trainees enrolled for this training." : "Select a training to view trainees."}
-          sortOptions={PARTICIPANT_SORT_OPTIONS}
-        />
-      </section>
     </div>
   );
 }

@@ -2,6 +2,21 @@ import type { SelectFieldOption } from "@/components/dashboard/ui/forms";
 import type { AllocationPercentRow } from "@/types/allocationPercent";
 import { toRows } from "@/utils/apiRows";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Unwrap GET /allocation/percentages envelope → items array. */
+export function parseAllocationPercentagesResponse(response: unknown): AllocationPercentRow[] {
+  const envelope = isRecord(response) ? response : null;
+  const payload = envelope?.data ?? response;
+  if (Array.isArray(payload)) return normalizeAllocationPercentRows(payload);
+  if (isRecord(payload) && Array.isArray(payload.items)) {
+    return normalizeAllocationPercentRows(payload.items);
+  }
+  return normalizeAllocationPercentRows(payload);
+}
+
 export function normalizeAllocationPercentRows(data: unknown): AllocationPercentRow[] {
   const rows = toRows(data);
   return rows
@@ -41,42 +56,39 @@ export function allocationPercentLabelByCode(
   return Object.fromEntries(types.map((t) => [t.code, t.label]));
 }
 
-/** 12.5% steps from 12.5 through 100 (designer / tester / PM). */
-export const FINE_ALLOCATION_PERCENT_STEP = 12.5;
-
-/** Designers, testers, and project managers use 12.5% increments up to 100%. */
-export function designationAllowsFineAllocationPercent(designation: string): boolean {
+/** Designer, DevOps, and manager roles use 25/50/75/100%; others use 50/100%. */
+export function designationAllowsExtendedAllocationPercent(designation: string): boolean {
   const r = designation.trim().toLowerCase();
   if (!r) return false;
-  return (
-    r.includes("design") ||
-    r.includes("test") ||
-    r.includes("project manager") ||
-    /\bpm\b/.test(r)
-  );
+  return r.includes("designer") || r.includes("devops") || r.includes("manager");
 }
 
-export function fineAllocationPercentOptions(): AllocationPercentRow[] {
-  const rows: AllocationPercentRow[] = [];
-  for (let pct = FINE_ALLOCATION_PERCENT_STEP; pct <= 100.001; pct += FINE_ALLOCATION_PERCENT_STEP) {
-    const code = Math.round(pct * 10) / 10;
-    rows.push({
-      code,
-      label: `${code}%`,
-      sortOrder: rows.length + 1,
-    });
-  }
-  return rows;
+/** @deprecated use designationAllowsExtendedAllocationPercent */
+export function designationAllowsFineAllocationPercent(designation: string): boolean {
+  return designationAllowsExtendedAllocationPercent(designation);
+}
+
+function fallbackAllocationPercentOptions(designation: string): AllocationPercentRow[] {
+  const percents = designationAllowsExtendedAllocationPercent(designation)
+    ? [25, 50, 75, 100]
+    : [50, 100];
+  return percents.map((code, index) => ({
+    code,
+    label: `${code}%`,
+    sortOrder: index + 1,
+  }));
 }
 
 export function allocationPercentOptionsForDesignation(
   designation: string,
   apiOptions: AllocationPercentRow[]
 ): AllocationPercentRow[] {
-  if (designationAllowsFineAllocationPercent(designation)) {
-    return fineAllocationPercentOptions();
-  }
-  return apiOptions;
+  if (apiOptions.length) return apiOptions;
+  return fallbackAllocationPercentOptions(designation);
+}
+
+export function allocationPercentFilterOptions(types: AllocationPercentRow[]): SelectFieldOption[] {
+  return [{ value: "ALL", label: "All types" }, ...allocationPercentSelectOptions(types)];
 }
 
 export function isValidAllocationPercentForDesignation(
@@ -106,10 +118,9 @@ export function resolveAllocatedPercentFromRow(row: Record<string, unknown>): nu
   if (!Number.isFinite(hours) || hours <= 0) return null;
   if (hours === 4) return 50;
   if (hours === 8) return 100;
+  if (hours === 2) return 25;
+  if (hours === 6) return 75;
   if (hours === 50 || hours === 100) return hours;
-  if (Number.isInteger(hours) && hours >= 1 && hours <= 8) {
-    return hours * FINE_ALLOCATION_PERCENT_STEP;
-  }
   const asPct = Math.min(100, Math.round((hours / 8) * 100));
   return asPct > 0 ? asPct : null;
 }
@@ -131,3 +142,14 @@ export function isKnownAllocationPercent(
   if (!Number.isFinite(n) || n <= 0) return false;
   return types.some((t) => Math.abs(t.code - n) < 0.01);
 }
+
+export function fineAllocationPercentOptions(): AllocationPercentRow[] {
+  return fallbackAllocationPercentOptions("Senior Designer");
+}
+
+export const ALL_ALLOCATION_PERCENT_LABELS: AllocationPercentRow[] = [
+  { code: 25, label: "25%", sortOrder: 1 },
+  { code: 50, label: "50%", sortOrder: 2 },
+  { code: 75, label: "75%", sortOrder: 3 },
+  { code: 100, label: "100%", sortOrder: 4 },
+];

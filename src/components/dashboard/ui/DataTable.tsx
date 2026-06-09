@@ -2,10 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { useClientPagination } from "@/hooks/useClientPagination";
-import { applyListSort, type ListSortOption } from "@/utils/listSort";
-import { prepareTableForDisplay } from "@/utils/tableDisplay";
+import {
+  activeSortDirectionForColumn,
+  applyListSort,
+  sortOptionsForColumn,
+  toggleColumnSort,
+  type ListSortOption,
+} from "@/utils/listSort";
+import { formatTableColumnHeader, prepareTableForDisplay } from "@/utils/tableDisplay";
 
 export function DataTable({
   title,
@@ -73,28 +79,32 @@ export function DataTable({
 
   return (
     <div className="space-y-2">
-      {title || sortOptions?.length ? (
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          {title ? <p className="text-sm font-medium">{title}</p> : <span />}
-          {sortOptions?.length ? (
-            <ListSortSelect
-              value={sortId}
-              onChange={setSortId}
-              options={sortOptionMeta(sortOptions)}
-              className="ml-auto"
-            />
-          ) : null}
-        </div>
-      ) : null}
+      {title ? <p className="text-sm font-medium">{title}</p> : null}
       <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
         <table className="min-w-full text-sm">
           <thead className="bg-wt-surface-2 text-wt-text-muted">
             <tr>
-              {displayColumns.map((col) => (
-                <th key={col} className={headCellClass}>
-                  {col.replaceAll("_", " ")}
-                </th>
-              ))}
+              {displayColumns.map((col) => {
+                const columnSortOpts = sortOptions?.length ? sortOptionsForColumn(col, sortOptions) : [];
+                const activeDir =
+                  sortOptions?.length && columnSortOpts.length
+                    ? activeSortDirectionForColumn(col, sortId, sortOptions)
+                    : null;
+                return (
+                  <th key={col} className={headCellClass}>
+                    <TableSortHeader
+                      label={formatTableColumnHeader(col)}
+                      activeDirection={activeDir}
+                      sortable={columnSortOpts.length > 0}
+                      onSort={
+                        columnSortOpts.length && sortOptions
+                          ? () => setSortId(toggleColumnSort(col, sortId, sortOptions))
+                          : undefined
+                      }
+                    />
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -110,7 +120,7 @@ export function DataTable({
           </tbody>
         </table>
       </div>
-      {paginate ? (
+      {paginate && pagination.totalPages > 1 ? (
         <ListPagination
           page={pagination.page}
           totalPages={pagination.totalPages}

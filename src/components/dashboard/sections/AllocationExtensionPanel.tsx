@@ -13,7 +13,9 @@ import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
   buildAllocationExtensionContextQuery,
   buildCreateAllocationExtensionBody,
+  findActiveAllocationForExtension,
   findExtensionAllocationContext,
+  mergeExtensionContextWithAllocationRow,
   mergeAllocationExtensionRowFromStatusResponse,
   normalizeAllocationExtensionContext,
   parseManagerProjectsForExtension,
@@ -21,6 +23,7 @@ import {
   type AllocationExtensionContext,
   type ManagerExtensionProject,
 } from "@/utils/allocationExtension";
+import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
 import { createEmptyAllocationExtensionForm } from "@/utils/allocationFormState";
 
 type Toast = { type: "success" | "error"; message: string } | null;
@@ -48,7 +51,6 @@ export function AllocationExtensionPanel() {
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerRole = userRoles.includes("ROLE_MANAGER");
   const canCreateRequest = hasManagerRole && !hasHrAccess;
-  const canViewManagerStatus = hasManagerRole && !hasHrAccess;
 
   const [toast, setToast] = useState<Toast>(null);
 
@@ -68,8 +70,6 @@ export function AllocationExtensionPanel() {
   const size = 10;
 
   const [hrStatusFilter, setHrStatusFilter] = useState<AllocationExtensionRequestStatus | "">("");
-  const [mgrProjectCode, setMgrProjectCode] = useState("");
-
   const [rows, setRows] = useState<AllocationExtensionRequestRow[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
@@ -130,6 +130,79 @@ export function AllocationExtensionPanel() {
     }
   }, [canCreateRequest]);
 
+  const resolveExtensionContext = useCallback(
+    async (query: { userEmail: string; projectCode?: string; projectId?: number }) => {
+      const projectValue = createForm.projectCode.trim();
+      let context: AllocationExtensionContext | null = null;
+
+      const loadContext = async (params: {
+        userEmail: string;
+        projectCode?: string;
+        projectId?: number;
+      }) => {
+        const res = await hrmsService.getAllocationExtensionContext(params);
+        const raw = (res as { data?: unknown }).data ?? res;
+        if (raw && typeof raw === "object") {
+          return normalizeAllocationExtensionContext(raw as Record<string, unknown>);
+        }
+        return null;
+      };
+
+      try {
+        context = await loadContext(query);
+      } catch {
+        context = null;
+      }
+
+      const managerProject = managerProjectsData.find((project) => {
+        if (/^\d+$/.test(projectValue)) return project.id === Number(projectValue);
+        return project.code.toLowerCase() === projectValue.toLowerCase();
+      });
+
+      if (!context?.current_end_date && managerProject?.id && query.projectId == null) {
+        try {
+          const byProjectId = await loadContext({
+            userEmail: query.userEmail,
+            projectId: managerProject.id,
+          });
+          if (byProjectId) context = byProjectId;
+        } catch {
+          /* keep prior context */
+        }
+      }
+
+      if (!context?.current_end_date) {
+        context =
+          findExtensionAllocationContext(managerProjectsData, query.userEmail, projectValue) ??
+          context;
+      }
+
+      if (!context?.current_end_date) {
+        try {
+          const empRes = await hrmsService.getEmployeeAllocations({ userEmail: query.userEmail });
+          const parsed = parseEmployeeAllocationsResponse(empRes);
+          const allocationRow = findActiveAllocationForExtension(
+            parsed?.allocations ?? [],
+            projectValue
+          );
+          if (allocationRow) {
+            context = mergeExtensionContextWithAllocationRow(
+              context,
+              allocationRow,
+              { userEmail: query.userEmail, projectValue },
+              managerProjectsData
+            );
+          }
+        } catch {
+          /* keep prior context */
+        }
+      }
+
+      return context;
+    },
+    [createForm.projectCode, managerProjectsData]
+  );
+
   const loadAllocationContext = useCallback(async () => {
     const query = buildAllocationExtensionContextQuery({
       userEmail: createForm.userEmail,
@@ -140,28 +213,13 @@ export function AllocationExtensionPanel() {
       return;
     }
 
-    const projectValue = createForm.projectCode.trim();
     setLoadingContext(true);
     try {
-      const res = await hrmsService.getAllocationExtensionContext(query);
-      const raw = (res as { data?: unknown }).data ?? res;
-      if (raw && typeof raw === "object") {
-        setAllocationContext(
-          normalizeAllocationExtensionContext(raw as Record<string, unknown>)
-        );
-        return;
-      }
-      setAllocationContext(
-        findExtensionAllocationContext(managerProjectsData, query.userEmail, projectValue)
-      );
-    } catch {
-      setAllocationContext(
-        findExtensionAllocationContext(managerProjectsData, query.userEmail, projectValue)
-      );
+      setAllocationContext(await resolveExtensionContext(query));
     } finally {
       setLoadingContext(false);
     }
-  }, [createForm.userEmail, createForm.projectCode, managerProjectsData]);
+  }, [createForm.userEmail, createForm.projectCode, resolveExtensionContext]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -184,7 +242,6 @@ export function AllocationExtensionPanel() {
         page,
         size,
         search: search.trim() || undefined,
-        projectCode: mgrProjectCode.trim() || undefined,
       });
       setRows(res.data.data ?? []);
       setTotalPages(res.data.total_pages ?? 1);
@@ -198,7 +255,7 @@ export function AllocationExtensionPanel() {
     } finally {
       setLoading(false);
     }
-  }, [visibleMode, page, size, search, hrStatusFilter, mgrProjectCode]);
+  }, [visibleMode, page, size, search, hrStatusFilter]);
 
   useEffect(() => {
     void load();
@@ -325,13 +382,7 @@ export function AllocationExtensionPanel() {
 
       {canCreateRequest ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="font-semibold">Request allocation end-date extension</h3>
-            <p className="text-xs text-wt-text-muted">
-              Manager initiated; HR approves or rejects. Extension must be at least 7 calendar days after
-              the current allocation end date.
-            </p>
-          </div>
+          <h3 className="font-semibold">Request allocation end-date extension</h3>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <SelectField
@@ -478,26 +529,23 @@ export function AllocationExtensionPanel() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[220px]">
             <h3 className="font-semibold">
-              {visibleMode === "hr" ? "Allocation extension requests (HR)" : "My allocation extension requests"}
+              {visibleMode === "hr" ? "Allocation extension requests" : "My allocation extension requests"}
             </h3>
             <p className="text-xs text-wt-text-muted">
               {loading ? "Loading…" : `${totalElements} total`}
             </p>
           </div>
 
-          <label className="text-sm">
-            <span className="block text-xs text-wt-text-muted mb-1">Search</span>
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-              className="w-64 max-w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-              placeholder="Search name"
-              aria-label="Search name"
-            />
-          </label>
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
+            className="w-64 max-w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
+            placeholder="Search"
+            aria-label="Search"
+          />
 
           {visibleMode === "hr" ? (
             <SelectField
@@ -515,19 +563,6 @@ export function AllocationExtensionPanel() {
                 { value: "REJECTED", label: "REJECTED" },
               ]}
             />
-          ) : canViewManagerStatus ? (
-            <label className="text-sm">
-              <span className="block text-xs text-wt-text-muted mb-1">Project code</span>
-              <input
-                value={mgrProjectCode}
-                onChange={(e) => {
-                  setMgrProjectCode(e.target.value);
-                  setPage(0);
-                }}
-                className="w-44 max-w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-                placeholder="(optional)"
-              />
-            </label>
           ) : null}
 
           <button
@@ -548,8 +583,6 @@ export function AllocationExtensionPanel() {
                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Project</th>
                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Current end</th>
                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Requested end</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Extension days</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Allocation %</th>
                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Status</th>
                   {visibleMode === "hr" ? (
                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Requested by</th>
@@ -563,25 +596,12 @@ export function AllocationExtensionPanel() {
                   return (
                     <tr key={String(r.id)} className="border-t border-wt-border">
                       <td className="px-3 py-2 whitespace-nowrap">{r.employee_name || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className="font-medium">{r.project_code || "—"}</span>
-                        <span className="text-wt-text-muted">{" · "}{r.project_name || "—"}</span>
-                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{r.project_name || "—"}</td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         {r.current_end_date ? asDateDisplayValue(r.current_end_date) : "—"}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         {asDateDisplayValue(r.requested_end_date)}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        {r.extension_days != null ? r.extension_days : "—"}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        {r.current_allocated_percent > 0
-                          ? `${r.current_allocated_percent}%`
-                          : r.requested_allocated_percent > 0
-                            ? `${r.requested_allocated_percent}%`
-                            : "—"}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         {visibleMode === "hr" ? (

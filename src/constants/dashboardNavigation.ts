@@ -109,12 +109,6 @@ export const dashboardNavigation: NavItem[] = [
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "users",
       },
-      {
-        id: "bench-forecast",
-        label: "Bench forecast",
-        roles: ["ROLE_HR", "ROLE_ADMIN"],
-        icon: "trendingUp",
-      },
     ],
   },
   {

@@ -53,6 +53,40 @@ export function parseAllocationEmployees(data: unknown): AllocationEmployeeOptio
   return out.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
 }
 
+/** Parse GET /user/onboard rows (ACTIVE employees) for allocation pickers. */
+export function parseActiveOnboardEmployees(
+  rows: Array<Record<string, unknown>>
+): AllocationEmployeeOption[] {
+  const seen = new Set<string>();
+  const out: AllocationEmployeeOption[] = [];
+
+  for (const row of rows) {
+    const email = String(row.email ?? row.user_email ?? row.userEmail ?? "")
+      .trim()
+      .toLowerCase();
+    if (!email || seen.has(email)) continue;
+    seen.add(email);
+    const name = String(row.name ?? row.user_name ?? row.userName ?? email).trim();
+    const role = String(
+      row.role ?? row.designation ?? row.designation_name ?? row.designationName ?? ""
+    ).trim();
+    const userIdRaw = row.userId ?? row.user_id ?? row.id;
+    const userId =
+      userIdRaw !== undefined && userIdRaw !== null && userIdRaw !== ""
+        ? Number(userIdRaw)
+        : undefined;
+    out.push({
+      employeeEmail: email,
+      employeeName: name || email,
+      userId: Number.isFinite(userId) ? userId : undefined,
+      empId: String(row.empId ?? row.emp_id ?? "").trim() || undefined,
+      ...(role ? { role } : {}),
+    });
+  }
+
+  return out.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+}
+
 export function allocationEmployeesToPickerUsers(
   employees: AllocationEmployeeOption[]
 ): Array<{ name: string; email: string; role?: string }> {
