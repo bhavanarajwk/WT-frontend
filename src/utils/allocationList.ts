@@ -261,6 +261,43 @@ export function parseDeallocatedAllocationListRows(data: unknown): Array<Record<
   return parseAllocationListRows(data);
 }
 
+export type EmployeeAllocationsData = {
+  employeeEmail: string;
+  employeeName: string;
+  userId?: number;
+  empId?: string;
+  totalElements: number;
+  allocations: Array<Record<string, unknown>>;
+};
+
+/** Parse GET /allocation/employee — data.allocations[]. */
+export function parseEmployeeAllocationsResponse(res: unknown): EmployeeAllocationsData | null {
+  const raw = (res as { data?: unknown })?.data ?? res;
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const allocations = Array.isArray(o.allocations)
+    ? (o.allocations as Array<Record<string, unknown>>)
+    : [];
+  const employeeEmail = String(o.employee_email ?? o.employeeEmail ?? "").trim();
+  const employeeName = String(o.employee_name ?? o.employeeName ?? "").trim();
+  const userIdRaw = o.user_id ?? o.userId;
+  const userId =
+    userIdRaw !== undefined && userIdRaw !== null && userIdRaw !== ""
+      ? Number(userIdRaw)
+      : undefined;
+  const empId = String(o.emp_id ?? o.empId ?? "").trim() || undefined;
+  const totalRaw = o.total_elements ?? o.totalElements ?? allocations.length;
+  const totalElements = Number(totalRaw);
+  return {
+    employeeEmail,
+    employeeName,
+    userId: Number.isFinite(userId) ? userId : undefined,
+    empId,
+    totalElements: Number.isFinite(totalElements) ? totalElements : allocations.length,
+    allocations,
+  };
+}
+
 /** Row returned by DELETE /allocation/{id} (soft-deallocated). */
 export function parseDeallocatedAllocationDeleteResponse(
   res: unknown

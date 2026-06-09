@@ -4,12 +4,10 @@ import { useMemo } from "react";
 import { SelectField, type SelectFieldOption } from "@/components/dashboard/ui/forms";
 import { useAllocationPercentages } from "@/hooks/useAllocationPercentages";
 import {
-  allocationPercentOptionsForDesignation,
   allocationPercentSelectOptions,
-  designationAllowsFineAllocationPercent,
 } from "@/utils/allocationPercent";
 
-/** Create/update allocation — API % (50/100) or 12.5% steps for designer / tester / PM. */
+/** Create/update allocation — options from GET /allocation/percentages for the selected role. */
 export function AllocatedPercentSelect({
   designation,
   value,
@@ -25,51 +23,41 @@ export function AllocatedPercentSelect({
   enabled?: boolean;
   disabled?: boolean;
 }) {
-  const fineGrained = designationAllowsFineAllocationPercent(designation);
+  const role = designation.trim();
   const { data: apiOptions = [], isLoading, isError } = useAllocationPercentages(
-    enabled && !fineGrained
-  );
-
-  const resolvedOptions = useMemo(
-    () => allocationPercentOptionsForDesignation(designation, apiOptions),
-    [designation, apiOptions]
+    role,
+    enabled
   );
 
   const selectOptions: SelectFieldOption[] = useMemo(() => {
-    if (!fineGrained) {
-      if (isLoading) {
-        return [{ value: "", label: "Loading allocation %…" }];
-      }
-      if (isError) {
-        return [{ value: "", label: "Could not load allocation %" }];
-      }
+    if (!role) {
+      return [{ value: "", label: "Select project role first" }];
     }
-    if (!resolvedOptions.length) {
+    if (isLoading) {
+      return [{ value: "", label: "Loading allocation %…" }];
+    }
+    if (isError) {
+      return [{ value: "", label: "Could not load allocation %" }];
+    }
+    if (!apiOptions.length) {
       return [{ value: "", label: "No allocation % configured" }];
     }
-    return allocationPercentSelectOptions(resolvedOptions);
-  }, [fineGrained, resolvedOptions, isLoading, isError]);
+    return allocationPercentSelectOptions(apiOptions);
+  }, [apiOptions, isError, isLoading, role]);
 
   const validCodes = useMemo(
-    () => new Set(resolvedOptions.map((t) => String(t.code))),
-    [resolvedOptions]
+    () => new Set(apiOptions.map((t) => String(t.code))),
+    [apiOptions]
   );
-
-  const selectDisabled =
-    disabled ||
-    (!fineGrained && (isLoading || isError)) ||
-    !resolvedOptions.length;
 
   return (
     <SelectField
       label="Allocated %"
-      placeholder={
-        fineGrained ? "Select allocation % (12.5% steps)" : "Select allocation %"
-      }
+      placeholder={role ? "Select allocation %" : "Select project role first"}
       required={required}
       value={value}
       options={selectOptions}
-      disabled={selectDisabled}
+      disabled={disabled || !role || isLoading || isError || !apiOptions.length}
       onChange={(v) => onChange(validCodes.has(v) ? v : "")}
     />
   );

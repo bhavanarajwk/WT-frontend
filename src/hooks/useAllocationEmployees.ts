@@ -6,25 +6,46 @@ import {
   ALLOCATION_EMPLOYEES_PAGE,
   ALLOCATION_EMPLOYEES_SIZE,
 } from "@/constants/allocationApi";
+import { toPagedRows } from "@/utils/apiRows";
+import { isActiveOnboardRow } from "@/utils/learning/onboardOptions";
 import {
-  parseAllocationEmployees,
+  parseActiveOnboardEmployees,
   type AllocationEmployeeOption,
 } from "@/utils/allocationEmployees";
 
-async function fetchAllocationEmployees(): Promise<AllocationEmployeeOption[]> {
-  const res = await hrmsService.getAllocationEmployees({
+async function fetchActiveOnboardEmployees(): Promise<AllocationEmployeeOption[]> {
+  const onboardRes = await hrmsService.getOnboardList({
     page: ALLOCATION_EMPLOYEES_PAGE,
     size: ALLOCATION_EMPLOYEES_SIZE,
+    onboardingStatus: "ACTIVE",
   });
-  return parseAllocationEmployees(res.data ?? res);
+  let rows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes).filter(
+    isActiveOnboardRow
+  );
+  if (!rows.length) {
+    const fallback = await hrmsService.getOnboardList({
+      page: ALLOCATION_EMPLOYEES_PAGE,
+      size: ALLOCATION_EMPLOYEES_SIZE,
+    });
+    rows = toPagedRows((fallback as { data?: unknown }).data ?? fallback).filter(
+      isActiveOnboardRow
+    );
+  }
+  return parseActiveOnboardEmployees(rows);
 }
 
-/** GET /api/v1/allocation/employees — allocate-form employee directory */
+/** ACTIVE employees from GET /api/v1/user/onboard — allocate-form employee directory */
 export function useAllocationEmployees(enabled = true) {
   return useQuery({
-    queryKey: ["allocation", "employees", ALLOCATION_EMPLOYEES_PAGE, ALLOCATION_EMPLOYEES_SIZE],
+    queryKey: [
+      "allocation",
+      "employees",
+      "active",
+      ALLOCATION_EMPLOYEES_PAGE,
+      ALLOCATION_EMPLOYEES_SIZE,
+    ],
     enabled,
-    queryFn: fetchAllocationEmployees,
+    queryFn: fetchActiveOnboardEmployees,
     staleTime: 60_000,
   });
 }

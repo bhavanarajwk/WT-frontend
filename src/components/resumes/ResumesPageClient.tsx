@@ -13,17 +13,17 @@ import {
   tableColumnsForResumeRows,
 } from "@/utils/employeeResume";
 import { EmployeeResumeLinkFromRow } from "@/components/resumes/EmployeeResumeLink";
-import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useClientPagination } from "@/hooks/useClientPagination";
-import { applyListSort, resumeSortOptions } from "@/utils/listSort";
-
-function labelizeKey(key: string): string {
-  return key
-    .replace(/_/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
+import {
+  activeSortDirectionForColumn,
+  applyListSort,
+  resumeSortOptions,
+  sortOptionsForColumn,
+  toggleColumnSort,
+} from "@/utils/listSort";
+import { formatTableColumnHeader } from "@/utils/tableDisplay";
 
 export function ResumesPageClient() {
   const { user, status: authStatus } = useAuth();
@@ -93,23 +93,18 @@ export function ResumesPageClient() {
             Employee resume share links. Click <strong>resume</strong> to open the document.
           </p>
           <div className="mt-4 flex flex-wrap items-end gap-3">
-            <label className="flex min-w-[min(100%,280px)] flex-1 flex-col gap-1 text-xs text-wt-text-muted">
+            <label className="sr-only" htmlFor="resumes-search">
               Search
-              <input
-                className="input-field px-3 py-2.5 text-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Name, email, employee ID…"
-                aria-label="Search resumes"
-              />
             </label>
-            {sortOptions.length ? (
-              <ListSortSelect
-                value={sortId}
-                onChange={setSortId}
-                options={sortOptionMeta(sortOptions)}
-              />
-            ) : null}
+            <input
+              id="resumes-search"
+              type="search"
+              className="input-field min-w-[min(100%,280px)] flex-1 px-3 py-2.5 text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search"
+              aria-label="Search"
+            />
           </div>
         </div>
 
@@ -148,14 +143,31 @@ export function ResumesPageClient() {
               <table className="min-w-full text-sm">
                 <thead className="sticky top-0 z-[1] bg-wt-surface-2 text-wt-text-muted">
                   <tr>
-                    {columns.map((col) => (
-                      <th
-                        key={col}
-                        className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                      >
-                        {labelizeKey(col)}
-                      </th>
-                    ))}
+                    {columns.map((col) => {
+                      const columnSortOpts = sortOptions.length
+                        ? sortOptionsForColumn(col, sortOptions)
+                        : [];
+                      const activeDir = columnSortOpts.length
+                        ? activeSortDirectionForColumn(col, sortId, sortOptions)
+                        : null;
+                      return (
+                        <th
+                          key={col}
+                          className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold tracking-wide"
+                        >
+                          <TableSortHeader
+                            label={formatTableColumnHeader(col)}
+                            activeDirection={activeDir}
+                            sortable={columnSortOpts.length > 0}
+                            onSort={
+                              columnSortOpts.length
+                                ? () => setSortId(toggleColumnSort(col, sortId, sortOptions))
+                                : undefined
+                            }
+                          />
+                        </th>
+                      );
+                    })}
                     <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                       Resume
                     </th>

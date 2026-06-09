@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import type { TraineeTableRow } from "@/utils/learning/participants";
 import {
+  computeWeightedOverallScore,
   findParticipantScoreForTrainee,
-  resolveOverallScorePercent,
   type ParticipantTrainingScore,
 } from "@/utils/learning/trainingScores";
 
@@ -20,9 +20,9 @@ function scoreForAssessment(
   assessmentId: string,
   participant: ParticipantTrainingScore | undefined,
   draft: ScoreDraft | undefined,
-  isSelected: boolean
+  includeDraft: boolean
 ): number | null {
-  if (isSelected && draft) {
+  if (includeDraft && draft) {
     const fromDraft = parseScorePct(draft.scorePct);
     if (fromDraft != null) return fromDraft;
   }
@@ -31,8 +31,20 @@ function scoreForAssessment(
   return null;
 }
 
+function mergedScoresJson(
+  participant: ParticipantTrainingScore | undefined,
+  draft: ScoreDraft | undefined,
+  selectedAssessmentId: string
+): Record<string, number> {
+  const base = { ...(participant?.scoresJson ?? {}) };
+  if (selectedAssessmentId && draft) {
+    const fromDraft = parseScorePct(draft.scorePct);
+    if (fromDraft != null) base[selectedAssessmentId] = fromDraft;
+  }
+  return base;
+}
+
 export function TraineeScoreAnalytics({
-  employeeUserId,
   traineeRows,
   assessments,
   assessmentId,
@@ -40,7 +52,6 @@ export function TraineeScoreAnalytics({
   savedScores,
   scoresLoading,
 }: {
-  employeeUserId: string;
   traineeRows: TraineeTableRow[];
   assessments: Array<Record<string, unknown>>;
   assessmentId: string;
@@ -48,68 +59,27 @@ export function TraineeScoreAnalytics({
   savedScores: ParticipantTrainingScore[];
   scoresLoading: boolean;
 }) {
-  const trainee = useMemo(
-    () => traineeRows.find((r) => r.userId === employeeUserId),
-    [traineeRows, employeeUserId]
-  );
-
-  const participantScore = useMemo(
+  const assessmentColumns = useMemo(
     () =>
-      employeeUserId
-        ? findParticipantScoreForTrainee(savedScores, employeeUserId, trainee?.email)
-        : undefined,
-    [savedScores, employeeUserId, trainee?.email]
+      assessments
+        .map((a) => {
+          const id = String(a.id ?? "").trim();
+          const name = String(a.name ?? `Assessment ${id}`).trim();
+          return id ? { id, name: name || id } : null;
+        })
+        .filter((a): a is { id: string; name: string } => Boolean(a)),
+    [assessments]
   );
 
-  const draft = scoresByUser[employeeUserId] ?? { scorePct: "0", markCompleted: false };
-  const selectedAssessment = useMemo(
-    () => assessments.find((a) => String(a.id ?? "").trim() === assessmentId.trim()),
-    [assessments, assessmentId]
-  );
-  const selectedName = String(selectedAssessment?.name ?? "Selected assessment").trim();
-  const selectedId = assessmentId.trim();
-  const currentScore = scoreForAssessment(
-    selectedId,
-    participantScore,
-    draft,
-    Boolean(selectedId)
-  );
-  const overallScore = resolveOverallScorePercent(participantScore, assessments);
-  const totalAssessments = assessments.length;
-  const scoredAssessmentCount = useMemo(() => {
-    if (!participantScore) return 0;
-    return assessments.filter((a) => {
-      const id = String(a.id ?? "").trim();
-      return id && participantScore.scoresJson[id] != null;
-    }).length;
-  }, [assessments, participantScore]);
-  const markedComplete = participantScore?.isCompleted ?? draft.markCompleted;
+  const selectedAssessmentId = assessmentId.trim();
 
-  if (!employeeUserId) {
+  if (!traineeRows.length) {
     return (
-      <p className="text-sm text-wt-text-muted">
-        Select an employee to see score and completion analytics for this training.
-      </p>
+      <p className="text-sm text-wt-text-muted">No trainees enrolled for this training.</p>
     );
   }
 
-  if (!trainee) {
-    return (
-      <p className="text-sm text-wt-text-muted">
-        Selected employee is not enrolled in this training.
-      </p>
-    );
-  }
-
-  if (!assessmentId.trim()) {
-    return (
-      <p className="text-sm text-wt-text-muted">
-        Select an assessment to view score analytics for {trainee.name}.
-      </p>
-    );
-  }
-
-  if (!totalAssessments) {
+  if (!assessmentColumns.length) {
     return (
       <p className="text-sm text-wt-text-muted">
         No assessments defined for this training yet.
@@ -118,121 +88,68 @@ export function TraineeScoreAnalytics({
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm font-medium">{trainee.name}</p>
+    <div className="space-y-3">
       {scoresLoading ? (
         <p className="text-xs text-wt-text-muted">Loading saved scores…</p>
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <article className="rounded-xl border border-wt-border bg-wt-surface-2 p-4 sm:col-span-2 lg:col-span-1">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
-            Overall score
-          </p>
-          <p className="text-2xl font-semibold mt-1 text-indigo-700">
-            {overallScore != null ? `${overallScore}%` : "—"}
-          </p>
-          <p className="text-xs text-wt-text-muted mt-1">
-            Weighted across all assessments
-            {scoredAssessmentCount > 0
-              ? ` (${scoredAssessmentCount}/${totalAssessments} scored)`
-              : ""}
-          </p>
-        </article>
-        <article className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
-            Total assessments
-          </p>
-          <p className="text-2xl font-semibold mt-1">{totalAssessments}</p>
-        </article>
-        <article className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
-            Current score
-          </p>
-          <p className="text-2xl font-semibold mt-1 text-sky-700">
-            {currentScore != null ? `${currentScore}%` : "—"}
-          </p>
-          <p className="text-xs text-wt-text-muted mt-1 truncate" title={selectedName}>
-            {selectedName}
-          </p>
-        </article>
-        <article className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
-            Training completion
-          </p>
-          <p
-            className={`text-2xl font-semibold mt-1 ${
-              markedComplete ? "text-emerald-700" : "text-wt-text-muted"
-            }`}
-          >
-            {markedComplete ? "Complete" : "In progress"}
-          </p>
-        </article>
-        <article className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
-            Enrollment
-          </p>
-          <p className="text-2xl font-semibold mt-1 text-base">{trainee.enrollmentStatus}</p>
-        </article>
-      </div>
-      <div className="wt-scroll-both overflow-x-auto rounded-lg border border-wt-border">
+      <div className="wt-scroll-both overflow-x-auto rounded-xl border border-wt-border">
         <table className="min-w-full text-sm">
           <thead className="bg-wt-surface-2 text-wt-text-muted">
             <tr>
-              <th className="text-left px-3 py-2 font-medium">Assessment</th>
-              <th className="text-left px-3 py-2 font-medium">Weight</th>
-              <th className="text-left px-3 py-2 font-medium">Score (%)</th>
-              <th className="text-left px-3 py-2 font-medium">Completion</th>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap sticky left-0 bg-wt-surface-2 z-10">
+                Employee
+              </th>
+              {assessmentColumns.map((a) => (
+                <th
+                  key={a.id}
+                  className="text-left px-3 py-2 font-medium whitespace-nowrap min-w-[7rem]"
+                  title={a.name}
+                >
+                  {a.name}
+                </th>
+              ))}
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap min-w-[8rem]">
+                Overall avg score
+              </th>
             </tr>
           </thead>
           <tbody>
-            {assessments.map((a) => {
-              const id = String(a.id ?? "").trim();
-              const name = String(a.name ?? `Assessment ${id}`).trim();
-              const weight = Number(a.weight_percent ?? a.weightPercent ?? 0);
-              const isSelected = id === assessmentId.trim();
-              const rowScore = scoreForAssessment(
-                id,
-                participantScore,
-                isSelected ? draft : undefined,
-                isSelected
+            {traineeRows.map((trainee) => {
+              const participant = findParticipantScoreForTrainee(
+                savedScores,
+                trainee.userId,
+                trainee.email
               );
+              const draft = scoresByUser[trainee.userId];
+              const overall = computeWeightedOverallScore(
+                mergedScoresJson(participant, draft, selectedAssessmentId),
+                assessments
+              );
+
               return (
-                <tr
-                  key={id || name}
-                  className={`border-t border-wt-border ${isSelected ? "bg-wt-surface-2/60" : ""}`}
-                >
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    {name}
-                    {isSelected ? (
-                      <span className="ml-2 text-[10px] uppercase tracking-wide text-wt-text-muted">
-                        (selected)
-                      </span>
-                    ) : null}
+                <tr key={trainee.key} className="border-t border-wt-border">
+                  <td className="px-3 py-2 whitespace-nowrap font-medium sticky left-0 bg-wt-surface-1 z-10">
+                    {trainee.name}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-wt-text-muted">
-                    {Number.isFinite(weight) && weight > 0 ? `${weight}%` : "—"}
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    {rowScore != null ? (
-                      <span className={`font-medium ${isSelected ? "text-sky-700" : ""}`}>
-                        {rowScore}%
-                      </span>
-                    ) : (
-                      <span className="text-wt-text-muted">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    {isSelected ? (
-                      <span
-                        className={
-                          markedComplete ? "text-emerald-700 font-medium" : "text-wt-text-muted"
-                        }
-                      >
-                        {markedComplete ? "Marked complete" : "Not completed"}
-                      </span>
-                    ) : (
-                      <span className="text-wt-text-muted">—</span>
-                    )}
+                  {assessmentColumns.map((a) => {
+                    const score = scoreForAssessment(
+                      a.id,
+                      participant,
+                      draft,
+                      a.id === selectedAssessmentId
+                    );
+                    return (
+                      <td key={a.id} className="px-3 py-2 whitespace-nowrap">
+                        {score != null ? (
+                          <span className="font-medium">{score}%</span>
+                        ) : (
+                          <span className="text-wt-text-muted">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="px-3 py-2 whitespace-nowrap font-semibold text-indigo-700">
+                    {overall != null ? `${overall}%` : "—"}
                   </td>
                 </tr>
               );

@@ -29,8 +29,6 @@ import {
   ALLOCATION_FORECAST_DAYS,
   ALLOCATION_FORECAST_PAGE,
   ALLOCATION_FORECAST_SIZE,
-  ALLOCATION_DEALLOCATED_PAGE,
-  ALLOCATION_DEALLOCATED_SIZE,
   ALLOCATION_LIST_PAGE,
   ALLOCATION_LIST_SIZE,
 } from "@/constants/allocationApi";
@@ -66,7 +64,7 @@ import { normalizeToApiDate } from "@/utils/apiDate";
 import {
   allocationPercentLabelByCode,
   allocationPercentOptionsForDesignation,
-  fineAllocationPercentOptions,
+  ALL_ALLOCATION_PERCENT_LABELS,
   formatAllocatedPercentDisplay,
   isKnownAllocationPercent,
   isValidAllocationPercentForDesignation,
@@ -83,6 +81,7 @@ import {
   normalizeForecastRows,
   allocationRowEmail,
   allocationProjectCode,
+  allocationProjectDisplayName,
   allocationProjectTitleFromRow,
 } from "@/utils/dashboard/allocationDisplay";
 import {
@@ -104,9 +103,16 @@ import {
 } from "@/components/dashboard/ui/profile";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { useClientPagination } from "@/hooks/useClientPagination";
-import { applyListSort, PROJECT_SORT_OPTIONS, TIMELOG_SORT_OPTIONS, ALLOCATION_FORECAST_SORT_OPTIONS } from "@/utils/listSort";
+import {
+  activeSortDirectionForColumn,
+  applyListSort,
+  PROJECT_SORT_OPTIONS,
+  TIMELOG_SORT_OPTIONS,
+  ALLOCATION_FORECAST_SORT_OPTIONS,
+  toggleColumnSort,
+} from "@/utils/listSort";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
@@ -125,12 +131,10 @@ import {
   parseAllocationForecastRows,
   parseAllocationListRows,
   parseAllocationUpdateResponse,
-  parseDeallocatedAllocationDeleteResponse,
-  parseDeallocatedAllocationListRows,
+  parseEmployeeAllocationsResponse,
   sortAllocationListRows,
 } from "@/utils/allocationList";
 import { TALENT_POOL_QUERY_KEY } from "@/hooks/allocation/useTalentPool";
-import { BENCH_FORECAST_QUERY_KEY } from "@/hooks/allocation/useBenchForecastList";
 
 
 
@@ -171,13 +175,16 @@ export function AllocationPageClient() {
   invitedListFromDateRef.current = invitedListFromDate;
   invitedListToDateRef.current = invitedListToDate;
   const [allocations, setAllocations] = useState<Array<Record<string, unknown>>>([]);
-  const [deallocatedAllocations, setDeallocatedAllocations] = useState<
-    Array<Record<string, unknown>>
-  >([]);
-  const [deallocatedLoading, setDeallocatedLoading] = useState(false);
-  const [deallocatedLoadError, setDeallocatedLoadError] = useState<string | null>(null);
   const [allocationsLoading, setAllocationsLoading] = useState(false);
   const [allocationsLoadError, setAllocationsLoadError] = useState<string | null>(null);
+  const [selectedEmployeeAllocations, setSelectedEmployeeAllocations] = useState<{
+    employeeEmail: string;
+    employeeName: string;
+    allocations: Array<Record<string, unknown>>;
+    highlightedAllocationId: string;
+  } | null>(null);
+  const [employeeAllocationsLoading, setEmployeeAllocationsLoading] = useState(false);
+  const [employeeAllocationsError, setEmployeeAllocationsError] = useState<string | null>(null);
   const [allocationForecastRows, setAllocationForecastRows] = useState<Array<Record<string, unknown>>>([]);
   const [allocationForecastLoading, setAllocationForecastLoading] = useState(false);
   const [allocationForecastLoadError, setAllocationForecastLoadError] = useState<string | null>(null);
@@ -416,13 +423,13 @@ export function AllocationPageClient() {
     () => projectTypeLabelByCode(allProjectTypes),
     [allProjectTypes]
   );
-  const { data: allocationPercentOptions = [] } = useAllocationPercentages(hasAllocationAccess);
+  const { data: allocationPercentOptions = [] } = useAllocationPercentages(
+    allocationForm.role,
+    hasAllocationAccess && Boolean(allocationForm.role.trim())
+  );
   const allocationPercentLabels = useMemo(
-    () => ({
-      ...allocationPercentLabelByCode(fineAllocationPercentOptions()),
-      ...allocationPercentLabelByCode(allocationPercentOptions),
-    }),
-    [allocationPercentOptions]
+    () => allocationPercentLabelByCode(ALL_ALLOCATION_PERCENT_LABELS),
+    []
   );
   /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
   const timelogHrNoSelfProject =
@@ -942,7 +949,7 @@ export function AllocationPageClient() {
       const code = String(p.project_code ?? p.projectCode ?? "").trim();
       if (!code) continue;
       const name = String(p.project_name ?? p.projectName ?? "").trim();
-      map[code] = name ? `${code} — ${name}` : code;
+      map[code] = name || code;
     }
     return map;
   }
@@ -979,8 +986,7 @@ export function AllocationPageClient() {
       const titleOnRow = allocationProjectTitleFromRow(row);
       let allocated_project = "";
       if (code) {
-        allocated_project =
-          projectDisplayByCode[code] ?? (titleOnRow ? `${code} — ${titleOnRow}` : code);
+        allocated_project = projectDisplayByCode[code] ?? (titleOnRow || code);
       } else if (titleOnRow) {
         allocated_project = titleOnRow;
       } else {
@@ -1314,10 +1320,7 @@ export function AllocationPageClient() {
     const email = allocationForm.employee_email.trim().toLowerCase();
     if (!email) return "Select employee";
     const hit = allocationUsers.find((u) => u.email.toLowerCase() === email);
-    if (!hit) return allocationForm.employee_email.trim();
-    return hit.role
-      ? `${hit.name} | ${hit.role} (${hit.email})`
-      : `${hit.name} (${hit.email})`;
+    return hit?.name ?? allocationForm.employee_email.trim();
   }, [allocationUsers, allocationForm.employee_email]);
   const assignedProjectsWithAllocationPct = useMemo(
     () =>
@@ -2298,42 +2301,48 @@ export function AllocationPageClient() {
     }
   }, [enrichAllocationRowsWithContext]);
 
-  const loadDeallocatedAllocationsForHr = useCallback(async () => {
-    setDeallocatedLoading(true);
-    setDeallocatedLoadError(null);
-    try {
-      const res = await hrmsService.getDeallocatedAllocations({
-        page: ALLOCATION_DEALLOCATED_PAGE,
-        size: ALLOCATION_DEALLOCATED_SIZE,
-      });
-      const rows = parseDeallocatedAllocationListRows((res as { data?: unknown }).data ?? res);
-      setDeallocatedAllocations(await enrichAllocationRowsWithContext(rows));
-    } catch (err) {
-      setDeallocatedAllocations([]);
-      setDeallocatedLoadError(
-        err instanceof Error ? err.message : "Could not load deallocated allocation records."
-      );
-    } finally {
-      setDeallocatedLoading(false);
-    }
-  }, [enrichAllocationRowsWithContext]);
+  const loadEmployeeAllocationsForRow = useCallback(
+    async (row: Record<string, unknown>) => {
+      const employeeEmail = String(
+        row.employee_email ?? row.employeeEmail ?? row.email ?? ""
+      ).trim();
+      const userIdRaw = row.user_id ?? row.userId;
+      const userId =
+        userIdRaw !== undefined && userIdRaw !== null && userIdRaw !== ""
+          ? Number(userIdRaw)
+          : undefined;
+      const highlightedAllocationId = allocationRowId(row);
 
-  const prependDeallocatedRowFromDelete = useCallback(
-    async (res: unknown) => {
-      const row = parseDeallocatedAllocationDeleteResponse(res);
-      if (!row) {
-        await loadDeallocatedAllocationsForHr();
-        return;
+      if (!employeeEmail && !Number.isFinite(userId)) return;
+
+      setEmployeeAllocationsLoading(true);
+      setEmployeeAllocationsError(null);
+
+      try {
+        const res = await hrmsService.getEmployeeAllocations(
+          employeeEmail ? { userEmail: employeeEmail } : { userId: userId! }
+        );
+        const parsed = parseEmployeeAllocationsResponse(res);
+        if (!parsed) throw new Error("Could not load employee allocations.");
+        const enriched = await enrichAllocationRowsWithContext(parsed.allocations);
+        setSelectedEmployeeAllocations({
+          employeeEmail: (parsed.employeeEmail || employeeEmail).toLowerCase(),
+          employeeName:
+            parsed.employeeName ||
+            String(row.employee_name ?? row.employeeName ?? "Employee"),
+          allocations: enriched,
+          highlightedAllocationId,
+        });
+      } catch (err) {
+        setSelectedEmployeeAllocations(null);
+        setEmployeeAllocationsError(
+          err instanceof Error ? err.message : "Could not load employee allocations."
+        );
+      } finally {
+        setEmployeeAllocationsLoading(false);
       }
-      const [enriched] = await enrichAllocationRowsWithContext([row]);
-      if (!enriched) return;
-      const id = allocationRowId(enriched);
-      setDeallocatedAllocations((prev) => {
-        const without = id ? prev.filter((r) => allocationRowId(r) !== id) : prev;
-        return [enriched, ...without];
-      });
     },
-    [enrichAllocationRowsWithContext, loadDeallocatedAllocationsForHr]
+    [enrichAllocationRowsWithContext]
   );
 
   const loadAllocationForecasting = useCallback(async () => {
@@ -2390,7 +2399,6 @@ export function AllocationPageClient() {
     if (!hasHrAccess || requiresSelfOnboarding) return;
     const id = window.setTimeout(() => {
       void loadAllocationsForHr();
-      void loadDeallocatedAllocationsForHr();
     }, 0);
     return () => window.clearTimeout(id);
   }, [
@@ -2399,7 +2407,6 @@ export function AllocationPageClient() {
     hasHrAccess,
     requiresSelfOnboarding,
     loadAllocationsForHr,
-    loadDeallocatedAllocationsForHr,
   ]);
   useEffect(() => {
     if (!user) return;
@@ -2407,7 +2414,6 @@ export function AllocationPageClient() {
     if (allocationHrSubTab !== "list") return;
     const id = window.setTimeout(() => {
       void loadAllocationsForHr();
-      void loadDeallocatedAllocationsForHr();
       void loadAllocationForecasting();
     }, 0);
     return () => window.clearTimeout(id);
@@ -2418,7 +2424,6 @@ export function AllocationPageClient() {
     hasHrAccess,
     requiresSelfOnboarding,
     loadAllocationsForHr,
-    loadDeallocatedAllocationsForHr,
     loadAllocationForecasting,
   ]);
 
@@ -2451,8 +2456,9 @@ export function AllocationPageClient() {
           projectFilters.project_type;
       const searchOk =
         !search ||
-        String(project.project_code ?? "").toLowerCase().includes(search) ||
-        String(project.project_name ?? "").toLowerCase().includes(search);
+        String(project.project_name ?? project.projectName ?? "")
+          .toLowerCase()
+          .includes(search);
       return typeOk && searchOk;
     });
     return applyListSort(filtered, projectSortId, PROJECT_SORT_OPTIONS);
@@ -2461,7 +2467,6 @@ export function AllocationPageClient() {
     resetKeys: [projectFilters.search, projectFilters.project_type, projectSortId],
   });
   const allocationPagination = useClientPagination(allocations);
-  const deallocatedPagination = useClientPagination(deallocatedAllocations);
   const normalizedManagerProjects = useMemo(() => {
     const sourceRows = managerProjects.length ? managerProjects : managerPortfolioRows;
     return Array.from(
@@ -3377,7 +3382,6 @@ export function AllocationPageClient() {
                                   onClick={() => {
                                     setAllocationHrSubTab("list");
                                     void loadAllocationsForHr();
-                                    void loadDeallocatedAllocationsForHr();
                                     void loadAllocationForecasting();
                                   }}
                                   className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -3454,11 +3458,11 @@ export function AllocationPageClient() {
                                           }
                                           const project_code = generateAutomaticProjectCode();
                                           await hrmsService.createProject({
-                                            projectCode: project_code,
-                                            projectName: name,
-                                            projectType: projectForm.project_type,
-                                            clientName: projectForm.client_name.trim() || null,
-                                            accountManagerEmail,
+                                            project_code,
+                                            project_name: name,
+                                            project_type: projectForm.project_type,
+                                            client_name: projectForm.client_name.trim() || null,
+                                            account_manager_email: accountManagerEmail,
                                           });
                                           setEditingProjectCode("");
                                           setProjectForm(createEmptyProjectForm());
@@ -3494,7 +3498,7 @@ export function AllocationPageClient() {
                                   <p className="text-sm font-medium">All Projects</p>
                                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     <InputField
-                                      label="Search by code or name"
+                                      label="Search by name"
                                       value={projectFilters.search}
                                       onChange={(v) =>
                                         setProjectFilters((p) => ({
@@ -3513,11 +3517,6 @@ export function AllocationPageClient() {
                                         }))
                                       }
                                     />
-                                    <ListSortSelect
-                                      value={projectSortId}
-                                      onChange={setProjectSortId}
-                                      options={sortOptionMeta(PROJECT_SORT_OPTIONS)}
-                                    />
                                   </div>
                                   {filteredProjects.length ? (
                                     <>
@@ -3525,8 +3524,26 @@ export function AllocationPageClient() {
                                       <table className="min-w-full text-sm">
                                         <thead className="bg-wt-surface-1 text-wt-text-muted">
                                           <tr>
-                                            <th className="px-3 py-2 text-left font-medium">Project code</th>
-                                            <th className="px-3 py-2 text-left font-medium">Project name</th>
+                                            <th className="px-3 py-2 text-left font-medium">
+                                              <TableSortHeader
+                                                label="Project name"
+                                                activeDirection={activeSortDirectionForColumn(
+                                                  "project_name",
+                                                  projectSortId,
+                                                  PROJECT_SORT_OPTIONS
+                                                )}
+                                                sortable
+                                                onSort={() =>
+                                                  setProjectSortId(
+                                                    toggleColumnSort(
+                                                      "project_name",
+                                                      projectSortId,
+                                                      PROJECT_SORT_OPTIONS
+                                                    )
+                                                  )
+                                                }
+                                              />
+                                            </th>
                                             <th className="px-3 py-2 text-left font-medium">Type</th>
                                             <th className="px-3 py-2 text-right font-medium w-20">Actions</th>
                                           </tr>
@@ -3541,14 +3558,13 @@ export function AllocationPageClient() {
                                             const typ = formatProjectTypeCode(typCode, projectTypeLabels);
                                             return (
                                               <tr key={code || String(idx)} className="border-t border-wt-border">
-                                                <td className="px-3 py-2 whitespace-nowrap font-medium">{code || "—"}</td>
-                                                <td className="px-3 py-2 max-w-[200px] truncate">{name || "—"}</td>
+                                                <td className="px-3 py-2 max-w-[240px] truncate font-medium">{name || "—"}</td>
                                                 <td className="px-3 py-2 whitespace-nowrap">{typ}</td>
                                                 <td className="px-3 py-2 text-right">
                                                   <button
                                                     type="button"
                                                     className="rounded-lg p-2 text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600"
-                                                    aria-label={`Delete project ${code}`}
+                                                    aria-label={`Delete project ${name || code}`}
                                                     title="Delete project"
                                                     disabled={actionLoading || !code}
                                                     onClick={() =>
@@ -3662,9 +3678,7 @@ export function AllocationPageClient() {
                                                   setAllocationEmployeePickerQuery("");
                                                 }}
                                               >
-                                                {u.role
-                                                  ? `${u.name} | ${u.role} (${u.email})`
-                                                  : `${u.name} (${u.email})`}
+                                                {u.name}
                                               </button>
                                             ))
                                           ) : (
@@ -3683,7 +3697,7 @@ export function AllocationPageClient() {
                                     placeholder="Select project"
                                     options={allocationProjects.map((p) => ({
                                       value: p.code,
-                                      label: `${p.name} (${p.code})`,
+                                      label: p.name,
                                     }))}
                                     onChange={(project_code) =>
                                       setAllocationForm((p) => ({
@@ -3833,13 +3847,7 @@ export function AllocationPageClient() {
                                         void queryClient.invalidateQueries({
                                           queryKey: TALENT_POOL_QUERY_KEY,
                                         });
-                                        void queryClient.invalidateQueries({
-                                          queryKey: BENCH_FORECAST_QUERY_KEY,
-                                        });
                                         await loadAllocationsForHr();
-                                        if (savedEditingId) {
-                                          await loadDeallocatedAllocationsForHr();
-                                        }
                                         if (!savedEditingId) {
                                           setAllocationHrSubTab("assign-pm");
                                         } else {
@@ -3856,10 +3864,7 @@ export function AllocationPageClient() {
                                     className="rounded-lg p-2 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
                                     onClick={() =>
                                       runAction("Load allocations", async () => {
-                                        await Promise.all([
-                                          loadAllocationsForHr(),
-                                          loadDeallocatedAllocationsForHr(),
-                                        ]);
+                                        await loadAllocationsForHr();
                                         setAllocationHrSubTab("list");
                                         requestAnimationFrame(() => {
                                           allocationRecordsRef.current?.scrollIntoView({
@@ -3896,26 +3901,13 @@ export function AllocationPageClient() {
                                   className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2"
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <div>
-                                      <p className="text-sm font-medium">Allocation records</p>
-                                      <p className="text-xs text-wt-text-muted">
-                                        Grey rows are superseded history; edit the active row only.
-                                      </p>
-                                    </div>
+                                    <p className="text-sm font-medium">Allocation records</p>
                                     <div className="flex items-center gap-2">
-                                      <span className="text-xs text-wt-text-muted">
-                                        {allocationsLoading
-                                          ? "Loading…"
-                                          : `${allocations.length} row(s)`}
-                                      </span>
                                       <button
                                         type="button"
                                         className="rounded-lg border border-wt-border bg-wt-surface-1 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
                                         disabled={allocationsLoading || actionLoading}
-                                        onClick={() => {
-                                          void loadAllocationsForHr();
-                                          void loadDeallocatedAllocationsForHr();
-                                        }}
+                                        onClick={() => void loadAllocationsForHr()}
                                       >
                                         Refresh
                                       </button>
@@ -3978,16 +3970,41 @@ export function AllocationPageClient() {
                                             ).trim();
                                             const superseded = isSupersededAllocationRow(row);
                                             const editable = isEditableAllocationRow(row);
+                                            const isSelectedEmployee =
+                                              Boolean(employeeEmail) &&
+                                              selectedEmployeeAllocations?.employeeEmail ===
+                                                employeeEmail.toLowerCase();
+                                            const isHighlightedRow =
+                                              isSelectedEmployee &&
+                                              selectedEmployeeAllocations?.highlightedAllocationId ===
+                                                allocationId;
                                             return (
                                               <tr
                                                 key={`${allocationId || "alloc"}-${idx}`}
-                                                className={`border-t border-wt-border ${
+                                                role="button"
+                                                tabIndex={0}
+                                                className={`border-t border-wt-border cursor-pointer transition hover:bg-wt-surface-1/80 ${
                                                   superseded
                                                     ? "bg-wt-surface-2/60 text-wt-text-muted opacity-75"
                                                     : ""
+                                                } ${
+                                                  isHighlightedRow
+                                                    ? "bg-indigo-500/10"
+                                                    : isSelectedEmployee
+                                                      ? "bg-indigo-500/5"
+                                                      : ""
                                                 }`}
+                                                onClick={() => void loadEmployeeAllocationsForRow(row)}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === "Enter" || e.key === " ") {
+                                                    e.preventDefault();
+                                                    void loadEmployeeAllocationsForRow(row);
+                                                  }
+                                                }}
                                               >
-                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.allocated_project ?? "—")}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                  {allocationProjectDisplayName(row)}
+                                                </td>
                                                 <td className="px-3 py-2 whitespace-nowrap">{String(row.employee_name ?? "—")}</td>
                                                 <td className="px-3 py-2 whitespace-nowrap">{String(row.role ?? "—")}</td>
                                                 <td className="px-3 py-2 whitespace-nowrap">
@@ -4073,18 +4090,14 @@ export function AllocationPageClient() {
                                                       onClick={(e) => {
                                                         e.stopPropagation();
                                                         runAction("Deallocate", async () => {
-                                                          const res =
-                                                            await hrmsService.deleteAllocation(
-                                                              allocationId
-                                                            );
+                                                          await hrmsService.deleteAllocation(
+                                                            allocationId
+                                                          );
                                                           setAllocations((prev) =>
                                                             prev.filter(
                                                               (r) =>
                                                                 allocationRowId(r) !== allocationId
                                                             )
-                                                          );
-                                                          await prependDeallocatedRowFromDelete(
-                                                            res
                                                           );
                                                         });
                                                       }}
@@ -4111,6 +4124,112 @@ export function AllocationPageClient() {
                                       onPageChange={allocationPagination.setPage}
                                       onPageSizeChange={allocationPagination.setPageSize}
                                     />
+                                    {employeeAllocationsLoading ? (
+                                      <p className="mt-3 text-sm text-wt-text-muted">
+                                        Loading employee allocations…
+                                      </p>
+                                    ) : null}
+                                    {employeeAllocationsError ? (
+                                      <p className="mt-3 text-sm text-rose-700">
+                                        {employeeAllocationsError}
+                                      </p>
+                                    ) : null}
+                                    {selectedEmployeeAllocations ? (
+                                      <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-2">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                          <p className="text-sm font-medium">
+                                            {selectedEmployeeAllocations.employeeName} — allocations
+                                          </p>
+                                          <button
+                                            type="button"
+                                            className="rounded-lg border border-wt-border bg-wt-surface-2 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3"
+                                            onClick={() => {
+                                              setSelectedEmployeeAllocations(null);
+                                              setEmployeeAllocationsError(null);
+                                            }}
+                                          >
+                                            Close
+                                          </button>
+                                        </div>
+                                        <div className="wt-scroll-both max-h-[min(50vh,360px)] rounded-xl border border-wt-border">
+                                          <table className="min-w-full text-sm">
+                                            <thead className="bg-wt-surface-2 text-wt-text-muted">
+                                              <tr>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                  ALLOCATED PROJECT
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                  PROJECT ROLE
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                  ALLOCATION %
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                  ALLOCATION TYPE
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                  BILLING STATUS
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                  START DATE
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                  END DATE
+                                                </th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {selectedEmployeeAllocations.allocations.map(
+                                                (detailRow, detailIdx) => {
+                                                  const detailId = allocationRowId(detailRow);
+                                                  const highlighted =
+                                                    detailId &&
+                                                    detailId ===
+                                                      selectedEmployeeAllocations.highlightedAllocationId;
+                                                  return (
+                                                    <tr
+                                                      key={`${detailId || "emp-alloc"}-${detailIdx}`}
+                                                      className={`border-t border-wt-border ${
+                                                        highlighted ? "bg-indigo-500/10 font-medium" : ""
+                                                      }`}
+                                                    >
+                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                        {allocationProjectDisplayName(detailRow)}
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                        {String(detailRow.role ?? "—")}
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                        {formatAllocatedPercentDisplay(
+                                                          detailRow,
+                                                          allocationPercentLabels
+                                                        )}
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                        {String(detailRow.allocation_type ?? "—")}
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                        {String(
+                                                          detailRow.billing_status ??
+                                                            detailRow.billingStatus ??
+                                                            "—"
+                                                        )}
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                        {String(detailRow.start_date ?? "—")}
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                        {String(detailRow.end_date ?? "—")}
+                                                      </td>
+                                                    </tr>
+                                                  );
+                                                }
+                                              )}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </div>
+                                    ) : null}
                                     </>
                                   ) : (
                                     <p className="text-sm text-wt-text-muted">
@@ -4121,144 +4240,15 @@ export function AllocationPageClient() {
                                   )}
                                 </div>
 
-                                <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2">
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-sm font-medium">
-                                      Deallocated employees &amp; managers
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-wt-text-muted">
-                                        {deallocatedLoading
-                                          ? "Loading…"
-                                          : `${deallocatedAllocations.length} row(s)`}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        className="rounded-lg border border-wt-border bg-wt-surface-1 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
-                                        disabled={deallocatedLoading || actionLoading}
-                                        onClick={() => void loadDeallocatedAllocationsForHr()}
-                                      >
-                                        Refresh
-                                      </button>
-                                    </div>
-                                  </div>
-                                  {deallocatedLoadError ? (
-                                    <p className="text-sm text-rose-700">{deallocatedLoadError}</p>
-                                  ) : null}
-                                  {deallocatedLoading && !deallocatedAllocations.length ? (
-                                    <p className="text-sm text-wt-text-muted">Loading deallocated records…</p>
-                                  ) : deallocatedAllocations.length ? (
-                                    <>
-                                      <div className="wt-scroll-both max-h-[min(60vh,480px)] rounded-xl border border-wt-border">
-                                        <table className="min-w-full text-sm">
-                                          <thead className="bg-wt-surface-2 text-wt-text-muted">
-                                            <tr>
-                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
-                                                PROJECT
-                                              </th>
-                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
-                                                NAME
-                                              </th>
-                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
-                                                PROJECT ROLE
-                                              </th>
-                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
-                                                ALLOCATION %
-                                              </th>
-                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
-                                                END DATE
-                                              </th>
-                                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
-                                                DEALLOCATED AT
-                                              </th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {deallocatedPagination.pageItems.map((row, idx) => (
-                                                <tr
-                                                  key={`dealloc-${String(row.id ?? row.allocation_id ?? idx)}-${idx}`}
-                                                  className="border-t border-wt-border"
-                                                >
-                                                  <td className="px-3 py-2 whitespace-nowrap">
-                                                    {String(row.allocated_project ?? "—")}
-                                                  </td>
-                                                  <td className="px-3 py-2 whitespace-nowrap">
-                                                    {String(
-                                                      row.employee_name ?? row.employeeName ?? "—"
-                                                    )}
-                                                  </td>
-                                                  <td className="px-3 py-2 whitespace-nowrap">
-                                                    {String(row.role ?? "—")}
-                                                  </td>
-                                                  <td className="px-3 py-2 whitespace-nowrap">
-                                                    {formatAllocatedPercentDisplay(
-                                                      row as Record<string, unknown>,
-                                                      allocationPercentLabels
-                                                    )}
-                                                  </td>
-                                                  <td className="px-3 py-2 whitespace-nowrap">
-                                                    {String(row.end_date ?? row.endDate ?? "—")}
-                                                  </td>
-                                                  <td className="px-3 py-2 whitespace-nowrap">
-                                                    {String(
-                                                      row.deallocatedAt ?? row.deallocated_at ?? "—"
-                                                    )}
-                                                  </td>
-                                                </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                      <ListPagination
-                                        className="mt-3 px-1"
-                                        page={deallocatedPagination.page}
-                                        totalPages={deallocatedPagination.totalPages}
-                                        totalItems={deallocatedPagination.totalItems}
-                                        rangeStart={deallocatedPagination.rangeStart}
-                                        rangeEnd={deallocatedPagination.rangeEnd}
-                                        pageSize={deallocatedPagination.pageSize}
-                                        pageSizeOptions={deallocatedPagination.pageSizeOptions}
-                                        onPageChange={deallocatedPagination.setPage}
-                                        onPageSizeChange={deallocatedPagination.setPageSize}
-                                      />
-                                    </>
-                                  ) : (
-                                    <p className="text-sm text-wt-text-muted">
-                                      {deallocatedLoadError
-                                        ? "Deallocated history could not be loaded."
-                                        : "No deallocated employees or managers on record."}
-                                    </p>
-                                  )}
-                                </div>
-          
-                                <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2">
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-sm font-medium">
-                                      Allocation Forecasting (next {ALLOCATION_FORECAST_DAYS} days)
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-wt-text-muted">
-                                        {allocationForecastLoading
-                                          ? "Loading…"
-                                          : `${allocationForecastRows.length} row(s)`}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        className="rounded-lg border border-wt-border bg-wt-surface-1 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
-                                        onClick={() => void loadAllocationForecasting()}
-                                        disabled={allocationForecastLoading || actionLoading}
-                                      >
-                                        Refresh
-                                      </button>
-                                    </div>
-                                  </div>
+                                <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3">
                                   {allocationForecastLoadError ? (
-                                    <p className="text-sm text-rose-700">{allocationForecastLoadError}</p>
+                                    <p className="mb-2 text-sm text-rose-700">{allocationForecastLoadError}</p>
                                   ) : null}
                                   {allocationForecastLoading && !allocationForecastRows.length ? (
                                     <p className="text-sm text-wt-text-muted">Loading forecasting…</p>
                                   ) : (
                                     <DataTable
+                                      title={`Allocation Forecasting (next ${ALLOCATION_FORECAST_DAYS} days)`}
                                       columns={["project_name", "employee_name", "billing_status", "role"]}
                                       rows={allocationForecastRows}
                                       emptyLabel={

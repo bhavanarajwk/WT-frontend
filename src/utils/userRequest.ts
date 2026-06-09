@@ -26,6 +26,115 @@ import {
 
 export type UserRequestStatusValue = ApprovalStage;
 
+/** Canonical request types for list fetches — avoid duplicate alias calls (COMPOFF, COMP-OFF, etc.). */
+export const USER_REQUEST_FETCH_TYPES = ["LEAVE", "WFH", "COMP_OFF"] as const;
+
+function dedupeUserRequestRows(
+  rows: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  return Array.from(
+    new Map(
+      rows.map((row) => {
+        const key = String(
+          pickRowField(
+            row,
+            "user_request_id",
+            "userRequestId",
+            "request_id",
+            "requestId",
+            "id"
+          ) ?? Math.random()
+        );
+        return [key, row] as const;
+      })
+    ).values()
+  );
+}
+
+export function resolveRequestTypesForFetch(requestType: string): string[] {
+  const normalized = requestType.trim().toUpperCase() || "ALL";
+  if (normalized === "ALL") return ["ALL"];
+  if (normalized === "LEAVE") return ["LEAVE"];
+  if (normalized === "WFH") return ["WFH"];
+  if (
+    normalized === "COMP_OFF" ||
+    normalized === "COMPOFF" ||
+    normalized === "COMP-OFF" ||
+    normalized === "COMP OFF"
+  ) {
+    return ["COMP_OFF"];
+  }
+  return [requestType.trim()];
+}
+
+async function fetchUserRequestPathPages(params: {
+  fromDate: string;
+  toDate: string;
+  requestTypes: string[];
+  empEmails?: string;
+  extraQuery?: Record<string, string>;
+}): Promise<Array<Record<string, unknown>>> {
+  const normalizedFrom = toApiDateParam(params.fromDate) ?? params.fromDate.trim();
+  const normalizedTo = toApiDateParam(params.toDate) ?? params.toDate.trim();
+  const query = { page: "0", size: "200", ...params.extraQuery };
+  const email = params.empEmails?.trim();
+  const collected: Array<Record<string, unknown>> = [];
+
+  for (const requestType of params.requestTypes) {
+    const paths: string[] = [];
+    if (email) {
+      paths.push(
+        endpoints.userRequest.getByEmployees(email, normalizedFrom, normalizedTo, requestType)
+      );
+    }
+    paths.push(endpoints.userRequest.getRange(normalizedFrom, normalizedTo, requestType));
+
+    for (const path of paths) {
+      try {
+        const res = await apiClient.get<ApiEnvelope<unknown>>(path, { query });
+        collected.push(...toPagedRows(res.data ?? res));
+      } catch {
+        /* try next path/type */
+      }
+    }
+  }
+
+  return dedupeUserRequestRows(collected);
+}
+
+/** Team / scoped lists — prefer a single ALL call, then canonical types only. */
+export async function listScopedUserRequests(params: {
+  fromDate: string;
+  toDate: string;
+  requestType?: string;
+  empEmails?: string;
+}): Promise<Array<Record<string, unknown>>> {
+  const primaryTypes = resolveRequestTypesForFetch(params.requestType ?? "ALL");
+
+  if (primaryTypes[0] === "ALL") {
+    const allRows = await fetchUserRequestPathPages({
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+      requestTypes: ["ALL"],
+      empEmails: params.empEmails,
+    });
+    if (allRows.length) return allRows;
+    return fetchUserRequestPathPages({
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+      requestTypes: [...USER_REQUEST_FETCH_TYPES],
+      empEmails: params.empEmails,
+    });
+  }
+
+  return fetchUserRequestPathPages({
+    fromDate: params.fromDate,
+    toDate: params.toDate,
+    requestTypes: primaryTypes,
+    empEmails: params.empEmails,
+  });
+}
+
 
 
 export const STAGE_USER_REQUEST_TYPES = ["LEAVE", "WFH", "COMP_OFF"] as const;
@@ -597,43 +706,29 @@ export async function listSelfUserRequests(params: {
 
 
 
-  const pathQuery = { page: String(page), size: String(size), selfOnly: "true" };
-
   const email = params.empEmail?.trim();
 
-  if (email) {
+  const legacyRows = await fetchUserRequestPathPages({
+    fromDate: params.fromDate,
+    toDate: params.toDate,
+    requestTypes: resolveRequestTypesForFetch(requestType),
+    empEmails: email,
+    extraQuery: { selfOnly: "true" },
+  });
 
-    try {
+  if (legacyRows.length) return legacyRows;
 
-      const res = await apiClient.get<ApiEnvelope<unknown>>(
-
-        endpoints.userRequest.getByEmployees(email, normalizedFrom, normalizedTo, requestType),
-
-        { query: pathQuery }
-
-      );
-
-      return parse(res);
-
-    } catch {
-
-      /* try range path */
-
-    }
-
+  if (requestType === "ALL") {
+    return fetchUserRequestPathPages({
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+      requestTypes: [...USER_REQUEST_FETCH_TYPES],
+      empEmails: email,
+      extraQuery: { selfOnly: "true" },
+    });
   }
 
-
-
-  const res = await apiClient.get<ApiEnvelope<unknown>>(
-
-    endpoints.userRequest.getRange(normalizedFrom, normalizedTo, requestType),
-
-    { query: pathQuery }
-
-  );
-
-  return parse(res);
+  return legacyRows;
 
 }
 

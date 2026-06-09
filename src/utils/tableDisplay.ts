@@ -126,6 +126,41 @@ export function sanitizeTableRowsForDisplay(
   });
 }
 
+const COLUMN_HEADER_LABELS: Record<string, string> = {
+  session_date: "Session date",
+  start_time: "Start time",
+  end_time: "End time",
+  meeting_link: "Meeting link",
+  enrollment_status: "Enrollment status",
+  material_url: "Material URL",
+  visibility: "Visibility",
+  file_url: "File URL",
+  weight_percent: "Weight %",
+  duration_days: "Duration (days)",
+  date_of_joining: "Date of joining",
+  date_of_birth: "Date of birth",
+  phone_number: "Phone number",
+  user_type: "User type",
+  work_mode: "Work mode",
+  log_date: "Log date",
+  request_from_date: "From",
+  request_to_date: "To",
+  request_type: "Request type",
+  project_name: "Project name",
+  project_type: "Project type",
+  employee_name: "Employee",
+};
+
+export function formatTableColumnHeader(column: string): string {
+  const key = normalizeColumnKey(column);
+  if (COLUMN_HEADER_LABELS[key]) return COLUMN_HEADER_LABELS[key];
+  return column
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/\bUrl\b/g, "URL")
+    .replace(/\bId\b/g, "ID");
+}
+
 export function prepareTableForDisplay(
   columns: readonly string[],
   rows: Array<Record<string, unknown>>

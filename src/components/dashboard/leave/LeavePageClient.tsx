@@ -14,6 +14,7 @@ import {
   formatActionSuccessMessage,
   userRequestActionLabel,
   formatUserRequestTypeLabel,
+  normalizeUserRequestType,
   USER_REQUEST_FILTER_TYPE_OPTIONS,
   USER_REQUEST_TYPE_SELECT_OPTIONS,
 } from "@/utils/actionToast";
@@ -71,17 +72,22 @@ import {
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
 import { MetricCard } from "@/components/dashboard/ui/MetricCard";
-import { InputField, SelectField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, TextAreaField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
 import {
   ProfilePhotoAvatar,
   ProfileField,
   formatSecondarySkillsForProfile,
 } from "@/components/dashboard/ui/profile";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
-import { ListSortSelect, sortOptionMeta } from "@/components/dashboard/ui/ListSortSelect";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useClientPagination } from "@/hooks/useClientPagination";
-import { applyListSort, LEAVE_REQUEST_SORT_OPTIONS } from "@/utils/listSort";
+import {
+  activeSortDirectionForColumn,
+  applyListSort,
+  LEAVE_REQUEST_SORT_OPTIONS,
+  toggleColumnSort,
+} from "@/utils/listSort";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
@@ -103,6 +109,7 @@ import {
   extractStatusUpdateData,
   formatApprovalStageLabel,
   formatStageRejectionReason,
+  listScopedUserRequests,
   listSelfUserRequests,
   mergeStatusUpdateIntoRow,
   requestFinalStatus,
@@ -172,13 +179,9 @@ export function LeavePageClient() {
       .trim()
       .toLowerCase()
       .includes("manager");
-  const REQUEST_TYPE_ALIASES: Record<string, string[]> = {
-    LEAVE: ["LEAVE"],
-    WFH: ["WFH"],
-    COMP_OFF: ["COMP_OFF", "COMPOFF", "COMP-OFF", "COMP OFF"],
-  };
-
   const { user, signOut, refresh: refreshSession } = useAuth();
+  const userEmail = useMemo(() => String(user?.email ?? "").trim(), [user?.email]);
+  const leaveRequestsLoadInFlight = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metrics, loading, refresh } = useOverviewData();
@@ -439,7 +442,7 @@ export function LeavePageClient() {
   );
   const [timelogSubTab, setTimelogSubTab] = useState<"my" | "team">("my");
   const pathname = usePathname();
-  const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team" | "comp-off">(
+  const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team" | "comp-off" | "wfh">(
     pathname.includes("/dashboard/leave/team") ? "team" : "my"
   );
   useEffect(() => {
@@ -467,10 +470,21 @@ export function LeavePageClient() {
   const compOffForcedTab: "my" | "team" = canApplyCompOff ? "my" : "team";
 
   const leaveRequestTypeOptions = useMemo(() => {
-    const base = [...USER_REQUEST_TYPE_SELECT_OPTIONS];
+    const base = USER_REQUEST_TYPE_SELECT_OPTIONS.filter((opt) => opt.value !== "WFH");
     if (!canApplyCompOff) return base;
     return [...base, { value: "COMP_OFF" as const, label: "Comp off" }];
   }, [canApplyCompOff]);
+  useEffect(() => {
+    if (leaveSubTab === "wfh") {
+      setLeaveRequestForm((prev) =>
+        prev.request_type === "WFH" ? prev : { ...prev, request_type: "WFH" }
+      );
+    } else if (leaveSubTab === "my") {
+      setLeaveRequestForm((prev) =>
+        prev.request_type === "WFH" ? { ...prev, request_type: "LEAVE" } : prev
+      );
+    }
+  }, [leaveSubTab]);
   const canAccessProfile = Boolean(user);
   useEffect(() => {
     if (!hasManagerAccess && !hasHrAccess && timelogSubTab === "team") {
@@ -928,25 +942,42 @@ export function LeavePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [timelogSubTab, hasManagerAccess, selectedManagerProjectCode]);
-  useEffect(() => {
-    const id = window.setTimeout(() => {
-      void (async () => {
-        try {
-          await loadMyLeaveRequests();
-        } catch {
-          setMyLeaveRequests([]);
-        }
-      })();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [user]);  useEffect(() => {
-    const timer = window.setInterval(() => {
-      void loadMyLeaveRequests().catch(() => {
-        /* ignore periodic refresh errors */
+  const loadMyLeaveRequests = useCallback(async () => {
+    if (!userEmail) {
+      setMyLeaveRequests([]);
+      return;
+    }
+    if (leaveRequestsLoadInFlight.current) return;
+    leaveRequestsLoadInFlight.current = true;
+    try {
+      const today = new Date();
+      const future = new Date(today);
+      future.setFullYear(future.getFullYear() + 2);
+      const merged = await listSelfUserRequests({
+        fromDate: "01/01/2000",
+        toDate: formatApiDate(future),
+        requestType: "ALL",
+        empEmail: userEmail,
       });
-    }, 15000);
-    return () => window.clearInterval(timer);
-  }, [user]);
+      const deduped = Array.from(
+        new Map(
+          merged.map((row) => {
+            const key = String(row.user_request_id ?? row.userRequestId ?? row.id ?? Math.random());
+            return [key, row] as const;
+          })
+        ).values()
+      );
+      setMyLeaveRequests(deduped);
+    } finally {
+      leaveRequestsLoadInFlight.current = false;
+    }
+  }, [userEmail]);
+
+  useEffect(() => {
+    void loadMyLeaveRequests().catch(() => {
+      setMyLeaveRequests([]);
+    });
+  }, [loadMyLeaveRequests]);
   function applyTheme(nextTheme: "light" | "dark" | "system") {
     const root = document.documentElement;
     if (nextTheme === "system") {
@@ -1987,31 +2018,6 @@ export function LeavePageClient() {
     setTimelogs(normalizedRows);
     return normalizedRows;
   }, [hasHrAccess, hasManagerAccess, loadManagerData]);
-  async function loadMyLeaveRequests() {
-    const email = String((user as { email?: string } | null)?.email ?? "").trim();
-    if (!email) {
-      setMyLeaveRequests([]);
-      return;
-    }
-    const today = new Date();
-    const future = new Date(today);
-    future.setFullYear(future.getFullYear() + 2);
-    const merged = await listSelfUserRequests({
-      fromDate: "01/01/2000",
-      toDate: formatApiDate(future),
-      requestType: "ALL",
-      empEmail: email,
-    });
-    const deduped = Array.from(
-      new Map(
-        merged.map((row) => {
-          const key = String(row.user_request_id ?? row.userRequestId ?? row.id ?? Math.random());
-          return [key, row] as const;
-        })
-      ).values()
-    );
-    setMyLeaveRequests(deduped);
-  }
   const loadEmployeeRequestsForApprover = useCallback(async () => {
     const today = new Date();
     const future = new Date(today);
@@ -2019,14 +2025,6 @@ export function LeavePageClient() {
     const from = employeeRequestFilters.fromDate || `${today.getFullYear()}-01-01`;
     const to = employeeRequestFilters.toDate || future.toISOString().slice(0, 10);
     const requestType = employeeRequestFilters.requestType || "ALL";
-    const requestTypes =
-      requestType === "ALL"
-        ? [
-            ...REQUEST_TYPE_ALIASES.LEAVE,
-            ...REQUEST_TYPE_ALIASES.WFH,
-            ...REQUEST_TYPE_ALIASES.COMP_OFF,
-          ]
-        : REQUEST_TYPE_ALIASES[requestType] ?? [requestType];
     let onboardRows: Array<Record<string, unknown>> = [];
     let scopedManagerRows: Array<Record<string, unknown>> = [];
     if (hasHrAccess) {
@@ -2078,36 +2076,23 @@ export function LeavePageClient() {
       .join(",");
     const collectedRows: Array<Record<string, unknown>> = [];
     if (emailCsv) {
-      try {
-        const responses = await Promise.all(
-          requestTypes.map((type) =>
-            apiClient.get(endpoints.userRequest.getByEmployees(emailCsv, from, to, type), {
-              query: { page: "0", size: "200" },
-            })
-          )
-        );
-        collectedRows.push(
-          ...responses.flatMap((res) => toPagedRows((res as { data?: unknown }).data ?? res))
-        );
-      } catch {
-        /* ignore and continue with range endpoint */
-      }
+      collectedRows.push(
+        ...(await listScopedUserRequests({
+          fromDate: from,
+          toDate: to,
+          requestType,
+          empEmails: emailCsv,
+        }))
+      );
     }
     if (hasHrAccess) {
-      try {
-        const rangeResponses = await Promise.all(
-          requestTypes.map((type) =>
-            apiClient.get(endpoints.userRequest.getRange(from, to, type), {
-              query: { page: "0", size: "200" },
-            })
-          )
-        );
-        collectedRows.push(
-          ...rangeResponses.flatMap((res) => toPagedRows((res as { data?: unknown }).data ?? res))
-        );
-      } catch {
-        /* ignore if one source already succeeded */
-      }
+      collectedRows.push(
+        ...(await listScopedUserRequests({
+          fromDate: from,
+          toDate: to,
+          requestType,
+        }))
+      );
     }
     let rows = collectedRows;
     rows = Array.from(
@@ -3276,23 +3261,49 @@ export function LeavePageClient() {
     [myLeaveRequests, myLeaveSearch]
   );
 
+  const filteredLeaveTabRequests = useMemo(
+    () =>
+      filteredMyLeaveRequests.filter(
+        (row) => normalizeUserRequestType(row.request_type ?? row.requestType) !== "WFH"
+      ),
+    [filteredMyLeaveRequests]
+  );
+
+  const filteredWfhTabRequests = useMemo(
+    () =>
+      myLeaveRequests
+        .filter(
+          (row) => normalizeUserRequestType(row.request_type ?? row.requestType) === "WFH"
+        )
+        .filter((row) => leaveRequestMatchesSearch(row, myLeaveSearch)),
+    [myLeaveRequests, myLeaveSearch]
+  );
+
   const filteredEmployeeRequests = useMemo(
     () => employeeRequests.filter((row) => leaveRequestMatchesSearch(row, teamLeaveSearch)),
     [employeeRequests, teamLeaveSearch]
   );
 
-  const sortedMyLeaveRequests = useMemo(
-    () => applyListSort(filteredMyLeaveRequests, myLeaveSortId, LEAVE_REQUEST_SORT_OPTIONS),
-    [filteredMyLeaveRequests, myLeaveSortId]
+  const sortedLeaveTabRequests = useMemo(
+    () => applyListSort(filteredLeaveTabRequests, myLeaveSortId, LEAVE_REQUEST_SORT_OPTIONS),
+    [filteredLeaveTabRequests, myLeaveSortId]
   );
+
+  const sortedWfhTabRequests = useMemo(
+    () => applyListSort(filteredWfhTabRequests, myLeaveSortId, LEAVE_REQUEST_SORT_OPTIONS),
+    [filteredWfhTabRequests, myLeaveSortId]
+  );
+
+  const activeSelfServeRequests =
+    leaveSubTab === "wfh" ? sortedWfhTabRequests : sortedLeaveTabRequests;
 
   const sortedEmployeeRequests = useMemo(
     () => applyListSort(filteredEmployeeRequests, teamLeaveSortId, LEAVE_REQUEST_SORT_OPTIONS),
     [filteredEmployeeRequests, teamLeaveSortId]
   );
 
-  const myLeavePagination = useClientPagination(sortedMyLeaveRequests, {
-    resetKeys: [myLeaveSortId, myLeaveSearch],
+  const myLeavePagination = useClientPagination(activeSelfServeRequests, {
+    resetKeys: [myLeaveSortId, myLeaveSearch, leaveSubTab],
   });
 
   const teamLeavePagination = useClientPagination(sortedEmployeeRequests, {
@@ -3317,7 +3328,7 @@ export function LeavePageClient() {
                                         : "text-wt-text-muted hover:bg-wt-surface-2"
                                     }`}
                                   >
-                                    My leave requests
+                                    Leave requests
                                   </button>
                                   <button
                                     type="button"
@@ -3332,34 +3343,43 @@ export function LeavePageClient() {
                                   </button>
                                 </>
                               ) : null}
-                              {showCompOffTab ? (
-                                <>
-                                  {canApplyCompOff && !hasManagerAccess && !hasHrAccess ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => setLeaveSubTab("my")}
-                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                                        leaveSubTab === "my"
-                                          ? "bg-wt-surface-3 text-wt-text"
-                                          : "text-wt-text-muted hover:bg-wt-surface-2"
-                                      }`}
-                                    >
-                                      My leave requests
-                                    </button>
-                                  ) : null}
-                                  <button
-                                    type="button"
-                                    onClick={() => setLeaveSubTab("comp-off")}
-                                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                                      leaveSubTab === "comp-off"
-                                        ? "bg-wt-surface-3 text-wt-text"
-                                        : "text-wt-text-muted hover:bg-wt-surface-2"
-                                    }`}
-                                  >
-                                    Comp off
-                                  </button>
-                                </>
+                              {canApplyCompOff && !hasManagerAccess && !hasHrAccess ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setLeaveSubTab("my")}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    leaveSubTab === "my"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Leave requests
+                                </button>
                               ) : null}
+                              {showCompOffTab ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setLeaveSubTab("comp-off")}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    leaveSubTab === "comp-off"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Comp off credit
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => setLeaveSubTab("wfh")}
+                                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  leaveSubTab === "wfh"
+                                    ? "bg-wt-surface-3 text-wt-text"
+                                    : "text-wt-text-muted hover:bg-wt-surface-2"
+                                }`}
+                              >
+                                WFH
+                              </button>
                             </div>
                           ) : null}
                           {leaveSubTab === "comp-off" ? (
@@ -3368,22 +3388,33 @@ export function LeavePageClient() {
                               flowScope="earn"
                               forcedTab={compOffForcedTab}
                             />
-                          ) : leaveSubTab === "my" ? (
+                          ) : leaveSubTab === "my" || leaveSubTab === "wfh" ? (
                         <section className="grid gap-4 xl:grid-cols-1">
                           <div className="space-y-4">
                             {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                             <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                              <h3 className="font-semibold mb-3">Create Request</h3>
-                              <div className="space-y-2">
-                                <InputField label="From Date" value={leaveRequestForm.request_from_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_from_date: v }))} type="date" />
-                                <InputField label="To Date" value={leaveRequestForm.request_to_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_to_date: v }))} type="date" />
-                                <SelectField
-                                  label="Request Type"
-                                  value={leaveRequestForm.request_type}
-                                  options={leaveRequestTypeOptions}
-                                  onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_type: v }))}
-                                />
-                                <InputField label="Comments" value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
+                              <h3 className="font-semibold mb-3">
+                                {leaveSubTab === "wfh" ? "Work from home" : "Time off/comp off"}
+                              </h3>
+                              <div className="space-y-3">
+                                <div
+                                  className={`grid grid-cols-1 gap-3 ${
+                                    leaveSubTab === "wfh" ? "sm:grid-cols-2" : "sm:grid-cols-3"
+                                  }`}
+                                >
+                                  {leaveSubTab === "my" ? (
+                                    <SelectField
+                                      label="Request Type"
+                                      required
+                                      value={leaveRequestForm.request_type}
+                                      options={leaveRequestTypeOptions}
+                                      onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_type: v }))}
+                                    />
+                                  ) : null}
+                                  <InputField label="From Date" required value={leaveRequestForm.request_from_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_from_date: v }))} type="date" />
+                                  <InputField label="To Date" required value={leaveRequestForm.request_to_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_to_date: v }))} type="date" />
+                                </div>
+                                <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                               </div>
                               <div className="mt-4 flex gap-2">
                                 <button
@@ -3392,7 +3423,7 @@ export function LeavePageClient() {
                                   onClick={() =>
                                     runAction(
                                       userRequestActionLabel(
-                                        leaveRequestForm.request_type,
+                                        leaveSubTab === "wfh" ? "WFH" : leaveRequestForm.request_type,
                                         editingLeaveRequestId ? "update" : "submit"
                                       ),
                                       async () => {
@@ -3412,12 +3443,18 @@ export function LeavePageClient() {
                                         throw new Error("To Date cannot be earlier than From Date.");
                                       }
                                       const comments = leaveRequestForm.comments.trim();
+                                      if (!comments) {
+                                        throw new Error("Comments are required.");
+                                      }
                                       if (comments.length > 200) {
                                         throw new Error("Comments must be 200 characters or less.");
                                       }
+                                      const requestType =
+                                        leaveSubTab === "wfh"
+                                          ? "WFH"
+                                          : leaveRequestForm.request_type;
                                       const isCompOffUsage =
-                                        normalizeCompOffRequestType(leaveRequestForm.request_type) ===
-                                        "COMP_OFF";
+                                        normalizeCompOffRequestType(requestType) === "COMP_OFF";
                                       if (isCompOffUsage) {
                                         const days = calendarDaysInclusive(fromDate, toDate);
                                         if (days < 1) {
@@ -3457,6 +3494,7 @@ export function LeavePageClient() {
                                       }
                                       const payload = {
                                         ...leaveRequestForm,
+                                        request_type: requestType,
                                         request_from_date: fromDate,
                                         request_to_date: toDate,
                                         requestFromDate: fromDate,
@@ -3523,11 +3561,6 @@ export function LeavePageClient() {
                                     onChange={(e) => setMyLeaveSearch(e.target.value)}
                                     aria-label="Search my leave requests"
                                   />
-                                  <ListSortSelect
-                                    value={myLeaveSortId}
-                                    onChange={setMyLeaveSortId}
-                                    options={sortOptionMeta(LEAVE_REQUEST_SORT_OPTIONS)}
-                                  />
                                   <button
                                     type="button"
                                     className="btn-primary px-3 py-2"
@@ -3538,13 +3571,32 @@ export function LeavePageClient() {
                                   </button>
                                 </div>
                               </div>
-                              {sortedMyLeaveRequests.length ? (
+                              {activeSelfServeRequests.length ? (
                                 <div className="wt-scroll-both max-h-[min(50vh,380px)] rounded-xl border border-wt-border">
                                   <table className="min-w-full text-sm">
                                     <thead className="bg-wt-surface-2 text-wt-text-muted">
                                       <tr>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Request Type</th>
-                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">From</th>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                          <TableSortHeader
+                                            label="From"
+                                            activeDirection={activeSortDirectionForColumn(
+                                              "from",
+                                              myLeaveSortId,
+                                              LEAVE_REQUEST_SORT_OPTIONS
+                                            )}
+                                            sortable
+                                            onSort={() =>
+                                              setMyLeaveSortId(
+                                                toggleColumnSort(
+                                                  "from",
+                                                  myLeaveSortId,
+                                                  LEAVE_REQUEST_SORT_OPTIONS
+                                                )
+                                              )
+                                            }
+                                          />
+                                        </th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager status</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager reason</th>
@@ -3598,14 +3650,22 @@ export function LeavePageClient() {
                                                   className="rounded-lg px-2.5 py-1.5 text-xs border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-50"
                                                   disabled={actionLoading || !requestId || !isPending}
                                                   onClick={() => {
+                                                    const rowType = String(
+                                                      row.request_type ?? row.requestType ?? "LEAVE"
+                                                    );
                                                     setLeaveRequestForm({
                                                       request_from_date: String(row.request_from_date ?? row.requestFromDate ?? ""),
                                                       request_to_date: String(row.request_to_date ?? row.requestToDate ?? ""),
-                                                      request_type: String(row.request_type ?? row.requestType ?? "LEAVE"),
+                                                      request_type: rowType,
                                                       comments: String(row.comments ?? ""),
                                                       is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
                                                     });
                                                     setEditingLeaveRequestId(requestId);
+                                                    if (normalizeUserRequestType(rowType) === "WFH") {
+                                                      setLeaveSubTab("wfh");
+                                                    } else {
+                                                      setLeaveSubTab("my");
+                                                    }
                                                   }}
                                                 >
                                                   Edit
@@ -3645,14 +3705,14 @@ export function LeavePageClient() {
                                     </tbody>
                                   </table>
                                 </div>
-                              ) : myLeaveRequests.length ? (
+                              ) : (leaveSubTab === "wfh" ? filteredWfhTabRequests : filteredLeaveTabRequests).length ? (
                                 <p className="text-sm text-wt-text-muted">
                                   No requests match your search.
                                 </p>
                               ) : (
                                 <p className="text-sm text-wt-text-muted">No previous requests found.</p>
                               )}
-                              {sortedMyLeaveRequests.length > 0 ? (
+                              {activeSelfServeRequests.length > 0 ? (
                                 <ListPagination
                                   className="mt-3"
                                   page={myLeavePagination.page}
@@ -3712,11 +3772,6 @@ export function LeavePageClient() {
                               onChange={(e) => setTeamLeaveSearch(e.target.value)}
                               aria-label="Search team leave requests"
                             />
-                            <ListSortSelect
-                              value={teamLeaveSortId}
-                              onChange={setTeamLeaveSortId}
-                              options={sortOptionMeta(LEAVE_REQUEST_SORT_OPTIONS)}
-                            />
                           </div>
 
                           {sortedEmployeeRequests.length ? (
@@ -3724,9 +3779,47 @@ export function LeavePageClient() {
                               <table className="min-w-full text-sm">
                                 <thead className="bg-wt-surface-2 text-wt-text-muted">
                                   <tr>
-                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Employee</th>
+                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                      <TableSortHeader
+                                        label="Employee"
+                                        activeDirection={activeSortDirectionForColumn(
+                                          "employee",
+                                          teamLeaveSortId,
+                                          LEAVE_REQUEST_SORT_OPTIONS
+                                        )}
+                                        sortable
+                                        onSort={() =>
+                                          setTeamLeaveSortId(
+                                            toggleColumnSort(
+                                              "employee",
+                                              teamLeaveSortId,
+                                              LEAVE_REQUEST_SORT_OPTIONS
+                                            )
+                                          )
+                                        }
+                                      />
+                                    </th>
                                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Type</th>
-                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">From</th>
+                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                      <TableSortHeader
+                                        label="From"
+                                        activeDirection={activeSortDirectionForColumn(
+                                          "from",
+                                          teamLeaveSortId,
+                                          LEAVE_REQUEST_SORT_OPTIONS
+                                        )}
+                                        sortable
+                                        onSort={() =>
+                                          setTeamLeaveSortId(
+                                            toggleColumnSort(
+                                              "from",
+                                              teamLeaveSortId,
+                                              LEAVE_REQUEST_SORT_OPTIONS
+                                            )
+                                          )
+                                        }
+                                      />
+                                    </th>
                                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
                                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                       {hasHrAccess ? "Final status" : "Status"}

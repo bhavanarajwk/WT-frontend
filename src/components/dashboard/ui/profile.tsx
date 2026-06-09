@@ -27,6 +27,18 @@ export function resolveProfilePhotoSrc(profile: Record<string, unknown> | null |
   return raw.startsWith("/") ? `${base}${raw}` : `${base}/${raw}`;
 }
 
+export function readProfileField(
+  profile: Record<string, unknown> | null | undefined,
+  snakeKey: string,
+  camelKey?: string
+): string {
+  if (!profile) return "";
+  const camel = camelKey ?? snakeKey.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+  const value = profile[snakeKey] ?? profile[camel];
+  if (value === null || value === undefined || value === "") return "";
+  return String(value).trim();
+}
+
 export function formatSecondarySkillsForProfile(profile: Record<string, unknown> | null | undefined): string {
   if (!profile) return "—";
   const raw =

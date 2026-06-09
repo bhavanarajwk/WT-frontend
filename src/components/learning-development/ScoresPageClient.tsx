@@ -32,7 +32,6 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
   const trainingId = fixedTrainingId?.trim() || pickedTrainingId;
   const embedded = Boolean(fixedTrainingId?.trim());
   const [assessmentId, setAssessmentId] = useState("");
-  const [viewEmployeeId, setViewEmployeeId] = useState("");
   const [scoresByUser, setScoresByUser] = useState<Record<string, ScoreDraft>>({});
 
   const assessmentsQ = useTrainingAssessments(trainingId, Boolean(trainingId.trim()));
@@ -89,10 +88,6 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
       return next;
     });
   }, [traineeRows]);
-
-  useEffect(() => {
-    setViewEmployeeId("");
-  }, [trainingId]);
 
   useEffect(() => {
     const assessId = assessmentId.trim();
@@ -164,7 +159,6 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
             onTrainingIdChange={(id) => {
               setPickedTrainingId(id);
               setAssessmentId("");
-              setViewEmployeeId("");
             }}
             required
           />
@@ -192,12 +186,7 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wt-border pb-4">
           <div>
             <h2 className="font-semibold">Trainee scores</h2>
-            {marksAlreadyPublished ? (
-              <p className="text-xs text-wt-text-muted mt-1">
-                Marks for this assessment were published
-                {marksPublishedAt ? ` on ${new Date(marksPublishedAt).toLocaleString()}` : ""}.
-              </p>
-            ) : hasHrAccess ? (
+            {!marksAlreadyPublished && hasHrAccess ? (
               <p className="text-xs text-wt-text-muted mt-1">
                 Save scores for all trainees, then publish to email marks to each employee.
               </p>
@@ -316,40 +305,7 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <h2 className="font-semibold">Score analytics</h2>
-        <p className="text-xs text-wt-text-muted">
-          Scores and completion for the selected assessment and trainee.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2 max-w-3xl">
-          <SelectField
-            label="Assessment"
-            required
-            value={assessmentId}
-            onChange={setAssessmentId}
-            disabled={!trainingId || assessmentsQ.isLoading}
-            placeholder={
-              assessmentsQ.isLoading
-                ? "Loading…"
-                : assessments.length
-                  ? "Select assessment"
-                  : "No assessments"
-            }
-            options={assessments.map((a) => {
-              const id = String(a.id ?? "").trim();
-              const name = String(a.name ?? `Assessment ${id}`).trim();
-              return { value: id, label: name || id };
-            })}
-          />
-          <SelectField
-            label="View employee"
-            value={viewEmployeeId}
-            onChange={setViewEmployeeId}
-            disabled={!trainingId || !traineeRows.length}
-            placeholder="Select employee"
-            options={traineeRows.map((row) => ({ value: row.userId, label: row.name }))}
-          />
-        </div>
         <TraineeScoreAnalytics
-          employeeUserId={viewEmployeeId}
           traineeRows={traineeRows}
           assessments={assessments}
           assessmentId={assessmentId}
