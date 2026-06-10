@@ -4,7 +4,7 @@
  */
 import { endpoints } from "@/api/endpoints";
 import { ApiError } from "@/api/error";
-import { apiClient, normalizeApiBaseUrl } from "@/api/httpClient";
+import { apiClient, resolveClientApiBaseUrl } from "@/api/httpClient";
 
 export interface AuthUser {
   message: string;
@@ -21,9 +21,7 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-const API_BASE = normalizeApiBaseUrl(
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
-);
+const API_BASE = resolveClientApiBaseUrl();
 
 /**
  * Initiates the Google OAuth flow.
