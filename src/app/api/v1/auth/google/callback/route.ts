@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
   };
   const data = payload.data;
 
-  const response = NextResponse.redirect(new URL("/login", request.nextUrl.origin));
+  const response = NextResponse.redirect(new URL("/dashboard", request.nextUrl.origin));
   setAuthCookies(response, data);
   response.cookies.set("oauthState", "", {
     httpOnly: true,

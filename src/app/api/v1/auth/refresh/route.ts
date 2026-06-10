@@ -32,9 +32,25 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const payload = JSON.parse(body) as { data: SessionTokens };
-    if (payload.data?.accessToken) {
-      setAuthCookies(response, payload.data);
+    const payload = JSON.parse(body) as {
+      data: SessionTokens & {
+        accessToken?: string;
+        refreshToken?: string;
+        tokenId?: string;
+      };
+    };
+    const data = payload.data;
+    if (data?.accessToken && data.refreshToken && data.tokenId) {
+      setAuthCookies(response, {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        tokenId: data.tokenId,
+        email: data.email,
+        name: data.name,
+        roles: data.roles ?? [],
+        status: data.status ?? "",
+        user_type: data.user_type ?? "",
+      });
     }
   } catch {
     /* keep upstream body as-is */
