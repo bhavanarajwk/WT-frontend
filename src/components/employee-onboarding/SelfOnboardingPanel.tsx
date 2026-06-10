@@ -233,7 +233,6 @@ export function SelfOnboardingPanel({
           <InputField
             label="Experience summary"
             required
-            className="sm:col-span-2"
             placeholder="e.g. 2 years at XYZ Corp"
             value={form.experience}
             onChange={(v) => setForm((p) => ({ ...p, experience: v }))}
