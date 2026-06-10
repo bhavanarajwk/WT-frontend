@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
+import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { ExitInterviewResponsesView } from "@/components/exit-interview/ExitInterviewResponsesView";
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
+import { useUpdateExitInterviewMinutesOfMeeting } from "@/hooks/exit-interview/useExitInterviewMinutesOfMeeting";
 import { useExitInterviewSubmissionDetail } from "@/hooks/exit-interview/useExitInterviewSubmissionDetail";
 
 function formatDateTime(value: string | null): string {
@@ -26,16 +30,23 @@ function formatDateTime(value: string | null): string {
 export function ExitInterviewSubmissionDetailPageClient({ empId }: { empId: string }) {
   const { hasHrAccess, userRoles } = useDashboardAccess();
   const canView = hasHrAccess || userRoles.includes("ROLE_ADMIN");
+  const { toast, actionLoading, runAction } = useDashboardAction();
 
   const detailQ = useExitInterviewSubmissionDetail(empId, { enabled: canView });
   const formDefQ = useExitInterviewFormDefinition({ enabled: canView });
+  const updateMomMutation = useUpdateExitInterviewMinutesOfMeeting(empId);
+  const [minutesOfMeeting, setMinutesOfMeeting] = useState("");
   const fields = formDefQ.data?.fields ?? [];
+
+  useEffect(() => {
+    setMinutesOfMeeting(detailQ.data?.minutes_of_meeting ?? "");
+  }, [detailQ.data?.minutes_of_meeting]);
 
   if (!canView) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-sm text-wt-text-muted">
-          Exit interview detail is available to HR and admin only.
+          Exit survey detail is available to HR and admin only.
         </div>
       </DashboardPageShell>
     );
@@ -43,14 +54,23 @@ export function ExitInterviewSubmissionDetailPageClient({ empId }: { empId: stri
 
   const detail = detailQ.data;
 
+  const saveMinutesOfMeeting = () => {
+    void runAction("Save minutes of meeting", async () => {
+      await updateMomMutation.mutateAsync(minutesOfMeeting);
+    });
+  };
+
+  const momSaving = actionLoading || updateMomMutation.isPending;
+
   return (
     <DashboardPageShell>
+      <DashboardToast toast={toast} />
       <div className="mx-auto max-w-4xl space-y-4">
         <Link
           href={DASHBOARD_ROUTES["exit-interview-submissions"]}
           className="text-xs font-medium text-indigo-600 hover:underline"
         >
-          ← Back to submissions
+          ← Back to exit survey
         </Link>
 
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 px-5 py-6 md:px-7">
@@ -98,6 +118,33 @@ export function ExitInterviewSubmissionDetailPageClient({ empId }: { empId: stri
               ) : (
                 <p className="mt-6 text-sm text-wt-text-muted">Form definition unavailable for labels.</p>
               )}
+
+              <div className="mt-8 border-t border-wt-border pt-6 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-base font-semibold">Minutes of meeting (MOM)</h4>
+                    <p className="mt-1 text-xs text-wt-text-muted">
+                      HR notes from the exit survey discussion. Clear the field and save to remove.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-primary px-3 py-1.5 text-sm"
+                    disabled={momSaving}
+                    onClick={saveMinutesOfMeeting}
+                  >
+                    {momSaving ? "Saving…" : "Save MOM"}
+                  </button>
+                </div>
+                <textarea
+                  className="input-field min-h-[140px] w-full px-3 py-2 text-sm"
+                  value={minutesOfMeeting}
+                  onChange={(e) => setMinutesOfMeeting(e.target.value)}
+                  disabled={momSaving}
+                  placeholder="Add HR notes from the exit survey meeting…"
+                  aria-label="Minutes of meeting"
+                />
+              </div>
             </>
           ) : null}
         </div>

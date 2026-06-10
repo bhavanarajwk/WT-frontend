@@ -136,6 +136,7 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
 
 export type EmployeeProfileEditForm = {
   name: string;
+  email: string;
   personal_email: string;
   department: string;
   user_status: string;
@@ -161,6 +162,7 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
 
   return {
     name: String(pickProfileField(profile, ["name"]) ?? "").trim(),
+    email: String(pickProfileField(profile, ["email"]) ?? "").trim(),
     personal_email: String(pickProfileField(profile, ["personal_email"]) ?? "").trim(),
     department: String(pickProfileField(profile, ["department"]) ?? "").trim(),
     user_status: String(
@@ -192,6 +194,7 @@ export function editFormToUpdatePayload(form: EmployeeProfileEditForm): Record<s
 
   const payload: Record<string, unknown> = {
     name: form.name.trim(),
+    email: form.email.trim().toLowerCase(),
     department: form.department.trim(),
     user_status: form.user_status.trim(),
     work_mode: form.work_mode.trim(),
@@ -201,7 +204,10 @@ export function editFormToUpdatePayload(form: EmployeeProfileEditForm): Record<s
   };
 
   const bandId = form.band_id.trim();
-  if (bandId) payload.band_id = bandId;
+  if (bandId) {
+    const bandNum = Number(bandId);
+    payload.band_id = Number.isFinite(bandNum) ? bandNum : bandId;
+  }
 
   const personalEmail = form.personal_email.trim();
   if (personalEmail) payload.personal_email = personalEmail;
@@ -236,12 +242,12 @@ const PROFILE_HIDDEN_LABELS = new Set([
   "Secondary",
   "Carry Forward",
   "Total Leave",
-  "Exit Interview Applicable",
-  "Can Fill Exit Interview",
-  "Exit Interview Submitted",
-  "Exit Interview Resignation Date",
-  "Exit Interview Last Working Day",
-  "Exit Interview Days Until Last Working Day",
+  "Exit Survey Applicable",
+  "Can Fill Exit Survey",
+  "Exit Survey Submitted",
+  "Exit Survey Resignation Date",
+  "Exit Survey Last Working Day",
+  "Exit Survey Days Until Last Working Day",
 ]);
 
 const PROFILE_EXCLUDED_KEYS = new Set([

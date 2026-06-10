@@ -60,7 +60,7 @@ import {
   generateAutomaticProjectCode,
   formatAllocatedHoursPercentLabel,
 } from "@/utils/dashboard/validation";
-import { normalizeToApiDate } from "@/utils/apiDate";
+import { formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
 import {
   allocationPercentLabelByCode,
   allocationPercentOptionsForDesignation,
@@ -180,12 +180,17 @@ export function AllocationPageClient() {
   const [selectedEmployeeAllocations, setSelectedEmployeeAllocations] = useState<{
     employeeEmail: string;
     employeeName: string;
+    totalAllocatedPercent: number;
     allocations: Array<Record<string, unknown>>;
     highlightedAllocationId: string;
   } | null>(null);
   const [employeeAllocationsLoading, setEmployeeAllocationsLoading] = useState(false);
   const [employeeAllocationsError, setEmployeeAllocationsError] = useState<string | null>(null);
   const [allocationForecastRows, setAllocationForecastRows] = useState<Array<Record<string, unknown>>>([]);
+  const [allocationForecastDays, setAllocationForecastDays] = useState(ALLOCATION_FORECAST_DAYS);
+  const [allocationForecastDaysInput, setAllocationForecastDaysInput] = useState(
+    String(ALLOCATION_FORECAST_DAYS)
+  );
   const [allocationForecastLoading, setAllocationForecastLoading] = useState(false);
   const [allocationForecastLoadError, setAllocationForecastLoadError] = useState<string | null>(null);
   const allocationRecordsRef = useRef<HTMLDivElement>(null);
@@ -198,6 +203,16 @@ export function AllocationPageClient() {
   const [allocationEmployeePickerOpen, setAllocationEmployeePickerOpen] = useState(false);
   const [allocationEmployeePickerQuery, setAllocationEmployeePickerQuery] = useState("");
   const allocationEmployeeComboboxRef = useRef<HTMLDivElement>(null);
+  const [pickerEmployeeAllocations, setPickerEmployeeAllocations] = useState<{
+    employeeEmail: string;
+    employeeName: string;
+    totalAllocatedPercent: number;
+    allocations: Array<Record<string, unknown>>;
+  } | null>(null);
+  const [pickerEmployeeAllocationsLoading, setPickerEmployeeAllocationsLoading] = useState(false);
+  const [pickerEmployeeAllocationsError, setPickerEmployeeAllocationsError] = useState<string | null>(
+    null
+  );
   const [projects, setProjects] = useState<Array<Record<string, unknown>>>([]);
   const [assignedProjects, setAssignedProjects] = useState<Array<Record<string, unknown>>>([]);
   const [profileAssignedProjects, setProfileAssignedProjects] = useState<
@@ -2320,7 +2335,9 @@ export function AllocationPageClient() {
 
       try {
         const res = await hrmsService.getEmployeeAllocations(
-          employeeEmail ? { userEmail: employeeEmail } : { userId: userId! }
+          employeeEmail
+            ? { userEmail: employeeEmail, scope: "current_and_future" }
+            : { userId: userId!, scope: "current_and_future" }
         );
         const parsed = parseEmployeeAllocationsResponse(res);
         if (!parsed) throw new Error("Could not load employee allocations.");
@@ -2330,6 +2347,7 @@ export function AllocationPageClient() {
           employeeName:
             parsed.employeeName ||
             String(row.employee_name ?? row.employeeName ?? "Employee"),
+          totalAllocatedPercent: parsed.totalAllocatedPercent,
           allocations: enriched,
           highlightedAllocationId,
         });
@@ -2345,12 +2363,77 @@ export function AllocationPageClient() {
     [enrichAllocationRowsWithContext]
   );
 
+  const loadPickerEmployeeAllocations = useCallback(
+    async (employeeEmail: string, employeeName: string) => {
+      const normalizedEmail = employeeEmail.trim().toLowerCase();
+      if (!normalizedEmail) {
+        setPickerEmployeeAllocations(null);
+        setPickerEmployeeAllocationsError(null);
+        return;
+      }
+
+      setPickerEmployeeAllocationsLoading(true);
+      setPickerEmployeeAllocationsError(null);
+
+      try {
+        const res = await hrmsService.getEmployeeAllocations({
+          userEmail: normalizedEmail,
+          scope: "current_and_future",
+        });
+        const parsed = parseEmployeeAllocationsResponse(res);
+        if (!parsed) throw new Error("Could not load employee allocations.");
+        const enriched = await enrichAllocationRowsWithContext(parsed.allocations);
+        setPickerEmployeeAllocations({
+          employeeEmail: (parsed.employeeEmail || normalizedEmail).toLowerCase(),
+          employeeName: parsed.employeeName || employeeName,
+          totalAllocatedPercent: parsed.totalAllocatedPercent,
+          allocations: enriched,
+        });
+      } catch (err) {
+        setPickerEmployeeAllocations(null);
+        setPickerEmployeeAllocationsError(
+          err instanceof Error ? err.message : "Could not load employee allocations."
+        );
+      } finally {
+        setPickerEmployeeAllocationsLoading(false);
+      }
+    },
+    [enrichAllocationRowsWithContext]
+  );
+
+  useEffect(() => {
+    const email = allocationForm.employee_email.trim().toLowerCase();
+    if (!email || allocationHrSubTab !== "allocate") {
+      if (!email) {
+        setPickerEmployeeAllocations(null);
+        setPickerEmployeeAllocationsError(null);
+        setPickerEmployeeAllocationsLoading(false);
+      }
+      return;
+    }
+    const hit = allocationUsers.find((u) => u.email.toLowerCase() === email);
+    void loadPickerEmployeeAllocations(email, hit?.name ?? allocationForm.employee_email.trim());
+  }, [
+    allocationForm.employee_email,
+    allocationHrSubTab,
+    allocationUsers,
+    loadPickerEmployeeAllocations,
+  ]);
+
+  const commitAllocationForecastDays = useCallback(() => {
+    const parsed = Number.parseInt(allocationForecastDaysInput.trim(), 10);
+    const next =
+      Number.isFinite(parsed) && parsed > 0 ? Math.min(365, parsed) : ALLOCATION_FORECAST_DAYS;
+    setAllocationForecastDays(next);
+    setAllocationForecastDaysInput(String(next));
+  }, [allocationForecastDaysInput]);
+
   const loadAllocationForecasting = useCallback(async () => {
     setAllocationForecastLoading(true);
     setAllocationForecastLoadError(null);
     try {
       const forecastRes = await hrmsService.getAllocationForecasting({
-        days: ALLOCATION_FORECAST_DAYS,
+        days: allocationForecastDays,
         page: Number(ALLOCATION_FORECAST_PAGE),
         size: Number(ALLOCATION_FORECAST_SIZE),
       });
@@ -2392,7 +2475,7 @@ export function AllocationPageClient() {
     } finally {
       setAllocationForecastLoading(false);
     }
-  }, [loadAllProjectsForHr]);
+  }, [loadAllProjectsForHr, allocationForecastDays]);
 
   useEffect(() => {
     if (!user) return;
@@ -3425,6 +3508,18 @@ export function AllocationPageClient() {
                                       setProjectForm((p) => ({ ...p, project_type: v }))
                                     }
                                   />
+                                  <InputField
+                                    label="Start date"
+                                    type="date"
+                                    value={projectForm.start_date}
+                                    onChange={(v) => setProjectForm((p) => ({ ...p, start_date: v }))}
+                                  />
+                                  <InputField
+                                    label="End date"
+                                    type="date"
+                                    value={projectForm.end_date}
+                                    onChange={(v) => setProjectForm((p) => ({ ...p, end_date: v }))}
+                                  />
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                   <button
@@ -3457,12 +3552,19 @@ export function AllocationPageClient() {
                                             throw new Error("Select a valid account manager email.");
                                           }
                                           const project_code = generateAutomaticProjectCode();
+                                          const startDate = projectForm.start_date.trim();
+                                          const endDate = projectForm.end_date.trim();
+                                          if (startDate && endDate && startDate > endDate) {
+                                            throw new Error("Start date must be on or before end date.");
+                                          }
                                           await hrmsService.createProject({
                                             project_code,
                                             project_name: name,
                                             project_type: projectForm.project_type,
                                             client_name: projectForm.client_name.trim() || null,
                                             account_manager_email: accountManagerEmail,
+                                            ...(startDate ? { start_date: startDate } : {}),
+                                            ...(endDate ? { end_date: endDate } : {}),
                                           });
                                           setEditingProjectCode("");
                                           setProjectForm(createEmptyProjectForm());
@@ -3545,6 +3647,8 @@ export function AllocationPageClient() {
                                               />
                                             </th>
                                             <th className="px-3 py-2 text-left font-medium">Type</th>
+                                            <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Start date</th>
+                                            <th className="px-3 py-2 text-left font-medium whitespace-nowrap">End date</th>
                                             <th className="px-3 py-2 text-right font-medium w-20">Actions</th>
                                           </tr>
                                         </thead>
@@ -3556,10 +3660,18 @@ export function AllocationPageClient() {
                                               row as Record<string, unknown>
                                             );
                                             const typ = formatProjectTypeCode(typCode, projectTypeLabels);
+                                            const startDate = formatApiDateDisplay(
+                                              String(row.start_date ?? row.startDate ?? "")
+                                            );
+                                            const endDate = formatApiDateDisplay(
+                                              String(row.end_date ?? row.endDate ?? "")
+                                            );
                                             return (
                                               <tr key={code || String(idx)} className="border-t border-wt-border">
                                                 <td className="px-3 py-2 max-w-[240px] truncate font-medium">{name || "—"}</td>
                                                 <td className="px-3 py-2 whitespace-nowrap">{typ}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</td>
                                                 <td className="px-3 py-2 text-right">
                                                   <button
                                                     type="button"
@@ -3655,6 +3767,8 @@ export function AllocationPageClient() {
                                             className="block w-full px-3 py-2 text-left text-sm text-wt-text-muted hover:bg-wt-surface-2"
                                             onClick={() => {
                                               setAllocationForm((p) => ({ ...p, employee_email: "" }));
+                                              setPickerEmployeeAllocations(null);
+                                              setPickerEmployeeAllocationsError(null);
                                               setAllocationEmployeePickerOpen(false);
                                               setAllocationEmployeePickerQuery("");
                                             }}
@@ -3770,6 +3884,71 @@ export function AllocationPageClient() {
                                   <InputField label="Start Date" required value={allocationForm.start_date} onChange={(v) => setAllocationForm((p) => ({ ...p, start_date: v }))} type="date" />
                                   <InputField label="End Date" value={allocationForm.end_date} onChange={(v) => setAllocationForm((p) => ({ ...p, end_date: v }))} type="date" />
                                 </div>
+                                {allocationForm.employee_email.trim() ? (
+                                  <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <p className="text-sm font-medium">
+                                        {allocationEmployeeSelectLabel} — current &amp; future allocations
+                                      </p>
+                                      {pickerEmployeeAllocations ? (
+                                        <p className="text-xs text-wt-text-muted">
+                                          Total allocated: {pickerEmployeeAllocations.totalAllocatedPercent}%
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    {pickerEmployeeAllocationsLoading ? (
+                                      <p className="text-sm text-wt-text-muted">Loading allocations…</p>
+                                    ) : null}
+                                    {pickerEmployeeAllocationsError ? (
+                                      <p className="text-sm text-rose-700">{pickerEmployeeAllocationsError}</p>
+                                    ) : null}
+                                    {!pickerEmployeeAllocationsLoading &&
+                                    !pickerEmployeeAllocationsError &&
+                                    pickerEmployeeAllocations &&
+                                    pickerEmployeeAllocations.allocations.length === 0 ? (
+                                      <p className="text-sm text-wt-text-muted">
+                                        No current or future allocations for this employee.
+                                      </p>
+                                    ) : null}
+                                    {!pickerEmployeeAllocationsLoading &&
+                                    pickerEmployeeAllocations &&
+                                    pickerEmployeeAllocations.allocations.length > 0 ? (
+                                      <div className="wt-scroll-both max-h-[min(40vh,280px)] rounded-xl border border-wt-border">
+                                        <table className="min-w-full text-sm">
+                                          <thead className="bg-wt-surface-1 text-wt-text-muted">
+                                            <tr>
+                                              <th className="text-left px-3 py-2 font-medium">Project</th>
+                                              <th className="text-left px-3 py-2 font-medium">Allocation %</th>
+                                              <th className="text-left px-3 py-2 font-medium">Start date</th>
+                                              <th className="text-left px-3 py-2 font-medium">End date</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {pickerEmployeeAllocations.allocations.map((row, idx) => (
+                                              <tr
+                                                key={`${allocationRowId(row) || "picker-alloc"}-${idx}`}
+                                                className="border-t border-wt-border"
+                                              >
+                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                  {allocationProjectDisplayName(row)}
+                                                </td>
+                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                  {formatAllocatedPercentDisplay(row, allocationPercentLabels)}
+                                                </td>
+                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                  {formatApiDateDisplay(row.start_date ?? row.startDate) || "—"}
+                                                </td>
+                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                  {formatApiDateDisplay(row.end_date ?? row.endDate) || "—"}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                ) : null}
                                 <div className="flex flex-wrap gap-2">
                                   <button
                                     type="button"
@@ -4138,18 +4317,25 @@ export function AllocationPageClient() {
                                       <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-2">
                                         <div className="flex flex-wrap items-center justify-between gap-2">
                                           <p className="text-sm font-medium">
-                                            {selectedEmployeeAllocations.employeeName} — allocations
+                                            {selectedEmployeeAllocations.employeeName} — current &amp;
+                                            future allocations
                                           </p>
-                                          <button
-                                            type="button"
-                                            className="rounded-lg border border-wt-border bg-wt-surface-2 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3"
-                                            onClick={() => {
-                                              setSelectedEmployeeAllocations(null);
-                                              setEmployeeAllocationsError(null);
-                                            }}
-                                          >
-                                            Close
-                                          </button>
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <p className="text-xs text-wt-text-muted">
+                                              Total allocated:{" "}
+                                              {selectedEmployeeAllocations.totalAllocatedPercent}%
+                                            </p>
+                                            <button
+                                              type="button"
+                                              className="rounded-lg border border-wt-border bg-wt-surface-2 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3"
+                                              onClick={() => {
+                                                setSelectedEmployeeAllocations(null);
+                                                setEmployeeAllocationsError(null);
+                                              }}
+                                            >
+                                              Close
+                                            </button>
+                                          </div>
                                         </div>
                                         <div className="wt-scroll-both max-h-[min(50vh,360px)] rounded-xl border border-wt-border">
                                           <table className="min-w-full text-sm">
@@ -4240,23 +4426,50 @@ export function AllocationPageClient() {
                                   )}
                                 </div>
 
-                                <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3">
+                                <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-3">
                                   {allocationForecastLoadError ? (
-                                    <p className="mb-2 text-sm text-rose-700">{allocationForecastLoadError}</p>
+                                    <p className="text-sm text-rose-700">{allocationForecastLoadError}</p>
                                   ) : null}
+                                  <div className="flex flex-wrap items-end justify-between gap-3">
+                                    <p className="text-sm font-medium">
+                                      Allocation Forecasting (next {allocationForecastDays} days)
+                                    </p>
+                                    <label className="flex w-full sm:w-44 flex-col gap-1 text-xs text-wt-text-muted">
+                                      <FieldLabel label="Allocations ending within" />
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          max={365}
+                                          className="input-field w-full px-3 py-2 text-sm"
+                                          value={allocationForecastDaysInput}
+                                          onChange={(e) => setAllocationForecastDaysInput(e.target.value)}
+                                          onBlur={commitAllocationForecastDays}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                              e.currentTarget.blur();
+                                            }
+                                          }}
+                                          disabled={allocationForecastLoading}
+                                          aria-label="Allocations ending within days"
+                                        />
+                                        <span className="shrink-0 text-sm text-wt-text-muted">days</span>
+                                      </div>
+                                    </label>
+                                  </div>
                                   {allocationForecastLoading && !allocationForecastRows.length ? (
                                     <p className="text-sm text-wt-text-muted">Loading forecasting…</p>
                                   ) : (
                                     <DataTable
-                                      title={`Allocation Forecasting (next ${ALLOCATION_FORECAST_DAYS} days)`}
                                       columns={["project_name", "employee_name", "billing_status", "role"]}
                                       rows={allocationForecastRows}
                                       emptyLabel={
                                         allocationForecastLoadError
                                           ? "Allocation forecasting could not be loaded."
-                                          : `No employees with allocations ending in the next ${ALLOCATION_FORECAST_DAYS} days.`
+                                          : `No employees with allocations ending in the next ${allocationForecastDays} days.`
                                       }
                                       sortOptions={ALLOCATION_FORECAST_SORT_OPTIONS}
+                                      resetPaginationKeys={[allocationForecastDays]}
                                     />
                                   )}
                                 </div>

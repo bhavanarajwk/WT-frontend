@@ -197,6 +197,15 @@ export const hrmsService = {
     });
   },
 
+  /** POST /user/onboard/resend-invite — INVITED or ONBOARDING users only. */
+  resendOnboardInvite(payload: { email: string }) {
+    const email = payload.email.trim().toLowerCase();
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.user.resendOnboardInvite, {
+      contentType: "application/json",
+      body: JSON.stringify({ email }),
+    });
+  },
+
   completeMyOnboarding(formData: FormData) {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.user.onboard, {
       body: formData,
@@ -299,14 +308,19 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<PagedData<unknown>>>(endpoints.allocation.root, { query: params });
   },
 
-  /** GET /allocation/employee — all allocations for one employee (ROLE_HR | ROLE_ADMIN). */
-  getEmployeeAllocations(params: { userEmail?: string; userId?: number }) {
+  /** GET /allocation/employee — allocations for one employee (ROLE_HR | ROLE_ADMIN). */
+  getEmployeeAllocations(params: {
+    userEmail?: string;
+    userId?: number;
+    scope?: "current_and_future" | "all";
+  }) {
     const query: Record<string, string> = {};
     if (params.userId != null && Number.isFinite(params.userId)) {
       query.userId = String(params.userId);
     } else if (params.userEmail?.trim()) {
       query.userEmail = params.userEmail.trim();
     }
+    if (params.scope) query.scope = params.scope;
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.employee, { query });
   },
 
@@ -527,13 +541,20 @@ export const hrmsService = {
 
   /** POST /project — body uses snake_case (project_code, project_name, project_type, …). */
   createProject(payload: Record<string, unknown>) {
-    const body: Record<string, unknown> = {
-      project_code: payload.project_code ?? payload.projectCode,
-      project_name: payload.project_name ?? payload.projectName,
-      project_type: payload.project_type ?? payload.projectType,
-      client_name: payload.client_name ?? payload.clientName ?? null,
-      account_manager_email: payload.account_manager_email ?? payload.accountManagerEmail,
-    };
+    const body = applyApiDateFields(
+      {
+        project_code: payload.project_code ?? payload.projectCode,
+        project_name: payload.project_name ?? payload.projectName,
+        project_type: payload.project_type ?? payload.projectType,
+        client_name: payload.client_name ?? payload.clientName ?? null,
+        account_manager_email: payload.account_manager_email ?? payload.accountManagerEmail,
+        start_date: payload.start_date ?? payload.startDate,
+        end_date: payload.end_date ?? payload.endDate,
+      },
+      ["start_date", "end_date"]
+    );
+    if (!body.start_date) delete body.start_date;
+    if (!body.end_date) delete body.end_date;
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.project.createOne, {
       contentType: "application/json",
       body: JSON.stringify(body),
@@ -556,9 +577,26 @@ export const hrmsService = {
 
   /** POST /projects — body: CreateProjectRequest[] — ROLE_ADMIN per contract */
   createProjectsBulk(payload: Array<Record<string, unknown>>) {
+    const body = payload.map((item) => {
+      const row = applyApiDateFields(
+        {
+          project_code: item.project_code ?? item.projectCode,
+          project_name: item.project_name ?? item.projectName,
+          project_type: item.project_type ?? item.projectType,
+          client_name: item.client_name ?? item.clientName ?? null,
+          account_manager_email: item.account_manager_email ?? item.accountManagerEmail,
+          start_date: item.start_date ?? item.startDate,
+          end_date: item.end_date ?? item.endDate,
+        },
+        ["start_date", "end_date"]
+      );
+      if (!row.start_date) delete row.start_date;
+      if (!row.end_date) delete row.end_date;
+      return row;
+    });
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.project.createBulk, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
@@ -581,12 +619,21 @@ export const hrmsService = {
 
   getTimelogWeek(params: { weekStart: string; employeeEmail?: string }) {
     const query: Record<string, string> = { weekStart: params.weekStart };
-    if (params.employeeEmail?.trim()) query.employeeEmail = params.employeeEmail.trim();
+    if (params.employeeEmail?.trim()) {
+      query.employeeEmail = params.employeeEmail.trim().toLowerCase();
+    }
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.week, { query });
   },
 
   saveTimelogWeek(payload: Record<string, unknown>) {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.week, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  submitTimelogWeek(payload: { week_start: string; employee_email?: string }) {
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.timelog.weekSubmit, {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
