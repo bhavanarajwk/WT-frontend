@@ -44,10 +44,19 @@ export function normalizeApiBaseUrl(url: string): string {
   return url.replace(/\/$/, "");
 }
 
-// Empty base URL = same-origin requests via Next.js API routes (production BFF).
-const DEFAULT_BASE_URL = normalizeApiBaseUrl(
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
-);
+/**
+ * Browser API base URL. In production always use same-origin /api/v1 (Vercel BFF)
+ * so OAuth cookies stay on the frontend domain — never Render directly.
+ */
+export function resolveClientApiBaseUrl(): string {
+  const configured = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL ?? "");
+  if (process.env.NODE_ENV === "production") {
+    return "";
+  }
+  return configured;
+}
+
+const DEFAULT_BASE_URL = resolveClientApiBaseUrl();
 
 export class HttpClient {
   private readonly baseUrl: string;
