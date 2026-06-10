@@ -22,7 +22,7 @@ import {
   rowEmail,
   type EmployeeProfileEditForm,
 } from "@/utils/employeeDirectory";
-import { validatePersonalEmail } from "@/utils/personalEmail";
+import { validatePersonalEmail, validateWorkEmail } from "@/utils/personalEmail";
 import {
   buildResumeShareLinkIndex,
   lookupResumeShareLink,
@@ -38,8 +38,8 @@ import { EmployeeLeaveBalancesCard } from "@/components/employee-directory/Emplo
 import { FullProfileDetailsGrid } from "@/components/employee-directory/FullProfileDetailsGrid";
 import { EmployeeResumeLink } from "@/components/resumes/EmployeeResumeLink";
 import { IconPencil } from "@/components/employee-directory/employeeDirectoryIcons";
-const WORK_MODES = ["ONSITE", "OFFSHORE", "HYBRID", "REMOTE"];
-const WORK_LOCATIONS = ["ONSITE", "OFFSHORE", "HYBRID", "REMOTE"];
+const WORK_MODES = ["WFO", "WFH", "HYBRID"];
+const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
 const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING"];
 
 export function EmployeeProfilePageClient() {
@@ -48,7 +48,7 @@ export function EmployeeProfilePageClient() {
   const {
     authStatus,
     canView: canViewProfile,
-    canEdit: canEditProfile,
+    canEditProfile,
     queriesEnabled,
     roles,
   } = useEmployeeDirectoryAccess();
@@ -69,6 +69,9 @@ export function EmployeeProfilePageClient() {
   const displayName = cleanEmployeeName(profileRecord) || "Employee";
   const department = String(pickProfileField(profileRecord, ["department"]) ?? "").trim();
   const email = String(pickProfileField(profileRecord, ["email"]) ?? "").trim();
+  const phone = formatProfileDisplayValue(
+    pickProfileField(profileRecord, ["phone_number", "phoneNumber"])
+  );
   const profileUserId = String(
     profileRecord.user_id ?? profileRecord.userId ?? ""
   ).trim();
@@ -117,6 +120,14 @@ export function EmployeeProfilePageClient() {
     return [...new Set(source)];
   }, [bandOptions, editForm?.band_id]);
 
+  const workModeOptions = useMemo(() => {
+    const current = editForm?.work_mode?.trim();
+    if (current && !WORK_MODES.includes(current)) {
+      return [current, ...WORK_MODES];
+    }
+    return WORK_MODES;
+  }, [editForm?.work_mode]);
+
   const openEditor = () => {
     setEditForm(profileToEditForm(profileRecord));
     setIsEditing(true);
@@ -130,12 +141,12 @@ export function EmployeeProfilePageClient() {
   const saveProfile = () => {
     if (!editForm || !empId) return;
     void runAction("Update employee profile", async () => {
-      const workEmail = email || String(pickProfileField(profileRecord, ["email"]) ?? "").trim();
-      const personal = editForm.personal_email.trim();
-      if (personal) {
-        const personalError = validatePersonalEmail(workEmail, personal, { required: true });
-        if (personalError) throw new Error(personalError);
-      }
+      const workEmailError = validateWorkEmail(editForm.email);
+      if (workEmailError) throw new Error(workEmailError);
+      const personalError = validatePersonalEmail(editForm.email, editForm.personal_email, {
+        required: false,
+      });
+      if (personalError) throw new Error(personalError);
       await updateMutation.mutateAsync(editFormToUpdatePayload(editForm));
       await refetch();
       setIsEditing(false);
@@ -234,6 +245,15 @@ export function EmployeeProfilePageClient() {
                     </span>
                     <span className="text-wt-text-muted">Resume: </span>
                     <EmployeeResumeLink href={resumeShareHref} />
+                    {phone && phone !== "—" ? (
+                      <>
+                        <span className="mx-2 text-wt-border-md" aria-hidden>
+                          •
+                        </span>
+                        <span className="text-wt-text-muted">Phone: </span>
+                        <span className="text-wt-text">{phone}</span>
+                      </>
+                    ) : null}
                   </p>
                 </div>
 
@@ -254,16 +274,13 @@ export function EmployeeProfilePageClient() {
                   <h4 className="text-base font-semibold">Edit profile</h4>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <InputField label="Name" value={editForm.name} onChange={(v) => setEditForm({ ...editForm, name: v })} />
-                    <label className="flex flex-col gap-1 text-xs text-wt-text-muted">
-                      Work email
-                      <input
-                        className="input-field bg-wt-surface-2 px-3 py-2 text-sm text-wt-text-muted"
-                        type="email"
-                        value={email}
-                        readOnly
-                        disabled
-                      />
-                    </label>
+                    <InputField
+                      label="Work email"
+                      type="email"
+                      required
+                      value={editForm.email}
+                      onChange={(v) => setEditForm({ ...editForm, email: v })}
+                    />
                     <InputField
                       label="Personal mail ID"
                       type="email"
@@ -284,7 +301,7 @@ export function EmployeeProfilePageClient() {
                     <SelectField
                       label="Work mode"
                       value={editForm.work_mode}
-                      options={WORK_MODES}
+                      options={workModeOptions}
                       onChange={(v) => setEditForm({ ...editForm, work_mode: v })}
                     />
                     <SelectField
@@ -338,16 +355,6 @@ export function EmployeeProfilePageClient() {
                 </div>
               ) : null}
 
-              <div className="mt-6 space-y-6">
-                <EmployeeLeaveBalancesCard empId={empId} enabled={queriesEnabled} />
-                <EmployeeTrainingMarksCard
-                  variant="hr"
-                  targetUserId={profileUserId}
-                  targetEmail={email}
-                  enabled={queriesEnabled && Boolean(profileUserId)}
-                />
-              </div>
-
               <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
                 <div className="min-w-0 rounded-xl border border-wt-border p-5 md:p-6">
                   <FullProfileDetailsGrid
@@ -362,6 +369,16 @@ export function EmployeeProfilePageClient() {
                   designation={employeeRole}
                   department=""
                   email={email}
+                />
+              </div>
+
+              <div className="mt-6 space-y-6">
+                <EmployeeLeaveBalancesCard empId={empId} enabled={queriesEnabled} />
+                <EmployeeTrainingMarksCard
+                  variant="hr"
+                  targetUserId={profileUserId}
+                  targetEmail={email}
+                  enabled={queriesEnabled && Boolean(profileUserId)}
                 />
               </div>
             </>

@@ -1,3 +1,16 @@
+import {
+  GENERAL_PROJECT_CODE,
+  INTERNAL_PROJECT_CODE,
+} from "@/utils/timelog/categories";
+
+const SYSTEM_PROJECT_CODES = new Set([GENERAL_PROJECT_CODE, INTERNAL_PROJECT_CODE]);
+
+/** True for HR-created allocation projects (excludes timelog system projects). */
+export function isHrCreatedProjectCode(code: string): boolean {
+  const normalized = code.trim().toUpperCase();
+  return Boolean(normalized) && !SYSTEM_PROJECT_CODES.has(normalized);
+}
+
 /** Normalize GET /projects/all (or paginated /projects) rows for pickers. */
 export function parseProjectPickerRows(
   rows: Array<Record<string, unknown>>

@@ -15,7 +15,7 @@ export function ExitInterviewProfileBanner() {
   if (flags.exit_interview_submitted) {
     return (
       <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-        Your exit interview has been submitted. Thank you.
+        Your exit survey has been submitted. Thank you.
       </div>
     );
   }
@@ -24,9 +24,9 @@ export function ExitInterviewProfileBanner() {
     const days = flags.exit_interview_days_until_last_working_day;
     return (
       <div className="mb-6 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-950">
-        <p className="font-medium">Exit interview due</p>
+        <p className="font-medium">Exit survey due</p>
         <p className="mt-1 text-indigo-900/90">
-          Please complete your exit interview before your last working day
+          Please complete your exit survey before your last working day
           {days != null ? ` (${days} day${days === 1 ? "" : "s"} remaining)` : ""}.
         </p>
         <Link
@@ -41,7 +41,7 @@ export function ExitInterviewProfileBanner() {
 
   return (
     <div className="mb-6 rounded-xl border border-wt-border bg-wt-surface-2/80 px-4 py-3 text-sm text-wt-text-muted">
-      Your exit interview will open during your notice period.
+      Your exit survey will open during your notice period.
     </div>
   );
 }

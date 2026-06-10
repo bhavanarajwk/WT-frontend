@@ -358,7 +358,7 @@ export function hrTeamActionBlockedHint(
 
   const mgr = requestManagerStatus(row);
 
-  if (mgr === "PENDING") return "Awaiting manager approval";
+  if (mgr === "PENDING") return "Awaiting manager/DM approval";
 
   if (mgr === "REJECTED") return "Manager rejected";
 
@@ -372,11 +372,11 @@ export function canManagerActOnRequest(
 
   row: Record<string, unknown>,
 
-  options: { hasManagerAccess: boolean }
+  options: { hasManagerAccess: boolean; hasDmAccess?: boolean }
 
 ): boolean {
 
-  if (!options.hasManagerAccess) return false;
+  if (!options.hasManagerAccess && !options.hasDmAccess) return false;
 
   const requestType = pickRowField(row, "request_type", "requestType");
 
@@ -396,7 +396,7 @@ export function canManagerRejectRequest(
 
   row: Record<string, unknown>,
 
-  options: { hasManagerAccess: boolean }
+  options: { hasManagerAccess: boolean; hasDmAccess?: boolean }
 
 ): boolean {
 
@@ -422,7 +422,7 @@ export function canApproverActOnRequest(
 
   row: Record<string, unknown>,
 
-  options: { hasHrAccess: boolean; hasManagerAccess?: boolean }
+  options: { hasHrAccess: boolean; hasManagerAccess?: boolean; hasDmAccess?: boolean }
 
 ): boolean {
 
@@ -432,7 +432,10 @@ export function canApproverActOnRequest(
 
   }
 
-  return canManagerActOnRequest(row, { hasManagerAccess: Boolean(options.hasManagerAccess) });
+  return canManagerActOnRequest(row, {
+    hasManagerAccess: Boolean(options.hasManagerAccess),
+    hasDmAccess: Boolean(options.hasDmAccess),
+  });
 
 }
 

@@ -33,6 +33,11 @@ export function canEditEmployeeDirectory(roles: string[]): boolean {
   return hasHrRole(roles);
 }
 
+/** PUT /employee-profile/{empId} — ROLE_HR only (not admin-only). */
+export function canEditEmployeeProfile(roles: string[]): boolean {
+  return roles.includes("ROLE_HR");
+}
+
 /** Leave and comp-off from AM employees are reviewed by HR. */
 export function isAccountManagerEmployeeUser(roles: string[]): boolean {
   return hasAccountManagerRole(roles) && roles.includes("ROLE_EMPLOYEE");

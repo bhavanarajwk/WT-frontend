@@ -27,7 +27,7 @@ function formatDateLabel(value: string | null): string {
   }
 }
 
-/** Exit interview survey (employee self-serve, including offboarded users in notice). */
+/** Exit survey (employee self-serve, including offboarded users in notice). */
 export function ExitInterviewSurveyPanel({ className = "" }: { className?: string }) {
   const queryClient = useQueryClient();
   const { toast, actionLoading, runAction } = useDashboardAction();
@@ -63,10 +63,10 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
     if (profileQ.isLoading) return null;
     if (!flags?.exit_interview_applicable) return null;
     if (flags.exit_interview_submitted) {
-      return "Thank you — your exit interview has been submitted.";
+      return "Thank you — your exit survey has been submitted.";
     }
     if (!flags.can_fill_exit_interview) {
-      return "Your exit interview will be available during your notice period.";
+      return "Your exit survey will be available during your notice period.";
     }
     return null;
   }, [profileQ.isLoading, flags]);
@@ -86,7 +86,7 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
     setFieldErrors(errors);
     if (Object.keys(errors).length) return;
 
-    void runAction("Submit exit interview", async () => {
+    void runAction("Submit exit survey", async () => {
       const body = buildExitInterviewSubmitBody(formDefQ.data, answers);
       await exitInterviewService.submit(body);
       await queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
@@ -113,7 +113,7 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
         ) : null}
 
         {profileQ.isLoading ? (
-          <p className="mt-3 text-sm text-wt-text-muted">Loading exit interview…</p>
+          <p className="mt-3 text-sm text-wt-text-muted">Loading exit survey…</p>
         ) : null}
 
         {statusMessage ? (
@@ -168,7 +168,7 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
                     disabled={actionLoading}
                     onClick={handleSubmit}
                   >
-                    {actionLoading ? "Submitting…" : "Submit exit interview"}
+                    {actionLoading ? "Submitting…" : "Submit exit survey"}
                   </button>
                 </div>
               </div>

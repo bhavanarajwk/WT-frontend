@@ -7,6 +7,14 @@ export function parsePersonalEmailFromProfile(
   return String(profile.personal_email ?? "").trim();
 }
 
+/** Client validation for HR work email updates. */
+export function validateWorkEmail(workEmail: string): string | null {
+  const work = workEmail.trim();
+  if (!work) return "Work email is required.";
+  if (!EMAIL_RE.test(work)) return "Enter a valid work email address.";
+  return null;
+}
+
 /** Client validation for `personal_email` (snake_case API field). */
 export function validatePersonalEmail(
   workEmail: string,

@@ -23,6 +23,31 @@ const DEFAULT_PAGE_SIZE = 10;
 
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
+function defaultFinancialYearStart(): string {
+  const now = new Date();
+  const year = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+  return String(year);
+}
+
+function financialYearOptions(): string[] {
+  return Array.from({ length: Math.max(new Date().getFullYear() - 2019 + 1, 1) }, (_, idx) =>
+    String(2019 + idx)
+  );
+}
+
+function formatPercent(value: unknown): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "—";
+  return `${n}%`;
+}
+
+function exitSplitPercent(part: unknown, total: unknown): number {
+  const p = Number(part);
+  const t = Number(total);
+  if (!Number.isFinite(p) || !Number.isFinite(t) || t <= 0) return 0;
+  return Math.round((p / t) * 1000) / 10;
+}
+
 function formatBool(value: boolean): string {
   return value ? "Yes" : "No";
 }
@@ -48,10 +73,48 @@ export function OffboardingPanel() {
   const [filterToDate, setFilterToDate] = useState("");
   const [filterType, setFilterType] = useState("");
 
+  const [fyStartYear, setFyStartYear] = useState(defaultFinancialYearStart);
+  const [attritionPercent, setAttritionPercent] = useState<number | null>(null);
+  const [voluntaryPercent, setVoluntaryPercent] = useState<number | null>(null);
+  const [involuntaryPercent, setInvoluntaryPercent] = useState<number | null>(null);
+  const [attritionExitCount, setAttritionExitCount] = useState<number | null>(null);
+  const [loadingAttrition, setLoadingAttrition] = useState(false);
+
   const [loadingList, setLoadingList] = useState(false);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
+
+  const loadAttritionSummary = useCallback(async () => {
+    const parsedFy = Number.parseInt(fyStartYear, 10);
+    const fy_start_year =
+      Number.isFinite(parsedFy) && parsedFy >= 2000 && parsedFy <= 2100
+        ? parsedFy
+        : Number(defaultFinancialYearStart());
+    setLoadingAttrition(true);
+    try {
+      const [overallRes, viRes] = await Promise.all([
+        hrmsService.getAttritionOverallPercent({ fy_start_year }),
+        hrmsService.getAttritionVoluntaryInvoluntary({ fy_start_year }),
+      ]);
+      const overall = ((overallRes as { data?: unknown }).data ?? {}) as Record<string, unknown>;
+      const vi = ((viRes as { data?: unknown }).data ?? {}) as Record<string, unknown>;
+      const voluntaryCount = Number(vi.voluntary_count ?? 0);
+      const involuntaryCount = Number(vi.involuntary_count ?? 0);
+      const totalCount = Number(vi.total_count ?? voluntaryCount + involuntaryCount);
+      setAttritionPercent(Number(overall.attrition_percent ?? 0));
+      setAttritionExitCount(Number(overall.number_of_exits ?? totalCount));
+      setVoluntaryPercent(exitSplitPercent(voluntaryCount, totalCount));
+      setInvoluntaryPercent(exitSplitPercent(involuntaryCount, totalCount));
+    } catch {
+      setAttritionPercent(null);
+      setVoluntaryPercent(null);
+      setInvoluntaryPercent(null);
+      setAttritionExitCount(null);
+    } finally {
+      setLoadingAttrition(false);
+    }
+  }, [fyStartYear]);
 
   const loadOffboardList = useCallback(async () => {
     setLoadingList(true);
@@ -123,6 +186,10 @@ export function OffboardingPanel() {
   useEffect(() => {
     void loadOffboardList();
   }, [loadOffboardList]);
+
+  useEffect(() => {
+    void loadAttritionSummary();
+  }, [loadAttritionSummary]);
 
   useEffect(() => {
     setListPage(0);
@@ -201,6 +268,7 @@ export function OffboardingPanel() {
       });
       setOffboardedRows(res.data?.items ?? []);
       setListTotal(res.data?.total ?? 0);
+      await loadAttritionSummary();
     } catch (error) {
       const msg =
         error instanceof ApiError
@@ -227,6 +295,56 @@ export function OffboardingPanel() {
           {toast.message}
         </div>
       ) : null}
+
+      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 className="font-semibold">Attrition summary</h3>
+            <p className="text-xs text-wt-text-muted mt-1">
+              Financial-year exit metrics (Apr–Mar)
+              {attritionExitCount != null ? ` · ${attritionExitCount} exit(s)` : ""}
+            </p>
+          </div>
+          <SelectField
+            label="Financial year (start)"
+            className="min-w-[10rem]"
+            value={fyStartYear}
+            onChange={setFyStartYear}
+            options={financialYearOptions().map((year) => ({
+              value: year,
+              label: `FY ${year}–${String(Number(year) + 1).slice(-2)}`,
+            }))}
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <article className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
+              Attrition %
+            </p>
+            <p className="text-2xl font-semibold mt-2 tabular-nums text-rose-700">
+              {loadingAttrition ? "…" : formatPercent(attritionPercent)}
+            </p>
+          </article>
+          <article className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
+              Voluntary %
+            </p>
+            <p className="text-2xl font-semibold mt-2 tabular-nums text-sky-700">
+              {loadingAttrition ? "…" : formatPercent(voluntaryPercent)}
+            </p>
+            <p className="text-xs text-wt-text-muted mt-1">Share of FY exits</p>
+          </article>
+          <article className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
+              Involuntary %
+            </p>
+            <p className="text-2xl font-semibold mt-2 tabular-nums text-amber-700">
+              {loadingAttrition ? "…" : formatPercent(involuntaryPercent)}
+            </p>
+            <p className="text-xs text-wt-text-muted mt-1">Share of FY exits</p>
+          </article>
+        </div>
+      </div>
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
         <h3 className="font-semibold mb-4">Employee offboarding</h3>

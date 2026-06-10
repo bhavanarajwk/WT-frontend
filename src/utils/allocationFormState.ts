@@ -4,6 +4,8 @@ export type ProjectFormState = {
   project_type: string;
   client_name: string;
   account_manager_email: string;
+  start_date: string;
+  end_date: string;
 };
 
 export type AllocationFormState = {
@@ -25,6 +27,8 @@ export function createEmptyProjectForm(): ProjectFormState {
     project_type: "",
     client_name: "",
     account_manager_email: "",
+    start_date: "",
+    end_date: "",
   };
 }
 

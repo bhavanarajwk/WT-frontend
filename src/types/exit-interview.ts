@@ -95,6 +95,11 @@ export type ExitInterviewSubmissionDetail = {
   /** @deprecated API legacy field; prefer exit_type */
   separation_type?: string | null;
   responses: Record<string, unknown>;
+  minutes_of_meeting?: string | null;
+};
+
+export type ExitInterviewMinutesOfMeetingUpdate = {
+  minutes_of_meeting?: string | null;
 };
 
 export type ExitInterviewSubmissionsQuery = {
