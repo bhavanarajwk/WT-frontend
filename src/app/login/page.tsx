@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   getGoogleSignInUrl,
   oauthErrorMessages,
@@ -103,7 +103,6 @@ function ErrorBanner({ message }: { message: string }) {
 /* ------------------------------------------------------------------ */
 
 function LoginPageInner() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { status, refresh } = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -121,9 +120,10 @@ function LoginPageInner() {
   useEffect(() => {
     if (status === "authenticated" && !didRedirect.current) {
       didRedirect.current = true;
-      router.replace("/dashboard");
+      // Full navigation so middleware receives HttpOnly cookies set by /auth/refresh.
+      window.location.replace("/dashboard");
     }
-  }, [status, router]);
+  }, [status]);
 
   // On login page, if session becomes valid right after OAuth callback/cookie set,
   // re-check once so roles are populated immediately from /auth/refresh.
@@ -134,10 +134,10 @@ function LoginPageInner() {
       const fresh = await refresh();
       if (fresh && !didRedirect.current) {
         didRedirect.current = true;
-        router.replace("/dashboard");
+        window.location.replace("/dashboard");
       }
     })();
-  }, [status, refresh, router]);
+  }, [status, refresh]);
 
   function handleGoogleSignIn() {
     setGoogleLoading(true);

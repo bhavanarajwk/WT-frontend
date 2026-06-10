@@ -17,7 +17,9 @@ export function middleware(request: NextRequest) {
   const hasAccessToken = request.cookies.has("accessToken");
   const hasRefreshSession =
     request.cookies.has("tokenId") && request.cookies.has("refreshToken");
-  const hasToken = hasAccessToken || hasRefreshSession;
+  // Email is always set with the session; treat it as a fallback for post-OAuth navigation.
+  const hasSessionEmail = request.cookies.has("email");
+  const hasToken = hasAccessToken || hasRefreshSession || hasSessionEmail;
 
   if (!hasToken) {
     const loginUrl = new URL("/login", request.url);
