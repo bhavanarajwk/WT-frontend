@@ -4,7 +4,7 @@
  */
 import { endpoints } from "@/api/endpoints";
 import { ApiError } from "@/api/error";
-import { apiClient } from "@/api/httpClient";
+import { apiClient, normalizeApiBaseUrl } from "@/api/httpClient";
 
 export interface AuthUser {
   message: string;
@@ -20,7 +20,9 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const API_BASE = normalizeApiBaseUrl(
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
+);
 
 /**
  * Initiates the Google OAuth flow.

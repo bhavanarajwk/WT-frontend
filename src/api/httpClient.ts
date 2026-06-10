@@ -40,8 +40,14 @@ interface ApiClientConfig {
   baseUrl: string;
 }
 
-const DEFAULT_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+export function normalizeApiBaseUrl(url: string): string {
+  return url.replace(/\/$/, "");
+}
+
+// Empty base URL = same-origin requests via Next.js API routes (production BFF).
+const DEFAULT_BASE_URL = normalizeApiBaseUrl(
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
+);
 
 export class HttpClient {
   private readonly baseUrl: string;
@@ -165,7 +171,12 @@ export class HttpClient {
 
   private buildUrl(path: string, query?: QueryParams) {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    const url = new URL(`${this.baseUrl}${normalizedPath}`);
+    const url = this.baseUrl
+      ? new URL(`${this.baseUrl}${normalizedPath}`)
+      : new URL(
+          normalizedPath,
+          typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
+        );
     if (!query) return url.toString();
 
     Object.entries(query).forEach(([key, value]) => {
