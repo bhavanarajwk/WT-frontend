@@ -3936,10 +3936,14 @@ export function AllocationPageClient() {
                                                   {formatAllocatedPercentDisplay(row, allocationPercentLabels)}
                                                 </td>
                                                 <td className="px-3 py-2 whitespace-nowrap">
-                                                  {formatApiDateDisplay(row.start_date ?? row.startDate) || "—"}
+                                                  {formatApiDateDisplay(
+                                                    (row.start_date ?? row.startDate) as string | null | undefined
+                                                  ) || "—"}
                                                 </td>
                                                 <td className="px-3 py-2 whitespace-nowrap">
-                                                  {formatApiDateDisplay(row.end_date ?? row.endDate) || "—"}
+                                                  {formatApiDateDisplay(
+                                                    (row.end_date ?? row.endDate) as string | null | undefined
+                                                  ) || "—"}
                                                 </td>
                                               </tr>
                                             ))}

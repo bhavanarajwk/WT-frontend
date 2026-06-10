@@ -146,5 +146,5 @@ export function normalizeTrainingTrainerRows(
         email: email || "—",
       };
     })
-    .filter((row): row is Record<string, unknown> => Boolean(row));
+    .filter((row) => row !== null);
 }

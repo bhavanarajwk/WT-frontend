@@ -13,6 +13,7 @@ export interface AuthUser {
   roles: string[];
   status: string;
   user_type: string;
+  requiresSelfOnboarding?: boolean;
 }
 
 export interface ApiResponse<T> {
