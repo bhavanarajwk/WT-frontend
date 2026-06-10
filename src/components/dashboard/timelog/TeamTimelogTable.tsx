@@ -8,6 +8,7 @@ import {
   type TeamTimelogEntryLine,
 } from "@/utils/timelog/teamWeekTable";
 import { compareSortValues, type SortDirection } from "@/utils/listSort";
+import { formatHoursDisplay } from "@/utils/timelog/weekDates";
 
 type TeamTimelogTableProps = {
   snapshot: TimelogWeekSnapshot | null;
@@ -20,7 +21,7 @@ const DETAIL_COLUMNS: Array<{ key: keyof TeamTimelogEntryLine; label: string }> 
   { key: "task_category", label: "Task category" },
   { key: "sub_category", label: "Sub category" },
   { key: "hours", label: "Hours" },
-  { key: "comment", label: "Comment" },
+  { key: "comment", label: "Description" },
 ];
 
 function StackedCell({ lines, field }: { lines: TeamTimelogEntryLine[]; field: keyof TeamTimelogEntryLine }) {
@@ -109,7 +110,9 @@ export function TeamTimelogTable({ snapshot, dayDates, dayKeys }: TeamTimelogTab
                     <StackedCell lines={day.entries} field={col.key} />
                   </td>
                 ))}
-                <td className="whitespace-nowrap px-4 py-4 align-top font-semibold">{day.total_hours}</td>
+                <td className="whitespace-nowrap px-4 py-4 align-top font-semibold tabular-nums">
+                  {formatHoursDisplay(day.total_hours)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -118,7 +121,7 @@ export function TeamTimelogTable({ snapshot, dayDates, dayKeys }: TeamTimelogTab
 
       <div className="rounded-xl border border-wt-border bg-wt-surface-2/60 px-4 py-3 text-sm text-right">
         <span className="text-wt-text-muted">Week total:</span>{" "}
-        <span className="font-semibold">{weeklyTotal > 0 ? weeklyTotal : "—"}</span>
+        <span className="font-semibold tabular-nums">{formatHoursDisplay(weeklyTotal)}</span>
       </div>
     </div>
   );

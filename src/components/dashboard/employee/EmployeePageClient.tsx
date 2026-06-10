@@ -84,6 +84,7 @@ import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashb
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { EmployeeOnboardingSubNav } from "@/components/employee-onboarding/EmployeeOnboardingSubNav";
 import { HrOnboardForm } from "@/components/employee-onboarding/HrOnboardForm";
+import { InvitedEmployeesTable } from "@/components/employee-onboarding/InvitedEmployeesTable";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -105,6 +106,7 @@ export function EmployeePageClient() {
   const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
+  const [resendingInviteEmail, setResendingInviteEmail] = useState<string | null>(null);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
     () => defaultInvitedEmployeesDateRange().from
   );
@@ -1710,6 +1712,26 @@ export function EmployeePageClient() {
     setOnboardFormKey((key) => key + 1);
   }, []);
 
+  const resendOnboardInvite = useCallback(
+    (email: string) => {
+      const normalized = email.trim().toLowerCase();
+      if (!normalized) return;
+      void runAction("Resend onboarding invite", async () => {
+        setResendingInviteEmail(normalized);
+        try {
+          await hrmsService.resendOnboardInvite({ email: normalized });
+          setToast({
+            type: "success",
+            message: `Onboarding invite resent to ${normalized}.`,
+          });
+        } finally {
+          setResendingInviteEmail(null);
+        }
+      });
+    },
+    [runAction]
+  );
+
   const loadAllocationsForHr = useCallback(async () => {
     let rows: Array<Record<string, unknown>> = [];
     try {
@@ -2602,19 +2624,12 @@ export function EmployeePageClient() {
                                     <code className="text-[11px]">toDate</code>.
                                   </p>
                                 ) : null}
-                                <DataTable
-                                  columns={[
-                                    "emp_id",
-                                    "name",
-                                    "email",
-                                    "personal_email",
-                                    "status",
-                                    "user_type",
-                                    "department",
-                                    "created_at",
-                                  ]}
+                                <InvitedEmployeesTable
                                   rows={inviteOnboardingRows}
                                   emptyLabel="No invited employees in this date range."
+                                  actionLoading={actionLoading}
+                                  resendingEmail={resendingInviteEmail}
+                                  onResendInvite={resendOnboardInvite}
                                 />
                               </div>
                             </section>

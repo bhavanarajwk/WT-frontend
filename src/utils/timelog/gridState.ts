@@ -1,6 +1,7 @@
 export type TimelogGridRow = {
   clientKey: string;
   project_code: string;
+  project_name?: string;
   task_category: string;
   sub_category: string;
   comment: string;
@@ -52,6 +53,7 @@ export function gridRowsFromWeekSnapshot(snapshot: TimelogWeekSnapshot | null, d
     return {
       clientKey: `saved-${index}-${row.project_code}-${row.task_category}`,
       project_code: row.project_code,
+      project_name: row.project_name?.trim() || undefined,
       task_category: row.task_category,
       sub_category: row.sub_category ?? "",
       comment: row.comment ?? "",
@@ -60,6 +62,38 @@ export function gridRowsFromWeekSnapshot(snapshot: TimelogWeekSnapshot | null, d
       status_by_date: row.status_by_date,
     };
   });
+}
+
+export function isTimelogCellEditable(status?: string): boolean {
+  return !status || status === "DRAFT" || status === "REJECTED";
+}
+
+export function isRowMetadataEditable(row: TimelogGridRow, dayKeys: string[]): boolean {
+  return dayKeys.some((key) => isTimelogCellEditable(row.status_by_date?.[key]));
+}
+
+export function dayHasSubmittedEntries(rows: TimelogGridRow[], dayKey: string): boolean {
+  return rows.some((row) => row.status_by_date?.[dayKey] === "SUBMITTED");
+}
+
+export function submittedProjectCodesForDay(rows: TimelogGridRow[], dayKey: string): string[] {
+  const projects = new Set<string>();
+  for (const row of rows) {
+    if (row.status_by_date?.[dayKey] === "SUBMITTED" && row.project_code.trim()) {
+      projects.add(row.project_code.trim());
+    }
+  }
+  return Array.from(projects);
+}
+
+export function hasSubmittableEntries(rows: TimelogGridRow[], dayKeys: string[]): boolean {
+  return rows.some((row) =>
+    dayKeys.some((key) => {
+      const status = row.status_by_date?.[key];
+      const hours = Number(row.hours_by_date[key]);
+      return isTimelogCellEditable(status) && Number.isFinite(hours) && hours > 0;
+    })
+  );
 }
 
 export function weekPayloadFromGridRows(
@@ -77,9 +111,11 @@ export function weekPayloadFromGridRows(
     .map((row) => {
       const hours_by_date: Record<string, number> = {};
       for (const key of dayKeys) {
+        if (!isTimelogCellEditable(row.status_by_date?.[key])) continue;
         const n = Number(row.hours_by_date[key]);
         if (Number.isFinite(n) && n > 0) hours_by_date[key] = n;
       }
+      if (!Object.keys(hours_by_date).length) return null;
       return {
         project_code: row.project_code.trim(),
         task_category: row.task_category.trim(),
@@ -87,5 +123,6 @@ export function weekPayloadFromGridRows(
         comment: row.comment.trim() || undefined,
         hours_by_date,
       };
-    });
+    })
+    .filter((row): row is NonNullable<typeof row> => row != null);
 }

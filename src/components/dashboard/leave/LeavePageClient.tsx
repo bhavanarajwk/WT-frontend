@@ -452,6 +452,8 @@ export function LeavePageClient() {
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
+  const hasDmAccess = userRoles.includes("ROLE_DM");
+  const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess;
   const submitsToHrForReview = isAccountManagerEmployeeUser(userRoles);
   const { data: accountManagerEmails = new Set<string>() } = useAccountManagerEmails();
   /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
@@ -466,7 +468,7 @@ export function LeavePageClient() {
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canApplyCompOff = !hasHrAccess && !hasManagerAccess;
   const teamRequestType = employeeRequestFilters.requestType || "ALL";
-  const showCompOffTab = canApplyCompOff || hasManagerAccess || hasHrAccess;
+  const showCompOffTab = canApplyCompOff || hasManagerAccess || hasHrAccess || hasDmAccess;
   const compOffForcedTab: "my" | "team" = canApplyCompOff ? "my" : "team";
 
   const leaveRequestTypeOptions = useMemo(() => {
@@ -492,10 +494,10 @@ export function LeavePageClient() {
     }
   }, [hasManagerAccess, hasHrAccess, timelogSubTab]);
   useEffect(() => {
-    if (!hasManagerAccess && !hasHrAccess && leaveSubTab === "team") {
+    if (!canViewTeamLeave && leaveSubTab === "team") {
       setLeaveSubTab("my");
     }
-  }, [hasManagerAccess, hasHrAccess, leaveSubTab]);
+  }, [canViewTeamLeave, leaveSubTab]);
 
   const loadManagerData = useCallback(
     async (force = false) => {
@@ -2093,6 +2095,14 @@ export function LeavePageClient() {
           requestType,
         }))
       );
+    } else if (hasDmAccess && !hasManagerAccess) {
+      collectedRows.push(
+        ...(await listScopedUserRequests({
+          fromDate: from,
+          toDate: to,
+          requestType,
+        }))
+      );
     }
     let rows = collectedRows;
     rows = Array.from(
@@ -2183,9 +2193,9 @@ export function LeavePageClient() {
       return { ...row, employee_display };
     });
     setEmployeeRequests(enriched);
-  }, [employeeRequestFilters, hasHrAccess, hasManagerAccess, managerPortfolioRows, loadManagerData]);  useEffect(() => {
+  }, [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, managerPortfolioRows, loadManagerData]);  useEffect(() => {
     if (leaveSubTab !== "team") return;
-    if (!hasManagerAccess && !hasHrAccess) return;
+    if (!canViewTeamLeave) return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -2196,7 +2206,7 @@ export function LeavePageClient() {
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [leaveSubTab, hasManagerAccess, hasHrAccess, loadEmployeeRequestsForApprover]);
+  }, [leaveSubTab, canViewTeamLeave, loadEmployeeRequestsForApprover]);
 
   async function updateEmployeeRequestStatus(
     requestId: string,
@@ -3315,9 +3325,9 @@ export function LeavePageClient() {
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className="space-y-4">
-                          {hasManagerAccess || hasHrAccess || canApplyCompOff ? (
+                          {canViewTeamLeave || canApplyCompOff ? (
                             <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
-                              {hasManagerAccess || hasHrAccess ? (
+                              {canViewTeamLeave ? (
                                 <>
                                   <button
                                     type="button"
@@ -3729,7 +3739,7 @@ export function LeavePageClient() {
                             </div>
                           </div>
                         </section>
-                          ) : hasManagerAccess || hasHrAccess ? (
+                          ) : canViewTeamLeave ? (
                         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
                           <div className="flex flex-wrap items-end gap-3">
                             <InputField
@@ -3862,12 +3872,12 @@ export function LeavePageClient() {
                                       hasHrAccess,
                                     });
                                     const showManagerActions =
-                                      hasManagerAccess &&
+                                      (hasManagerAccess || hasDmAccess) &&
                                       !hrCanActOnRow &&
-                                      canManagerActOnRequest(rowRecord, { hasManagerAccess });
+                                      canManagerActOnRequest(rowRecord, { hasManagerAccess, hasDmAccess });
                                     const showManagerReject =
                                       showManagerActions &&
-                                      canManagerRejectRequest(rowRecord, { hasManagerAccess });
+                                      canManagerRejectRequest(rowRecord, { hasManagerAccess, hasDmAccess });
                                     const isRowUpdating = teamStatusUpdatingId === requestId;
                                     const rowEmail = requestRowEmail(row as Record<string, unknown>);
                                     const isAm = rowEmail ? accountManagerEmails.has(rowEmail) : false;

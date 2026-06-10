@@ -267,6 +267,7 @@ export type EmployeeAllocationsData = {
   userId?: number;
   empId?: string;
   totalElements: number;
+  totalAllocatedPercent: number;
   allocations: Array<Record<string, unknown>>;
 };
 
@@ -288,14 +289,23 @@ export function parseEmployeeAllocationsResponse(res: unknown): EmployeeAllocati
   const empId = String(o.emp_id ?? o.empId ?? "").trim() || undefined;
   const totalRaw = o.total_elements ?? o.totalElements ?? allocations.length;
   const totalElements = Number(totalRaw);
+  const totalPercentRaw = o.total_allocated_percent ?? o.totalAllocatedPercent ?? 0;
+  const totalAllocatedPercent = Number(totalPercentRaw);
   return {
     employeeEmail,
     employeeName,
     userId: Number.isFinite(userId) ? userId : undefined,
     empId,
     totalElements: Number.isFinite(totalElements) ? totalElements : allocations.length,
+    totalAllocatedPercent: Number.isFinite(totalAllocatedPercent) ? totalAllocatedPercent : 0,
     allocations,
   };
+}
+
+export function allocationTimingLabel(row: Record<string, unknown>, todayIso?: string): "Current" | "Future" {
+  const today = todayIso ?? new Date().toISOString().slice(0, 10);
+  const start = String(row.start_date ?? row.startDate ?? today).slice(0, 10);
+  return start > today ? "Future" : "Current";
 }
 
 /** Row returned by DELETE /allocation/{id} (soft-deallocated). */

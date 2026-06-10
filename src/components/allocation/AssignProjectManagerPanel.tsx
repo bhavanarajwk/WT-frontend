@@ -5,6 +5,7 @@ import { SelectField } from "@/components/dashboard/ui/forms";
 import { useAllocationProjectEmployees } from "@/hooks/useAllocationProjectEmployees";
 import { hrmsService } from "@/services/hrms.service";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
+import { isHrCreatedProjectCode } from "@/utils/projectPicker";
 
 type Props = {
   projects: Array<{ code: string; name: string; id?: number }>;
@@ -69,7 +70,7 @@ export function AssignProjectManagerPanel({
   const projectOptions = useMemo(
     () =>
       projects
-        .filter((p) => p.code.trim())
+        .filter((p) => p.code.trim() && isHrCreatedProjectCode(p.code))
         .map((p) => ({
           value: p.code.trim(),
           label: p.name.trim() || p.code.trim(),

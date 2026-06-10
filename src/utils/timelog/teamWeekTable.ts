@@ -1,6 +1,6 @@
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import type { TimelogWeekSnapshot } from "@/utils/timelog/gridState";
-import { formatDayHeader, parseTimelogDate, toIsoDateKey } from "@/utils/timelog/weekDates";
+import { formatTimelogTableDate, parseTimelogDate, toIsoDateKey } from "@/utils/timelog/weekDates";
 
 export type TeamTimelogEntryLine = {
   project: string;
@@ -30,7 +30,7 @@ function flattenEntriesFromSnapshot(
 ): Array<TeamTimelogEntryLine & { log_date: string; log_date_label: string }> {
   if (!snapshot?.rows?.length) return [];
 
-  const dateLabels = Object.fromEntries(dayKeys.map((key, i) => [key, formatDayHeader(dayDates[i])]));
+  const dateLabels = Object.fromEntries(dayKeys.map((key, i) => [key, formatTimelogTableDate(dayDates[i])]));
   const entries: Array<TeamTimelogEntryLine & { log_date: string; log_date_label: string }> = [];
 
   for (const row of snapshot.rows) {
@@ -49,7 +49,7 @@ function flattenEntriesFromSnapshot(
         task_category: taskLabel,
         sub_category: subCategory,
         log_date: logDate,
-        log_date_label: dateLabels[logDate] ?? (parsed ? formatDayHeader(parsed) : logDate),
+        log_date_label: dateLabels[logDate] ?? (parsed ? formatTimelogTableDate(parsed) : logDate),
         hours,
         comment: comment || "—",
       });

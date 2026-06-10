@@ -1,4 +1,7 @@
-export const DAILY_HOUR_WARNING_THRESHOLD = 8;
+export const DAILY_HOUR_HIGH_THRESHOLD = 10;
+export const DAILY_HOUR_LOW_THRESHOLD = 4;
+
+export type DailyHourHighlight = "high" | "low" | null;
 
 export function parseHourInput(value: string): number {
   const n = Number(String(value ?? "").trim());
@@ -28,6 +31,15 @@ export function weeklyTotal(daily: Record<string, number>): number {
   return Object.values(daily).reduce((a, b) => a + b, 0);
 }
 
-export function isDailyOverThreshold(total: number): boolean {
-  return total > DAILY_HOUR_WARNING_THRESHOLD;
+export function dailyHourHighlight(total: number): DailyHourHighlight {
+  if (!Number.isFinite(total) || total <= 0) return null;
+  if (total >= DAILY_HOUR_HIGH_THRESHOLD) return "high";
+  if (total < DAILY_HOUR_LOW_THRESHOLD) return "low";
+  return null;
+}
+
+export function dailyHourHighlightClass(highlight: DailyHourHighlight): string {
+  if (highlight === "high") return "bg-amber-100 text-amber-900";
+  if (highlight === "low") return "bg-sky-100 text-sky-900";
+  return "";
 }

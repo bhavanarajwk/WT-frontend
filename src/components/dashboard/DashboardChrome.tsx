@@ -359,7 +359,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               {activeSection === "employee" && !isLearningRoute ? "Employee Onboarding" : null}
               {activeSection === "exit-interview" && !isLearningRoute ? "Exit survey" : null}
               {activeSection === "exit-interview-submissions" && !isLearningRoute
-                ? "Exit interview submissions"
+                ? "Exit survey"
                 : null}
               {activeSection !== "profile" &&
               activeSection !== "employee-directory" &&
