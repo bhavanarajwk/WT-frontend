@@ -2,6 +2,7 @@ import { endpoints } from "@/api/endpoints";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import type {
   ExitInterviewFormDefinition,
+  ExitInterviewMinutesOfMeetingUpdate,
   ExitInterviewSubmissionDetail,
   ExitInterviewSubmissionsListData,
   ExitInterviewSubmissionsQuery,
@@ -44,6 +45,16 @@ export const exitInterviewService = {
   getSubmission(empId: string) {
     return apiClient.get<ApiEnvelope<ExitInterviewSubmissionDetail>>(
       endpoints.exitInterview.submissionByEmpId(empId)
+    );
+  },
+
+  updateMinutesOfMeeting(empId: string, body: ExitInterviewMinutesOfMeetingUpdate) {
+    return apiClient.put<ApiEnvelope<ExitInterviewSubmissionDetail>>(
+      endpoints.exitInterview.minutesOfMeetingByEmpId(empId),
+      {
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      }
     );
   },
 };

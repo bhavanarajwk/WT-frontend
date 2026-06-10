@@ -42,16 +42,9 @@ export function EmployeeLeaveBalancesCard({
         ) : null}
 
         {!isLoading && !isError && data ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <BalanceItem label="Primary" value={data.leave?.primary ?? 0} />
-              <BalanceItem label="Secondary" value={data.leave?.secondary ?? 0} />
-              <BalanceItem label="Carry forward" value={data.leave?.carry_forward ?? 0} />
-              <BalanceItem label="Total leave" value={data.leave?.total ?? 0} />
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
-              <BalanceItem label="Comp-off balance" value={data.comp_off_balance ?? 0} />
-            </div>
+          <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+            <BalanceItem label="Total leave" value={data.leave?.total ?? 0} />
+            <BalanceItem label="Comp-off balance" value={data.comp_off_balance ?? 0} />
           </div>
         ) : null}
 

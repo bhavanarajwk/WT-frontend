@@ -67,7 +67,7 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "exit-interview-submissions",
-        label: "Exit interviews",
+        label: "Exit survey",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "fileText",
       },

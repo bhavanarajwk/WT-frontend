@@ -34,6 +34,15 @@ export function filterInvitedRowsByCreatedAtRange(
   });
 }
 
+export function canResendOnboardInvite(status: unknown): boolean {
+  const normalized = String(status ?? "").trim().toUpperCase();
+  return normalized === "INVITED" || normalized === "ONBOARDING";
+}
+
+export function invitedEmployeeWorkEmail(row: Record<string, unknown>): string {
+  return String(row.email ?? row.work_email ?? row.workEmail ?? "").trim().toLowerCase();
+}
+
 export function formatInvitedEmployeeTableRows(
   rows: Array<Record<string, unknown>>
 ): Array<Record<string, unknown>> {

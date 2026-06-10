@@ -13,6 +13,7 @@ export const endpoints = {
 
   user: {
     onboard: `${api}/user/onboard`,
+    resendOnboardInvite: `${api}/user/onboard/resend-invite`,
     invited: `${api}/user/invited`,
     offboardList: `${api}/user/offboard`,
     offboard: (empId: string) => `${api}/user/offboard/${encodeURIComponent(empId)}`,
@@ -82,6 +83,7 @@ export const endpoints = {
     root: `${api}/timelog`,
     options: `${api}/timelog/options`,
     week: `${api}/timelog/week`,
+    weekSubmit: `${api}/timelog/week/submit`,
     byId: (timelogId: string) => `${api}/timelog/${encodeURIComponent(timelogId)}`,
     legacyGetByDate: (empEmail: string, logDate: string) =>
       `${api}/timelog/get/${encodeURIComponent(empEmail)}/${encodeURIComponent(logDate)}`,
@@ -192,6 +194,8 @@ export const endpoints = {
     submissions: `${api}/exit-interview/submissions`,
     submissionByEmpId: (empId: string) =>
       `${api}/exit-interview/submissions/${encodeURIComponent(empId)}`,
+    minutesOfMeetingByEmpId: (empId: string) =>
+      `${api}/exit-interview/submissions/${encodeURIComponent(empId)}/minutes-of-meeting`,
   },
 
   hrReports: {
