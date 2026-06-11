@@ -1,4 +1,5 @@
 import { normalizeApiBaseUrl } from "@/api/httpClient";
+import type { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
 
 /** Upstream FastAPI base URL (server-side only). */
@@ -71,6 +72,49 @@ export function clearAuthCookies(response: NextResponse): void {
   ]) {
     response.cookies.set(key, "", { ...base, maxAge: 0 });
   }
+}
+
+/** Headers for server-side proxy calls to FastAPI (forwards session cookies + Bearer). */
+export function buildUpstreamAuthHeaders(
+  request: NextRequest,
+  initHeaders?: Headers
+): Headers {
+  const headers = new Headers(initHeaders);
+
+  const hopByHop = new Set([
+    "connection",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailers",
+    "transfer-encoding",
+    "upgrade",
+    "host",
+    "content-length",
+    "cookie",
+    "authorization",
+  ]);
+
+  request.headers.forEach((value, key) => {
+    if (hopByHop.has(key.toLowerCase())) return;
+    headers.set(key, value);
+  });
+
+  const cookies = request.cookies.getAll();
+  if (cookies.length) {
+    headers.set(
+      "cookie",
+      cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ")
+    );
+  }
+
+  const accessToken = request.cookies.get("accessToken")?.value?.trim();
+  if (accessToken) {
+    headers.set("authorization", `Bearer ${accessToken}`);
+  }
+
+  return headers;
 }
 
 export function buildCookieHeader(request: Request, keys: string[]): string {

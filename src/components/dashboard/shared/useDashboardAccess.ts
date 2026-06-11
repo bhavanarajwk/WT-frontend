@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { hrmsService } from "@/services/hrms.service";
+import { fetchSelfProfile } from "@/utils/selfProfile";
+import { hasDmRole } from "@/utils/roles";
 import {
   isActiveUserStatus,
   isOffboardedUserStatus,
@@ -17,6 +18,7 @@ export function useDashboardAccess() {
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
+  const hasDmAccess = hasDmRole(userRoles);
   const hasAccountManagerAccess = userRoles.includes("ROLE_AM");
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
   const isAccountManagerOnly =
@@ -41,9 +43,17 @@ export function useDashboardAccess() {
   );
 
   const loadMyProfile = useCallback(async () => {
-    const res = await hrmsService.getMyProfile();
-    const profile = (res.data ?? null) as Record<string, unknown> | null;
-    if (!profile) return profile;
+    const applySessionStatus = () => {
+      const status = normalizeUserStatus(user?.status);
+      setProfileStatus(status);
+      setIsSelfOnboarded(isActiveUserStatus(status));
+      return null;
+    };
+
+    const profile = await fetchSelfProfile(userRoles);
+    if (!profile) {
+      return applySessionStatus();
+    }
     const status = resolveProfileStatus(profile, user);
     setProfileStatus(status);
     setIsSelfOnboarded(isActiveUserStatus(status));
@@ -52,7 +62,7 @@ export function useDashboardAccess() {
     }
     void queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
     return profile;
-  }, [user, refreshSession, queryClient]);
+  }, [user, userRoles, refreshSession, queryClient]);
 
   useEffect(() => {
     if (!user) return;
@@ -68,6 +78,7 @@ export function useDashboardAccess() {
     userRoles,
     hasHrAccess,
     hasManagerAccess,
+    hasDmAccess,
     hasAccountManagerAccess,
     isAccountManagerOnly,
     isEmployee,

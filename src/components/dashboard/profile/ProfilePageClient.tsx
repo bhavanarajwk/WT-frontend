@@ -81,6 +81,8 @@ import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
+import { fetchSelfProfile, shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import {
   isActiveUserStatus,
   isOffboardedUserStatus,
@@ -412,15 +414,19 @@ export function ProfilePageClient() {
   }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
-    const res = await hrmsService.getMyProfile();
-    const profile = (res.data ?? null) as Record<string, unknown> | null;
+    const profile = await fetchSelfProfile(userRoles);
     setEmployeeProfile(profile);
-    if (!profile) return;
+    if (!profile) {
+      const status = resolveProfileStatus(null, user);
+      setIsSelfOnboarded(isActiveUserStatus(status));
+      setIsOffboarded(isOffboardedUserStatus(status));
+      return;
+    }
 
     const status = resolveProfileStatus(profile, user);
     setIsSelfOnboarded(isActiveUserStatus(status));
     setIsOffboarded(isOffboardedUserStatus(status));
-  }, [user]);
+  }, [user, userRoles]);
 
   const handleOnboardingSuccess = useCallback(async () => {
     await refreshSession();
@@ -429,11 +435,15 @@ export function ProfilePageClient() {
   }, [refreshSession, loadMyProfile, router]);
   useEffect(() => {
     if (!user) return;
+    if (shouldSkipSelfProfileFetch(userRoles)) {
+      router.replace(DASHBOARD_ROUTES["leave-team"]);
+      return;
+    }
     const id = window.setTimeout(() => {
       void loadMyProfile();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [user, loadMyProfile]);
+  }, [user, userRoles, loadMyProfile, router]);
   useEffect(() => {
         if (requiresSelfOnboarding) return;
     const id = window.setTimeout(() => {

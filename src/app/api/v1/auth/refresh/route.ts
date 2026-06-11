@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  buildCookieHeader,
   clearAuthCookies,
   getBackendBaseUrl,
   setAuthCookies,
@@ -10,7 +9,12 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const cookieHeader = buildCookieHeader(request, ["tokenId", "refreshToken"]);
+  const tokenId = request.cookies.get("tokenId")?.value ?? "";
+  const refreshToken = request.cookies.get("refreshToken")?.value ?? "";
+  const cookieHeader = [tokenId && `tokenId=${tokenId}`, refreshToken && `refreshToken=${refreshToken}`]
+    .filter(Boolean)
+    .join("; ");
+
   const upstream = await fetch(`${getBackendBaseUrl()}/api/v1/auth/refresh`, {
     method: "POST",
     headers: cookieHeader ? { Cookie: cookieHeader } : undefined,

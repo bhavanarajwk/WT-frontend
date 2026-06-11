@@ -10,6 +10,7 @@ import { useOverviewData } from "@/hooks/useOverviewData";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 import { ApiError } from "@/api/error";
 import { toRows, toPagedRows } from "@/utils/apiRows";
+import { loadSelfProfileState } from "@/utils/selfProfile";
 import {
   formatActionErrorMessage,
   formatActionSuccessMessage,
@@ -431,14 +432,10 @@ export function ReportsPageClient() {
   }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
-    const res = await hrmsService.getMyProfile();
-    const profile = (res.data ?? null) as Record<string, unknown> | null;
+    const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
     setEmployeeProfile(profile);
-    if (!profile) return;
-
-    const status = String(profile.status ?? user?.status ?? "").toUpperCase();
-    setIsSelfOnboarded(status === "ACTIVE");
-  }, [user?.status]);
+    setIsSelfOnboarded(onboarded);
+  }, [user, userRoles]);
   useEffect(() => {
     if (!user) return;
     const id = window.setTimeout(() => {
