@@ -369,25 +369,23 @@ export function hrTeamActionBlockedHint(
 
 
 export function canManagerActOnRequest(
-
   row: Record<string, unknown>,
-
   options: { hasManagerAccess: boolean; hasDmAccess?: boolean }
-
 ): boolean {
-
-  if (!options.hasManagerAccess && !options.hasDmAccess) return false;
+  const hasManager = Boolean(options.hasManagerAccess);
+  const hasDm = Boolean(options.hasDmAccess);
+  if (!hasManager && !hasDm) return false;
 
   const requestType = pickRowField(row, "request_type", "requestType");
-
   if (!isStageUserRequestType(requestType)) {
-
     return requestFinalStatus(row) === "PENDING";
-
   }
-
-  return isPendingApprovalStage(requestManagerStatus(row));
-
+  if (!isPendingApprovalStage(requestManagerStatus(row))) {
+    return false;
+  }
+  // DM-only users approve manager leave/WFH; PMs never see those in their scoped list.
+  if (hasDm && !hasManager) return true;
+  return hasManager;
 }
 
 

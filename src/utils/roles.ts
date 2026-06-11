@@ -10,6 +10,15 @@ export function hasManagerRole(roles: string[]): boolean {
   return roles.includes("ROLE_MANAGER");
 }
 
+export function hasDmRole(roles: string[]): boolean {
+  return roles.includes("ROLE_DM");
+}
+
+/** Delivery manager — first-line approver for manager leave/WFH (not project PM). */
+export function isDeliveryManagerUser(roles: string[]): boolean {
+  return hasDmRole(roles) && !hasHrRole(roles);
+}
+
 /** Account manager portal user (not HR/admin). */
 export function isAccountManagerPortalUser(roles: string[]): boolean {
   return hasAccountManagerRole(roles) && !hasHrRole(roles);

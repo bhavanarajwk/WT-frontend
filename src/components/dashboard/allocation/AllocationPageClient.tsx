@@ -61,6 +61,7 @@ import {
   formatAllocatedHoursPercentLabel,
 } from "@/utils/dashboard/validation";
 import { formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
+import { loadSelfProfileState } from "@/utils/selfProfile";
 import {
   allocationPercentLabelByCode,
   allocationPercentOptionsForDesignation,
@@ -521,14 +522,10 @@ export function AllocationPageClient() {
   }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
-    const res = await hrmsService.getMyProfile();
-    const profile = (res.data ?? null) as Record<string, unknown> | null;
+    const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
     setEmployeeProfile(profile);
-    if (!profile) return;
-
-    const status = String(profile.status ?? user?.status ?? "").toUpperCase();
-    setIsSelfOnboarded(status === "ACTIVE");
-  }, [user?.status]);
+    setIsSelfOnboarded(onboarded);
+  }, [user, userRoles]);
   useEffect(() => {
     if (!user) return;
     const id = window.setTimeout(() => {

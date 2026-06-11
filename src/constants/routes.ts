@@ -97,6 +97,9 @@ export function defaultDashboardPathForRoles(roles: string[]): string {
   if (r.includes("ROLE_AM") && !r.includes("ROLE_HR") && !r.includes("ROLE_ADMIN")) {
     return DASHBOARD_ROUTES.resumes;
   }
+  if (r.includes("ROLE_DM") && !r.includes("ROLE_HR") && !r.includes("ROLE_ADMIN")) {
+    return DASHBOARD_ROUTES["leave-team"];
+  }
   if (r.includes("ROLE_MANAGER")) {
     return DASHBOARD_ROUTES.timelog;
   }

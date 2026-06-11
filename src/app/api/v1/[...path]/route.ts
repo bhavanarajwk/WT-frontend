@@ -1,30 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBackendBaseUrl } from "@/lib/serverApi";
+import { buildUpstreamAuthHeaders, getBackendBaseUrl } from "@/lib/serverApi";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const HOP_BY_HOP = new Set([
-  "connection",
-  "keep-alive",
-  "proxy-authenticate",
-  "proxy-authorization",
-  "te",
-  "trailers",
-  "transfer-encoding",
-  "upgrade",
-  "host",
-  "content-length",
-]);
-
 async function proxyRequest(request: NextRequest, pathSegments: string[]) {
   const backendUrl = `${getBackendBaseUrl()}/api/v1/${pathSegments.join("/")}${request.nextUrl.search}`;
-  const headers = new Headers();
-
-  request.headers.forEach((value, key) => {
-    if (HOP_BY_HOP.has(key.toLowerCase())) return;
-    headers.set(key, value);
-  });
+  const headers = buildUpstreamAuthHeaders(request);
 
   const init: RequestInit & { duplex?: "half" } = {
     method: request.method,
