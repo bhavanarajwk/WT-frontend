@@ -20,10 +20,15 @@ async function proxyRequest(request: NextRequest, pathSegments: string[]) {
   }
 
   const upstream = await fetch(backendUrl, init);
+  // Buffer body so Node fetch decompresses gzip; piping upstream.body with
+  // content-encoding stripped corrupts JSON on the browser.
+  const body = await upstream.arrayBuffer();
   const responseHeaders = new Headers(upstream.headers);
   responseHeaders.delete("content-encoding");
+  responseHeaders.delete("content-length");
+  responseHeaders.delete("transfer-encoding");
 
-  return new NextResponse(upstream.body, {
+  return new NextResponse(body, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers: responseHeaders,

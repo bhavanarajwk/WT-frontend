@@ -42,6 +42,7 @@ import {
   FALLBACK_ONBOARD_OPTIONS,
   parseOnboardOptions,
 } from "@/utils/onboardFormOptions";
+import { parseBandsList } from "@/utils/masters";
 import { createEmptyOnboardForm } from "@/utils/onboardFormState";
 import { createEmptyOffboardingForm } from "@/utils/offboardingFormState";
 import {
@@ -418,34 +419,30 @@ export function EmployeePageClient() {
     if (!user || !hasHrAccess) return;
     const id = window.setTimeout(() => {
       void (async () => {
+        let bandsError: string | null = null;
         try {
-          const [bandsRes, onboardOptionsRes] = await Promise.all([
-            hrmsService.getBands(),
-            hrmsService.getOnboardOptions().catch(() => null),
-          ]);
-          const rows = toRows((bandsRes as { data?: unknown })?.data ?? bandsRes);
+          const bandsRes = await hrmsService.getBands();
+          const rows = parseBandsList(bandsRes);
           setOnboardBands(rows);
-
-          const parsedOnboardOptions = parseOnboardOptions(onboardOptionsRes);
-          setOnboardOptions(parsedOnboardOptions);
-
           if (!rows.length) {
-            setToast({
-              type: "error",
-              message:
-                "No bands found. Restart the API (seeds bands on startup) or run alembic migrations.",
-            });
+            bandsError =
+              "No bands found. Restart the API (seeds bands on startup) or run alembic migrations.";
           }
         } catch (error) {
           setOnboardBands([]);
+          bandsError =
+            error instanceof Error ? error.message : "Could not load bands.";
+        }
+
+        try {
+          const onboardOptionsRes = await hrmsService.getOnboardOptions();
+          setOnboardOptions(parseOnboardOptions(onboardOptionsRes));
+        } catch {
           setOnboardOptions(FALLBACK_ONBOARD_OPTIONS);
-          setToast({
-            type: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Could not load bands and onboarding options.",
-          });
+        }
+
+        if (bandsError) {
+          setToast({ type: "error", message: bandsError });
         }
       })();
     }, 0);
