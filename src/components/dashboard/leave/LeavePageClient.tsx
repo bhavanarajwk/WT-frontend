@@ -114,10 +114,18 @@ import {
   listSelfUserRequests,
   mergeStatusUpdateIntoRow,
   requestFinalStatus,
+  requestHrStatus,
   requestManagerStatus,
+  hrTeamActionBlockedHint,
   updateUserRequestStatus,
   type UserRequestStatusValue,
 } from "@/utils/userRequest";
+import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
+import { activeAllocationsRequireClientApproval } from "@/utils/leaveAllocations";
+import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
+import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
+import { ManagerTeamOnLeavePanel } from "@/components/dashboard/leave/ManagerTeamOnLeavePanel";
+import { LeaveWorkflowNotice } from "@/components/dashboard/leave/LeaveWorkflowNotice";
 import {
   calendarDaysInclusive,
   normalizeCompOffRequestType,
@@ -135,6 +143,7 @@ function createDefaultLeaveRequestForm() {
     request_type: "LEAVE",
     comments: "",
     is_half_day: false,
+    client_approval: false,
   };
 }
 
@@ -443,7 +452,7 @@ export function LeavePageClient() {
   );
   const [timelogSubTab, setTimelogSubTab] = useState<"my" | "team">("my");
   const pathname = usePathname();
-  const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team" | "comp-off" | "wfh">(
+  const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team" | "comp-off" | "wfh" | "balances">(
     pathname.includes("/dashboard/leave/team") ? "team" : "my"
   );
   useEffect(() => {
@@ -452,6 +461,7 @@ export function LeavePageClient() {
   }, [pathname]);
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
+  const hasAdminAccess = userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const hasDmAccess = hasDmRole(userRoles);
   const isDmOnlyUser = isDeliveryManagerUser(userRoles);
@@ -484,6 +494,26 @@ export function LeavePageClient() {
     if (!canApplyCompOff) return base;
     return [...base, { value: "COMP_OFF" as const, label: "Comp off" }];
   }, [canApplyCompOff]);
+
+  const myAllocationRowsForLeave = useMemo(
+    () => (assignedProjects.length ? assignedProjects : profileAssignedProjects),
+    [assignedProjects, profileAssignedProjects]
+  );
+
+  const requiresClientApproval = useMemo(
+    () => activeAllocationsRequireClientApproval(myAllocationRowsForLeave),
+    [myAllocationRowsForLeave]
+  );
+
+  const leaveWorkflowVariant = useMemo((): Parameters<typeof LeaveWorkflowNotice>[0]["variant"] => {
+    if (hasHrAccess && userRoles.includes("ROLE_HR") && !hasAdminAccess) {
+      return "hr-dual-required";
+    }
+    if (hasHrAccess) return "hr";
+    if (hasDmAccess && !hasManagerAccess) return "dm";
+    if (hasManagerAccess) return "manager";
+    return "employee";
+  }, [hasAdminAccess, hasDmAccess, hasHrAccess, hasManagerAccess, userRoles]);
   useEffect(() => {
     if (leaveSubTab === "wfh") {
       setLeaveRequestForm((prev) =>
@@ -3394,9 +3424,24 @@ export function LeavePageClient() {
                               >
                                 WFH
                               </button>
+                              {hasHrAccess ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setLeaveSubTab("balances")}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    leaveSubTab === "balances"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Balances
+                                </button>
+                              ) : null}
                             </div>
                           ) : null}
-                          {leaveSubTab === "comp-off" ? (
+                          {leaveSubTab === "balances" && hasHrAccess ? (
+                            <HrLeaveBalancesPanel actionLoading={actionLoading} runAction={runAction} />
+                          ) : leaveSubTab === "comp-off" ? (
                             <CompOffPageClient
                               embedded
                               flowScope="earn"
@@ -3406,6 +3451,11 @@ export function LeavePageClient() {
                         <section className="grid gap-4 xl:grid-cols-1">
                           <div className="space-y-4">
                             {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
+                            {leaveSubTab === "my" &&
+                            normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
+                              <LeaveBalanceSummary />
+                            ) : null}
+                            <LeaveWorkflowNotice variant={leaveWorkflowVariant} />
                             <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                               <h3 className="font-semibold mb-3">
                                 {leaveSubTab === "wfh" ? "Work from home" : "Time off/comp off"}
@@ -3425,9 +3475,73 @@ export function LeavePageClient() {
                                       onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_type: v }))}
                                     />
                                   ) : null}
-                                  <InputField label="From Date" required value={leaveRequestForm.request_from_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_from_date: v }))} type="date" />
-                                  <InputField label="To Date" required value={leaveRequestForm.request_to_date} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_to_date: v }))} type="date" />
+                                  <InputField
+                                    label="From Date"
+                                    required
+                                    value={leaveRequestForm.request_from_date}
+                                    onChange={(v) =>
+                                      setLeaveRequestForm((p) => ({
+                                        ...p,
+                                        request_from_date: v,
+                                        request_to_date: p.is_half_day ? v : p.request_to_date,
+                                      }))
+                                    }
+                                    type="date"
+                                  />
+                                  <InputField
+                                    label="To Date"
+                                    required
+                                    value={
+                                      leaveRequestForm.is_half_day
+                                        ? leaveRequestForm.request_from_date
+                                        : leaveRequestForm.request_to_date
+                                    }
+                                    onChange={(v) => {
+                                      if (leaveRequestForm.is_half_day) return;
+                                      setLeaveRequestForm((p) => ({ ...p, request_to_date: v }));
+                                    }}
+                                    type="date"
+                                  />
                                 </div>
+                                {leaveSubTab === "my" &&
+                                normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
+                                  <label className="text-sm flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={leaveRequestForm.is_half_day}
+                                      onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setLeaveRequestForm((p) => ({
+                                          ...p,
+                                          is_half_day: checked,
+                                          request_to_date: checked ? p.request_from_date : p.request_to_date,
+                                        }));
+                                      }}
+                                    />
+                                    Half-day leave (single day only)
+                                  </label>
+                                ) : null}
+                                {requiresClientApproval &&
+                                (leaveSubTab === "wfh" ||
+                                  normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE") ? (
+                                  <label className="text-sm flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                                    <input
+                                      type="checkbox"
+                                      className="mt-0.5"
+                                      checked={leaveRequestForm.client_approval}
+                                      onChange={(e) =>
+                                        setLeaveRequestForm((p) => ({
+                                          ...p,
+                                          client_approval: e.target.checked,
+                                        }))
+                                      }
+                                    />
+                                    <span>
+                                      I confirm client approval for this request (required on active client/staffing
+                                      projects).
+                                    </span>
+                                  </label>
+                                ) : null}
                                 <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                               </div>
                               <div className="mt-4 flex gap-2">
@@ -3463,10 +3577,20 @@ export function LeavePageClient() {
                                       if (comments.length > 200) {
                                         throw new Error("Comments must be 200 characters or less.");
                                       }
+                                      if (leaveRequestForm.is_half_day && fromDate !== toDate) {
+                                        throw new Error("Half-day request must be for one day.");
+                                      }
                                       const requestType =
                                         leaveSubTab === "wfh"
                                           ? "WFH"
                                           : leaveRequestForm.request_type;
+                                      const needsClientApproval =
+                                        requiresClientApproval &&
+                                        (leaveSubTab === "wfh" ||
+                                          normalizeUserRequestType(requestType) === "LEAVE");
+                                      if (needsClientApproval && !leaveRequestForm.client_approval) {
+                                        throw new Error("Client approval is required for client users.");
+                                      }
                                       const isCompOffUsage =
                                         normalizeCompOffRequestType(requestType) === "COMP_OFF";
                                       if (isCompOffUsage) {
@@ -3506,23 +3630,25 @@ export function LeavePageClient() {
                                         }
                                         return;
                                       }
-                                      const payload = {
-                                        ...leaveRequestForm,
-                                        request_type: requestType,
-                                        request_from_date: fromDate,
-                                        request_to_date: toDate,
-                                        requestFromDate: fromDate,
-                                        requestToDate: toDate,
-                                        comments,
-                                        is_half_day: leaveRequestForm.is_half_day,
-                                      };
+                                      const payload = buildUserRequestBody(
+                                        {
+                                          request_from_date: fromDate,
+                                          request_to_date: toDate,
+                                          request_type: requestType,
+                                          comments,
+                                          is_half_day: leaveRequestForm.is_half_day,
+                                          client_approval: needsClientApproval
+                                            ? leaveRequestForm.client_approval
+                                            : undefined,
+                                        },
+                                        editingLeaveRequestId
+                                          ? { userRequestId: Number(editingLeaveRequestId) }
+                                          : undefined
+                                      );
                                       if (editingLeaveRequestId) {
                                         await apiClient.put(endpoints.userRequest.root, {
                                           contentType: "application/json",
-                                          body: JSON.stringify({
-                                            ...payload,
-                                            user_request_id: Number(editingLeaveRequestId),
-                                          }),
+                                          body: JSON.stringify(payload),
                                         });
                                       } else {
                                         await apiClient.post(endpoints.userRequest.root, {
@@ -3615,6 +3741,7 @@ export function LeavePageClient() {
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager status</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager reason</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">HR status</th>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Final status</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Comments</th>
                                         <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Actions</th>
                                       </tr>
@@ -3630,13 +3757,14 @@ export function LeavePageClient() {
                                             ""
                                         ).trim();
                                         const rowRecord = row as Record<string, unknown>;
-                                        const status = requestFinalStatus(rowRecord);
+                                        const finalStatus = requestFinalStatus(rowRecord);
+                                        const hrStatus = requestHrStatus(rowRecord);
                                         const managerStatus = requestManagerStatus(rowRecord);
                                         const managerReason = formatStageRejectionReason(
                                           managerStatus,
                                           pickRowField(rowRecord, "manager_reason", "managerReason")
                                         );
-                                        const isPending = status === "PENDING";
+                                        const isPending = finalStatus === "PENDING";
                                         return (
                                           <tr key={`${requestId || "myreq"}-${idx}`} className="border-t border-wt-border">
                                             <td className="px-3 py-2 whitespace-nowrap">
@@ -3653,8 +3781,11 @@ export function LeavePageClient() {
                                             >
                                               {managerReason}
                                             </td>
-                                            <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(status)}`}>
-                                              {formatApprovalStageLabel(status)}
+                                            <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(hrStatus)}`}>
+                                              {formatApprovalStageLabel(hrStatus)}
+                                            </td>
+                                            <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(finalStatus)}`}>
+                                              {formatApprovalStageLabel(finalStatus)}
                                             </td>
                                             <td className="px-3 py-2 max-w-[240px] truncate">{String(row.comments ?? "—")}</td>
                                             <td className="px-3 py-2 text-right">
@@ -3673,6 +3804,7 @@ export function LeavePageClient() {
                                                       request_type: rowType,
                                                       comments: String(row.comments ?? ""),
                                                       is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
+                                                      client_approval: false,
                                                     });
                                                     setEditingLeaveRequestId(requestId);
                                                     if (normalizeUserRequestType(rowType) === "WFH") {
@@ -3745,11 +3877,11 @@ export function LeavePageClient() {
                         </section>
                           ) : canViewTeamLeave ? (
                         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                          {isDmOnlyUser ? (
-                            <p className="text-sm text-wt-text-muted">
-                              Approve or reject manager leave and WFH requests. HR finalizes after your
-                              approval.
-                            </p>
+                          {hasManagerAccess && !hasHrAccess ? <ManagerTeamOnLeavePanel /> : null}
+                          {hasHrAccess ? (
+                            <LeaveWorkflowNotice variant="hr" />
+                          ) : hasDmAccess ? (
+                            <LeaveWorkflowNotice variant="dm" />
                           ) : null}
                           <div className="flex flex-wrap items-end gap-3">
                             <InputField
@@ -3890,6 +4022,7 @@ export function LeavePageClient() {
                                     const showManagerReject =
                                       showManagerActions &&
                                       canManagerRejectRequest(rowRecord, { hasManagerAccess, hasDmAccess });
+                                    const blockedHint = hrTeamActionBlockedHint(rowRecord, { hasHrAccess });
                                     const isRowUpdating = teamStatusUpdatingId === requestId;
                                     const rowEmail = requestRowEmail(row as Record<string, unknown>);
                                     const isAm = rowEmail ? accountManagerEmails.has(rowEmail) : false;
@@ -4037,6 +4170,8 @@ export function LeavePageClient() {
                                                 </button>
                                               ) : null}
                                             </div>
+                                          ) : blockedHint ? (
+                                            <span className="text-xs text-wt-text-muted">{blockedHint}</span>
                                           ) : (
                                             <span className="text-wt-text-muted">—</span>
                                           )}
