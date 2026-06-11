@@ -201,22 +201,35 @@ export class HttpClient {
     if (responseType === "blob") return (await response.blob()) as T;
     if (responseType === "text") return (await response.text()) as T;
 
-    const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.includes("application/json")) return null;
-    return (await response.json()) as T;
+    const text = await response.text();
+    if (!text.trim()) return null;
+
+    if (!this.looksLikeJsonBody(response.headers.get("content-type"), text)) {
+      return null;
+    }
+
+    return JSON.parse(text) as T;
+  }
+
+  private looksLikeJsonBody(contentType: string | null, text: string): boolean {
+    const trimmed = text.trimStart();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) return true;
+    const type = (contentType ?? "").toLowerCase();
+    return type.includes("application/json") || type.includes("+json");
   }
 
   private async tryReadBody(response: Response): Promise<unknown> {
-    const contentType = response.headers.get("content-type") ?? "";
-    if (contentType.includes("application/json")) {
-      try {
-        return await response.json();
-      } catch {
-        return null;
-      }
-    }
     try {
-      return await response.text();
+      const text = await response.text();
+      if (!text.trim()) return null;
+      if (this.looksLikeJsonBody(response.headers.get("content-type"), text)) {
+        try {
+          return JSON.parse(text);
+        } catch {
+          return text;
+        }
+      }
+      return text;
     } catch {
       return null;
     }
