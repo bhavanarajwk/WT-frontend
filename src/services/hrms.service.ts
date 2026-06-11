@@ -37,6 +37,32 @@ export interface EmployeeLeaveBalancesData {
   comp_off_balance: number;
 }
 
+export interface LeaveBalancesListItem {
+  emp_id: string;
+  leave: EmployeeLeaveBalanceBreakdown;
+  comp_off_balance: number;
+  employee_name?: string;
+  email?: string;
+}
+
+export interface LeaveBalancesListData {
+  current_page: number;
+  total_pages: number;
+  page_size: number;
+  total_elements: number;
+  year: number;
+  month: number;
+  items: LeaveBalancesListItem[];
+}
+
+export interface ManagerTeamOnLeaveRow {
+  employee_email?: string;
+  employee_name?: string;
+  project_code?: string;
+  project_name?: string;
+  leave_date?: string;
+}
+
 export interface InvitedUsersQuery {
   fromDate?: string;
   toDate?: string;
@@ -665,6 +691,40 @@ export const hrmsService = {
 
   getLeaveSummary(params: Record<string, string>) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.leaveSummary, { query: params });
+  },
+
+  /** GET /user/leave-balances — paginated org balances (ROLE_HR | ROLE_ADMIN). */
+  getLeaveBalancesList(params: {
+    page?: number;
+    size?: number;
+    search?: string;
+    type?: string;
+    band?: string;
+    year?: number;
+    month?: number;
+  } = {}) {
+    const query: Record<string, string> = {
+      page: String(params.page ?? 0),
+      size: String(Math.min(params.size ?? 50, 500)),
+    };
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.type?.trim()) query.type = params.type.trim();
+    if (params.band?.trim()) query.band = params.band.trim();
+    if (params.year != null) query.year = String(params.year);
+    if (params.month != null) query.month = String(params.month);
+    return apiClient.get<ApiEnvelope<LeaveBalancesListData>>(endpoints.userRequest.leaveBalances, {
+      query,
+    });
+  },
+
+  /** GET /manager-team-on-leave-today — ROLE_MANAGER. */
+  getManagerTeamOnLeaveToday(params: { asOfDate?: string } = {}) {
+    const query: Record<string, string> = {};
+    if (params.asOfDate?.trim()) query.asOfDate = params.asOfDate.trim();
+    return apiClient.get<ApiEnvelope<ManagerTeamOnLeaveRow[]>>(
+      endpoints.userRequest.managerTeamOnLeaveToday,
+      { query }
+    );
   },
 
   /** GET /employee-attendance-leave — employee-wise attendance and leave in a date range. */
