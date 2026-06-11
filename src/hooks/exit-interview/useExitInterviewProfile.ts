@@ -1,12 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
 import { endpoints } from "@/api/endpoints";
-import { hrmsService } from "@/services/hrms.service";
 import { buildExitInterviewAutofill, parseExitInterviewProfileFlags } from "@/utils/exitInterview";
+import { fetchSelfProfile, shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 
 export function useExitInterviewProfile(options?: { enabled?: boolean }) {
-  const enabled = options?.enabled ?? true;
+  const { user } = useAuth();
+  const userRoles = user?.roles ?? [];
+  const enabled = (options?.enabled ?? true) && !shouldSkipSelfProfileFetch(userRoles);
 
   return useQuery({
     queryKey: ["profile", "exit-interview", endpoints.profile.self],
@@ -14,8 +17,7 @@ export function useExitInterviewProfile(options?: { enabled?: boolean }) {
     staleTime: 0,
     refetchOnMount: "always",
     queryFn: async () => {
-      const res = await hrmsService.getMyProfile();
-      const profile = (res.data ?? null) as Record<string, unknown> | null;
+      const profile = await fetchSelfProfile(userRoles);
       if (!profile) return null;
       return {
         profile,

@@ -50,6 +50,7 @@ import {
   formatApiDateDisplay,
   parseApiDate,
 } from "@/utils/apiDate";
+import { loadSelfProfileState } from "@/utils/selfProfile";
 import type { OnboardOptionsResponse } from "@/types/onboard-options";
 import {
   isManagerFlagTruthy,
@@ -81,6 +82,7 @@ import {
 } from "@/components/dashboard/ui/profile";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
+import { defaultDashboardPathForRoles } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { EmployeeOnboardingSubNav } from "@/components/employee-onboarding/EmployeeOnboardingSubNav";
 import { HrOnboardForm } from "@/components/employee-onboarding/HrOnboardForm";
@@ -317,6 +319,12 @@ export function EmployeePageClient() {
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canAccessProfile = Boolean(user);
   useEffect(() => {
+    if (!user) return;
+    if (!hasHrAccess) {
+      router.replace(defaultDashboardPathForRoles(userRoles));
+    }
+  }, [user, hasHrAccess, userRoles, router]);
+  useEffect(() => {
         if (!hasManagerAccess && !hasHrAccess && timelogSubTab === "team") {
       setTimelogSubTab("my");
     }
@@ -369,14 +377,10 @@ export function EmployeePageClient() {
   }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
-    const res = await hrmsService.getMyProfile();
-    const profile = (res.data ?? null) as Record<string, unknown> | null;
+    const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
     setEmployeeProfile(profile);
-    if (!profile) return;
-
-    const status = String(profile.status ?? user?.status ?? "").toUpperCase();
-    setIsSelfOnboarded(status === "ACTIVE");
-  }, [user?.status]);
+    setIsSelfOnboarded(onboarded);
+  }, [user, userRoles]);
   useEffect(() => {
     if (!user) return;
     const id = window.setTimeout(() => {
@@ -411,6 +415,7 @@ export function EmployeePageClient() {
     return () => window.clearTimeout(id);
   }, [ canAccessProfile, requiresSelfOnboarding]);
   useEffect(() => {
+    if (!user || !hasHrAccess) return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -418,18 +423,34 @@ export function EmployeePageClient() {
             hrmsService.getBands(),
             hrmsService.getOnboardOptions().catch(() => null),
           ]);
-          const rows = toRows(bandsRes);
+          const rows = toRows((bandsRes as { data?: unknown })?.data ?? bandsRes);
           setOnboardBands(rows);
 
           const parsedOnboardOptions = parseOnboardOptions(onboardOptionsRes);
           setOnboardOptions(parsedOnboardOptions);
-        } catch {
+
+          if (!rows.length) {
+            setToast({
+              type: "error",
+              message:
+                "No bands found. Restart the API (seeds bands on startup) or run alembic migrations.",
+            });
+          }
+        } catch (error) {
+          setOnboardBands([]);
           setOnboardOptions(FALLBACK_ONBOARD_OPTIONS);
+          setToast({
+            type: "error",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Could not load bands and onboarding options.",
+          });
         }
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, []);
+  }, [user, hasHrAccess]);
   useEffect(() => {
         const hasAllocationAccess =
       (user?.roles ?? []).includes("ROLE_HR") || (user?.roles ?? []).includes("ROLE_ADMIN");
@@ -2531,7 +2552,9 @@ export function EmployeePageClient() {
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className="space-y-4">
-            {hasHrAccess ? <EmployeeOnboardingSubNav /> : null}
+            {hasHrAccess ? (
+              <>
+                              <EmployeeOnboardingSubNav />
                               <HrOnboardForm
                                 formKey={onboardFormKey}
                                 form={onboardForm}
@@ -2632,6 +2655,8 @@ export function EmployeePageClient() {
                                   onResendInvite={resendOnboardInvite}
                                 />
                               </div>
+              </>
+            ) : null}
                             </section>
         </OnboardingGate>
       </DashboardPageShell>

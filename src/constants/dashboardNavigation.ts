@@ -74,7 +74,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "leave-team",
         label: "Leave requests",
-        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
@@ -126,7 +126,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "leave",
         label: "Leave request",
-        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {

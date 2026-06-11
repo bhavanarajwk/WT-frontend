@@ -12,6 +12,36 @@ export function bandNameMatchKey(name: string): string {
   return name.trim().toUpperCase().replace(/[\s\-_–—]+/g, "");
 }
 
+export function bandDisplayLabel(row: Record<string, unknown>): string {
+  return String(row.name ?? row.band_name ?? row.bandName ?? row.id ?? "").trim();
+}
+
+export function bandsForDepartment(
+  bands: Array<Record<string, unknown>>,
+  department: string
+): Array<Record<string, unknown>> {
+  const dept = department.trim();
+  if (!dept) return bands;
+  const filtered = bands.filter((row) => {
+    const stream = String(row.stream ?? row.department ?? row.dept ?? "").trim();
+    if (!stream) return true;
+    return stream.toLowerCase() === dept.toLowerCase();
+  });
+  return filtered.length ? filtered : bands;
+}
+
+export function bandSelectOptions(
+  bands: Array<Record<string, unknown>>
+): Array<{ value: string; label: string }> {
+  return bands
+    .map((row) => {
+      const value = String(row.id ?? "").trim();
+      const label = bandDisplayLabel(row) || (value ? `Band ${value}` : "");
+      return { value, label };
+    })
+    .filter((item) => item.value && item.label);
+}
+
 export function resolveInternBandId(bands: Array<Record<string, unknown>>): number {
   const internHit = bands.find((row) => {
     const name = String(row.name ?? row.band_name ?? "").trim();
