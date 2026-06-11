@@ -17,6 +17,7 @@ import {
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
 import { shouldShowExitSurveyInNav } from "@/utils/exitInterview";
+import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import { dashboardHref, DASHBOARD_ROUTES } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { SidebarIcon } from "@/constants/sidebarIcons";
@@ -92,7 +93,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasAccountManagerAccess = userRoles.includes("ROLE_AM");
-  const canAccessProfile = Boolean(user);
+  const canAccessProfile = Boolean(user) && !shouldSkipSelfProfileFetch(userRoles);
   const isEmployeeDirectoryRoute = pathname.startsWith("/dashboard/employee-directory");
   const isEmployeeOnboardingRoute =
     pathname === DASHBOARD_ROUTES.employee ||

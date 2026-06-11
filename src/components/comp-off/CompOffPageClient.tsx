@@ -17,6 +17,7 @@ import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
 import { useManagerPortfolioEmails } from "@/hooks/comp-off/useManagerPortfolioEmails";
 import { requestRowEmail } from "@/utils/learning/onboardOptions";
 import { isAccountManagerEmployeeUser } from "@/utils/roles";
+import { fetchSelfProfile } from "@/utils/selfProfile";
 import type { CompOffProjectOption } from "@/utils/compOffProjects";
 import {
   loadCompOffProjectCatalog,
@@ -316,8 +317,7 @@ export function CompOffPageClient({
 
   const loadProfileBalanceFallback = useCallback(async () => {
     try {
-      const profileRes = await hrmsService.getMyProfile();
-      const profile = (profileRes.data ?? null) as Record<string, unknown> | null;
+      const profile = await fetchSelfProfile(user?.roles ?? []);
       const empId = String(profile?.emp_id ?? profile?.empId ?? "").trim();
       if (!empId) return;
       const balRes = await hrmsService.getEmployeeLeaveBalances(empId);
@@ -328,7 +328,7 @@ export function CompOffPageClient({
     } catch {
       /* optional fallback */
     }
-  }, [balanceUnits]);
+  }, [balanceUnits, user?.roles]);
 
   const loadAssignedProjects = useCallback(async () => {
     try {

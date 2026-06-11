@@ -4,7 +4,7 @@
  */
 import { endpoints } from "@/api/endpoints";
 import { ApiError } from "@/api/error";
-import { apiClient, resolveClientApiBaseUrl } from "@/api/httpClient";
+import { apiClient } from "@/api/httpClient";
 
 export interface AuthUser {
   message: string;
@@ -21,14 +21,12 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-const API_BASE = resolveClientApiBaseUrl();
-
 /**
- * Initiates the Google OAuth flow.
- * Navigate the browser directly to this URL (do not fetch).
+ * Initiates the Google OAuth flow on the frontend host (Next.js BFF).
+ * Always same-origin so redirect_uri and auth cookies stay on localhost / Vercel.
  */
 export function getGoogleSignInUrl(): string {
-  return `${API_BASE}${endpoints.auth.googleSignIn}`;
+  return endpoints.auth.googleSignIn;
 }
 
 /**

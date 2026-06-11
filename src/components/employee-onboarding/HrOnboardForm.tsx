@@ -3,10 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { InputField, SelectField, TextAreaField } from "@/components/dashboard/ui/forms";
-import { DesignationCombobox } from "@/components/employee-onboarding/DesignationCombobox";
 import { isValidIndiaMobile, isValidPersonName } from "@/utils/dashboard/validation";
 import { parseApiDate } from "@/utils/apiDate";
-import { resolveInternBandId } from "@/utils/dashboard/validation";
+import {
+  bandSelectOptions,
+  bandsForDepartment,
+  resolveInternBandId,
+} from "@/utils/dashboard/validation";
+import { parseDesignationList } from "@/utils/masters";
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import type { OnboardFormState } from "@/utils/onboardFormState";
 import type { OnboardOptionsResponse } from "@/types/onboard-options";
@@ -122,6 +126,10 @@ export function HrOnboardForm({
   runAction,
 }: HrOnboardFormProps) {
   const [step, setStep] = useState<"work" | "personal">("work");
+  const [designationOptions, setDesignationOptions] = useState<Array<{ value: string; label: string }>>(
+    []
+  );
+  const [designationLoading, setDesignationLoading] = useState(false);
   const internBandId = useMemo(() => resolveInternBandId(bands), [bands]);
   const defaultConsultantBandId = useMemo(() => {
     const first = bands[0];
@@ -138,12 +146,52 @@ export function HrOnboardForm({
     setForm((prev) => (prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }));
   }, [form.user_type, internBandId, setForm]);
 
-  const bandOptions = bands.length
-    ? bands.map((row) => ({
-        value: String(row.id),
-        label: String(row.name ?? row.id ?? ""),
-      }))
-    : [];
+  const departmentBands = useMemo(
+    () => bandsForDepartment(bands, form.department),
+    [bands, form.department]
+  );
+  const bandOptions = useMemo(() => bandSelectOptions(departmentBands), [departmentBands]);
+
+  useEffect(() => {
+    if (!form.department.trim()) return;
+    const currentBandId = Number(form.band_id);
+    if (!currentBandId) return;
+    const stillValid = departmentBands.some((row) => Number(row.id) === currentBandId);
+    if (!stillValid) {
+      setForm((prev) => ({ ...prev, band_id: 0, role: "" }));
+    }
+  }, [departmentBands, form.band_id, form.department, setForm]);
+
+  useEffect(() => {
+    const bandId = Number(form.band_id);
+    const department = form.department.trim();
+    if (form.user_type === "CONSULTANT" || bandId <= 0 || !department) {
+      setDesignationOptions([]);
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      void (async () => {
+        setDesignationLoading(true);
+        try {
+          const res = await hrmsService.searchDesignations({ band_id: bandId, department });
+          setDesignationOptions(
+            parseDesignationList(res).map((item) => ({
+              value: item.name,
+              label: item.name,
+            }))
+          );
+        } catch (error) {
+          setDesignationOptions([]);
+          onError(
+            error instanceof Error ? error.message : "Could not load designations for this band."
+          );
+        } finally {
+          setDesignationLoading(false);
+        }
+      })();
+    }, 200);
+    return () => window.clearTimeout(handle);
+  }, [form.band_id, form.department, form.user_type, onError]);
 
   function goNext() {
     try {
@@ -271,15 +319,28 @@ export function HrOnboardForm({
             placeholder="Select"
             value={form.department}
             options={options.departments}
-            onChange={(v) => setForm((p) => ({ ...p, department: v, role: "" }))}
+            onChange={(v) =>
+              setForm((p) => ({
+                ...p,
+                department: v,
+                band_id: 0,
+                role: "",
+              }))
+            }
           />
           {form.user_type !== "CONSULTANT" ? (
             <SelectField
               label="Band"
               required
-              placeholder="Select"
+              placeholder={
+                !form.department.trim()
+                  ? "Select department first"
+                  : bandOptions.length
+                    ? "Select"
+                    : "No bands available"
+              }
               value={form.band_id ? String(form.band_id) : ""}
-              disabled={form.user_type === "INTERN"}
+              disabled={form.user_type === "INTERN" || !form.department.trim() || !bandOptions.length}
               options={bandOptions}
               onChange={(v) =>
                 setForm((p) => ({
@@ -298,15 +359,24 @@ export function HrOnboardForm({
               onChange={(v) => setForm((p) => ({ ...p, role: v }))}
             />
           ) : (
-            <DesignationCombobox
-              key={`onboard-designation-${formKey}`}
-              bandId={Number(form.band_id) || 0}
-              department={form.department}
-              value={form.role}
-              onChange={(role) => setForm((p) => ({ ...p, role }))}
+            <SelectField
+              label="Designation"
               required
-              canCreate={hasHrAccess}
-              onError={onError}
+              value={form.role}
+              placeholder={
+                !form.department.trim() || !form.band_id
+                  ? "Select band and department first"
+                  : designationLoading
+                    ? "Loading designations…"
+                    : designationOptions.length
+                      ? "Select"
+                      : "No designations for this band"
+              }
+              disabled={
+                !form.department.trim() || !form.band_id || designationLoading || !designationOptions.length
+              }
+              options={designationOptions}
+              onChange={(role) => setForm((p) => ({ ...p, role }))}
             />
           )}
           <SelectField

@@ -27,7 +27,8 @@ import {
 } from "@/utils/learning/onboardOptions";
 import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
 import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
-import { isAccountManagerEmployeeUser } from "@/utils/roles";
+import { hasDmRole, isAccountManagerEmployeeUser, isDeliveryManagerUser } from "@/utils/roles";
+import { loadSelfProfileState } from "@/utils/selfProfile";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import {
   HARDCODED_DEPARTMENT_OPTIONS,
@@ -452,8 +453,15 @@ export function LeavePageClient() {
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
-  const hasDmAccess = userRoles.includes("ROLE_DM");
+  const hasDmAccess = hasDmRole(userRoles);
+  const isDmOnlyUser = isDeliveryManagerUser(userRoles);
   const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess;
+  const teamLeaveTabLabel = isDmOnlyUser ? "Manager leave requests" : "Team requests";
+  const firstLineStatusColumnLabel = hasHrAccess
+    ? "Manager/DM status"
+    : hasDmAccess && !hasManagerAccess
+      ? "DM status"
+      : "Manager status";
   const submitsToHrForReview = isAccountManagerEmployeeUser(userRoles);
   const { data: accountManagerEmails = new Set<string>() } = useAccountManagerEmails();
   /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
@@ -553,14 +561,10 @@ export function LeavePageClient() {
   }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
-    const res = await hrmsService.getMyProfile();
-    const profile = (res.data ?? null) as Record<string, unknown> | null;
+    const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
     setEmployeeProfile(profile);
-    if (!profile) return;
-
-    const status = String(profile.status ?? user?.status ?? "").toUpperCase();
-    setIsSelfOnboarded(status === "ACTIVE");
-  }, [user?.status]);
+    setIsSelfOnboarded(onboarded);
+  }, [user, userRoles]);
   useEffect(() => {
     if (!user) return;
     const id = window.setTimeout(() => {
@@ -2095,7 +2099,7 @@ export function LeavePageClient() {
           requestType,
         }))
       );
-    } else if (hasDmAccess && !hasManagerAccess) {
+    } else if (hasDmAccess) {
       collectedRows.push(
         ...(await listScopedUserRequests({
           fromDate: from,
@@ -3349,7 +3353,7 @@ export function LeavePageClient() {
                                         : "text-wt-text-muted hover:bg-wt-surface-2"
                                     }`}
                                   >
-                                    Team requests
+                                    {teamLeaveTabLabel}
                                   </button>
                                 </>
                               ) : null}
@@ -3741,6 +3745,12 @@ export function LeavePageClient() {
                         </section>
                           ) : canViewTeamLeave ? (
                         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+                          {isDmOnlyUser ? (
+                            <p className="text-sm text-wt-text-muted">
+                              Approve or reject manager leave and WFH requests. HR finalizes after your
+                              approval.
+                            </p>
+                          ) : null}
                           <div className="flex flex-wrap items-end gap-3">
                             <InputField
                               label="From Date"
@@ -3832,16 +3842,18 @@ export function LeavePageClient() {
                                     </th>
                                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
                                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
-                                      {hasHrAccess ? "Final status" : "Status"}
+                                      {hasHrAccess || hasDmAccess ? "Final status" : "Status"}
                                     </th>
-                                    {hasHrAccess ? (
+                                    {hasHrAccess || hasDmAccess ? (
                                       <>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
-                                          Manager status
+                                          {firstLineStatusColumnLabel}
                                         </th>
-                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
-                                          Manager reason
-                                        </th>
+                                        {hasHrAccess ? (
+                                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                            Manager reason
+                                          </th>
+                                        ) : null}
                                       </>
                                     ) : null}
                                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Comments</th>
@@ -3908,19 +3920,21 @@ export function LeavePageClient() {
                                         <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(status)}`}>
                                           {formatApprovalStageLabel(status)}
                                         </td>
-                                        {hasHrAccess ? (
+                                        {hasHrAccess || hasDmAccess ? (
                                           <>
                                             <td
                                               className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(managerStatus)}`}
                                             >
                                               {formatApprovalStageLabel(managerStatus)}
                                             </td>
-                                            <td
-                                              className="px-3 py-2 max-w-[220px] truncate"
-                                              title={managerReason || undefined}
-                                            >
-                                              {managerReason || "—"}
-                                            </td>
+                                            {hasHrAccess ? (
+                                              <td
+                                                className="px-3 py-2 max-w-[220px] truncate"
+                                                title={managerReason || undefined}
+                                              >
+                                                {managerReason || "—"}
+                                              </td>
+                                            ) : null}
                                           </>
                                         ) : null}
                                         <td className="px-3 py-2 max-w-[220px] truncate">{String(row.comments ?? "—")}</td>
