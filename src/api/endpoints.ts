@@ -103,6 +103,8 @@ export const endpoints = {
       `${api}/userRequest/get/${encodeURIComponent(empEmails)}/${encodeURIComponent(fromDate)}/${encodeURIComponent(toDate)}/${encodeURIComponent(requestType)}`,
     status: `${api}/userRequest/status`,
     leaveSummary: `${api}/leave-summary`,
+    leaveBalances: `${api}/user/leave-balances`,
+    managerTeamOnLeaveToday: `${api}/manager-team-on-leave-today`,
   },
 
   compOff: {
