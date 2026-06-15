@@ -1,3 +1,5 @@
+import { normalizeRoles } from "@/utils/roles";
+
 /** Path for each dashboard nav id (route-based; no ?tab=). */
 export const DASHBOARD_ROUTES: Record<string, string> = {
   overview: "/dashboard/overview",
@@ -90,7 +92,7 @@ export function employeeDirectoryProfilePath(empId: string): string {
 
 /** Landing route after login based on the user's roles. */
 export function defaultDashboardPathForRoles(roles: string[]): string {
-  const r = roles ?? [];
+  const r = normalizeRoles(roles ?? []);
   if (r.includes("ROLE_HR") || r.includes("ROLE_ADMIN") || r.includes("ROLE_FINANCE")) {
     return DASHBOARD_ROUTES["employee-directory"];
   }
