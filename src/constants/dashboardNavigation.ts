@@ -257,7 +257,7 @@ export function accordionSectionForPathname(pathname: string, activeSection: str
 }
 
 const PAGE_TITLE_OVERRIDES: Record<string, string> = {
-  profile: "My Profile",
+  profile: "Profile",
   overview: "Overview",
 };
 
