@@ -55,7 +55,7 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "employee-attendance",
-        label: "Attendance",
+        label: "Attendance and leave summary",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarCheck",
       },
