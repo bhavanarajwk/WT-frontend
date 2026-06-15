@@ -21,6 +21,18 @@ type AttendanceSummary = {
 
 const PAGE_SIZE = 25;
 
+const NAME_HEADER_CLASS = "px-3 py-2 text-left font-medium";
+const NUMERIC_HEADER_CLASS =
+  "px-3 py-2 text-center font-medium whitespace-nowrap tabular-nums";
+const LEAVE_COLUMN_CLASS = `${NUMERIC_HEADER_CLASS} w-36`;
+const ATTENDANCE_COLUMN_CLASS = `${NUMERIC_HEADER_CLASS} w-44`;
+const STICKY_HEADER_CLASS =
+  "sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted shadow-[inset_0_-1px_0_var(--wt-border)]";
+const NAME_CELL_CLASS = "px-3 py-2 text-left truncate";
+const NUMERIC_CELL_CLASS = "px-3 py-2 text-center tabular-nums whitespace-nowrap";
+const LEAVE_CELL_CLASS = `${NUMERIC_CELL_CLASS} w-36`;
+const ATTENDANCE_CELL_CLASS = `${NUMERIC_CELL_CLASS} w-44`;
+
 function defaultAttendanceDateRange(): { from: string; to: string } {
   const to = new Date();
   const from = new Date(2026, 0, 1);
@@ -158,7 +170,7 @@ export function EmployeeAttendancePanel() {
           void fetchNextPage();
         }
       },
-      { root, rootMargin: "120px", threshold: 0 }
+      { root, rootMargin: "160px", threshold: 0 }
     );
 
     observer.observe(sentinel);
@@ -190,7 +202,7 @@ export function EmployeeAttendancePanel() {
       ) : null}
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h3 className="font-semibold">Employee attendance &amp; leave</h3>
+        <h3 className="font-semibold">Employee Attendance And Leave Summary</h3>
 
         <div className="flex flex-wrap items-end gap-3">
           <DatePickerField
@@ -240,23 +252,43 @@ export function EmployeeAttendancePanel() {
             ) : null}
           </p>
         ) : null}
-      </div>
 
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
         {loading && !employees.length ? (
-          <p className="text-sm text-wt-text-muted">Loading attendance data…</p>
+          <div
+            className="flex min-h-[12rem] items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2/30"
+            aria-busy="true"
+            aria-live="polite"
+          >
+            <span className="spinner-dark" role="status" aria-label="Loading attendance data" />
+          </div>
         ) : employees.length ? (
-          <div className="mx-auto max-w-4xl">
+          <div className="relative min-h-[12rem]">
+            {loading ? (
+              <div
+                className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-wt-surface-1/80"
+                aria-busy="true"
+                aria-live="polite"
+              >
+                <span className="spinner-dark" role="status" aria-label="Loading attendance data" />
+              </div>
+            ) : null}
             <div
               ref={scrollRootRef}
-              className="wt-scroll-both max-h-[min(70vh,560px)] overflow-y-auto rounded-xl border border-wt-border"
+              className="wt-scroll-both max-h-[min(70vh,560px)] overflow-auto rounded-xl border border-wt-border"
             >
-              <table className="w-full text-sm">
-                <thead className="bg-wt-surface-2 text-wt-text-muted sticky top-0 z-10">
+              <table className="w-full min-w-full border-separate border-spacing-0 text-sm">
+                <colgroup>
+                  <col className="min-w-0" />
+                  <col className="w-36" />
+                  <col className="w-44" />
+                </colgroup>
+                <thead>
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Name</th>
-                    <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Leave days</th>
-                    <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Attendance days</th>
+                    <th className={`${STICKY_HEADER_CLASS} ${NAME_HEADER_CLASS}`}>Name</th>
+                    <th className={`${STICKY_HEADER_CLASS} ${LEAVE_COLUMN_CLASS}`}>Leave days</th>
+                    <th className={`${STICKY_HEADER_CLASS} ${ATTENDANCE_COLUMN_CLASS}`}>
+                      Attendance days
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -265,28 +297,35 @@ export function EmployeeAttendancePanel() {
                       key={String(row.user_id ?? row.emp_id ?? row.name)}
                       className="border-t border-wt-border hover:bg-wt-surface-2/50"
                     >
-                      <td className="px-3 py-2 whitespace-nowrap">{row.name?.trim() || "—"}</td>
+                      <td className={NAME_CELL_CLASS} title={row.name?.trim() || undefined}>
+                        {row.name?.trim() || "—"}
+                      </td>
                       <td
-                        className="px-3 py-2 text-right whitespace-nowrap cursor-default"
+                        className={`${LEAVE_CELL_CLASS} cursor-default`}
                         title={formatLeaveDatesHover(row)}
                       >
                         {row.leave_days_taken}
                       </td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap">
-                        {row.total_attendance_days}
-                      </td>
+                      <td className={ATTENDANCE_CELL_CLASS}>{row.total_attendance_days}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <div ref={loadMoreRef} className="px-3 py-3 text-center text-xs text-wt-text-muted">
-                {loadingMore ? "Loading more employees…" : allLoaded ? "All employees loaded" : null}
+                {loadingMore ? (
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <span className="spinner-dark" role="status" aria-label="Loading more employees" />
+                    <span>Loading more employees…</span>
+                  </span>
+                ) : allLoaded ? (
+                  "All employees loaded"
+                ) : null}
               </div>
             </div>
           </div>
-        ) : (
+        ) : !loading ? (
           <p className="text-sm text-wt-text-muted">No employees found for this range.</p>
-        )}
+        ) : null}
       </div>
     </section>
   );
