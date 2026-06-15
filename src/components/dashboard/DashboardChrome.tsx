@@ -13,6 +13,7 @@ import {
   dashboardNavigation,
   filterNavigationForOffboardedUser,
   filterVisibleNavigation,
+  dashboardPageTitle,
 } from "@/constants/dashboardNavigation";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
@@ -94,14 +95,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasAccountManagerAccess = userRoles.includes("ROLE_AM");
   const canAccessProfile = Boolean(user) && !shouldSkipSelfProfileFetch(userRoles);
-  const isEmployeeDirectoryRoute = pathname.startsWith("/dashboard/employee-directory");
-  const isEmployeeOnboardingRoute =
-    pathname === DASHBOARD_ROUTES.employee ||
-    pathname.startsWith("/dashboard/employee/assign-account-manager");
-  const isAssignAccountManagerRoute = pathname.startsWith(
-    "/dashboard/employee/assign-account-manager"
-  );
-  const isEmployeeProfileRoute = Boolean(pathname.match(/^\/dashboard\/employee-directory\/[^/]+$/));
   const { isOffboarded } = useDashboardAccess();
   const exitProfileQ = useExitInterviewProfile({ enabled: Boolean(user) });
   const showExitSurveyNav = useMemo(() => {
@@ -163,10 +156,16 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   );
 
   const isLearningRoute = pathname.startsWith("/dashboard/learning-development");
-  const learningSectionTitle = useMemo(() => {
-    const hit = learningSubNav.find((l) => pathname === l.href || pathname.startsWith(`${l.href}/`));
-    return hit?.label ?? "Learning & Development";
-  }, [pathname]);
+
+  const pageTitle = useMemo(() => {
+    if (isOffboarded && !isExitSurveyRoute && !isLearningRoute) {
+      return "You Are Offboarded";
+    }
+    if (isLearningRoute) {
+      return "Learning & Development";
+    }
+    return dashboardPageTitle(activeSection);
+  }, [activeSection, isOffboarded, isExitSurveyRoute, isLearningRoute]);
 
   return (
     <div className="wt-page-scroll h-dvh overflow-y-auto bg-wt-bg text-wt-text">
@@ -350,80 +349,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 shrink-0 border-b border-wt-border bg-wt-bg px-6 py-4 flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold">
-              {isOffboarded && !isExitSurveyRoute && !isLearningRoute ? "You are offboarded" : null}
-              {activeSection === "profile" && !isLearningRoute && !isOffboarded ? "My profile" : null}
-              {activeSection === "employee-directory" && !isLearningRoute ? "Employee Directory" : null}
-              {activeSection === "resumes" && !isLearningRoute ? "Resumes" : null}
-              {activeSection === "annual-calendar" && !isLearningRoute ? "Annual calendar" : null}
-              {activeSection === "talent-pool" && !isLearningRoute ? "Talent Pool" : null}
-              {activeSection === "employee" && !isLearningRoute ? "Employee Onboarding" : null}
-              {activeSection === "exit-interview" && !isLearningRoute ? "Exit survey" : null}
-              {activeSection === "exit-interview-submissions" && !isLearningRoute
-                ? "Exit survey"
-                : null}
-              {activeSection !== "profile" &&
-              activeSection !== "employee-directory" &&
-              activeSection !== "resumes" &&
-              activeSection !== "annual-calendar" &&
-              activeSection !== "talent-pool" &&
-              activeSection !== "employee" &&
-              activeSection !== "exit-interview" &&
-              activeSection !== "exit-interview-submissions" &&
-              !isLearningRoute &&
-              !isOffboarded
-                ? "Dashboard"
-                : null}
-              {isLearningRoute ? "Learning & Development" : null}
-            </h2>
-            {isEmployeeDirectoryRoute && !isLearningRoute ? (
-              <nav
-                className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
-                aria-label="Breadcrumb"
-              >
-                <Link href="/dashboard" className="hover:text-wt-text transition">
-                  Dashboard
-                </Link>
-                <span aria-hidden>/</span>
-                {isEmployeeProfileRoute ? (
-                  <>
-                    <Link
-                      href={DASHBOARD_ROUTES["employee-directory"]}
-                      className="hover:text-wt-text transition"
-                    >
-                      Employee Directory
-                    </Link>
-                    <span aria-hidden>/</span>
-                    <span className="text-wt-text">Employee Profile</span>
-                  </>
-                ) : (
-                  <span className="text-wt-text">Employee Directory</span>
-                )}
-              </nav>
-            ) : isEmployeeOnboardingRoute && !isLearningRoute ? (
-              <nav
-                className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
-                aria-label="Breadcrumb"
-              >
-                <Link href="/dashboard" className="hover:text-wt-text transition">
-                  Dashboard
-                </Link>
-                <span aria-hidden>/</span>
-                {isAssignAccountManagerRoute ? (
-                  <>
-                    <Link href={DASHBOARD_ROUTES.employee} className="hover:text-wt-text transition">
-                      Employee Onboarding
-                    </Link>
-                    <span aria-hidden>/</span>
-                    <span className="text-wt-text">Assign</span>
-                  </>
-                ) : (
-                  <span className="text-wt-text">Employee Onboarding</span>
-                )}
-              </nav>
-            ) : isLearningRoute ? (
-              <p className="text-xs text-wt-text-muted">{learningSectionTitle}</p>
-            ) : null}
+            <h2 className="text-xl font-semibold">{pageTitle}</h2>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {!isOffboarded ? (
