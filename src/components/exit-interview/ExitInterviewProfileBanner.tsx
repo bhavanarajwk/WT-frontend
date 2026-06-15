@@ -39,9 +39,5 @@ export function ExitInterviewProfileBanner() {
     );
   }
 
-  return (
-    <div className="mb-6 rounded-xl border border-wt-border bg-wt-surface-2/80 px-4 py-3 text-sm text-wt-text-muted">
-      Your exit survey will open during your notice period.
-    </div>
-  );
+  return null;
 }
