@@ -47,7 +47,7 @@ export async function refreshSession(): Promise<AuthUser | null> {
 
 /**
  * Logs out the current session and clears auth cookies server-side.
- * Best-effort: network or server errors are ignored so the client can still sign out locally.
+ * Best-effort: network or server errors are ignored so the client can still log out locally.
  */
 export async function logout(): Promise<void> {
   try {
@@ -55,7 +55,7 @@ export async function logout(): Promise<void> {
       skipAuth: true,
     });
   } catch {
-    // Backend unreachable or logout endpoint failed — local session is cleared by signOut.
+    // Backend unreachable or logout endpoint failed — local session is cleared by logout.
   }
 }
 

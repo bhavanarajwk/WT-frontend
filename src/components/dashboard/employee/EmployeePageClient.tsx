@@ -101,7 +101,7 @@ export function EmployeePageClient() {
       .trim()
       .toLowerCase()
       .includes("manager");
-  const { user, signOut, refresh: refreshSession } = useAuth();
+  const { user, refresh: refreshSession } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metrics, loading, refresh } = useOverviewData();
