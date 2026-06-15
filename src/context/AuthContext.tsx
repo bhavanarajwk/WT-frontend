@@ -8,8 +8,18 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { type AuthUser, refreshSession, logout as authLogout } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import { type AuthUser, refreshSession, logout as authLogout } from "@/lib/auth";
+import { normalizeRoles } from "@/utils/roles";
+import {
+  clearSessionTiming,
+  persistSessionTiming,
+  useSessionTimeout,
+} from "@/hooks/useSessionTimeout";
+import {
+  sessionLogoutMessages,
+  type SessionLogoutReason,
+} from "@/constants/sessionPolicy";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                                 */
@@ -32,6 +42,12 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function applyAuthenticatedUser(freshUser: AuthUser): AuthUser {
+  const normalized = { ...freshUser, roles: normalizeRoles(freshUser.roles ?? []) };
+  persistSessionTiming(normalized.session_started_at);
+  return normalized;
+}
+
 /* ------------------------------------------------------------------ */
 /* Provider                                                              */
 /* ------------------------------------------------------------------ */
@@ -41,29 +57,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
   const didInitialRefresh = useRef(false);
+  const timeoutHandled = useRef(false);
 
   const refresh = useCallback(async (): Promise<AuthUser | null> => {
     setStatus("loading");
     const freshUser = await refreshSession();
     if (freshUser) {
-      setUser(freshUser);
+      const normalized = applyAuthenticatedUser(freshUser);
+      setUser(normalized);
       setStatus("authenticated");
-    } else {
-      setUser(null);
-      setStatus("unauthenticated");
+      return normalized;
     }
-    return freshUser;
+    clearSessionTiming();
+    setUser(null);
+    setStatus("unauthenticated");
+    return null;
   }, []);
 
   const logout = useCallback(async () => {
     try {
       await authLogout();
     } finally {
+      clearSessionTiming();
       setUser(null);
       setStatus("unauthenticated");
       router.push("/login");
     }
   }, [router]);
+
+  const handleSessionTimeout = useCallback(
+    async (reason: SessionLogoutReason) => {
+      if (timeoutHandled.current) return;
+      timeoutHandled.current = true;
+      try {
+        await authLogout();
+      } catch {
+        /* best-effort */
+      } finally {
+        clearSessionTiming();
+        setUser(null);
+        setStatus("unauthenticated");
+        const query =
+          reason === "idle"
+            ? "session_idle_timeout"
+            : reason === "expired"
+              ? "session_expired"
+              : "oauth_login_failed";
+        router.replace(`/login?error=${query}`);
+      }
+    },
+    [router]
+  );
+
+  useSessionTimeout(status === "authenticated", handleSessionTimeout);
 
   /* Validate session on first mount */
   useEffect(() => {
@@ -71,6 +117,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     didInitialRefresh.current = true;
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      timeoutHandled.current = false;
+    }
+  }, [status]);
 
   return (
     <AuthContext.Provider value={{ user, status, refresh, logout }}>
@@ -90,3 +142,5 @@ export function useAuth(): AuthContextValue {
   }
   return ctx;
 }
+
+export { sessionLogoutMessages };

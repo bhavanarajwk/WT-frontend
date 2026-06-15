@@ -7,6 +7,7 @@ export const endpoints = {
     googleSignIn: `${api}/google-signin`,
     googleCallback: `${api}/auth/google/callback`,
     refresh: `${api}/auth/refresh`,
+    activity: `${api}/auth/activity`,
     logout: `${api}/auth/logout`,
     oauthBypass: (email: string) => `${api}/oauth/bypass/${encodeURIComponent(email)}`,
   },
