@@ -22,7 +22,7 @@ import { dashboardHref, DASHBOARD_ROUTES } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { SidebarIcon } from "@/constants/sidebarIcons";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
-import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
+import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 
 function IconUser({ className = "" }: { className?: string }) {
   return (
@@ -511,7 +511,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(100vw-2rem,280px)] space-y-4 rounded-xl border border-wt-border bg-wt-surface-1 p-4 shadow-lg">
                 <div>
                   <span className="mb-1.5 block text-xs font-medium text-wt-text-muted">Theme</span>
-                  <SearchableSelectCombobox
+                  <DropdownSelect
                     value={theme}
                     onChange={(nextTheme) => {
                       const next = nextTheme as "light" | "dark" | "system";
@@ -523,7 +523,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       { value: "dark", label: "Dark" },
                       { value: "system", label: "System" },
                     ]}
-                    placeholder="Search theme…"
                     aria-label="Theme"
                   />
                 </div>
