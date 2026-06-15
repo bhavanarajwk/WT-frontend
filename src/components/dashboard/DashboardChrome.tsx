@@ -83,7 +83,7 @@ function applyTheme(nextTheme: "light" | "dark" | "system") {
 }
 
 export function DashboardChrome({ children }: { children: ReactNode }) {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const pathname = usePathname();
   const {
     activeSection,
@@ -488,9 +488,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   className="w-full rounded-lg border border-red-600/90 bg-red-600 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700"
-                  onClick={() => void signOut()}
+                  onClick={() => void logout()}
                 >
-                  Sign out
+                  Logout
                 </button>
               </div>
             </details>

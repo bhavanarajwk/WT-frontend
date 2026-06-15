@@ -8,7 +8,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { type AuthUser, refreshSession, logout } from "@/lib/auth";
+import { type AuthUser, refreshSession, logout as authLogout } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
 /* ------------------------------------------------------------------ */
@@ -23,7 +23,7 @@ interface AuthContextValue {
   /** Re-validates the session with the server. Returns the user or null. */
   refresh: () => Promise<AuthUser | null>;
   /** Logs out and redirects to /login. */
-  signOut: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -55,9 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return freshUser;
   }, []);
 
-  const signOut = useCallback(async () => {
+  const logout = useCallback(async () => {
     try {
-      await logout();
+      await authLogout();
     } finally {
       setUser(null);
       setStatus("unauthenticated");
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   return (
-    <AuthContext.Provider value={{ user, status, refresh, signOut }}>
+    <AuthContext.Provider value={{ user, status, refresh, logout }}>
       {children}
     </AuthContext.Provider>
   );
