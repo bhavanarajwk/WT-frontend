@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
@@ -125,6 +125,26 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     return "light";
   });
   const [actionLoading, setActionLoading] = useState(false);
+  const notificationsPanelRef = useRef<HTMLDetailsElement>(null);
+  const settingsPanelRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    const onDocMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (notificationsPanelRef.current?.contains(target)) return;
+      if (settingsPanelRef.current?.contains(target)) return;
+
+      if (notificationsPanelRef.current?.open) {
+        notificationsPanelRef.current.open = false;
+      }
+      if (settingsPanelRef.current?.open) {
+        settingsPanelRef.current.open = false;
+      }
+    };
+
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);
@@ -354,10 +374,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2 shrink-0">
             {!isOffboarded ? (
             <details
+              ref={notificationsPanelRef}
               className="group relative"
               onToggle={(e) => {
                 const el = e.currentTarget as HTMLDetailsElement;
                 if (el.open) {
+                  if (settingsPanelRef.current) {
+                    settingsPanelRef.current.open = false;
+                  }
                   void loadNotifications().catch(() => setNotifications([]));
                 }
               }}
@@ -430,7 +454,16 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               </div>
             </details>
             ) : null}
-            <details className="group relative">
+            <details
+              ref={settingsPanelRef}
+              className="group relative"
+              onToggle={(e) => {
+                const el = e.currentTarget as HTMLDetailsElement;
+                if (el.open && notificationsPanelRef.current) {
+                  notificationsPanelRef.current.open = false;
+                }
+              }}
+            >
               <summary className="flex cursor-pointer list-none items-center justify-center rounded-lg border border-wt-border bg-wt-surface-1 p-2.5 text-wt-text shadow-sm transition hover:bg-wt-surface-2 [&::-webkit-details-marker]:hidden">
                 <IconSettings className="h-5 w-5 text-wt-text-muted" />
               </summary>
