@@ -14,6 +14,9 @@ export interface AuthUser {
   status: string;
   user_type: string;
   requiresSelfOnboarding?: boolean;
+  session_started_at?: string;
+  session_max_hours?: number;
+  session_inactivity_minutes?: number;
 }
 
 export interface ApiResponse<T> {
@@ -43,6 +46,15 @@ export async function refreshSession(): Promise<AuthUser | null> {
     if (error instanceof ApiError && error.status === 401) return null;
     return null;
   }
+}
+
+/**
+ * Records user activity server-side to reset the inactivity timer.
+ */
+export async function recordSessionActivity(): Promise<void> {
+  await apiClient.post<ApiResponse<null>>(endpoints.auth.activity, {
+    skipAuth: true,
+  });
 }
 
 /**
@@ -77,4 +89,6 @@ export const oauthErrorMessages: Record<string, string> = {
   unregistered_user:
     "Your Google account is not registered. Please contact your administrator.",
   oauth_login_failed: "Sign-in failed. Please try again.",
+  session_idle_timeout: "You were logged out after 30 minutes of inactivity.",
+  session_expired: "Your session has expired after 8 hours. Please sign in again.",
 };
