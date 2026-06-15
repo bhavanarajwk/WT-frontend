@@ -2819,7 +2819,7 @@ export function ProfilePageClient() {
         <div className="flex min-w-0 flex-1 items-start gap-5">
           <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold mb-1">My Profile</h3>
+            <h3 className="text-lg font-semibold mb-1">Profile</h3>
             <p className="text-sm text-wt-text-muted">
               {isOffboarded
                 ? "Your profile is read-only because your account is offboarded."
@@ -2850,7 +2850,7 @@ export function ProfilePageClient() {
 
   const renderEditMyProfilePanel = () => (
     <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-7 md:p-8">
-      <h3 className="font-semibold mb-1">Edit My Profile</h3>
+      <h3 className="font-semibold mb-1">Edit Profile</h3>
       <p className="text-sm text-wt-text-muted mb-4">You are onboarded. Update your profile details anytime.</p>
       <div className="grid sm:grid-cols-2 gap-3">
         <InputField label="Phone Number" value={selfProfileForm.phone_number} onChange={(v) => setSelfProfileForm((p) => ({ ...p, phone_number: v }))} />
@@ -3037,7 +3037,7 @@ export function ProfilePageClient() {
                               <div className="mb-6 flex items-start gap-5">
                                 <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
                                 <div className="min-w-0">
-                                  <h3 className="text-lg font-semibold mb-1">My Profile</h3>
+                                  <h3 className="text-lg font-semibold mb-1">Profile</h3>
                                   <p className="text-sm text-wt-text-muted">
                                     Your account details and current role information.
                                   </p>
