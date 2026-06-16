@@ -216,6 +216,14 @@ export function editFormToUpdatePayload(form: EmployeeProfileEditForm): Record<s
   const personalEmail = form.personal_email.trim();
   if (personalEmail) payload.personal_email = personalEmail;
 
+  const calendarId = form.holiday_calendar_id.trim();
+  if (calendarId) {
+    const parsed = Number(calendarId);
+    payload.holiday_calendar_id = Number.isFinite(parsed) ? parsed : calendarId;
+  } else {
+    payload.holiday_calendar_id = null;
+  }
+
   return payload;
 }
 
@@ -351,6 +359,13 @@ export function buildProfileDisplayEntries(
     },
     { label: "Work location", value: pickProfileField(profile, ["work_location", "work_location_type", "workLocationType"]) },
     { label: "Work mode", value: pickProfileField(profile, ["work_mode", "workMode"]) },
+    {
+      label: "Holiday calendar",
+      value:
+        pickProfileField(profile, ["holiday_calendar_name", "holidayCalendarName"]) ||
+        pickProfileField(profile, ["holiday_calendar_code", "holidayCalendarCode"]) ||
+        null,
+    },
     { label: "Primary skills", value: formatPrimarySkills(profile) },
     { label: "Secondary skills", value: formatSecondarySkills(profile) },
     {
@@ -405,6 +420,12 @@ export function buildProfileDisplayEntries(
     "workLocationType",
     "work_mode",
     "workMode",
+    "holiday_calendar_id",
+    "holidayCalendarId",
+    "holiday_calendar_code",
+    "holidayCalendarCode",
+    "holiday_calendar_name",
+    "holidayCalendarName",
     "primary_skills",
     "primarySkills",
     "secondary_skills",

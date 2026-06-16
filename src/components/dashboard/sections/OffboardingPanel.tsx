@@ -30,6 +30,12 @@ const DEFAULT_PAGE_SIZE = 10;
 
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
+const USER_TYPE_FILTER_LABELS: Record<string, string> = {
+  FULLTIME: "Full Time",
+  INTERN: "Intern",
+  CONSULTANT: "Consultant",
+};
+
 const STICKY_HEADER_CLASS =
   "sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted shadow-[inset_0_-1px_0_var(--wt-border)]";
 
@@ -606,7 +612,7 @@ export function OffboardingPanel() {
               { value: "", label: "All types" },
               ...USER_TYPE_FILTER_OPTIONS.filter(Boolean).map((t) => ({
                 value: t,
-                label: t,
+                label: USER_TYPE_FILTER_LABELS[t] ?? t,
               })),
             ]}
           />

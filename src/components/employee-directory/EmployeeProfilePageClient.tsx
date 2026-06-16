@@ -28,6 +28,8 @@ import {
   lookupResumeShareLink,
 } from "@/utils/employeeResume";
 import { canFetchEmployeeResumeApi } from "@/utils/roles";
+import { parseOnboardOptions } from "@/utils/onboardFormOptions";
+import type { OnboardOptionItem } from "@/types/onboard-options";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -64,6 +66,7 @@ export function EmployeeProfilePageClient() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<EmployeeProfileEditForm | null>(null);
   const [bandOptions, setBandOptions] = useState<string[]>([]);
+  const [holidayCalendarOptions, setHolidayCalendarOptions] = useState<OnboardOptionItem[]>([]);
 
   const profileRecord = profile ?? {};
   const displayName = cleanEmployeeName(profileRecord) || "Employee";
@@ -94,7 +97,10 @@ export function EmployeeProfilePageClient() {
     let cancelled = false;
     void (async () => {
       try {
-        const bandsRes = await hrmsService.getBands();
+        const [bandsRes, optionsRes] = await Promise.all([
+          hrmsService.getBands(),
+          hrmsService.getOnboardOptions(),
+        ]);
         if (cancelled) return;
         const rows = toRows((bandsRes as { data?: unknown }).data ?? bandsRes);
         const labels = rows
@@ -105,8 +111,13 @@ export function EmployeeProfilePageClient() {
           })
           .filter(Boolean);
         setBandOptions([...new Set(["", ...labels])]);
+        const options = parseOnboardOptions(optionsRes);
+        setHolidayCalendarOptions(options.holiday_calendars ?? []);
       } catch {
-        if (!cancelled) setBandOptions([""]);
+        if (!cancelled) {
+          setBandOptions([""]);
+          setHolidayCalendarOptions([]);
+        }
       }
     })();
     return () => {
@@ -322,6 +333,13 @@ export function EmployeeProfilePageClient() {
                         const id = raw.match(/\(([^)]+)\)\s*$/)?.[1]?.trim() ?? raw;
                         setEditForm({ ...editForm, band_id: id });
                       }}
+                    />
+                    <SelectField
+                      label="Holiday Calendar"
+                      placeholder="Optional"
+                      value={editForm.holiday_calendar_id}
+                      options={[{ value: "", label: "None" }, ...holidayCalendarOptions]}
+                      onChange={(v) => setEditForm({ ...editForm, holiday_calendar_id: v })}
                     />
                     <InputField
                       label="Primary skills (comma-separated)"
