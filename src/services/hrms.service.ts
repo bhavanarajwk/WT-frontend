@@ -143,6 +143,13 @@ export interface EmployeeAttendanceLeaveQuery {
   band?: string;
 }
 
+export interface LeaveManagerOption {
+  email: string;
+  name: string;
+  project_code?: string | null;
+  project_name?: string | null;
+}
+
 export interface AllocationExtensionRequestRow {
   id: number;
   employee_name: string;
@@ -751,6 +758,12 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<ManagerTeamOnLeaveRow[]>>(
       endpoints.userRequest.managerTeamOnLeaveToday,
       { query }
+    );
+  },
+
+  getLeaveManagerOptions() {
+    return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
+      endpoints.userRequest.leaveManagerOptions
     );
   },
 

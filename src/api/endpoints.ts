@@ -103,6 +103,7 @@ export const endpoints = {
     getByEmployees: (empEmails: string, fromDate: string, toDate: string, requestType: string) =>
       `${api}/userRequest/get/${encodeURIComponent(empEmails)}/${encodeURIComponent(fromDate)}/${encodeURIComponent(toDate)}/${encodeURIComponent(requestType)}`,
     status: `${api}/userRequest/status`,
+    leaveManagerOptions: `${api}/leave-request/manager-options`,
     leaveSummary: `${api}/leave-summary`,
     leaveBalances: `${api}/user/leave-balances`,
     managerTeamOnLeaveToday: `${api}/manager-team-on-leave-today`,

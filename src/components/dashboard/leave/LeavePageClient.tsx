@@ -126,6 +126,7 @@ import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSu
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
 import { ManagerTeamOnLeavePanel } from "@/components/dashboard/leave/ManagerTeamOnLeavePanel";
 import { LeaveWorkflowNotice } from "@/components/dashboard/leave/LeaveWorkflowNotice";
+import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
 import {
   calendarDaysInclusive,
   normalizeCompOffRequestType,
@@ -324,6 +325,7 @@ export function LeavePageClient() {
   const [roleAssignUsers, setRoleAssignUsers] = useState<Array<{ name: string; email: string }>>([]);
 
   const [leaveRequestForm, setLeaveRequestForm] = useState(createDefaultLeaveRequestForm);
+  const [selectedLeaveManagerEmails, setSelectedLeaveManagerEmails] = useState<string[]>([]);
   const [editingLeaveRequestId, setEditingLeaveRequestId] = useState<string>("");
   const [employeeRequestFilters, setEmployeeRequestFilters] = useState({
     fromDate: "",
@@ -3542,6 +3544,14 @@ export function LeavePageClient() {
                                     </span>
                                   </label>
                                 ) : null}
+                                {leaveSubTab === "my" &&
+                                normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
+                                  <LeaveManagerSelector
+                                    selectedEmails={selectedLeaveManagerEmails}
+                                    onChange={setSelectedLeaveManagerEmails}
+                                    disabled={actionLoading}
+                                  />
+                                ) : null}
                                 <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                               </div>
                               <div className="mt-4 flex gap-2">
@@ -3591,6 +3601,13 @@ export function LeavePageClient() {
                                       if (needsClientApproval && !leaveRequestForm.client_approval) {
                                         throw new Error("Client approval is required for client users.");
                                       }
+                                      if (
+                                        leaveSubTab === "my" &&
+                                        normalizeUserRequestType(requestType) === "LEAVE" &&
+                                        !selectedLeaveManagerEmails.length
+                                      ) {
+                                        throw new Error("Select at least one manager to notify.");
+                                      }
                                       const isCompOffUsage =
                                         normalizeCompOffRequestType(requestType) === "COMP_OFF";
                                       if (isCompOffUsage) {
@@ -3622,6 +3639,7 @@ export function LeavePageClient() {
                                           manager_comp_off_email: managerCompOffEmail,
                                         });
                                         setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                        setSelectedLeaveManagerEmails([]);
                                         setEditingLeaveRequestId("");
                                         try {
                                           await loadMyLeaveRequests();
@@ -3640,6 +3658,11 @@ export function LeavePageClient() {
                                           client_approval: needsClientApproval
                                             ? leaveRequestForm.client_approval
                                             : undefined,
+                                          selected_manager_emails:
+                                            leaveSubTab === "my" &&
+                                            normalizeUserRequestType(requestType) === "LEAVE"
+                                              ? selectedLeaveManagerEmails
+                                              : undefined,
                                         },
                                         editingLeaveRequestId
                                           ? { userRequestId: Number(editingLeaveRequestId) }
@@ -3657,6 +3680,7 @@ export function LeavePageClient() {
                                         });
                                       }
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                      setSelectedLeaveManagerEmails([]);
                                       setEditingLeaveRequestId("");
                                       try {
                                         await loadMyLeaveRequests();
@@ -3675,6 +3699,7 @@ export function LeavePageClient() {
                                     className="btn-ghost px-3 py-2"
                                     onClick={() => {
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                      setSelectedLeaveManagerEmails([]);
                                       setEditingLeaveRequestId("");
                                     }}
                                     disabled={actionLoading}
@@ -3836,6 +3861,7 @@ export function LeavePageClient() {
                                                       if (editingLeaveRequestId === requestId) {
                                                         setEditingLeaveRequestId("");
                                                         setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                                        setSelectedLeaveManagerEmails([]);
                                                       }
                                                       await loadMyLeaveRequests();
                                                     })

@@ -7,24 +7,24 @@ export function LeaveWorkflowNotice({
 }) {
   const copy: Record<typeof variant, { title: string; body: string }> = {
     employee: {
-      title: "Approval workflow",
-      body: "Your request goes to your project manager first, then HR for final approval. Leave is deducted only after HR approves.",
+      title: "Phase 1 Leave Workflow",
+      body: "Select one or more managers when you submit leave. WebTrak emails them immediately. Approval and rejection are handled outside the application in Phase 1.",
     },
     manager: {
-      title: "Approval workflow",
-      body: "Your leave is reviewed by a Delivery Manager first, then HR finalizes and deducts balance.",
+      title: "Phase 1 Leave Workflow",
+      body: "Select managers to notify by email when you submit leave. In-app approval and rejection are not used for leave in Phase 1.",
     },
     dm: {
-      title: "Delivery Manager review",
-      body: "Approve or reject manager leave/WFH requests. HR must approve after you to finalize and deduct leave.",
+      title: "Phase 1 Leave Workflow",
+      body: "Leave requests are emailed to selected managers. Approve and reject actions for leave are not available in WebTrak during Phase 1.",
     },
     hr: {
-      title: "HR final approval",
-      body: "First-line manager or DM must approve before you can finalize leave/WFH. Final approval deducts leave balance.",
+      title: "Phase 1 Leave Workflow",
+      body: "Employee leave requests are emailed to selected managers. HR finalize actions for leave are disabled in WebTrak during Phase 1.",
     },
     "hr-dual-required": {
-      title: "HR employee leave",
-      body: "Your leave requires approval from a user with both HR and Admin roles before it is finalized.",
+      title: "Phase 1 Leave Workflow",
+      body: "Select managers to notify by email. Leave approval is handled outside WebTrak during Phase 1.",
     },
   };
 

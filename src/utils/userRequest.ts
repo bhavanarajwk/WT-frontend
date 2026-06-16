@@ -175,6 +175,18 @@ export function isLeaveOrWfhRequestType(value: unknown): boolean {
 
 
 
+export function isLeaveRequestType(value: unknown): boolean {
+  return String(value ?? "").trim().toUpperCase() === "LEAVE";
+}
+
+
+
+export function isLeaveEmailOnlyWorkflow(row: Record<string, unknown>): boolean {
+  return isLeaveRequestType(pickRowField(row, "request_type", "requestType"));
+}
+
+
+
 export function isCompOffRequestType(value: unknown): boolean {
 
   const raw = String(value ?? "")
@@ -295,6 +307,8 @@ export function canHrToggleLeaveWfh(
 
   if (!options.hasHrAccess) return false;
 
+  if (isLeaveEmailOnlyWorkflow(row)) return false;
+
   if (!isLeaveOrWfhRequestType(pickRowField(row, "request_type", "requestType"))) return false;
 
   return canHrReviewUserRequest(row, options);
@@ -344,6 +358,10 @@ export function hrTeamActionBlockedHint(
 
   const requestType = pickRowField(row, "request_type", "requestType");
 
+  if (isLeaveEmailOnlyWorkflow(row)) {
+    return "Leave is emailed to managers (Phase 1)";
+  }
+
   if (!isLeaveOrWfhRequestType(requestType) && !isCompOffRequestType(requestType)) {
 
     return null;
@@ -372,6 +390,7 @@ export function canManagerActOnRequest(
   row: Record<string, unknown>,
   options: { hasManagerAccess: boolean; hasDmAccess?: boolean }
 ): boolean {
+  if (isLeaveEmailOnlyWorkflow(row)) return false;
   const hasManager = Boolean(options.hasManagerAccess);
   const hasDm = Boolean(options.hasDmAccess);
   if (!hasManager && !hasDm) return false;
@@ -601,6 +620,8 @@ export function formatApprovalStageLabel(value: unknown): string {
 
   const s = normalizeRequestStatus(value);
 
+  if (s === "SUBMITTED") return "Submitted";
+
   return s || "—";
 
 }
@@ -610,6 +631,8 @@ export function formatApprovalStageLabel(value: unknown): string {
 export function approvalStageTone(value: unknown): string {
 
   const s = normalizeRequestStatus(value);
+
+  if (s === "SUBMITTED") return "text-indigo-700";
 
   if (s === "APPROVED") return "text-emerald-700";
 
