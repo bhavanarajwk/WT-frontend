@@ -149,8 +149,10 @@ export function OffboardingPanel() {
     setLoadingCandidates(true);
     try {
       const [onboardRes, offboardRes] = await Promise.all([
-        hrmsService.getOnboardList({ page: "0", size: "500" }),
-        hrmsService.getOffboardList({ page: 0, size: 200 }),
+        hrmsService.getOnboardList({ page: "0", size: "500", onboardingStatus: "ACTIVE" }),
+        hrmsService.getOffboardList({ page: 0, size: 200 }).catch(() => ({
+          data: { items: [] as OffboardListItem[], total: 0, page: 0, size: 0 },
+        })),
       ]);
       const onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
       const offboardedIds = new Set(
@@ -163,7 +165,7 @@ export function OffboardingPanel() {
               const emp_id = String(row.emp_id ?? row.empId ?? "").trim();
               if (!emp_id || offboardedIds.has(emp_id.toLowerCase())) return null;
               const status = String(row.status ?? "").trim().toUpperCase();
-              if (status === "INACTIVE") return null;
+              if (status !== "ACTIVE") return null;
               const name = String(row.name ?? "—").trim() || "—";
               const email = String(row.email ?? "—").trim() || "—";
               return [emp_id.toLowerCase(), { emp_id, name, email }] as const;
@@ -299,14 +301,14 @@ export function OffboardingPanel() {
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h3 className="font-semibold">Attrition summary</h3>
+            <h3 className="font-semibold">Attrition Summary</h3>
             <p className="text-xs text-wt-text-muted mt-1">
               Financial-year exit metrics (Apr–Mar)
               {attritionExitCount != null ? ` · ${attritionExitCount} exit(s)` : ""}
             </p>
           </div>
           <SelectField
-            label="Financial year (start)"
+            label="Financial Year (Start)"
             className="min-w-[10rem]"
             value={fyStartYear}
             onChange={setFyStartYear}
@@ -347,7 +349,7 @@ export function OffboardingPanel() {
       </div>
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        <h3 className="font-semibold mb-4">Employee offboarding</h3>
+        <h3 className="font-semibold mb-4">Employee Offboarding</h3>
         <div className="grid md:grid-cols-2 gap-3">
           <SelectField
             label="Employee"
@@ -355,32 +357,32 @@ export function OffboardingPanel() {
             disabled={loadingCandidates}
             placeholder={
               loadingCandidates
-                ? "Loading employees…"
+                ? "Loading Employees…"
                 : candidateOptions.length
-                  ? "Select employee"
-                  : "No active employees available"
+                  ? "Select Employee"
+                  : "No Active Employees Available"
             }
             value={offboardingForm.emp_id}
             onChange={(emp_id) => setOffboardingForm((p) => ({ ...p, emp_id }))}
             options={candidateOptions}
           />
           <InputField
-            label="Resignation date"
+            label="Resignation Date"
             required
             type="date"
             value={offboardingForm.resignation_date}
             onChange={(v) => setOffboardingForm((p) => ({ ...p, resignation_date: v }))}
           />
           <InputField
-            label="Last working day"
+            label="Last Working Day"
             type="date"
             value={offboardingForm.last_working_day}
             onChange={(v) => setOffboardingForm((p) => ({ ...p, last_working_day: v }))}
           />
           <SelectField
-            label="Exit type"
+            label="Exit Type"
             required
-            placeholder="Select exit type"
+            placeholder="Select Exit Type"
             value={offboardingForm.exit_type}
             options={["VOLUNTARY", "INVOLUNTARY"]}
             onChange={(v) =>
@@ -396,7 +398,7 @@ export function OffboardingPanel() {
             onChange={(v) => setOffboardingForm((p) => ({ ...p, reason: v }))}
           />
           <InputField
-            label="Critical skill"
+            label="Critical Skill"
             value={offboardingForm.critical_skill}
             onChange={(v) => setOffboardingForm((p) => ({ ...p, critical_skill: v }))}
           />
@@ -408,7 +410,7 @@ export function OffboardingPanel() {
                 setOffboardingForm((p) => ({ ...p, is_regretted: e.target.checked }))
               }
             />
-            Is regretted
+            Is Regretted
           </label>
         </div>
         {offboardingNoticeLabel ? (
@@ -421,14 +423,14 @@ export function OffboardingPanel() {
             disabled={submitting || loadingCandidates}
             onClick={() => void submitOffboarding()}
           >
-            {submitting ? "Submitting…" : "Submit offboarding"}
+            {submitting ? "Submitting…" : "Submit Offboarding"}
           </button>
         </div>
       </div>
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-semibold">Offboarded employees</h3>
+          <h3 className="font-semibold">Offboarded Employees</h3>
           <p className="text-xs text-wt-text-muted tabular-nums">
             {loadingList ? "Loading…" : `${listTotal} total`}
           </p>
@@ -448,7 +450,7 @@ export function OffboardingPanel() {
             aria-label="Search"
           />
           <DatePickerField
-            label="LWD from"
+            label="LWD From"
             value={filterFromDate}
             onChange={(v) => {
               setFilterFromDate(v);
@@ -457,7 +459,7 @@ export function OffboardingPanel() {
             className="w-[10.5rem] shrink-0"
           />
           <DatePickerField
-            label="LWD to"
+            label="LWD To"
             value={filterToDate}
             onChange={(v) => {
               setFilterToDate(v);
@@ -466,7 +468,7 @@ export function OffboardingPanel() {
             className="w-[10.5rem] shrink-0"
           />
           <SelectField
-            label="User type"
+            label="User Type"
             className="w-[10.5rem] shrink-0"
             value={filterType}
             onChange={(v) => {
@@ -493,7 +495,7 @@ export function OffboardingPanel() {
         </div>
 
         {loadingList && !offboardedRows.length ? (
-          <p className="text-sm text-wt-text-muted">Loading offboarded employees…</p>
+          <p className="text-sm text-wt-text-muted">Loading Offboarded Employees…</p>
         ) : offboardedRows.length ? (
           <>
             <div className="wt-scroll-both max-h-[min(60vh,480px)] rounded-xl border border-wt-border">
@@ -502,9 +504,9 @@ export function OffboardingPanel() {
                   <tr>
                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Name</th>
                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Status</th>
-                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Exit type</th>
+                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Exit Type</th>
                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Resignation</th>
-                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Last working day</th>
+                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Last Working Day</th>
                     <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Notice (days)</th>
                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Designation</th>
                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Band</th>
@@ -554,7 +556,7 @@ export function OffboardingPanel() {
             />
           </>
         ) : (
-          <p className="text-sm text-wt-text-muted">No offboarded employees found.</p>
+          <p className="text-sm text-wt-text-muted">No Offboarded Employees Found.</p>
         )}
       </div>
     </section>

@@ -67,7 +67,7 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "offboarding",
-        label: "Offboarding",
+        label: "Employee Offboarding",
         roles: ["ROLE_HR"],
         icon: "userMinus",
       },
