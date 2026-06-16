@@ -150,6 +150,12 @@ export interface LeaveManagerOption {
   project_name?: string | null;
 }
 
+export interface LeaveRecipientOption {
+  email: string;
+  name: string;
+  emp_id?: string | null;
+}
+
 export interface AllocationExtensionRequestRow {
   id: number;
   employee_name: string;
@@ -764,6 +770,15 @@ export const hrmsService = {
   getLeaveManagerOptions() {
     return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
       endpoints.userRequest.leaveManagerOptions
+    );
+  },
+
+  getLeaveRecipientOptions(params?: { search?: string }) {
+    const query: Record<string, string> = {};
+    if (params?.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<{ items: LeaveRecipientOption[] }>>(
+      endpoints.userRequest.leaveRecipientOptions,
+      { query }
     );
   },
 
