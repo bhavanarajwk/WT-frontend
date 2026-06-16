@@ -78,7 +78,7 @@ export function ProfilePhotoAvatar({
 
   return (
     <div
-      className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-2 flex items-center justify-center"
+      className="h-28 w-28 shrink-0 overflow-hidden rounded-lg border border-wt-border bg-wt-surface-2 flex items-center justify-center"
       aria-hidden={!src || imageFailed}
     >
       {src && !imageFailed ? (

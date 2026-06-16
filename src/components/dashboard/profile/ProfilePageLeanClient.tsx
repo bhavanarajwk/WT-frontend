@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { ApiError } from "@/api/error";
-import { toPagedRows } from "@/utils/apiRows";
 import { formatActionErrorMessage, formatActionSuccessMessage } from "@/utils/actionToast";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import { createEmptySelfProfileForm } from "@/utils/profileFormState";
@@ -18,21 +17,17 @@ import {
   formatSecondarySkillsForProfile,
   readProfileField,
 } from "@/components/dashboard/ui/profile";
-import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
-import { EmployeeTrainingMarksCard } from "@/components/learning-development/EmployeeTrainingMarksCard";
+import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
+import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
 import { fetchSelfProfile, shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import {
   isActiveUserStatus,
   isOffboardedUserStatus,
   resolveProfileStatus,
 } from "@/utils/userStatus";
-import {
-  mergeProjectAndAllocationData,
-  normalizeAssignedProjects,
-} from "@/utils/dashboard/projects";
-import { formatAllocatedHoursPercentLabel } from "@/utils/dashboard/validation";
+import { buildProfileAssignedProjects } from "@/utils/dashboard/projects";
 import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
 import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
 
@@ -107,36 +102,34 @@ export function ProfilePageLeanClient() {
   }, [user, userRoles, loadMyProfile, router]);
 
   useEffect(() => {
-    if (!user || requiresSelfOnboarding) return;
+    if (!user || isProfileLoading || requiresSelfOnboarding) return;
     const load = async () => {
       setProfileAssignedProjectsLoading(true);
       try {
-        const [assignedRes, myAllocationsRes] = await Promise.all([
+        const [assignedRes, myAllocationsRes] = await Promise.allSettled([
           hrmsService.getAssignedProjects(),
           hrmsService.getMyAllocations(),
         ]);
-        const normalizedProjects = normalizeAssignedProjects(toPagedRows(assignedRes.data ?? assignedRes));
-        const myAllocations = toPagedRows(myAllocationsRes.data ?? myAllocationsRes);
-        setProfileAssignedProjects(mergeProjectAndAllocationData(normalizedProjects, myAllocations));
-      } catch {
-        setProfileAssignedProjects([]);
+        if (assignedRes.status !== "fulfilled") {
+          setProfileAssignedProjects([]);
+          return;
+        }
+        const allocationInput =
+          myAllocationsRes.status === "fulfilled"
+            ? myAllocationsRes.value.data ?? myAllocationsRes.value
+            : undefined;
+        setProfileAssignedProjects(
+          buildProfileAssignedProjects(
+            assignedRes.value.data ?? assignedRes.value,
+            allocationInput
+          )
+        );
       } finally {
         setProfileAssignedProjectsLoading(false);
       }
     };
     void load();
-  }, [user, requiresSelfOnboarding]);
-
-  const profileAssignedProjectsForTable = useMemo(
-    () =>
-      profileAssignedProjects.map((row) => ({
-        ...row,
-        allocated_hours: formatAllocatedHoursPercentLabel(
-          row.allocated_hours ?? row.allocatedHours ?? row.hours
-        ),
-      })),
-    [profileAssignedProjects]
-  );
+  }, [user, isProfileLoading, requiresSelfOnboarding]);
 
   const priorEmploymentDocsForProfile = useMemo(() => {
     const raw = String(selfProfileForm.yoe ?? "").trim().replace(",", ".");
@@ -278,26 +271,12 @@ export function ProfilePageLeanClient() {
     </div>
   );
 
-  const renderAssignedProjects = () => {
-    const columns = employeeSelfServeProfile
-      ? ["project_name", "project_code", "role", "allocated_hours", "start_date"]
-      : ["project_name", "project_code", "role", "allocated_hours", "billing_status", "start_date", "end_date"];
-    return (
-      <div className="mt-8 border-t border-wt-border pt-6">
-        <h4 className="mb-3 text-sm font-semibold">Assigned projects</h4>
-        {profileAssignedProjectsLoading ? (
-          <p className="text-sm text-wt-text-muted">Loading assigned projects…</p>
-        ) : (
-          <DataTable
-            columns={columns}
-            rows={profileAssignedProjectsForTable}
-            emptyLabel="No projects assigned."
-            compact
-          />
-        )}
-      </div>
-    );
-  };
+  const renderAssignedProjects = () => (
+    <ProfileAssignedProjectsSection
+      rows={profileAssignedProjects}
+      loading={profileAssignedProjectsLoading}
+    />
+  );
 
   const renderEditPanel = () => (
     <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-7 md:p-8">
@@ -480,11 +459,7 @@ export function ProfilePageLeanClient() {
                   />
                 )}
                 {!requiresSelfOnboarding ? renderAssignedProjects() : null}
-                {!requiresSelfOnboarding ? (
-                  <div className="mt-8 border-t border-wt-border pt-6">
-                    <EmployeeTrainingMarksCard variant="employee" enabled />
-                  </div>
-                ) : null}
+                {!requiresSelfOnboarding ? <ProfileEmployeeTrainingsSection enabled /> : null}
               </div>
             )
           ) : null}
