@@ -13,6 +13,7 @@ import {
   dashboardNavigation,
   filterNavigationForOffboardedUser,
   filterVisibleNavigation,
+  getDashboardSectionLabel,
 } from "@/constants/dashboardNavigation";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
@@ -163,6 +164,15 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   );
 
   const isLearningRoute = pathname.startsWith("/dashboard/learning-development");
+
+  const headerTitle = useMemo(() => {
+    if (isLearningRoute) return "Learning & Development";
+    if (isOffboarded && !isExitSurveyRoute) return "You Are Offboarded";
+    if (activeSection === "profile") return "My Profile";
+    if (activeSection === "employee-directory") return "Employee Directory";
+    if (activeSection === "employee") return "Employee Onboarding";
+    return getDashboardSectionLabel(activeSection) ?? "Dashboard";
+  }, [activeSection, isExitSurveyRoute, isLearningRoute, isOffboarded]);
   const learningSectionTitle = useMemo(() => {
     const hit = learningSubNav.find((l) => pathname === l.href || pathname.startsWith(`${l.href}/`));
     return hit?.label ?? "Learning & Development";
@@ -350,36 +360,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 shrink-0 border-b border-wt-border bg-wt-bg px-6 py-4 flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold">
-              {isOffboarded && !isExitSurveyRoute && !isLearningRoute ? "You are offboarded" : null}
-              {activeSection === "profile" && !isLearningRoute && !isOffboarded ? "My profile" : null}
-              {activeSection === "employee-directory" && !isLearningRoute ? "Employee Directory" : null}
-              {activeSection === "resumes" && !isLearningRoute ? "Resumes" : null}
-              {activeSection === "annual-calendar" && !isLearningRoute ? "Annual calendar" : null}
-              {activeSection === "talent-pool" && !isLearningRoute ? "Talent Pool" : null}
-              {activeSection === "employee" && !isLearningRoute ? "Employee Onboarding" : null}
-              {activeSection === "employee-attendance" && !isLearningRoute
-                ? "Employee Attendance And Leave Summary"
-                : null}
-              {activeSection === "exit-interview" && !isLearningRoute ? "Exit survey" : null}
-              {activeSection === "exit-interview-submissions" && !isLearningRoute
-                ? "Exit survey"
-                : null}
-              {activeSection !== "profile" &&
-              activeSection !== "employee-directory" &&
-              activeSection !== "resumes" &&
-              activeSection !== "annual-calendar" &&
-              activeSection !== "talent-pool" &&
-              activeSection !== "employee" &&
-              activeSection !== "employee-attendance" &&
-              activeSection !== "exit-interview" &&
-              activeSection !== "exit-interview-submissions" &&
-              !isLearningRoute &&
-              !isOffboarded
-                ? "Dashboard"
-                : null}
-              {isLearningRoute ? "Learning & Development" : null}
-            </h2>
+            <h2 className="text-xl font-semibold">{headerTitle}</h2>
             {isEmployeeDirectoryRoute && !isLearningRoute ? (
               <nav
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
