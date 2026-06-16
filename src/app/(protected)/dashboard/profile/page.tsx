@@ -1,5 +1,5 @@
-import { ProfilePageClient } from "@/components/dashboard/profile/ProfilePageClient";
+import { ProfilePageLeanClient } from "@/components/dashboard/profile/ProfilePageLeanClient";
 
 export default function DashboardProfilePage() {
-  return <ProfilePageClient />;
+  return <ProfilePageLeanClient />;
 }

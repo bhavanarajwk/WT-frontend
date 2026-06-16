@@ -95,20 +95,50 @@ export function ProfilePhotoAvatar({
   );
 }
 
+function formatProfileFieldValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || "—";
+  }
+  if (Array.isArray(value)) {
+    const parts = value.map((item) => String(item ?? "").trim()).filter(Boolean);
+    return parts.length ? parts.join(", ") : "—";
+  }
+  return String(value);
+}
+
 export function ProfileField({
   label,
   value,
   fullWidth = false,
+  link = false,
 }: {
   label: string;
   value: unknown;
   fullWidth?: boolean;
+  link?: boolean;
 }) {
-  const spanClass = fullWidth ? "sm:col-span-2" : "";
+  const formatted = formatProfileFieldValue(value);
+  const href = link && formatted !== "—" ? formatted : null;
+
   return (
-    <>
-      <dt className={`text-wt-text-muted ${spanClass}`}>{label}</dt>
-      <dd className={`font-medium ${spanClass}`}>{value ? String(value) : "—"}</dd>
-    </>
+    <div className={`flex items-baseline gap-x-4 gap-y-1 text-sm ${fullWidth ? "w-full" : ""}`}>
+      <dt className="w-40 shrink-0 text-wt-text-muted">{label}</dt>
+      <dd className="min-w-0 flex-1 font-medium text-wt-text break-words">
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline"
+          >
+            {formatted}
+          </a>
+        ) : (
+          formatted
+        )}
+      </dd>
+    </div>
   );
 }
