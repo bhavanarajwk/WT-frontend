@@ -1,3 +1,5 @@
+import { normalizeRoles } from "@/utils/roles";
+
 /** Path for each dashboard nav id (route-based; no ?tab=). */
 export const DASHBOARD_ROUTES: Record<string, string> = {
   overview: "/dashboard/overview",
@@ -18,6 +20,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   leave: "/dashboard/leave",
   "leave-team": "/dashboard/leave/team",
   "annual-calendar": "/dashboard/annual-calendar",
+  "holiday-calendars": "/dashboard/holiday-calendars",
   learning: "/dashboard/learning-development",
   "reports-workforce": "/dashboard/reports/workforce",
   "reports-section-2": "/dashboard/reports/utilization",
@@ -62,6 +65,7 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/leave/team", id: "leave-team" },
   { prefix: "/dashboard/leave", id: "leave" },
   { prefix: "/dashboard/annual-calendar", id: "annual-calendar" },
+  { prefix: "/dashboard/holiday-calendars", id: "holiday-calendars" },
   { prefix: "/dashboard/uploads", id: "uploads" },
   { prefix: "/dashboard/masters", id: "masters" },
   { prefix: "/dashboard/profile", id: "profile" },
@@ -90,7 +94,7 @@ export function employeeDirectoryProfilePath(empId: string): string {
 
 /** Landing route after login based on the user's roles. */
 export function defaultDashboardPathForRoles(roles: string[]): string {
-  const r = roles ?? [];
+  const r = normalizeRoles(roles ?? []);
   if (r.includes("ROLE_HR") || r.includes("ROLE_ADMIN") || r.includes("ROLE_FINANCE")) {
     return DASHBOARD_ROUTES["employee-directory"];
   }

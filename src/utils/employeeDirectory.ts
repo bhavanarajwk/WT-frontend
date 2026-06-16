@@ -146,6 +146,7 @@ export type EmployeeProfileEditForm = {
   primary_skills: string;
   secondary_skill: string;
   secondary_rating: string;
+  holiday_calendar_id: string;
 };
 
 export function profileToEditForm(profile: Record<string, unknown>): EmployeeProfileEditForm {
@@ -178,6 +179,9 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     primary_skills: primarySkills,
     secondary_skill: String(firstSecondary?.skill ?? "").trim(),
     secondary_rating: String(firstSecondary?.rating ?? "3").trim() || "3",
+    holiday_calendar_id: String(
+      pickProfileField(profile, ["holiday_calendar_id", "holidayCalendarId"]) ?? ""
+    ).trim(),
   };
 }
 

@@ -20,10 +20,11 @@ export interface SessionTokens {
   roles: string[];
   status: string;
   user_type: string;
+  session_started_at?: string;
 }
 
-const ACCESS_TOKEN_MINUTES = Number(process.env.ACCESS_TOKEN_MINUTES ?? 1440);
-const REFRESH_TOKEN_DAYS = Number(process.env.REFRESH_TOKEN_DAYS ?? 7);
+const ACCESS_TOKEN_MINUTES = Number(process.env.ACCESS_TOKEN_MINUTES ?? 30);
+const SESSION_MAX_HOURS = Number(process.env.SESSION_MAX_HOURS ?? 8);
 
 function cookieBaseOptions() {
   const secure = process.env.NODE_ENV === "production";
@@ -37,7 +38,7 @@ function cookieBaseOptions() {
 
 export function setAuthCookies(response: NextResponse, session: SessionTokens): void {
   const base = cookieBaseOptions();
-  const refreshMaxAge = REFRESH_TOKEN_DAYS * 86400;
+  const sessionMaxAge = SESSION_MAX_HOURS * 3600;
 
   response.cookies.set("accessToken", session.accessToken, {
     ...base,
@@ -45,17 +46,23 @@ export function setAuthCookies(response: NextResponse, session: SessionTokens): 
   });
   response.cookies.set("refreshToken", session.refreshToken, {
     ...base,
-    maxAge: refreshMaxAge,
+    maxAge: sessionMaxAge,
   });
   response.cookies.set("tokenId", session.tokenId, {
     ...base,
-    maxAge: refreshMaxAge,
+    maxAge: sessionMaxAge,
   });
-  response.cookies.set("email", session.email, { ...base, maxAge: refreshMaxAge });
-  response.cookies.set("employeeName", session.name, { ...base, maxAge: refreshMaxAge });
-  response.cookies.set("roles", session.roles.join(","), { ...base, maxAge: refreshMaxAge });
-  response.cookies.set("status", session.status, { ...base, maxAge: refreshMaxAge });
-  response.cookies.set("type", session.user_type, { ...base, maxAge: refreshMaxAge });
+  response.cookies.set("email", session.email, { ...base, maxAge: sessionMaxAge });
+  response.cookies.set("employeeName", session.name, { ...base, maxAge: sessionMaxAge });
+  response.cookies.set("roles", session.roles.join(","), { ...base, maxAge: sessionMaxAge });
+  response.cookies.set("status", session.status, { ...base, maxAge: sessionMaxAge });
+  response.cookies.set("type", session.user_type, { ...base, maxAge: sessionMaxAge });
+  if (session.session_started_at) {
+    response.cookies.set("sessionStartedAt", session.session_started_at, {
+      ...base,
+      maxAge: sessionMaxAge,
+    });
+  }
 }
 
 export function clearAuthCookies(response: NextResponse): void {
@@ -69,6 +76,7 @@ export function clearAuthCookies(response: NextResponse): void {
     "roles",
     "status",
     "type",
+    "sessionStartedAt",
   ]) {
     response.cookies.set(key, "", { ...base, maxAge: 0 });
   }
