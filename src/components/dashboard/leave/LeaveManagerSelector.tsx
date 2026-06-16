@@ -46,6 +46,16 @@ export function LeaveManagerSelector({
     };
   }, []);
 
+  useEffect(() => {
+    if (disabled || selectedEmails.length || !options.length) return;
+    const defaultOnly = options.filter((option) =>
+      String(option.project_name ?? "").toLowerCase().includes("default approver")
+    );
+    if (defaultOnly.length !== 1) return;
+    const email = String(defaultOnly[0].email ?? "").trim();
+    if (email) onChange([email]);
+  }, [disabled, onChange, options, selectedEmails.length]);
+
   const selectedSet = useMemo(
     () => new Set(selectedEmails.map((email) => email.trim().toLowerCase()).filter(Boolean)),
     [selectedEmails]

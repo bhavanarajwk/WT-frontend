@@ -470,6 +470,18 @@ export function LeavePageClient() {
   const hasAdminAccess = userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const hasDmAccess = hasDmRole(userRoles);
+
+  useEffect(() => {
+    if (
+      pathname.includes("/dashboard/leave") &&
+      !pathname.includes("/dashboard/leave/team") &&
+      hasHrAccess &&
+      !hasManagerAccess &&
+      !hasDmAccess
+    ) {
+      router.replace("/dashboard/leave/team");
+    }
+  }, [pathname, hasHrAccess, hasManagerAccess, hasDmAccess, router]);
   const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess;
   const firstLineStatusColumnLabel = hasHrAccess
     ? "Manager/DM status"
@@ -3575,13 +3587,6 @@ export function LeavePageClient() {
                                           normalizeUserRequestType(requestType) === "LEAVE");
                                       if (needsClientApproval && !leaveRequestForm.client_approval) {
                                         throw new Error("Client approval is required for client users.");
-                                      }
-                                      if (
-                                        leaveSubTab === "my" &&
-                                        normalizeUserRequestType(requestType) === "LEAVE" &&
-                                        !selectedLeaveManagerEmails.length
-                                      ) {
-                                        throw new Error("Select at least one manager to notify.");
                                       }
                                       const isCompOffUsage =
                                         normalizeCompOffRequestType(requestType) === "COMP_OFF";

@@ -138,8 +138,8 @@ export function HolidayCalendarsPageClient() {
           </header>
 
           <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-900">
-            <strong>Note:</strong> WebTrak uses a single holiday calendar for the whole company.
-            Per-employee calendar assignment is not supported.
+            <strong>Note:</strong> Import holidays for the company calendar below. Assign calendars to
+            employees during onboarding or from the employee profile in the directory.
           </div>
 
           {hasHrAccess ? (

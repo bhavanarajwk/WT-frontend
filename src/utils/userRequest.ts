@@ -181,9 +181,9 @@ export function isLeaveRequestType(value: unknown): boolean {
 
 
 
-export function isLeaveEmailOnlyWorkflow(row: Record<string, unknown>): boolean {
-  if (!isLeaveRequestType(pickRowField(row, "request_type", "requestType"))) return false;
-  return requestFinalStatus(row) === "SUBMITTED";
+/** @deprecated Legacy Phase 1 email-only leave is superseded; always false. */
+export function isLeaveEmailOnlyWorkflow(_row: Record<string, unknown>): boolean {
+  return false;
 }
 
 
@@ -235,13 +235,16 @@ export function requestHrStatus(row: Record<string, unknown>): string {
 
 
 export function requestFinalStatus(row: Record<string, unknown>): string {
-
-  return normalizeRequestStatus(
-
+  const raw = normalizeRequestStatus(
     pickRowField(row, "user_request_status", "userRequestStatus", "status") ?? "PENDING"
-
   );
-
+  if (
+    raw === "SUBMITTED" &&
+    isLeaveRequestType(pickRowField(row, "request_type", "requestType"))
+  ) {
+    return "PENDING";
+  }
+  return raw;
 }
 
 
@@ -358,10 +361,6 @@ export function hrTeamActionBlockedHint(
   if (!options.hasHrAccess) return null;
 
   const requestType = pickRowField(row, "request_type", "requestType");
-
-  if (isLeaveEmailOnlyWorkflow(row)) {
-    return "Legacy leave request — awaiting manager action via email";
-  }
 
   if (isLeaveRequestType(requestType)) {
     return "Manager approval is final for leave";
