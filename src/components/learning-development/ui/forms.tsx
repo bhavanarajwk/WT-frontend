@@ -2,7 +2,6 @@
 
 import { isValidElement, type ReactNode, useMemo, useState } from "react";
 import { ApiDateField, FieldLabel } from "@/components/dashboard/ui/forms";
-import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import {
@@ -131,7 +130,7 @@ export function DataTable({
     resetKeys: resetPaginationKeys ?? (sortOptions?.length ? [sortId] : undefined),
   });
 
-  const displayRows = paginate ? pagination.pageItems : sortedRows;
+  const displayRows = sortedRows;
 
   if (!displaySourceRows.length) {
     return (
@@ -143,14 +142,14 @@ export function DataTable({
   }
   const cellClass = compact ? "px-2 py-1.5 whitespace-nowrap" : "px-3 py-2 whitespace-nowrap";
   const headCellClass = compact
-    ? "text-left px-2 py-2 font-medium whitespace-nowrap sticky top-0 z-[1] bg-wt-surface-2 shadow-[0_1px_0_var(--wt-border)]"
-    : "text-left px-3 py-2 font-medium whitespace-nowrap sticky top-0 z-[1] bg-wt-surface-2 shadow-[0_1px_0_var(--wt-border)]";
+    ? "text-left px-2 py-2 font-medium whitespace-nowrap"
+    : "text-left px-3 py-2 font-medium whitespace-nowrap";
   return (
     <div className="space-y-2">
       {title ? <p className="text-sm font-medium">{title}</p> : null}
       <div className="wt-scroll-both max-h-[min(70vh,560px)] rounded-xl border border-wt-border overflow-auto">
-        <table className="min-w-full text-sm">
-          <thead className="text-wt-text-muted">
+        <table className="wt-scrollable-table text-sm">
+          <thead className="wt-table-sticky-head text-wt-text-muted">
             <tr>
               {displayColumns.map((col) => {
                 const columnSortOpts = sortOptions?.length ? sortOptionsForColumn(col, sortOptions) : [];
@@ -192,18 +191,10 @@ export function DataTable({
           </tbody>
         </table>
       </div>
-      {paginate ? (
-        <ListPagination
-          page={pagination.page}
-          totalPages={pagination.totalPages}
-          totalItems={pagination.totalItems}
-          rangeStart={pagination.rangeStart}
-          rangeEnd={pagination.rangeEnd}
-          pageSize={pagination.pageSize}
-          pageSizeOptions={pagination.pageSizeOptions}
-          onPageChange={pagination.setPage}
-          onPageSizeChange={pagination.setPageSize}
-        />
+      {paginate && pagination.totalItems > 0 ? (
+        <p className="text-xs text-wt-text-muted">
+          Showing {pagination.totalItems} row{pagination.totalItems === 1 ? "" : "s"}
+        </p>
       ) : null}
     </div>
   );

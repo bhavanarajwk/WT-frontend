@@ -196,8 +196,8 @@ export function HrEmployeeTimelogPageClient() {
                 {emailFilter !== "ALL" ? ` — ${emailFilter}` : ""}.
               </p>
               <div className="wt-scroll-both max-h-[min(65vh,560px)] overflow-auto rounded-xl border border-wt-border">
-                <table className="min-w-full text-sm">
-                  <thead className="sticky top-0 z-[1] bg-wt-surface-2 text-wt-text-muted">
+                <table className="wt-scrollable-table text-sm">
+                  <thead className="wt-table-sticky-head text-wt-text-muted">
                     <tr>
                       {tableDisplay.columns.map((col) => {
                         const columnSortOpts = sortOptionsForColumn(col, TIMELOG_SORT_OPTIONS);

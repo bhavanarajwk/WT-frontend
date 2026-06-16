@@ -31,15 +31,25 @@ export async function GET(request: NextRequest) {
   const exchangeResponse = await fetch(`${getBackendBaseUrl()}/api/v1/auth/google/exchange`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    body: JSON.stringify({ code, redirect_uri: redirectUri, state }),
+    credentials: "include",
   });
 
   if (!exchangeResponse.ok) {
+    const knownErrors = new Set([
+      "unregistered_user",
+      "account_inactive",
+      "unauthorized_email_domain",
+      "invalid_redirect_uri",
+      "google_token_exchange_failed",
+      "invalid_oauth_state",
+    ]);
     let errorCode = "oauth_login_failed";
     try {
       const payload = (await exchangeResponse.json()) as { detail?: string };
-      if (payload.detail === "unregistered_user") {
-        errorCode = "unregistered_user";
+      const detail = payload.detail?.trim();
+      if (detail && knownErrors.has(detail)) {
+        errorCode = detail;
       }
     } catch {
       /* ignore parse errors */

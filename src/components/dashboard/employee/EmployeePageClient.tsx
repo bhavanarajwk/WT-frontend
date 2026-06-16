@@ -448,105 +448,7 @@ export function EmployeePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [user, hasHrAccess]);
-  useEffect(() => {
-        const hasAllocationAccess =
-      (user?.roles ?? []).includes("ROLE_HR") || (user?.roles ?? []).includes("ROLE_ADMIN");
-    if (!hasAllocationAccess) return;
-    const id = window.setTimeout(() => {
-      void (async () => {
-        try {
-          const [response, onboardRes, projectRes] = await Promise.all([
-            hrmsService.getAllocationRoles({}),
-            hrmsService.getOnboardList({
-              page: "0",
-              size: "500",
-              onboardingStatus: "ACTIVE",
-            }),
-            hrmsService.getProjects({ page: "0", size: "10" }),
-          ]);
-          const rows = toRows(response.data ?? response);
-          const roles = Array.from(
-            new Set(
-              rows
-                .map((row) => String(row.name ?? row.role ?? "").trim())
-                .filter(Boolean)
-            )
-          ).sort();
-          setAllocationRoles(roles);
-          const isActiveOnboardRow = (row: Record<string, unknown>) =>
-            String(row.status ?? "").trim().toUpperCase() === "ACTIVE";
-          let userRows = toPagedRows(onboardRes.data ?? onboardRes).filter(isActiveOnboardRow);
-          if (!userRows.length) {
-            const fallbackOnboard = await hrmsService.getOnboardList({ page: "0", size: "500" });
-            userRows = toPagedRows(fallbackOnboard.data ?? fallbackOnboard).filter(isActiveOnboardRow);
-          }
-          const users = Array.from(
-            new Map(
-              userRows
-                .map((row) => {
-                  const email = String(row.email ?? "").trim();
-                  const name = String(row.name ?? email).trim();
-                  const role = String(
-                    row.role ?? row.designation ?? row.designation_name ?? row.designationName ?? ""
-                  ).trim();
-                  if (!email) return null;
-                  return [email.toLowerCase(), { name, email, ...(role ? { role } : {}) }] as const;
-                })
-                .filter(
-                  (x): x is readonly [string, { name: string; email: string; role?: string }] => Boolean(x)
-                )
-            ).values()
-          );
-          setAllocationUsers(users);
-          let projectRows = toRows(projectRes.data);
-          if (!projectRows.length) {
-            const fallback = await hrmsService.getAllProjects({});
-            projectRows = toRows(fallback.data ?? fallback);
-          }
-          const projects = Array.from(
-            new Map(
-              projectRows
-                .map((row) => {
-                  const code = String(row.project_code ?? row.projectCode ?? "").trim();
-                  const name = String(row.project_name ?? row.projectName ?? code).trim();
-                  if (!code) return null;
-                  const project_type = String(row.project_type ?? row.projectType ?? "").trim();
-                  return [code, { code, name, project_type }] as [
-                    string,
-                    { code: string; name: string; project_type: string },
-                  ];
-                })
-                .filter(
-                  (x): x is [string, { code: string; name: string; project_type: string }] => x != null
-                )
-            ).values()
-          ).sort((a, b) => a.name.localeCompare(b.name));
-          setAllocationProjects(projects);
-          const onboardEmailToName = buildEmailToNameMap(userRows);
-          const projectDisplayByCode = buildProjectCodeDisplayMap(projectRows);
-
-          try {
-            const forecastRes = await hrmsService.getAllocationForecasting({ days: 14 });
-            const forecastRows = toPagedRows((forecastRes as { data?: unknown }).data ?? forecastRes);
-            setAllocationForecastRows(
-              normalizeForecastRows(forecastRows, {
-                emailToName: onboardEmailToName,
-                projectDisplayByCode,
-              })
-            );
-          } catch {
-            setAllocationForecastRows([]);
-          }
-        } catch {
-          setAllocationRoles([]);
-          setAllocationUsers([]);
-          setAllocationProjects([]);
-          setAllocationForecastRows([]);
-        }
-      })();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [ user?.roles]);
+  // Allocation/projects/forecasting bootstrap removed — not rendered on this onboarding-only route.
   useEffect(() => {
         if (!(userRoles.includes("ROLE_ADMIN") || userRoles.includes("ROLE_HR"))) return;
     const id = window.setTimeout(() => {
@@ -1836,16 +1738,6 @@ export function EmployeePageClient() {
       })
     );
   }, [loadAllProjectsForHr]);
-  useEffect(() => {
-        if (!hasHrAccess) return;
-    if (requiresSelfOnboarding) return;
-    const id = window.setTimeout(() => {
-      void loadAllocationsForHr().catch(() => {
-        setAllocations([]);
-      });
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [ hasHrAccess, requiresSelfOnboarding, loadAllocationsForHr]);
   useEffect(() => {
         const id = window.setTimeout(() => {
       void loadInviteOnboardingPreview().catch(() => {

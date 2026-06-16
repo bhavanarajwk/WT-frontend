@@ -23,6 +23,7 @@ export function SearchableSelectCombobox({
   inputClassName = "input-field px-3 py-2 text-sm w-full",
   id: idProp,
   "aria-label": ariaLabel,
+  dropdownAttached = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -34,6 +35,8 @@ export function SearchableSelectCombobox({
   inputClassName?: string;
   id?: string;
   "aria-label"?: string;
+  /** Drop the list flush on the input (no gap) so it overlays content below. */
+  dropdownAttached?: boolean;
 }) {
   const autoId = useId();
   const id = idProp ?? autoId;
@@ -125,7 +128,11 @@ export function SearchableSelectCombobox({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-wt-border bg-wt-surface-1 py-1 text-sm shadow-lg"
+          className={`absolute z-50 max-h-56 w-full overflow-auto border border-wt-border bg-wt-surface-1 py-1 text-sm shadow-lg ${
+            dropdownAttached
+              ? "left-0 right-0 top-full -mt-px rounded-b-lg"
+              : "mt-1 rounded-lg"
+          }`}
         >
           {filteredOptions.length === 0 ? (
             <li className="px-3 py-2 text-wt-text-muted">No matches</li>

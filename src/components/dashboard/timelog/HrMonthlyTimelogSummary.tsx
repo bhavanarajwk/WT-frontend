@@ -84,9 +84,9 @@ export function HrMonthlyTimelogSummary({
           No approved timelog hours for this month.
         </p>
       ) : (
-        <div className="wt-scroll-both overflow-x-auto rounded-xl border border-wt-border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-wt-surface-2 text-wt-text-muted">
+        <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
+          <table className="wt-scrollable-table text-sm">
+            <thead className="wt-table-sticky-head text-wt-text-muted">
               <tr>
                 <th className="sticky left-0 z-[1] bg-wt-surface-2 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                   Employee

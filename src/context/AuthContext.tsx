@@ -44,15 +44,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async (): Promise<AuthUser | null> => {
     setStatus("loading");
-    const freshUser = await refreshSession();
-    if (freshUser) {
-      setUser(freshUser);
-      setStatus("authenticated");
-    } else {
+    try {
+      const freshUser = await refreshSession();
+      if (freshUser) {
+        setUser(freshUser);
+        setStatus("authenticated");
+      } else {
+        setUser(null);
+        setStatus("unauthenticated");
+      }
+      return freshUser;
+    } catch {
       setUser(null);
       setStatus("unauthenticated");
+      return null;
     }
-    return freshUser;
   }, []);
 
   const signOut = useCallback(async () => {
