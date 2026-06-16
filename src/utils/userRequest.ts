@@ -181,8 +181,9 @@ export function isLeaveRequestType(value: unknown): boolean {
 
 
 
-export function isLeaveEmailOnlyWorkflow(row: Record<string, unknown>): boolean {
-  return isLeaveRequestType(pickRowField(row, "request_type", "requestType"));
+/** @deprecated Phase 1 email-only leave workflow removed. Leave now uses standard in-app approval. */
+export function isLeaveEmailOnlyWorkflow(_row: Record<string, unknown>): boolean {
+  return false;
 }
 
 
