@@ -19,6 +19,7 @@ export type OnboardFormState = {
   personal_email: string;
   phone_number: string;
   date_of_birth: string;
+  holiday_calendar_id: string;
 };
 
 export function createEmptyOnboardForm(): OnboardFormState {
@@ -43,5 +44,6 @@ export function createEmptyOnboardForm(): OnboardFormState {
     personal_email: "",
     phone_number: "",
     date_of_birth: "",
+    holiday_calendar_id: "",
   };
 }

@@ -191,6 +191,17 @@ export const endpoints = {
       `${api}/annual-calendar/${encodeURIComponent(String(year))}`,
   },
 
+  holidayCalendar: {
+    root: `${api}/holiday-calendars`,
+    company: `${api}/holiday-calendars/company`,
+    byId: (id: string | number) =>
+      `${api}/holiday-calendars/${encodeURIComponent(String(id))}`,
+    importCsv: `${api}/holiday-calendars/import-csv`,
+    exportCsv: `${api}/holiday-calendars/export-csv`,
+    importAssignmentsCsv: `${api}/holiday-calendars/employee-assignments/import-csv`,
+    exportAssignmentsCsv: `${api}/holiday-calendars/employee-assignments/export-csv`,
+  },
+
   exitInterview: {
     formDefinition: `${api}/exit-interview/form-definition`,
     submit: `${api}/exit-interview`,

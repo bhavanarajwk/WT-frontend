@@ -106,7 +106,9 @@ export function EmployeeProfilePageClient() {
           .filter(Boolean);
         setBandOptions([...new Set(["", ...labels])]);
       } catch {
-        if (!cancelled) setBandOptions([""]);
+        if (!cancelled) {
+          setBandOptions([""]);
+        }
       }
     })();
     return () => {
