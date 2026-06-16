@@ -44,7 +44,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function applyAuthenticatedUser(freshUser: AuthUser): AuthUser {
   const normalized = { ...freshUser, roles: normalizeRoles(freshUser.roles ?? []) };
-  persistSessionTiming(normalized.session_started_at);
+  persistSessionTiming(freshUser.session_started_at);
   return normalized;
 }
 
