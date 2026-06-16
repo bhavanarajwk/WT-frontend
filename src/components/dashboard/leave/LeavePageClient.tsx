@@ -125,8 +125,7 @@ import { activeAllocationsRequireClientApproval } from "@/utils/leaveAllocations
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
 import { ManagerTeamOnLeavePanel } from "@/components/dashboard/leave/ManagerTeamOnLeavePanel";
-import { LeaveWorkflowNotice } from "@/components/dashboard/leave/LeaveWorkflowNotice";
-import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
+
 import {
   calendarDaysInclusive,
   normalizeCompOffRequestType,
@@ -325,7 +324,6 @@ export function LeavePageClient() {
   const [roleAssignUsers, setRoleAssignUsers] = useState<Array<{ name: string; email: string }>>([]);
 
   const [leaveRequestForm, setLeaveRequestForm] = useState(createDefaultLeaveRequestForm);
-  const [selectedLeaveManagerEmails, setSelectedLeaveManagerEmails] = useState<string[]>([]);
   const [editingLeaveRequestId, setEditingLeaveRequestId] = useState<string>("");
   const [employeeRequestFilters, setEmployeeRequestFilters] = useState({
     fromDate: "",
@@ -507,15 +505,6 @@ export function LeavePageClient() {
     [myAllocationRowsForLeave]
   );
 
-  const leaveWorkflowVariant = useMemo((): Parameters<typeof LeaveWorkflowNotice>[0]["variant"] => {
-    if (hasHrAccess && userRoles.includes("ROLE_HR") && !hasAdminAccess) {
-      return "hr-dual-required";
-    }
-    if (hasHrAccess) return "hr";
-    if (hasDmAccess && !hasManagerAccess) return "dm";
-    if (hasManagerAccess) return "manager";
-    return "employee";
-  }, [hasAdminAccess, hasDmAccess, hasHrAccess, hasManagerAccess, userRoles]);
   useEffect(() => {
     if (leaveSubTab === "wfh") {
       setLeaveRequestForm((prev) =>
@@ -3457,7 +3446,6 @@ export function LeavePageClient() {
                             normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
                               <LeaveBalanceSummary />
                             ) : null}
-                            <LeaveWorkflowNotice variant={leaveWorkflowVariant} />
                             <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                               <h3 className="font-semibold mb-3">
                                 {leaveSubTab === "wfh" ? "Work from home" : "Time off/comp off"}
@@ -3544,14 +3532,6 @@ export function LeavePageClient() {
                                     </span>
                                   </label>
                                 ) : null}
-                                {leaveSubTab === "my" &&
-                                normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
-                                  <LeaveManagerSelector
-                                    selectedEmails={selectedLeaveManagerEmails}
-                                    onChange={setSelectedLeaveManagerEmails}
-                                    disabled={actionLoading}
-                                  />
-                                ) : null}
                                 <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                               </div>
                               <div className="mt-4 flex gap-2">
@@ -3601,13 +3581,6 @@ export function LeavePageClient() {
                                       if (needsClientApproval && !leaveRequestForm.client_approval) {
                                         throw new Error("Client approval is required for client users.");
                                       }
-                                      if (
-                                        leaveSubTab === "my" &&
-                                        normalizeUserRequestType(requestType) === "LEAVE" &&
-                                        !selectedLeaveManagerEmails.length
-                                      ) {
-                                        throw new Error("Select at least one manager to notify.");
-                                      }
                                       const isCompOffUsage =
                                         normalizeCompOffRequestType(requestType) === "COMP_OFF";
                                       if (isCompOffUsage) {
@@ -3639,7 +3612,6 @@ export function LeavePageClient() {
                                           manager_comp_off_email: managerCompOffEmail,
                                         });
                                         setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                        setSelectedLeaveManagerEmails([]);
                                         setEditingLeaveRequestId("");
                                         try {
                                           await loadMyLeaveRequests();
@@ -3658,11 +3630,6 @@ export function LeavePageClient() {
                                           client_approval: needsClientApproval
                                             ? leaveRequestForm.client_approval
                                             : undefined,
-                                          selected_manager_emails:
-                                            leaveSubTab === "my" &&
-                                            normalizeUserRequestType(requestType) === "LEAVE"
-                                              ? selectedLeaveManagerEmails
-                                              : undefined,
                                         },
                                         editingLeaveRequestId
                                           ? { userRequestId: Number(editingLeaveRequestId) }
@@ -3680,7 +3647,6 @@ export function LeavePageClient() {
                                         });
                                       }
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                      setSelectedLeaveManagerEmails([]);
                                       setEditingLeaveRequestId("");
                                       try {
                                         await loadMyLeaveRequests();
@@ -3699,7 +3665,6 @@ export function LeavePageClient() {
                                     className="btn-ghost px-3 py-2"
                                     onClick={() => {
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                      setSelectedLeaveManagerEmails([]);
                                       setEditingLeaveRequestId("");
                                     }}
                                     disabled={actionLoading}
@@ -3861,7 +3826,6 @@ export function LeavePageClient() {
                                                       if (editingLeaveRequestId === requestId) {
                                                         setEditingLeaveRequestId("");
                                                         setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                                        setSelectedLeaveManagerEmails([]);
                                                       }
                                                       await loadMyLeaveRequests();
                                                     })
@@ -3904,11 +3868,6 @@ export function LeavePageClient() {
                           ) : canViewTeamLeave ? (
                         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
                           {hasManagerAccess && !hasHrAccess ? <ManagerTeamOnLeavePanel /> : null}
-                          {hasHrAccess ? (
-                            <LeaveWorkflowNotice variant="hr" />
-                          ) : hasDmAccess ? (
-                            <LeaveWorkflowNotice variant="dm" />
-                          ) : null}
                           <div className="flex flex-wrap items-end gap-3">
                             <InputField
                               label="From Date"
