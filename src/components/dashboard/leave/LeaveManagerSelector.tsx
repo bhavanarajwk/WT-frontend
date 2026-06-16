@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService, type LeaveManagerOption } from "@/services/hrms.service";
+import { unwrapLeaveOptionItems } from "@/utils/leaveApiOptions";
 
 function optionLabel(option: LeaveManagerOption): string {
   const name = option.name?.trim() || option.email;
@@ -29,8 +30,8 @@ export function LeaveManagerSelector({
     void (async () => {
       try {
         const res = await hrmsService.getLeaveManagerOptions();
-        const items = (res as { data?: { items?: LeaveManagerOption[] } }).data?.items ?? [];
-        if (!cancelled) setOptions(Array.isArray(items) ? items : []);
+        const items = unwrapLeaveOptionItems<LeaveManagerOption>(res);
+        if (!cancelled) setOptions(items);
       } catch (err) {
         if (!cancelled) {
           setOptions([]);
