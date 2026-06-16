@@ -255,3 +255,51 @@ export function accordionSectionForPathname(pathname: string, activeSection: str
   if (pathname.startsWith("/dashboard/learning-development")) return "learning";
   return null;
 }
+
+const PAGE_TITLE_OVERRIDES: Record<string, string> = {
+  profile: "Profile",
+  overview: "Overview",
+};
+
+function toTitleCase(label: string): string {
+  return label
+    .split(/\s+/)
+    .map((word) => {
+      if (word === "&") return word;
+      const lower = word.toLowerCase();
+      if (lower === "vs") return "vs";
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+function groupChildPageTitle(groupLabel: string, childLabel: string): string {
+  if (childLabel.toLowerCase().startsWith(groupLabel.toLowerCase())) {
+    return toTitleCase(childLabel);
+  }
+  return `${groupLabel} ${toTitleCase(childLabel)}`;
+}
+
+/** Page header title for the active dashboard section. */
+export function dashboardPageTitle(sectionId: string): string {
+  if (PAGE_TITLE_OVERRIDES[sectionId]) {
+    return PAGE_TITLE_OVERRIDES[sectionId];
+  }
+
+  for (const item of dashboardNavigation) {
+    if (item.kind === "group") {
+      const child = item.children.find((c) => c.id === sectionId);
+      if (child) return groupChildPageTitle(item.label, child.label);
+    }
+    if (item.kind === "link" && item.id === sectionId) {
+      return item.label;
+    }
+    if (item.kind === "expandable") {
+      if (item.id === sectionId) return item.label;
+      const child = item.children.find((c) => c.id === sectionId);
+      if (child) return child.label;
+    }
+  }
+
+  return toTitleCase(sectionId.replace(/-/g, " "));
+}

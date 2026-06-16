@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
@@ -13,16 +13,17 @@ import {
   dashboardNavigation,
   filterNavigationForOffboardedUser,
   filterVisibleNavigation,
+  dashboardPageTitle,
 } from "@/constants/dashboardNavigation";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
 import { shouldShowExitSurveyInNav } from "@/utils/exitInterview";
 import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
-import { isOffboardedUserStatus } from "@/utils/userStatus";
 import { dashboardHref, DASHBOARD_ROUTES } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { SidebarIcon } from "@/constants/sidebarIcons";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
-import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
+import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 
 function IconUser({ className = "" }: { className?: string }) {
   return (
@@ -105,7 +106,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const isHrPortalUser =
     (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN")) &&
     !userRoles.includes("ROLE_EMPLOYEE");
-  const isOffboarded = isOffboardedUserStatus(user?.status);
+  const { isOffboarded } = useDashboardAccess();
   const shouldLoadExitInterviewProfile = useMemo(() => {
     if (!user) return false;
     if (pathname.startsWith(DASHBOARD_ROUTES["exit-interview"])) return true;
@@ -141,6 +142,26 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     return "light";
   });
   const [actionLoading, setActionLoading] = useState(false);
+  const notificationsPanelRef = useRef<HTMLDetailsElement>(null);
+  const settingsPanelRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    const onDocMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (notificationsPanelRef.current?.contains(target)) return;
+      if (settingsPanelRef.current?.contains(target)) return;
+
+      if (notificationsPanelRef.current?.open) {
+        notificationsPanelRef.current.open = false;
+      }
+      if (settingsPanelRef.current?.open) {
+        settingsPanelRef.current.open = false;
+      }
+    };
+
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);
@@ -176,6 +197,16 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     const hit = learningSubNav.find((l) => pathname === l.href || pathname.startsWith(`${l.href}/`));
     return hit?.label ?? "Learning & Development";
   }, [pathname]);
+
+  const pageTitle = useMemo(() => {
+    if (isOffboarded && !isExitSurveyRoute && !isLearningRoute) {
+      return "You Are Offboarded";
+    }
+    if (isLearningRoute) {
+      return "Learning & Development";
+    }
+    return dashboardPageTitle(activeSection);
+  }, [activeSection, isOffboarded, isExitSurveyRoute, isLearningRoute]);
 
   return (
     <div className="wt-page-scroll h-dvh overflow-y-auto bg-wt-bg text-wt-text">
@@ -359,32 +390,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 shrink-0 border-b border-wt-border bg-wt-bg px-6 py-4 flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold">
-              {isOffboarded && !isExitSurveyRoute && !isLearningRoute ? "You are offboarded" : null}
-              {activeSection === "profile" && !isLearningRoute && !isOffboarded ? "My profile" : null}
-              {activeSection === "employee-directory" && !isLearningRoute ? "Employee Directory" : null}
-              {activeSection === "resumes" && !isLearningRoute ? "Resumes" : null}
-              {activeSection === "annual-calendar" && !isLearningRoute ? "Annual calendar" : null}
-              {activeSection === "talent-pool" && !isLearningRoute ? "Talent Pool" : null}
-              {activeSection === "employee" && !isLearningRoute ? "Employee Onboarding" : null}
-              {activeSection === "exit-interview" && !isLearningRoute ? "Exit survey" : null}
-              {activeSection === "exit-interview-submissions" && !isLearningRoute
-                ? "Exit survey"
-                : null}
-              {activeSection !== "profile" &&
-              activeSection !== "employee-directory" &&
-              activeSection !== "resumes" &&
-              activeSection !== "annual-calendar" &&
-              activeSection !== "talent-pool" &&
-              activeSection !== "employee" &&
-              activeSection !== "exit-interview" &&
-              activeSection !== "exit-interview-submissions" &&
-              !isLearningRoute &&
-              !isOffboarded
-                ? "Dashboard"
-                : null}
-              {isLearningRoute ? "Learning & Development" : null}
-            </h2>
+            <h2 className="text-xl font-semibold">{pageTitle}</h2>
             {isEmployeeDirectoryRoute && !isLearningRoute ? (
               <nav
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
@@ -396,7 +402,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 <span aria-hidden>/</span>
                 {isEmployeeProfileRoute ? (
                   <>
-                    <Link prefetch={false}
+                    <Link
+                      prefetch={false}
                       href={DASHBOARD_ROUTES["employee-directory"]}
                       className="hover:text-wt-text transition"
                     >
@@ -437,10 +444,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2 shrink-0">
             {!isOffboarded ? (
             <details
+              ref={notificationsPanelRef}
               className="group relative"
               onToggle={(e) => {
                 const el = e.currentTarget as HTMLDetailsElement;
                 if (el.open) {
+                  if (settingsPanelRef.current) {
+                    settingsPanelRef.current.open = false;
+                  }
                   void loadNotifications().catch(() => setNotifications([]));
                 }
               }}
@@ -513,14 +524,23 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               </div>
             </details>
             ) : null}
-            <details className="group relative">
+            <details
+              ref={settingsPanelRef}
+              className="group relative"
+              onToggle={(e) => {
+                const el = e.currentTarget as HTMLDetailsElement;
+                if (el.open && notificationsPanelRef.current) {
+                  notificationsPanelRef.current.open = false;
+                }
+              }}
+            >
               <summary className="flex cursor-pointer list-none items-center justify-center rounded-lg border border-wt-border bg-wt-surface-1 p-2.5 text-wt-text shadow-sm transition hover:bg-wt-surface-2 [&::-webkit-details-marker]:hidden">
                 <IconSettings className="h-5 w-5 text-wt-text-muted" />
               </summary>
               <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(100vw-2rem,280px)] space-y-4 rounded-xl border border-wt-border bg-wt-surface-1 p-4 shadow-lg">
                 <div>
                   <span className="mb-1.5 block text-xs font-medium text-wt-text-muted">Theme</span>
-                  <SearchableSelectCombobox
+                  <DropdownSelect
                     value={theme}
                     onChange={(nextTheme) => {
                       const next = nextTheme as "light" | "dark" | "system";
@@ -532,7 +552,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       { value: "dark", label: "Dark" },
                       { value: "system", label: "System" },
                     ]}
-                    placeholder="Search theme…"
                     aria-label="Theme"
                   />
                 </div>
