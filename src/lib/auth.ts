@@ -76,5 +76,12 @@ export const oauthErrorMessages: Record<string, string> = {
   missing_oauth_code: "No authorization code received from Google.",
   unregistered_user:
     "Your Google account is not registered. Please contact your administrator.",
+  account_inactive: "Your account is inactive. Please contact HR.",
+  unauthorized_email_domain:
+    "Sign in with your company Google account",
+  invalid_redirect_uri:
+    "OAuth redirect is misconfigured. Ask your administrator to add this app URL to Google OAuth and Render.",
+  google_token_exchange_failed:
+    "Google could not complete sign-in. Try again or contact support if it persists.",
   oauth_login_failed: "Sign-in failed. Please try again.",
 };

@@ -252,7 +252,7 @@ export function EmployeeAttendancePanel() {
               className="wt-scroll-both max-h-[min(70vh,560px)] overflow-y-auto rounded-xl border border-wt-border"
             >
               <table className="w-full text-sm">
-                <thead className="bg-wt-surface-2 text-wt-text-muted sticky top-0 z-10">
+                <thead className="wt-table-sticky-head text-wt-text-muted">
                   <tr>
                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Name</th>
                     <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Leave days</th>

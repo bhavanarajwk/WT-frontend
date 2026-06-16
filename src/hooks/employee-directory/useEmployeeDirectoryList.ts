@@ -24,5 +24,6 @@ export function useEmployeeDirectoryList(options?: Options) {
       return toPagedRows(res.data) as unknown as OnboardListItem[];
     },
     staleTime: 60_000,
+    refetchOnMount: false,
   });
 }

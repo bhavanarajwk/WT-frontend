@@ -175,9 +175,9 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
         ) : traineeRows.length === 0 ? (
           <p className="text-sm text-wt-text-muted">No trainees enrolled for this training.</p>
         ) : (
-          <div className="wt-scroll-both overflow-x-auto rounded-xl border border-wt-border">
-            <table className="min-w-full text-sm">
-              <thead className="bg-wt-surface-2 text-wt-text-muted">
+          <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
+            <table className="wt-scrollable-table text-sm">
+              <thead className="wt-table-sticky-head text-wt-text-muted">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium">Trainee</th>
                   <th className="text-left px-3 py-2 font-medium">Status</th>

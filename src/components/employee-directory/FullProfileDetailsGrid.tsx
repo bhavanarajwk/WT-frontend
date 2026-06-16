@@ -2,9 +2,27 @@
 
 import { EmployeeResumeLink } from "@/components/resumes/EmployeeResumeLink";
 import {
-  buildProfileDisplayEntries,
+  buildGroupedProfileSections,
   formatProfileDisplayValue,
+  type ProfileDisplayEntry,
 } from "@/utils/employeeDirectory";
+
+function ProfileDetailField({ entry }: { entry: ProfileDisplayEntry }) {
+  const spanClass = entry.fullWidth ? "sm:col-span-2" : "";
+
+  return (
+    <>
+      <dt className={`text-wt-text-muted ${spanClass}`}>{entry.label}</dt>
+      <dd className={`font-medium text-wt-text ${spanClass}`}>
+        {entry.resumeShareHref !== undefined ? (
+          <EmployeeResumeLink href={entry.resumeShareHref} />
+        ) : (
+          formatProfileDisplayValue(entry.value)
+        )}
+      </dd>
+    </>
+  );
+}
 
 export function FullProfileDetailsGrid({
   profile,
@@ -13,32 +31,22 @@ export function FullProfileDetailsGrid({
   profile: Record<string, unknown>;
   resumeShareHref?: string | null;
 }) {
-  const entries = buildProfileDisplayEntries(profile, resumeShareHref);
+  const sections = buildGroupedProfileSections(profile, resumeShareHref);
 
   return (
-    <div className="wt-scroll-both overflow-auto rounded-xl border border-wt-border">
-      <table className="min-w-full text-sm">
-        <thead className="bg-wt-surface-2 text-wt-text-muted">
-          <tr>
-            <th className="px-3 py-2 text-left font-medium whitespace-nowrap w-[32%]">Field</th>
-            <th className="px-3 py-2 text-left font-medium">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => (
-            <tr key={entry.label} className="border-t border-wt-border">
-              <td className="px-3 py-2 text-wt-text-muted whitespace-nowrap">{entry.label}</td>
-              <td className="px-3 py-2 font-medium">
-                {entry.resumeShareHref !== undefined ? (
-                  <EmployeeResumeLink href={entry.resumeShareHref} />
-                ) : (
-                  formatProfileDisplayValue(entry.value)
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-8">
+      {sections.map((section) => (
+        <section key={section.title}>
+          <h4 className="border-b border-wt-border pb-2 text-base font-semibold text-wt-text">
+            {section.title}
+          </h4>
+          <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
+            {section.entries.map((entry) => (
+              <ProfileDetailField key={entry.label} entry={entry} />
+            ))}
+          </dl>
+        </section>
+      ))}
     </div>
   );
 }

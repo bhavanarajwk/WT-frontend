@@ -41,7 +41,7 @@ export function EmployeeProfileSummaryCard({
         ) : null}
       </div>
 
-      <div className="flex flex-col items-center px-5 pb-4 pt-6">
+      <div className="flex flex-col items-center px-5 pb-6 pt-6">
         <div className="h-28 w-28 overflow-hidden rounded-full border border-wt-border bg-wt-surface-2">
           {photoSrc && !imageFailed ? (
             <img
@@ -59,39 +59,6 @@ export function EmployeeProfileSummaryCard({
         <p className="mt-4 text-base font-semibold text-wt-text">{displayName}</p>
         <p className="mt-0.5 text-sm text-wt-text-muted">{roleLine}</p>
       </div>
-
-      <ul className="space-y-0 border-t border-wt-border text-sm">
-        <li className="flex items-center justify-between gap-3 border-b border-wt-border px-5 py-3">
-          <span className="text-wt-text-muted">Employee ID</span>
-          <span className="font-medium text-right">
-            {formatProfileDisplayValue(pickProfileField(profile, ["emp_id", "empId"]))}
-          </span>
-        </li>
-        <li className="flex items-center justify-between gap-3 border-b border-wt-border px-5 py-3">
-          <span className="text-wt-text-muted">User type</span>
-          <span className="font-medium text-right">
-            {formatProfileDisplayValue(pickProfileField(profile, ["user_type", "userType"]))}
-          </span>
-        </li>
-        <li className="flex items-center justify-between gap-3 border-b border-wt-border px-5 py-3">
-          <span className="text-wt-text-muted">Work mode</span>
-          <span className="font-medium text-right">
-            {formatProfileDisplayValue(pickProfileField(profile, ["work_mode", "workMode"]))}
-          </span>
-        </li>
-        <li className="flex items-center justify-between gap-3 px-5 py-3">
-          <span className="text-wt-text-muted">Location</span>
-          <span className="font-medium text-right">
-            {formatProfileDisplayValue(
-              pickProfileField(profile, [
-                "work_location",
-                "work_location_type",
-                "workLocationType",
-              ])
-            )}
-          </span>
-        </li>
-      </ul>
 
       {(email || (phone && phone !== "—")) && (
         <div className="border-t border-wt-border px-5 py-4 text-sm space-y-1.5">

@@ -103,8 +103,8 @@ export function TalentPoolPageClient() {
               onPageChange={(p) => void loadUnallocatedPage(p)}
             >
               {unallocated.items.length ? (
-                <table className="min-w-full text-sm">
-                  <thead className="bg-wt-surface-2 text-wt-text-muted">
+                <table className="wt-scrollable-table text-sm">
+                  <thead className="wt-table-sticky-head text-wt-text-muted">
                     <tr>
                       <th className="text-left px-3 py-2 font-medium">Name</th>
                       <th className="text-left px-3 py-2 font-medium">Days without project</th>
@@ -175,7 +175,7 @@ function TalentPoolSection({
           onPageChange={onPageChange}
         />
       </div>
-      <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
+      <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
         {children}
       </div>
     </section>

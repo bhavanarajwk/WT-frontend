@@ -83,8 +83,8 @@ export function HrLeaveBalancesPanel({
 
       {rows.length ? (
         <div className="wt-scroll-both max-h-[min(60vh,480px)] rounded-xl border border-wt-border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-wt-surface-2 text-wt-text-muted">
+          <table className="wt-scrollable-table text-sm">
+            <thead className="wt-table-sticky-head text-wt-text-muted">
               <tr>
                 <th className="text-left px-3 py-2 font-medium">Emp ID</th>
                 <th className="text-left px-3 py-2 font-medium">Primary</th>

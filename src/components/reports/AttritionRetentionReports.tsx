@@ -117,8 +117,8 @@ function ReportTableCard({
         <p className="px-4 py-8 text-sm text-wt-text-muted text-center sm:px-5">{emptyLabel}</p>
       ) : (
         <div className="wt-scroll-both max-h-[min(360px,50vh)] overflow-auto">
-          <table className="min-w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted">
+          <table className="wt-scrollable-table text-sm">
+            <thead className="wt-table-sticky-head text-wt-text-muted">
               <tr>
                 {displayColumns.map((col) => (
                   <th

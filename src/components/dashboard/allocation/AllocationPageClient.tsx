@@ -112,6 +112,7 @@ import {
   PROJECT_SORT_OPTIONS,
   TIMELOG_SORT_OPTIONS,
   ALLOCATION_FORECAST_SORT_OPTIONS,
+  ALLOCATION_LIST_SORT_OPTIONS,
   toggleColumnSort,
 } from "@/utils/listSort";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
@@ -133,6 +134,11 @@ import {
   parseAllocationListRows,
   parseAllocationUpdateResponse,
   parseEmployeeAllocationsResponse,
+  parseDeallocatedAllocationListRows,
+  ALLOCATION_LIST_DEFAULT_SORT_ID,
+  filterAllocationListBySearch,
+  mergeUniqueAllocationListRows,
+  sortAllocationListForDisplay,
   sortAllocationListRows,
 } from "@/utils/allocationList";
 import { TALENT_POOL_QUERY_KEY } from "@/hooks/allocation/useTalentPool";
@@ -403,6 +409,8 @@ export function AllocationPageClient() {
     project_type: "ALL",
   });
   const [projectSortId, setProjectSortId] = useState(PROJECT_SORT_OPTIONS[0].id);
+  const [allocationListSearch, setAllocationListSearch] = useState("");
+  const [allocationListSortId, setAllocationListSortId] = useState(ALLOCATION_LIST_DEFAULT_SORT_ID);
   const [managerProjects, setManagerProjects] = useState<Array<Record<string, unknown>>>([]);
   const [managerPortfolioRows, setManagerPortfolioRows] = useState<Array<Record<string, unknown>>>([]);
   const [selectedManagerProjectCode, setSelectedManagerProjectCode] = useState("");
@@ -2294,14 +2302,33 @@ export function AllocationPageClient() {
     setAllocationsLoading(true);
     setAllocationsLoadError(null);
     try {
-      const res = await hrmsService.getAllocations({
-        page: ALLOCATION_LIST_PAGE,
-        size: ALLOCATION_LIST_SIZE,
-        includeSuperseded: "true",
-      });
-      const rows = sortAllocationListRows(
-        parseAllocationListRows((res as { data?: unknown }).data ?? res)
-      );
+      const [mainRes, deallocRes] = await Promise.all([
+        hrmsService.getAllocations({
+          page: ALLOCATION_LIST_PAGE,
+          size: "200",
+          view: "ALL",
+          includeSuperseded: "true",
+        }),
+        hrmsService
+          .getDeallocatedAllocations({ page: ALLOCATION_LIST_PAGE, size: "200" })
+          .catch(() => null),
+      ]);
+
+      let mainRows = parseAllocationListRows((mainRes as { data?: unknown }).data ?? mainRes);
+      if (!mainRows.length) {
+        const fallback = await hrmsService.getAllocations({
+          page: ALLOCATION_LIST_PAGE,
+          size: "200",
+          includeSuperseded: "true",
+        });
+        mainRows = parseAllocationListRows((fallback as { data?: unknown }).data ?? fallback);
+      }
+
+      const deallocRows = deallocRes
+        ? parseDeallocatedAllocationListRows((deallocRes as { data?: unknown }).data ?? deallocRes)
+        : [];
+
+      const rows = mergeUniqueAllocationListRows([...mainRows, ...deallocRows]);
       setAllocations(await enrichAllocationRowsWithContext(rows));
     } catch (err) {
       setAllocations([]);
@@ -2333,12 +2360,14 @@ export function AllocationPageClient() {
       try {
         const res = await hrmsService.getEmployeeAllocations(
           employeeEmail
-            ? { userEmail: employeeEmail, scope: "current_and_future" }
-            : { userId: userId!, scope: "current_and_future" }
+            ? { userEmail: employeeEmail, scope: "all" }
+            : { userId: userId!, scope: "all" }
         );
         const parsed = parseEmployeeAllocationsResponse(res);
         if (!parsed) throw new Error("Could not load employee allocations.");
-        const enriched = await enrichAllocationRowsWithContext(parsed.allocations);
+        const enriched = sortAllocationListForDisplay(
+          await enrichAllocationRowsWithContext(parsed.allocations)
+        );
         setSelectedEmployeeAllocations({
           employeeEmail: (parsed.employeeEmail || employeeEmail).toLowerCase(),
           employeeName:
@@ -2375,11 +2404,13 @@ export function AllocationPageClient() {
       try {
         const res = await hrmsService.getEmployeeAllocations({
           userEmail: normalizedEmail,
-          scope: "current_and_future",
+          scope: "all",
         });
         const parsed = parseEmployeeAllocationsResponse(res);
         if (!parsed) throw new Error("Could not load employee allocations.");
-        const enriched = await enrichAllocationRowsWithContext(parsed.allocations);
+        const enriched = sortAllocationListForDisplay(
+          await enrichAllocationRowsWithContext(parsed.allocations)
+        );
         setPickerEmployeeAllocations({
           employeeEmail: (parsed.employeeEmail || normalizedEmail).toLowerCase(),
           employeeName: parsed.employeeName || employeeName,
@@ -2546,7 +2577,19 @@ export function AllocationPageClient() {
   const projectPagination = useClientPagination(filteredProjects, {
     resetKeys: [projectFilters.search, projectFilters.project_type, projectSortId],
   });
-  const allocationPagination = useClientPagination(allocations);
+  const filteredAllocations = useMemo(
+    () => filterAllocationListBySearch(allocations, allocationListSearch),
+    [allocations, allocationListSearch]
+  );
+
+  const sortedAllocations = useMemo(
+    () => sortAllocationListForDisplay(filteredAllocations, allocationListSortId),
+    [filteredAllocations, allocationListSortId]
+  );
+
+  const allocationPagination = useClientPagination(sortedAllocations, {
+    resetKeys: [allocationListSearch, allocationListSortId],
+  });
   const normalizedManagerProjects = useMemo(() => {
     const sourceRows = managerProjects.length ? managerProjects : managerPortfolioRows;
     return Array.from(
@@ -3620,8 +3663,8 @@ export function AllocationPageClient() {
                                   {filteredProjects.length ? (
                                     <>
                                     <div className="wt-scroll-both max-h-[min(50vh,420px)] overflow-auto rounded-lg border border-wt-border">
-                                      <table className="min-w-full text-sm">
-                                        <thead className="bg-wt-surface-1 text-wt-text-muted">
+                                      <table className="wt-scrollable-table text-sm">
+                                        <thead className="wt-table-sticky-head text-wt-text-muted">
                                           <tr>
                                             <th className="px-3 py-2 text-left font-medium">
                                               <TableSortHeader
@@ -3910,9 +3953,9 @@ export function AllocationPageClient() {
                                     {!pickerEmployeeAllocationsLoading &&
                                     pickerEmployeeAllocations &&
                                     pickerEmployeeAllocations.allocations.length > 0 ? (
-                                      <div className="wt-scroll-both max-h-[min(40vh,280px)] rounded-xl border border-wt-border">
-                                        <table className="min-w-full text-sm">
-                                          <thead className="bg-wt-surface-1 text-wt-text-muted">
+                                      <div className="wt-scroll-both max-h-[min(40vh,280px)] overflow-auto rounded-xl border border-wt-border">
+                                        <table className="wt-scrollable-table text-sm">
+                                          <thead className="wt-table-sticky-head text-wt-text-muted">
                                             <tr>
                                               <th className="text-left px-3 py-2 font-medium">Project</th>
                                               <th className="text-left px-3 py-2 font-medium">Allocation %</th>
@@ -4082,7 +4125,19 @@ export function AllocationPageClient() {
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
                                     <p className="text-sm font-medium">Allocation records</p>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[200px] justify-end">
+                                      <label className="sr-only" htmlFor="allocation-list-search">
+                                        Search allocations
+                                      </label>
+                                      <input
+                                        id="allocation-list-search"
+                                        type="search"
+                                        className="input-field min-w-[200px] flex-1 max-w-md px-3 py-1.5 text-sm"
+                                        placeholder="Search project, employee, role, type, billing…"
+                                        value={allocationListSearch}
+                                        onChange={(e) => setAllocationListSearch(e.target.value)}
+                                        aria-label="Search allocations"
+                                      />
                                       <button
                                         type="button"
                                         className="rounded-lg border border-wt-border bg-wt-surface-1 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
@@ -4098,20 +4153,77 @@ export function AllocationPageClient() {
                                   ) : null}
                                   {allocationsLoading && !allocations.length ? (
                                     <p className="text-sm text-wt-text-muted">Loading allocations…</p>
-                                  ) : allocations.length ? (
+                                  ) : sortedAllocations.length ? (
                                     <>
                                     <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
-                                      <table className="min-w-full text-sm">
-                                        <thead className="bg-wt-surface-2 text-wt-text-muted">
+                                      <table className="wt-scrollable-table text-sm">
+                                        <thead className="wt-table-sticky-head text-wt-text-muted">
                                           <tr>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">ALLOCATED PROJECT</th>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                              <TableSortHeader
+                                                label="ALLOCATED PROJECT"
+                                                activeDirection={activeSortDirectionForColumn(
+                                                  "allocated_project",
+                                                  allocationListSortId,
+                                                  ALLOCATION_LIST_SORT_OPTIONS
+                                                )}
+                                                sortable
+                                                onSort={() =>
+                                                  setAllocationListSortId(
+                                                    toggleColumnSort(
+                                                      "allocated_project",
+                                                      allocationListSortId,
+                                                      ALLOCATION_LIST_SORT_OPTIONS
+                                                    )
+                                                  )
+                                                }
+                                              />
+                                            </th>
                                             <th className="text-left px-3 py-2 font-medium whitespace-nowrap">EMPLOYEE NAME</th>
                                             <th className="text-left px-3 py-2 font-medium whitespace-nowrap">PROJECT ROLE</th>
                                             <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                               ALLOCATION %
                                             </th>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">ALLOCATION TYPE</th>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">BILLING STATUS</th>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                              <TableSortHeader
+                                                label="ALLOCATION TYPE"
+                                                activeDirection={activeSortDirectionForColumn(
+                                                  "allocation_type",
+                                                  allocationListSortId,
+                                                  ALLOCATION_LIST_SORT_OPTIONS
+                                                )}
+                                                sortable
+                                                onSort={() =>
+                                                  setAllocationListSortId(
+                                                    toggleColumnSort(
+                                                      "allocation_type",
+                                                      allocationListSortId,
+                                                      ALLOCATION_LIST_SORT_OPTIONS
+                                                    )
+                                                  )
+                                                }
+                                              />
+                                            </th>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                              <TableSortHeader
+                                                label="BILLING STATUS"
+                                                activeDirection={activeSortDirectionForColumn(
+                                                  "billing_status",
+                                                  allocationListSortId,
+                                                  ALLOCATION_LIST_SORT_OPTIONS
+                                                )}
+                                                sortable
+                                                onSort={() =>
+                                                  setAllocationListSortId(
+                                                    toggleColumnSort(
+                                                      "billing_status",
+                                                      allocationListSortId,
+                                                      ALLOCATION_LIST_SORT_OPTIONS
+                                                    )
+                                                  )
+                                                }
+                                              />
+                                            </th>
                                             <th className="text-left px-3 py-2 font-medium whitespace-nowrap">START DATE</th>
                                             <th className="text-left px-3 py-2 font-medium whitespace-nowrap">END DATE</th>
                                             <th className="text-right px-3 py-2 font-medium whitespace-nowrap">ACTIONS</th>
@@ -4319,7 +4431,7 @@ export function AllocationPageClient() {
                                         <div className="flex flex-wrap items-center justify-between gap-2">
                                           <p className="text-sm font-medium">
                                             {selectedEmployeeAllocations.employeeName} — current &amp;
-                                            future allocations
+                                            past allocations
                                           </p>
                                           <div className="flex flex-wrap items-center gap-2">
                                             <p className="text-xs text-wt-text-muted">
@@ -4339,8 +4451,8 @@ export function AllocationPageClient() {
                                           </div>
                                         </div>
                                         <div className="wt-scroll-both max-h-[min(50vh,360px)] rounded-xl border border-wt-border">
-                                          <table className="min-w-full text-sm">
-                                            <thead className="bg-wt-surface-2 text-wt-text-muted">
+                                          <table className="wt-scrollable-table text-sm">
+                                            <thead className="wt-table-sticky-head text-wt-text-muted">
                                               <tr>
                                                 <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                                   ALLOCATED PROJECT
@@ -4418,11 +4530,15 @@ export function AllocationPageClient() {
                                       </div>
                                     ) : null}
                                     </>
+                                  ) : allocations.length ? (
+                                    <p className="text-sm text-wt-text-muted">
+                                      No allocations match your search.
+                                    </p>
                                   ) : (
                                     <p className="text-sm text-wt-text-muted">
                                       {allocationsLoadError
                                         ? "Allocation list could not be loaded."
-                                        : "No active allocations. Create one under Project allocation, then refresh."}
+                                        : "No allocations found. Create one under Project allocation, then refresh."}
                                     </p>
                                   )}
                                 </div>

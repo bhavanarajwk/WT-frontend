@@ -14,8 +14,8 @@ export function useExitInterviewProfile(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["profile", "exit-interview", endpoints.profile.self],
     enabled,
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 60_000,
+    refetchOnMount: false,
     queryFn: async () => {
       const profile = await fetchSelfProfile(userRoles);
       if (!profile) return null;

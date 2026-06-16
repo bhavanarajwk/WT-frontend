@@ -112,8 +112,8 @@ export function InvitedEmployeesTable({
   return (
     <div className="space-y-2">
       <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
-        <table className="min-w-full text-sm">
-          <thead className="bg-wt-surface-2 text-wt-text-muted">
+        <table className="wt-scrollable-table text-sm">
+          <thead className="wt-table-sticky-head text-wt-text-muted">
             <tr>
               {displayColumns.map((col) => {
                 const columnSortOpts = sortOptionsForColumn(col, SORT_OPTIONS);
