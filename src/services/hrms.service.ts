@@ -282,7 +282,7 @@ export const hrmsService = {
     empId: string,
     payload: {
       resignation_date: string;
-      exit_type: "VOLUNTARY" | "INVOLUNTARY";
+      exit_type: "VOLUNTARY" | "INVOLUNTARY" | "CONTRACTUAL";
       last_working_day?: string;
       reason?: string | null;
       critical_skill?: string | null;

@@ -182,7 +182,8 @@ export function isLeaveRequestType(value: unknown): boolean {
 
 
 export function isLeaveEmailOnlyWorkflow(row: Record<string, unknown>): boolean {
-  return isLeaveRequestType(pickRowField(row, "request_type", "requestType"));
+  if (!isLeaveRequestType(pickRowField(row, "request_type", "requestType"))) return false;
+  return requestFinalStatus(row) === "SUBMITTED";
 }
 
 
@@ -307,9 +308,9 @@ export function canHrToggleLeaveWfh(
 
   if (!options.hasHrAccess) return false;
 
-  if (isLeaveEmailOnlyWorkflow(row)) return false;
+  if (isLeaveRequestType(pickRowField(row, "request_type", "requestType"))) return false;
 
-  if (!isLeaveOrWfhRequestType(pickRowField(row, "request_type", "requestType"))) return false;
+  if (isLeaveEmailOnlyWorkflow(row)) return false;
 
   return canHrReviewUserRequest(row, options);
 
@@ -359,7 +360,11 @@ export function hrTeamActionBlockedHint(
   const requestType = pickRowField(row, "request_type", "requestType");
 
   if (isLeaveEmailOnlyWorkflow(row)) {
-    return "Leave is emailed to managers (Phase 1)";
+    return "Legacy leave request — awaiting manager action via email";
+  }
+
+  if (isLeaveRequestType(requestType)) {
+    return "Manager approval is final for leave";
   }
 
   if (!isLeaveOrWfhRequestType(requestType) && !isCompOffRequestType(requestType)) {

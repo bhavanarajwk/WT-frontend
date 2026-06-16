@@ -73,8 +73,7 @@ export function LeaveManagerSelector({
         Select Managers <span className="text-rose-600">*</span>
       </p>
       <p className="text-xs text-wt-text-muted">
-        Selected managers receive an email notification. Leave is not approved or rejected in WebTrak
-        during Phase 1.
+        Selected managers receive a notification and can approve or reject your leave in WebTrak.
       </p>
       <div className="max-h-48 space-y-2 overflow-auto rounded-xl border border-wt-border bg-wt-surface-2/30 p-3">
         {options.map((option) => {

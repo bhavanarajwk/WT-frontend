@@ -19,6 +19,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   "timelog-team": "/dashboard/timelog/team",
   leave: "/dashboard/leave",
   "leave-team": "/dashboard/leave/team",
+  "leave-org": "/dashboard/leave/team",
   "annual-calendar": "/dashboard/annual-calendar",
   "holiday-calendars": "/dashboard/holiday-calendars",
   learning: "/dashboard/learning-development",
@@ -81,6 +82,21 @@ export function dashboardNavIdFromPathname(pathname: string): string {
     }
   }
   return "employee-directory";
+}
+
+export function isDashboardNavChildActive(
+  childId: string,
+  activeSection: string,
+  pathname: string,
+  options?: { hasHrAccess?: boolean; hasManagerAccess?: boolean; hasDmAccess?: boolean }
+): boolean {
+  if (activeSection === childId) return true;
+  const onTeamLeave =
+    pathname === "/dashboard/leave/team" || pathname.startsWith("/dashboard/leave/team/");
+  if (!onTeamLeave) return false;
+  if (childId === "leave-org" && options?.hasHrAccess) return true;
+  if (childId === "leave-team" && (options?.hasManagerAccess || options?.hasDmAccess)) return true;
+  return false;
 }
 
 export function dashboardHref(navId: string): string {

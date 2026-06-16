@@ -79,8 +79,14 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "leave-team",
-        label: "Leave Requests",
-        roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
+        label: "Team Requests",
+        roles: ["ROLE_MANAGER", "ROLE_DM"],
+        icon: "calendarDays",
+      },
+      {
+        id: "leave-org",
+        label: "All Employee Requests",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
@@ -132,7 +138,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "leave",
         label: "Leave Request",
-        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM"],
         icon: "calendarDays",
       },
       {
@@ -199,6 +205,12 @@ function childVisible(
   options: { hasHrAccess: boolean }
 ): boolean {
   if (child.id === "employee" && !options.hasHrAccess) return false;
+  if (
+    child.id === "leave" &&
+    (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN"))
+  ) {
+    return false;
+  }
   return child.roles.length === 0 ? true : child.roles.some((r) => userRoles.includes(r));
 }
 

@@ -7,24 +7,24 @@ export function LeaveWorkflowNotice({
 }) {
   const copy: Record<typeof variant, { title: string; body: string }> = {
     employee: {
-      title: "Phase 1 Leave Workflow",
-      body: "Select one or more managers when you submit leave. WebTrak emails them immediately. Approval and rejection are handled outside the application in Phase 1.",
+      title: "Leave request",
+      body: "Select one or more managers to approve your leave. You can optionally add employees who should receive the notification email. Manager approval is final.",
     },
     manager: {
-      title: "Phase 1 Leave Workflow",
-      body: "Select managers to notify by email when you submit leave. In-app approval and rejection are not used for leave in Phase 1.",
+      title: "Leave request",
+      body: "Select managers when submitting leave. Optional additional recipients receive the same notification email at their work address.",
     },
     dm: {
-      title: "Phase 1 Leave Workflow",
-      body: "Leave requests are emailed to selected managers. Approve and reject actions for leave are not available in WebTrak during Phase 1.",
+      title: "Team leave requests",
+      body: "Review and approve or reject leave requests from managers on your team. Manager approval is final for employee leave.",
     },
     hr: {
-      title: "Phase 1 Leave Workflow",
-      body: "Employee leave requests are emailed to selected managers. HR finalize actions for leave are disabled in WebTrak during Phase 1.",
+      title: "All employee leave requests",
+      body: "Search and review leave requests across the organization. Managers approve employee leave in WebTrak; HR does not perform a separate final approval step.",
     },
     "hr-dual-required": {
-      title: "Phase 1 Leave Workflow",
-      body: "Select managers to notify by email. Leave approval is handled outside WebTrak during Phase 1.",
+      title: "Leave request",
+      body: "Select managers to notify. HR-submitted requests follow the HR and Admin dual-approval path.",
     },
   };
 
