@@ -54,7 +54,7 @@ export function HrLeaveBalancesPanel({
   return (
     <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
       <div>
-        <h3 className="font-semibold">Leave balances</h3>
+        <h3 className="font-semibold">Leave Balances</h3>
         <p className="text-sm text-wt-text-muted mt-1">
           Organization leave and comp-off balances by month (HR / Admin).
         </p>

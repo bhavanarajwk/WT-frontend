@@ -2,6 +2,7 @@
 
 import { isValidElement, type ReactNode, useMemo, useState } from "react";
 import { ApiDateField, FieldLabel } from "@/components/dashboard/ui/forms";
+import { FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import {
@@ -35,7 +36,7 @@ export function InputField({
   }
 
   return (
-    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+    <label className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} />
       <input
         className="input-field px-3 py-2 text-sm"
@@ -66,7 +67,7 @@ export function FileField({
   onPick?: (file: File | null) => void;
 }) {
   return (
-    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+    <label className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} />
       <input
         type="file"
@@ -191,11 +192,6 @@ export function DataTable({
           </tbody>
         </table>
       </div>
-      {paginate && pagination.totalItems > 0 ? (
-        <p className="text-xs text-wt-text-muted">
-          Showing {pagination.totalItems} row{pagination.totalItems === 1 ? "" : "s"}
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -103,17 +103,13 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
       <DashboardToast toast={toast} />
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 px-5 py-6 md:px-7">
-        <h3 className="text-lg font-semibold">Exit survey</h3>
+        <h3 className="text-lg font-semibold">Exit Survey</h3>
 
         {profileQ.isError ? (
           <p className="mt-3 text-sm text-rose-600">
             Could not load your profile.
             {profileQ.error instanceof Error ? ` ${profileQ.error.message}` : ""}
           </p>
-        ) : null}
-
-        {profileQ.isLoading ? (
-          <p className="mt-3 text-sm text-wt-text-muted">Loading exit survey…</p>
         ) : null}
 
         {statusMessage ? (
@@ -143,10 +139,6 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
               ) : null}
             </div>
 
-            {formDefQ.isLoading ? (
-              <p className="mt-6 text-sm text-wt-text-muted">Loading form…</p>
-            ) : null}
-
             {formDefQ.isError ? (
               <p className="mt-6 text-sm text-rose-600">Could not load the survey questions.</p>
             ) : null}
@@ -168,7 +160,7 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
                     disabled={actionLoading}
                     onClick={handleSubmit}
                   >
-                    {actionLoading ? "Submitting…" : "Submit exit survey"}
+                    {actionLoading ? "Submitting…" : "Submit Exit Survey"}
                   </button>
                 </div>
               </div>

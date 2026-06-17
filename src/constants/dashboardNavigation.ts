@@ -1,4 +1,5 @@
 import type { SidebarIconName } from "@/constants/sidebarIcons";
+import { toTitleCase } from "@/utils/titleCase";
 
 export type NavChild = {
   id: string;
@@ -67,13 +68,13 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "exit-interview-submissions",
-        label: "Exit survey",
+        label: "Exit Survey",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "fileText",
       },
       {
         id: "leave-team",
-        label: "Leave requests",
+        label: "Leave Requests",
         roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
@@ -93,13 +94,13 @@ export const dashboardNavigation: NavItem[] = [
     children: [
       {
         id: "allocation",
-        label: "Projects allocation",
+        label: "Projects Allocation",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "layoutGrid",
       },
       {
         id: "allocation-extension",
-        label: "Allocation extension",
+        label: "Allocation Extension",
         roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarRange",
       },
@@ -125,13 +126,13 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "leave",
-        label: "Leave request",
+        label: "Leave Request",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
         id: "annual-calendar",
-        label: "Annual calendar",
+        label: "Annual Calendar",
         roles: [
           "ROLE_EMPLOYEE",
           "ROLE_MANAGER",
@@ -144,7 +145,7 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "exit-interview",
-        label: "Exit survey",
+        label: "Exit Survey",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
         icon: "fileText",
       },
@@ -221,7 +222,7 @@ export function filterVisibleNavigation(
   return result;
 }
 
-/** Offboarded employees may only open Exit survey under Personal (during notice only). */
+/** Offboarded Employees may only open Exit survey under Personal (during notice only). */
 export function filterNavigationForOffboardedUser(
   _items: NavItem[],
   options?: { showExitSurvey?: boolean }
@@ -259,19 +260,8 @@ export function accordionSectionForPathname(pathname: string, activeSection: str
 const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   profile: "Profile",
   overview: "Overview",
+  "employee-directory": "Employee Directory",
 };
-
-function toTitleCase(label: string): string {
-  return label
-    .split(/\s+/)
-    .map((word) => {
-      if (word === "&") return word;
-      const lower = word.toLowerCase();
-      if (lower === "vs") return "vs";
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    })
-    .join(" ");
-}
 
 function groupChildPageTitle(groupLabel: string, childLabel: string): string {
   if (childLabel.toLowerCase().startsWith(groupLabel.toLowerCase())) {

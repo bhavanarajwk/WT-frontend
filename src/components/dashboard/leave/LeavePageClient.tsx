@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -3075,9 +3076,9 @@ export function LeavePageClient() {
 
   const renderProfileAssignedProjectsSection = () => (
     <div className="mt-8 border-t border-wt-border pt-6">
-      <h4 className="text-sm font-semibold mb-3">Assigned projects</h4>
+      <h4 className="text-sm font-semibold mb-3">Assigned Projects</h4>
       {profileAssignedProjectsLoading ? (
-        <p className="text-sm text-wt-text-muted">Loading assigned projects…</p>
+        <SectionLoading label="Loading assigned projects…" />
       ) : (
         <DataTable
           columns={profileAssignedProjectColumns}
@@ -3792,7 +3793,7 @@ export function LeavePageClient() {
                                               <div className="inline-flex items-center justify-end gap-1">
                                                 <button
                                                   type="button"
-                                                  className="rounded-lg px-2.5 py-1.5 text-xs border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                                                  className="btn-action px-2.5 py-1.5 text-xs"
                                                   disabled={actionLoading || !requestId || !isPending}
                                                   onClick={() => {
                                                     const rowType = String(

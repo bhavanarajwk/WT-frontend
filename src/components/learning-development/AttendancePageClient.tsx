@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -149,7 +150,7 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wt-border pb-4">
-          <h2 className="font-semibold">Trainee attendance</h2>
+          <h2 className="font-semibold">Trainee Attendance</h2>
           <button
             type="button"
             className="btn-primary px-4 py-2 text-sm"
@@ -169,7 +170,7 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
         {!trainingId ? (
           <p className="text-sm text-wt-text-muted">Select a training to load trainees.</p>
         ) : traineesQ.isLoading ? (
-          <p className="text-sm text-wt-text-muted">Loading trainees…</p>
+          <SectionLoading label="Loading trainees…" />
         ) : !sessionId ? (
           <p className="text-sm text-wt-text-muted">Select a session to mark attendance.</p>
         ) : traineeRows.length === 0 ? (
@@ -206,7 +207,7 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
       </section>
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h2 className="font-semibold">Attendance analytics</h2>
+        <h2 className="font-semibold">Attendance Analytics</h2>
         <SelectField
           label="View employee"
           className="max-w-md"

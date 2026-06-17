@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
 import { resolveProfilePhotoSrc } from "@/components/dashboard/ui/profile";
 import {
   formatProfileDisplayValue,
@@ -34,11 +35,7 @@ export function EmployeeProfileSummaryCard({
   return (
     <aside className="rounded-xl border border-wt-border bg-wt-surface-1 shadow-sm h-fit xl:sticky xl:top-24">
       <div className="border-b border-wt-border px-5 py-4">
-        {status ? (
-          <span className="inline-flex rounded-md border border-wt-border bg-wt-surface-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-wt-text-muted">
-            {status}
-          </span>
-        ) : null}
+        {status ? <EmployeeStatusBadge status={status} /> : null}
       </div>
 
       <div className="flex flex-col items-center px-5 pb-6 pt-6">

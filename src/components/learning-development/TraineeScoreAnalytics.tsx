@@ -1,5 +1,7 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+
 import { useMemo } from "react";
 import type { TraineeTableRow } from "@/utils/learning/participants";
 import {
@@ -90,7 +92,7 @@ export function TraineeScoreAnalytics({
   return (
     <div className="space-y-3">
       {scoresLoading ? (
-        <p className="text-xs text-wt-text-muted">Loading saved scores…</p>
+        <SectionLoading compact label="Loading saved scores…" className="py-2" />
       ) : null}
       <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
         <table className="wt-scrollable-table text-sm">

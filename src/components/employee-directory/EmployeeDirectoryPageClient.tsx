@@ -18,11 +18,13 @@ import {
 } from "@/utils/employeeDirectory";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import {
   SCROLLABLE_TABLE_CLASS,
   ScrollableTable,
   STICKY_TABLE_HEAD_CLASS,
 } from "@/components/dashboard/ui/ScrollableTable";
+import { useClientPagination } from "@/hooks/useClientPagination";
 import {
   activeSortDirectionForColumn,
   applyListSort,
@@ -43,6 +45,8 @@ const USER_TYPE_SELECT_OPTIONS = [
 ];
 
 type UserTypeFilterValue = (typeof USER_TYPE_FILTER_OPTIONS)[number]["value"] | "";
+
+const EMPLOYEE_DIRECTORY_PAGE_SIZE = 10;
 
 const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "name", label: "Employee Name" },
@@ -165,6 +169,11 @@ export function EmployeeDirectoryPageClient() {
     return applyListSort(filtered, sortId, EMPLOYEE_DIRECTORY_SORT_OPTIONS);
   }, [rows, search, userTypeFilter, sortId]);
 
+  const pagination = useClientPagination(tableRows, {
+    pageSize: EMPLOYEE_DIRECTORY_PAGE_SIZE,
+    resetKeys: [search, userTypeFilter, sortId],
+  });
+
   const handleCopyField = useCallback(
     async (value: string, successMessage: string) => {
       const text = value.trim();
@@ -196,20 +205,14 @@ export function EmployeeDirectoryPageClient() {
   );
 
   if (authStatus === "loading") {
-    return (
-      <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-sm text-wt-text-muted shadow-sm">
-          Loading…
-        </div>
-      </DashboardPageShell>
-    );
+    return <DashboardPageShell>{null}</DashboardPageShell>;
   }
 
   if (!canViewDirectory) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
-          <h3 className="text-lg font-semibold">Access restricted</h3>
+          <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="mt-2 text-sm text-wt-text-muted">
             Employee Directory is available to HR and admin users only.
           </p>
@@ -222,11 +225,11 @@ export function EmployeeDirectoryPageClient() {
   }
 
   return (
-    <DashboardPageShell>
+    <DashboardPageShell className="wt-detail-page">
       <DashboardToast toast={toast} position="top" />
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
-        <div className="border-b border-wt-border px-5 py-5 md:px-7 md:py-6">
-          <h3 className="text-lg font-semibold">All employees</h3>
+      <div className="wt-detail-scroll-root wt-detail-panel rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
+        <div className="wt-detail-panel__header border-b border-wt-border px-5 py-5 md:px-7 md:py-6">
+          <h3 className="text-lg font-semibold">All Employees</h3>
           <div className="mt-4 flex items-stretch gap-2 overflow-visible">
             <div className="min-w-0 flex-1">
               <label className="sr-only" htmlFor="employee-directory-search">
@@ -263,11 +266,7 @@ export function EmployeeDirectoryPageClient() {
           </div>
         </div>
 
-        <div className="p-5 md:p-7">
-          {isLoading ? (
-            <p className="text-sm text-wt-text-muted">Loading employees…</p>
-          ) : null}
-
+        <div className="wt-detail-panel__body p-5 md:p-7">
           {isError ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               <p>Could not load employees.{error instanceof Error ? ` ${error.message}` : ""}</p>
@@ -290,7 +289,11 @@ export function EmployeeDirectoryPageClient() {
 
           {!isLoading && !isError && tableRows.length ? (
             <>
-              <ScrollableTable>
+              <div className="wt-detail-scroll-section min-h-0">
+                <ScrollableTable
+                  scrollChain
+                  maxHeightClass="max-h-[min(58vh,560px)]"
+                >
                 <table className={SCROLLABLE_TABLE_CLASS}>
                   <thead className={STICKY_TABLE_HEAD_CLASS}>
                     <tr>
@@ -334,7 +337,7 @@ export function EmployeeDirectoryPageClient() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-wt-border">
-                    {tableRows.map(({ empId, display, record }) => {
+                    {pagination.pageItems.map(({ empId, display, record }) => {
                       const workEmail = rowEmail(record);
                       const showResendInvite =
                         isInvitedEmployeeStatus(display.status) && Boolean(workEmail);
@@ -364,14 +367,14 @@ export function EmployeeDirectoryPageClient() {
                                 {showResendInvite ? (
                                   <button
                                     type="button"
-                                    className="rounded-lg border border-wt-border bg-wt-surface-1 px-2.5 py-1 text-xs font-medium text-wt-text hover:bg-wt-surface-2 disabled:opacity-50"
+                                    className="btn-action px-2.5 py-1 text-xs"
                                     disabled={actionLoading || isResending}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleResendInvite(workEmail);
                                     }}
                                   >
-                                    {isResending ? "Sending…" : "Resend invite"}
+                                    {isResending ? "Sending…" : "Resend"}
                                   </button>
                                 ) : null}
                               </div>
@@ -406,9 +409,15 @@ export function EmployeeDirectoryPageClient() {
                   </tbody>
                 </table>
               </ScrollableTable>
-              <p className="mt-3 text-xs text-wt-text-muted">
-                Showing {tableRows.length} employee{tableRows.length === 1 ? "" : "s"}
-              </p>
+              </div>
+              <ListPagination
+                className="mt-4"
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                pageSize={pagination.pageSize}
+                onPageChange={pagination.setPage}
+              />
             </>
           ) : null}
         </div>

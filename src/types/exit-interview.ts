@@ -5,6 +5,7 @@ export type ExitInterviewProfileFlags = {
   exit_interview_resignation_date: string | null;
   exit_interview_last_working_day: string | null;
   exit_interview_days_until_last_working_day: number | null;
+  portal_locked: boolean;
 };
 
 export type FormFieldOption = { value: string; label: string };
@@ -62,6 +63,12 @@ export type ExitInterviewSubmitResult = {
 
 export type ExitInterviewSubmissionStatus = "SUBMITTED" | "PENDING";
 
+export type ExitInterviewResponseField = {
+  field: string;
+  label: string;
+  value: unknown;
+};
+
 export type ExitInterviewListItem = {
   emp_id: string | null;
   employee_name: string;
@@ -74,6 +81,9 @@ export type ExitInterviewListItem = {
   /** @deprecated API legacy field; prefer exit_type */
   separation_type?: string | null;
   submission_status: ExitInterviewSubmissionStatus;
+  employee_status?: string | null;
+  lookup_id?: string;
+  can_view_submission?: boolean;
 };
 
 export type ExitInterviewSubmissionsListData = {
@@ -84,7 +94,7 @@ export type ExitInterviewSubmissionsListData = {
 };
 
 export type ExitInterviewSubmissionDetail = {
-  emp_id: string;
+  emp_id: string | null;
   employee_name: string;
   email: string;
   department: string | null;
@@ -94,12 +104,39 @@ export type ExitInterviewSubmissionDetail = {
   exit_type?: string | null;
   /** @deprecated API legacy field; prefer exit_type */
   separation_type?: string | null;
+  employee_status?: string | null;
+  submission_status?: ExitInterviewSubmissionStatus;
   responses: Record<string, unknown>;
+  response_fields?: ExitInterviewResponseField[];
   minutes_of_meeting?: string | null;
 };
 
 export type ExitInterviewMinutesOfMeetingUpdate = {
   minutes_of_meeting?: string | null;
+};
+
+export type ExitInterviewResendResult = {
+  emp_id: string;
+  email: string;
+  employee_name: string;
+  message: string;
+};
+
+export type ExitSurveyResendStatus = "SENT" | "SKIPPED" | "FAILED";
+
+export type ExitSurveyBulkResendItemResult = {
+  emp_id: string;
+  email: string | null;
+  employee_name: string | null;
+  status: ExitSurveyResendStatus;
+  message: string;
+};
+
+export type ExitSurveyBulkResendData = {
+  sent_count: number;
+  skipped_count: number;
+  failed_count: number;
+  results: ExitSurveyBulkResendItemResult[];
 };
 
 export type ExitInterviewSubmissionsQuery = {

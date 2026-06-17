@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -7,7 +8,6 @@ import { useAuth } from "@/context/AuthContext";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
 import { hrmsService, type PagedData } from "@/services/hrms.service";
-import { useOverviewData } from "@/hooks/useOverviewData";
 import { ApiError } from "@/api/error";
 import { toRows, toPagedRows } from "@/utils/apiRows";
 import {
@@ -61,7 +61,6 @@ import {
   formatAllocatedHoursPercentLabel,
 } from "@/utils/dashboard/validation";
 import { formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
-import { loadSelfProfileState } from "@/utils/selfProfile";
 import {
   allocationPercentLabelByCode,
   allocationPercentOptionsForDesignation,
@@ -94,7 +93,7 @@ import {
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
 import { allocationEmployeesToPickerUsers } from "@/utils/allocationEmployees";
-import { parseProjectPickerRows } from "@/utils/projectPicker";
+import { isHrCreatedProjectCode } from "@/utils/projectPicker";
 import { MetricCard } from "@/components/dashboard/ui/MetricCard";
 import { InputField, SelectField, FileField, UploadTile, FieldLabel, NativeSelectField } from "@/components/dashboard/ui/forms";
 import {
@@ -142,6 +141,16 @@ import {
   sortAllocationListRows,
 } from "@/utils/allocationList";
 import { TALENT_POOL_QUERY_KEY } from "@/hooks/allocation/useTalentPool";
+import {
+  fetchAllocationOnboardDirectory,
+  ALLOCATION_ONBOARD_DIRECTORY_QUERY_KEY,
+  useAllocationOnboardDirectory,
+} from "@/hooks/allocation/useAllocationOnboardDirectory";
+import {
+  fetchHrProjects,
+  HR_PROJECTS_QUERY_KEY,
+  useHrProjects,
+} from "@/hooks/allocation/useHrProjects";
 
 
 
@@ -158,14 +167,20 @@ export function AllocationPageClient() {
   };
 
   const { user, signOut, refresh: refreshSession } = useAuth();
+  const {
+    requiresSelfOnboarding,
+    isSelfOnboarded,
+    setIsSelfOnboarded,
+    loadMyProfile,
+    employeeSelfServeProfile,
+    profile: employeeProfile,
+  } = useDashboardAccess();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const talentPoolPrefillHandled = useRef<string | null>(null);
-  const { metrics, loading, refresh } = useOverviewData();
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
     () => defaultInvitedEmployeesDateRange().from
@@ -204,9 +219,6 @@ export function AllocationPageClient() {
   const projectCrudFormRef = useRef<HTMLDivElement>(null);
   const allocationFormRef = useRef<HTMLDivElement>(null);
   const [allocationRoles, setAllocationRoles] = useState<string[]>([]);
-  const [allocationProjects, setAllocationProjects] = useState<
-    Array<{ code: string; name: string; project_type: string; id?: number }>
-  >([]);
   const [allocationEmployeePickerOpen, setAllocationEmployeePickerOpen] = useState(false);
   const [allocationEmployeePickerQuery, setAllocationEmployeePickerQuery] = useState("");
   const allocationEmployeeComboboxRef = useRef<HTMLDivElement>(null);
@@ -220,7 +232,6 @@ export function AllocationPageClient() {
   const [pickerEmployeeAllocationsError, setPickerEmployeeAllocationsError] = useState<string | null>(
     null
   );
-  const [projects, setProjects] = useState<Array<Record<string, unknown>>>([]);
   const [assignedProjects, setAssignedProjects] = useState<Array<Record<string, unknown>>>([]);
   const [profileAssignedProjects, setProfileAssignedProjects] = useState<
     Array<Record<string, unknown>>
@@ -313,7 +324,6 @@ export function AllocationPageClient() {
     target_email: "",
     role: "ROLE_HR",
   });
-  const [roleAssignUsers, setRoleAssignUsers] = useState<Array<{ name: string; email: string }>>([]);
 
   const [leaveRequestForm, setLeaveRequestForm] = useState({
     request_from_date: "",
@@ -401,7 +411,6 @@ export function AllocationPageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfProfileForm.yoe]);
-  const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(user?.status === "ACTIVE");
   const [projectForm, setProjectForm] = useState(createEmptyProjectForm);
   const [editingProjectCode, setEditingProjectCode] = useState<string>("");
   const [projectFilters, setProjectFilters] = useState({
@@ -417,6 +426,8 @@ export function AllocationPageClient() {
   const [teamTimelogEmailFilter, setTeamTimelogEmailFilter] = useState("ALL");
   const managerDataLoadedRef = useRef(false);
   const managerDataLoadingRef = useRef(false);
+  const managerProjectsRef = useRef<Array<Record<string, unknown>>>([]);
+  const managerPortfolioRowsRef = useRef<Array<Record<string, unknown>>>([]);
   const timelogLoadInFlightRef = useRef(false);
   const [managerProjectAllocations, setManagerProjectAllocations] = useState<Array<Record<string, unknown>>>([]);
   const managerAllocationsCacheRef = useRef<Record<string, Array<Record<string, unknown>>>>({});
@@ -436,6 +447,13 @@ export function AllocationPageClient() {
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const hasAllocationAccess = hasHrAccess;
   const hasProjectTypeAccess = hasHrAccess || hasManagerAccess;
+  const hrProjectsQ = useHrProjects(hasHrAccess);
+  const hrProjectRawRows = hrProjectsQ.data?.rawRows ?? [];
+  const allocationProjects = hrProjectsQ.data?.pickerRows ?? [];
+  useAllocationOnboardDirectory(hasHrAccess);
+  const refreshHrProjects = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: HR_PROJECTS_QUERY_KEY });
+  }, [queryClient]);
   const { data: activeProjectTypes = [] } = useProjectTypes(true, hasProjectTypeAccess);
   const { data: allProjectTypes = [] } = useProjectTypes(false, hasProjectTypeAccess);
   const { data: allocationEmployeeRows = [] } = useAllocationEmployees(hasAllocationAccess);
@@ -459,12 +477,6 @@ export function AllocationPageClient() {
   const timelogHrNoSelfProject =
     userRoles.includes("ROLE_HR") && !hasManagerAccess;
   const canExportTimelog = hasHrAccess || hasManagerAccess;
-  const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
-  const restrictForPendingOnboarding =
-    isEmployee && !hasHrAccess && !hasManagerAccess;
-  const requiresSelfOnboarding = restrictForPendingOnboarding && !isSelfOnboarded;
-  /** Self-service profile + onboarding (non-HR employees only) */
-  const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canAccessProfile = Boolean(user);
   useEffect(() => {
         if (!hasManagerAccess && !hasHrAccess && timelogSubTab === "team") {
@@ -475,10 +487,16 @@ export function AllocationPageClient() {
     async (force = false) => {
       if (!hasManagerAccess) return { projectRows: [] as Array<Record<string, unknown>>, detailRows: [] as Array<Record<string, unknown>> };
       if (!force && managerDataLoadedRef.current) {
-        return { projectRows: managerProjects, detailRows: managerPortfolioRows };
+        return {
+          projectRows: managerProjectsRef.current,
+          detailRows: managerPortfolioRowsRef.current,
+        };
       }
       if (managerDataLoadingRef.current) {
-        return { projectRows: managerProjects, detailRows: managerPortfolioRows };
+        return {
+          projectRows: managerProjectsRef.current,
+          detailRows: managerPortfolioRowsRef.current,
+        };
       }
       managerDataLoadingRef.current = true;
       try {
@@ -491,6 +509,8 @@ export function AllocationPageClient() {
         // Fallback: if projects endpoint is empty but team-details has project info,
         // derive visible project list from detail rows.
         const effectiveProjectRows = projectRows.length ? projectRows : detailRows;
+        managerProjectsRef.current = effectiveProjectRows;
+        managerPortfolioRowsRef.current = detailRows;
         setManagerProjects(effectiveProjectRows);
         setManagerPortfolioRows(detailRows);
         managerDataLoadedRef.current = true;
@@ -501,21 +521,8 @@ export function AllocationPageClient() {
         managerDataLoadingRef.current = false;
       }
     },
-    [hasManagerAccess, managerProjects, managerPortfolioRows]
+    [hasManagerAccess]
   );
-
-  const loadAllProjectsForHr = useCallback(async () => {
-    const res = await hrmsService.getAllProjects({});
-    const rows = toRows(res.data ?? res);
-    if (rows.length) return rows;
-    const fallback = await hrmsService.getProjects({ page: "0", size: "500" });
-    return toRows(fallback.data ?? fallback);
-  }, []);
-
-  const loadAllocationProjectsForPickers = useCallback(async () => {
-    const rows = await loadAllProjectsForHr();
-    return parseProjectPickerRows(rows);
-  }, [loadAllProjectsForHr]);
 
   const priorEmploymentDocsRequired = useMemo(() => {
     const raw = String(selfOnboardForm.yoe ?? "").trim().replace(",", ".");
@@ -529,20 +536,9 @@ export function AllocationPageClient() {
     return () => window.clearTimeout(id);
   }, [toast]);
 
-  const loadMyProfile = useCallback(async () => {
-    const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
-    setEmployeeProfile(profile);
-    setIsSelfOnboarded(onboarded);
-  }, [user, userRoles]);
-  useEffect(() => {
-    if (!user) return;
-    const id = window.setTimeout(() => {
-      void loadMyProfile();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [user, loadMyProfile]);
   useEffect(() => {
         if (requiresSelfOnboarding) return;
+    if (!employeeSelfServeProfile) return;
     const id = window.setTimeout(() => {
       void (async () => {
         setProfileAssignedProjectsLoading(true);
@@ -566,9 +562,11 @@ export function AllocationPageClient() {
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [ canAccessProfile, requiresSelfOnboarding]);
+  }, [ canAccessProfile, requiresSelfOnboarding, employeeSelfServeProfile]);
   useEffect(() => {
-        const id = window.setTimeout(() => {
+    // Employee onboarding master data is not rendered on the allocation page.
+    return;
+    const id = window.setTimeout(() => {
       void (async () => {
         try {
           const [bandsRes, departmentsRes] = await Promise.all([
@@ -629,6 +627,8 @@ export function AllocationPageClient() {
     return () => window.clearTimeout(id);
   }, []);
   useEffect(() => {
+    // Band/designation lookups are only needed on the employee onboarding page.
+    return;
         if (!onboardForm.band_id) {
       return;
     }
@@ -704,10 +704,7 @@ export function AllocationPageClient() {
     const id = window.setTimeout(() => {
       void (async () => {
         try {
-          const [response, projects] = await Promise.all([
-            hrmsService.getAllocationRoles({}),
-            loadAllocationProjectsForPickers(),
-          ]);
+          const response = await hrmsService.getAllocationRoles({});
           const rows = toRows(response.data ?? response);
           const roles = Array.from(
             new Set(
@@ -717,42 +714,13 @@ export function AllocationPageClient() {
             )
           ).sort();
           setAllocationRoles(roles);
-          setAllocationProjects(projects);
         } catch {
           setAllocationRoles([]);
-          setAllocationProjects([]);
         }
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [user?.roles, loadAllocationProjectsForPickers]);
-  useEffect(() => {
-        if (!(userRoles.includes("ROLE_ADMIN") || userRoles.includes("ROLE_HR"))) return;
-    const id = window.setTimeout(() => {
-      void (async () => {
-        try {
-          const res = await hrmsService.getOnboardList({ page: "0", size: "200" });
-          const rows = toPagedRows((res as { data?: unknown }).data ?? res);
-          const users = Array.from(
-            new Map(
-              rows
-                .map((row) => {
-                  const email = String(row.email ?? "").trim();
-                  if (!email) return null;
-                  const name = String(row.name ?? email).trim();
-                  return [email.toLowerCase(), { name, email }] as const;
-                })
-                .filter((entry): entry is readonly [string, { name: string; email: string }] => Boolean(entry))
-            ).values()
-          ).sort((a, b) => a.name.localeCompare(b.name));
-          setRoleAssignUsers(users);
-        } catch {
-          setRoleAssignUsers([]);
-        }
-      })();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [ userRoles]);
+  }, [user?.roles]);
   useEffect(() => {
         if (hasManagerAccess) return;
     const id = window.setTimeout(() => {
@@ -775,6 +743,7 @@ export function AllocationPageClient() {
     return () => window.clearTimeout(id);
   }, [ hasManagerAccess]);  useEffect(() => {
         if (!hasHrAccess) return;
+    return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -845,25 +814,6 @@ export function AllocationPageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ timelogSubTab, hasManagerAccess, selectedManagerProjectCode]);
-  useEffect(() => {
-        const id = window.setTimeout(() => {
-      void (async () => {
-        try {
-          await loadMyLeaveRequests();
-        } catch {
-          setMyLeaveRequests([]);
-        }
-      })();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [ user]);  useEffect(() => {
-        const timer = window.setInterval(() => {
-      void loadMyLeaveRequests().catch(() => {
-        /* ignore periodic refresh errors */
-      });
-    }, 15000);
-    return () => window.clearInterval(timer);
-  }, [ user]);
   function applyTheme(nextTheme: "light" | "dark" | "system") {
     const root = document.documentElement;
     if (nextTheme === "system") {
@@ -1389,16 +1339,16 @@ export function AllocationPageClient() {
   const selectedAllocationProjectType = useMemo(
     () =>
       resolveProjectTypeForProjectCode(allocationForm.project_code, {
-        projects,
+        projects: hrProjectRawRows,
         allocationProjects,
       }),
-    [allocationForm.project_code, projects, allocationProjects]
+    [allocationForm.project_code, hrProjectRawRows, allocationProjects]
   );
   const isStaffingProjectAllocation = isStaffingProjectTypeCode(selectedAllocationProjectType);
   useEffect(() => {
     const code = allocationForm.project_code.trim();
     if (!code) return;
-    const pt = resolveProjectTypeForProjectCode(code, { projects, allocationProjects });
+    const pt = resolveProjectTypeForProjectCode(code, { projects: hrProjectRawRows, allocationProjects });
     setAllocationForm((prev) => {
       let next = prev;
       if (pt === "PRODUCT" && prev.billing_status !== "INVESTMENT") {
@@ -1412,7 +1362,7 @@ export function AllocationPageClient() {
       }
       return next;
     });
-  }, [allocationForm.project_code, projects, allocationProjects]);
+  }, [allocationForm.project_code, hrProjectRawRows, allocationProjects]);
   useEffect(() => {
     if (!allocationEmployeePickerOpen) return;
     const onPointerDown = (e: MouseEvent | PointerEvent) => {
@@ -2226,31 +2176,22 @@ export function AllocationPageClient() {
   );
 
   const buildAllocationDisplayContext = useCallback(async () => {
-    let onboardUsers: Array<Record<string, unknown>> = [];
-    let projectRows: Array<Record<string, unknown>> = [];
-    await Promise.all([
-      (async () => {
-        try {
-          const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "500" });
-          const onboardPayload = (onboardRes as { data?: unknown }).data ?? onboardRes;
-          onboardUsers = toRows(onboardPayload);
-        } catch {
-          onboardUsers = [];
-        }
-      })(),
-      (async () => {
-        try {
-          projectRows = await loadAllProjectsForHr();
-        } catch {
-          projectRows = [];
-        }
-      })(),
+    const [onboardUsers, hrProjects] = await Promise.all([
+      queryClient.fetchQuery({
+        queryKey: ALLOCATION_ONBOARD_DIRECTORY_QUERY_KEY,
+        queryFn: fetchAllocationOnboardDirectory,
+      }),
+      queryClient.fetchQuery({
+        queryKey: HR_PROJECTS_QUERY_KEY,
+        queryFn: fetchHrProjects,
+      }),
     ]);
+    const projectRows = hrProjects.rawRows;
     const userIdToName = buildUserIdToNameMap(onboardUsers);
     const emailToName = buildEmailToNameMap(onboardUsers);
     const projectDisplayByCode = buildProjectCodeDisplayMap(projectRows);
     return { userIdToName, emailToName, projectDisplayByCode, onboardUsers };
-  }, [loadAllProjectsForHr]);
+  }, [queryClient]);
 
   const enrichAllocationRowsWithContext = useCallback(
     async (rows: Array<Record<string, unknown>>) => {
@@ -2471,24 +2412,23 @@ export function AllocationPageClient() {
 
       let onboardUsers: Array<Record<string, unknown>> = [];
       let projectRows: Array<Record<string, unknown>> = [];
-      await Promise.all([
-        (async () => {
-          try {
-            const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "500" });
-            const onboardPayload = (onboardRes as { data?: unknown }).data ?? onboardRes;
-            onboardUsers = toRows(onboardPayload);
-          } catch {
-            onboardUsers = [];
-          }
-        })(),
-        (async () => {
-          try {
-            projectRows = await loadAllProjectsForHr();
-          } catch {
-            projectRows = [];
-          }
-        })(),
-      ]);
+      try {
+        const [onboardResult, hrProjects] = await Promise.all([
+          queryClient.fetchQuery({
+            queryKey: ALLOCATION_ONBOARD_DIRECTORY_QUERY_KEY,
+            queryFn: fetchAllocationOnboardDirectory,
+          }),
+          queryClient.fetchQuery({
+            queryKey: HR_PROJECTS_QUERY_KEY,
+            queryFn: fetchHrProjects,
+          }),
+        ]);
+        onboardUsers = onboardResult;
+        projectRows = hrProjects.rawRows;
+      } catch {
+        onboardUsers = [];
+        projectRows = [];
+      }
 
       const emailToName = buildEmailToNameMap(onboardUsers);
       const projectDisplayByCode = buildProjectCodeDisplayMap(projectRows);
@@ -2503,22 +2443,8 @@ export function AllocationPageClient() {
     } finally {
       setAllocationForecastLoading(false);
     }
-  }, [loadAllProjectsForHr, allocationForecastDays]);
+  }, [queryClient, allocationForecastDays]);
 
-  useEffect(() => {
-    if (!user) return;
-    if (!hasHrAccess || requiresSelfOnboarding) return;
-    const id = window.setTimeout(() => {
-      void loadAllocationsForHr();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [
-    user,
-    userRoles,
-    hasHrAccess,
-    requiresSelfOnboarding,
-    loadAllocationsForHr,
-  ]);
   useEffect(() => {
     if (!user) return;
     if (!hasHrAccess || requiresSelfOnboarding) return;
@@ -2552,15 +2478,14 @@ export function AllocationPageClient() {
     talentPoolPrefillHandled.current = email;
     setAllocationForm((prev) => ({ ...prev, employee_email: email }));
     setAllocationHrSubTab("allocate");
-    void loadAllocationProjectsForPickers().then(setAllocationProjects);
     requestAnimationFrame(() => {
       allocationFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-  }, [hasHrAccess, searchParams, loadAllocationProjectsForPickers]);
+  }, [hasHrAccess, searchParams]);
 
   const filteredProjects = useMemo(() => {
     const search = projectFilters.search.trim().toLowerCase();
-    const filtered = projects.filter((project) => {
+    const filtered = hrProjectRawRows.filter((project) => {
       const typeOk =
         projectFilters.project_type === "ALL" ||
         projectTypeCodeFromRow(project as Record<string, unknown>) ===
@@ -2573,7 +2498,7 @@ export function AllocationPageClient() {
       return typeOk && searchOk;
     });
     return applyListSort(filtered, projectSortId, PROJECT_SORT_OPTIONS);
-  }, [projects, projectFilters, projectSortId]);
+  }, [hrProjectRawRows, projectFilters, projectSortId]);
   const projectPagination = useClientPagination(filteredProjects, {
     resetKeys: [projectFilters.search, projectFilters.project_type, projectSortId],
   });
@@ -2830,6 +2755,8 @@ export function AllocationPageClient() {
     }));
     setBgvDashboardRows(rows);
   }, [bgvReportEmploymentFilter, bgvReportReferenceFilter, bgvReportSearch, bgvReportStatusFilter]);  useEffect(() => {
+    // Workforce/utilization/attrition reports are not shown on the allocation page.
+    return;
         const id = window.setTimeout(() => {
       void loadWorkforceOverviewReports().catch(() => {
         setHeadcountBreakdown([]);
@@ -2839,6 +2766,7 @@ export function AllocationPageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadWorkforceOverviewReports]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadUtilizationReports().catch(() => {
         setUtilizationByDepartmentRows([]);
@@ -2847,6 +2775,7 @@ export function AllocationPageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadUtilizationReports]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadAttritionReports().catch(() => {
         setAttritionOverallRows([]);
@@ -2861,6 +2790,7 @@ export function AllocationPageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadAttritionReports]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadSkillInventoryReport().catch(() => {
         setSkillInventoryRows([]);
@@ -2868,6 +2798,7 @@ export function AllocationPageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadSkillInventoryReport]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadContractDistributionReport().catch(() => {
         setContractDistributionRows([]);
@@ -2875,6 +2806,7 @@ export function AllocationPageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadContractDistributionReport]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadBgvDashboardReport().catch(() => {
         setBgvDashboardRows([]);
@@ -2882,6 +2814,8 @@ export function AllocationPageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadBgvDashboardReport]);  useEffect(() => {
+    // Offboarding/BGV employee pickers are not shown on the allocation page.
+    return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -3234,9 +3168,9 @@ export function AllocationPageClient() {
 
   const renderProfileAssignedProjectsSection = () => (
     <div className="mt-8 border-t border-wt-border pt-6">
-      <h4 className="text-sm font-semibold mb-3">Assigned projects</h4>
+      <h4 className="text-sm font-semibold mb-3">Assigned Projects</h4>
       {profileAssignedProjectsLoading ? (
-        <p className="text-sm text-wt-text-muted">Loading assigned projects…</p>
+        <SectionLoading label="Loading assigned projects…" />
       ) : (
         <DataTable
           columns={profileAssignedProjectColumns}
@@ -3470,14 +3404,11 @@ export function AllocationPageClient() {
                                       : "text-wt-text-muted hover:bg-wt-surface-2"
                                   }`}
                                 >
-                                  Create project
+                                  Create Project
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setAllocationHrSubTab("allocate");
-                                    void loadAllocationProjectsForPickers().then(setAllocationProjects);
-                                  }}
+                                  onClick={() => setAllocationHrSubTab("allocate")}
                                   className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
                                     allocationHrSubTab === "allocate"
                                       ? "bg-wt-surface-3 text-wt-text"
@@ -3488,17 +3419,14 @@ export function AllocationPageClient() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setAllocationHrSubTab("assign-pm");
-                                    void loadAllocationProjectsForPickers().then(setAllocationProjects);
-                                  }}
+                                  onClick={() => setAllocationHrSubTab("assign-pm")}
                                   className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
                                     allocationHrSubTab === "assign-pm"
                                       ? "bg-wt-surface-3 text-wt-text"
                                       : "text-wt-text-muted hover:bg-wt-surface-2"
                                   }`}
                                 >
-                                  Assign project manager
+                                  Assign Project Manager
                                 </button>
                                 <button
                                   type="button"
@@ -3519,7 +3447,7 @@ export function AllocationPageClient() {
           
                               {allocationHrSubTab === "project" ? (
                               <div ref={projectCrudFormRef} className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                                <h3 className="font-semibold">Create project</h3>
+                                <h3 className="font-semibold">Create Project</h3>
                                 <div className="grid sm:grid-cols-2 gap-3">
                                   <InputField
                                     label="Project Name"
@@ -3567,7 +3495,7 @@ export function AllocationPageClient() {
                                     className="btn-primary px-3 py-2"
                                     onClick={() =>
                                       runAction(
-                                        editingProjectCode ? "Update project" : "Create project",
+                                        editingProjectCode ? "Update Project" : "Create Project",
                                         async () => {
                                           const name = projectForm.project_name.trim();
                                           if (!name) {
@@ -3608,9 +3536,7 @@ export function AllocationPageClient() {
                                           });
                                           setEditingProjectCode("");
                                           setProjectForm(createEmptyProjectForm());
-                                          const rows = await loadAllProjectsForHr();
-                                          setProjects(rows);
-                                          setAllocationProjects(parseProjectPickerRows(rows));
+                                          refreshHrProjects();
                                         }
                                       )
                                     }
@@ -3623,9 +3549,7 @@ export function AllocationPageClient() {
                                     className="rounded-lg p-2 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
                                     onClick={() =>
                                       runAction("Load projects", async () => {
-                                        const rows = await loadAllProjectsForHr();
-                                        setProjects(rows);
-                                        setAllocationProjects(parseProjectPickerRows(rows));
+                                        refreshHrProjects();
                                         setProjectFilters({ search: "", project_type: "ALL" });
                                       })
                                     }
@@ -3937,7 +3861,7 @@ export function AllocationPageClient() {
                                       ) : null}
                                     </div>
                                     {pickerEmployeeAllocationsLoading ? (
-                                      <p className="text-sm text-wt-text-muted">Loading allocations…</p>
+                                      <SectionLoading label="Loading allocations…" />
                                     ) : null}
                                     {pickerEmployeeAllocationsError ? (
                                       <p className="text-sm text-rose-700">{pickerEmployeeAllocationsError}</p>
@@ -4152,7 +4076,7 @@ export function AllocationPageClient() {
                                     <p className="text-sm text-rose-700">{allocationsLoadError}</p>
                                   ) : null}
                                   {allocationsLoading && !allocations.length ? (
-                                    <p className="text-sm text-wt-text-muted">Loading allocations…</p>
+                                    <SectionLoading label="Loading allocations…" />
                                   ) : sortedAllocations.length ? (
                                     <>
                                     <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
@@ -4313,7 +4237,7 @@ export function AllocationPageClient() {
                                                   <div className="inline-flex items-center justify-end gap-1">
                                                     <button
                                                       type="button"
-                                                      className="rounded-lg p-2 text-wt-text-muted hover:bg-wt-surface-1 hover:text-wt-text disabled:opacity-40 disabled:pointer-events-none"
+                                                      className="btn-action-icon disabled:opacity-40 disabled:pointer-events-none"
                                                       aria-label={`Edit allocation ${allocationId || idx}`}
                                                       title={
                                                         editable
@@ -4338,7 +4262,7 @@ export function AllocationPageClient() {
                                                           allocation_type: (() => {
                                                             const pt = resolveProjectTypeForProjectCode(
                                                               projectCode,
-                                                              { projects, allocationProjects }
+                                                              { projects: hrProjectRawRows, allocationProjects }
                                                             );
                                                             if (isStaffingProjectTypeCode(pt)) {
                                                               return "STAFFING";
@@ -4575,7 +4499,7 @@ export function AllocationPageClient() {
                                     </label>
                                   </div>
                                   {allocationForecastLoading && !allocationForecastRows.length ? (
-                                    <p className="text-sm text-wt-text-muted">Loading forecasting…</p>
+                                    <SectionLoading label="Loading forecasting…" />
                                   ) : (
                                     <DataTable
                                       columns={["project_name", "employee_name", "billing_status", "role"]}
