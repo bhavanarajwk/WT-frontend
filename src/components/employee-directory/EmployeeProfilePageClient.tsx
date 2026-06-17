@@ -10,6 +10,7 @@ import {
   useUpdateEmployeeProfile,
 } from "@/hooks/employee-directory/useEmployeeProfile";
 import { hrmsService } from "@/services/hrms.service";
+import { parseOnboardOptions } from "@/utils/onboardFormOptions";
 import { toRows } from "@/utils/apiRows";
 import { useEmployeeResumes } from "@/hooks/resumes/useEmployeeResumes";
 import {
@@ -64,6 +65,9 @@ export function EmployeeProfilePageClient() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<EmployeeProfileEditForm | null>(null);
   const [bandOptions, setBandOptions] = useState<string[]>([]);
+  const [holidayCalendarOptions, setHolidayCalendarOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
 
   const profileRecord = profile ?? {};
   const displayName = cleanEmployeeName(profileRecord) || "Employee";
@@ -105,9 +109,13 @@ export function EmployeeProfilePageClient() {
           })
           .filter(Boolean);
         setBandOptions([...new Set(["", ...labels])]);
+        const optionsRes = await hrmsService.getOnboardOptions();
+        const options = parseOnboardOptions((optionsRes as { data?: unknown }).data ?? optionsRes);
+        setHolidayCalendarOptions([{ value: "", label: "None" }, ...options.holiday_calendars]);
       } catch {
         if (!cancelled) {
           setBandOptions([""]);
+          setHolidayCalendarOptions([{ value: "", label: "None" }]);
         }
       }
     })();
@@ -324,6 +332,13 @@ export function EmployeeProfilePageClient() {
                         const id = raw.match(/\(([^)]+)\)\s*$/)?.[1]?.trim() ?? raw;
                         setEditForm({ ...editForm, band_id: id });
                       }}
+                    />
+                    <SelectField
+                      label="Holiday Calendar"
+                      value={editForm.holiday_calendar_id}
+                      placeholder="Select calendar"
+                      options={holidayCalendarOptions}
+                      onChange={(v) => setEditForm({ ...editForm, holiday_calendar_id: v })}
                     />
                     <InputField
                       label="Primary skills (comma-separated)"

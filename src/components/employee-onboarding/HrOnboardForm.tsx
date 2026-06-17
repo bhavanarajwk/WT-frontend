@@ -226,6 +226,12 @@ export function HrOnboardForm({
         category: form.category,
         ...(includePersonal ? buildPersonalPayload(form) : {}),
       };
+      if (form.holiday_calendar_id.trim()) {
+        const calendarId = Number(form.holiday_calendar_id.trim());
+        if (Number.isFinite(calendarId) && calendarId > 0) {
+          basePayload.holiday_calendar_id = calendarId;
+        }
+      }
 
       if (form.user_type === "INTERN") {
         await hrmsService.createOnboard({
@@ -402,6 +408,15 @@ export function HrOnboardForm({
             value={form.category}
             options={options.categories}
             onChange={(v) => setForm((p) => ({ ...p, category: v }))}
+          />
+          <SelectField
+            label="Holiday Calendar"
+            placeholder={
+              options.holiday_calendars.length ? "Select (optional)" : "No calendars configured"
+            }
+            value={form.holiday_calendar_id}
+            options={[{ value: "", label: "None" }, ...options.holiday_calendars]}
+            onChange={(v) => setForm((p) => ({ ...p, holiday_calendar_id: v }))}
           />
           {form.user_type === "INTERN" ? (
             <>
