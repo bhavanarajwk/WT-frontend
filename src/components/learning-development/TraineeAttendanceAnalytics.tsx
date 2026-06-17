@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { TraineeTableRow } from "@/utils/learning/participants";
@@ -90,7 +91,7 @@ export function TraineeAttendanceAnalytics({
     <div className="space-y-4">
       <p className="text-sm font-medium">{trainee.name}</p>
       {isLoading ? (
-        <p className="text-sm text-wt-text-muted">Loading attendance analytics…</p>
+        <SectionLoading label="Loading attendance analytics…" />
       ) : totalSessions === 0 ? (
         <p className="text-sm text-wt-text-muted">No sessions scheduled for this training yet.</p>
       ) : (

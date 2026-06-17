@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMyTrainingMarks } from "@/hooks/learning/useLearningTrainings";
 import { ApiError } from "@/api/error";
@@ -67,7 +68,7 @@ export function EmployeeTrainingMyMarks({
   });
 
   if (marksQ.isLoading) {
-    return <p className="text-sm text-wt-text-muted">Loading your scores…</p>;
+    return <SectionLoading label="Loading your scores…" />;
   }
 
   if (marksQ.isError) {

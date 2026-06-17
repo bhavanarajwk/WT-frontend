@@ -6,7 +6,8 @@ import {
   ScrollableTable,
   STICKY_TABLE_HEAD_CLASS,
 } from "@/components/dashboard/ui/ScrollableTable";
-import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";import { useClientPagination } from "@/hooks/useClientPagination";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
+import { useClientPagination } from "@/hooks/useClientPagination";
 import {
   activeSortDirectionForColumn,
   applyListSort,
@@ -123,11 +124,6 @@ export function DataTable({
           </tbody>
         </table>
       </ScrollableTable>
-      {paginate && pagination.totalItems > 0 ? (
-        <p className="text-xs text-wt-text-muted">
-          Showing {pagination.totalItems} row{pagination.totalItems === 1 ? "" : "s"}
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import {
   formatMonthYearLabel,
   formatSummaryHours,
@@ -78,7 +79,7 @@ export function HrMonthlyTimelogSummary({
       ) : null}
 
       {loading ? (
-        <p className="py-10 text-center text-sm text-wt-text-muted">Loading approved hours…</p>
+        <SectionLoading className="py-10" label="Loading approved hours…" />
       ) : !rows.length ? (
         <p className="py-10 text-center text-sm text-wt-text-muted">
           No approved timelog hours for this month.

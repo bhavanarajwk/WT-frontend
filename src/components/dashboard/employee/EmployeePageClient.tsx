@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -390,7 +391,9 @@ export function EmployeePageClient() {
     return () => window.clearTimeout(id);
   }, [user, loadMyProfile]);
   useEffect(() => {
-        if (requiresSelfOnboarding) return;
+    // Avoid background calls for HR onboarding; this section is only used for employee self-service.
+    if (!employeeSelfServeProfile) return;
+    if (requiresSelfOnboarding) return;
     const id = window.setTimeout(() => {
       void (async () => {
         setProfileAssignedProjectsLoading(true);
@@ -414,7 +417,7 @@ export function EmployeePageClient() {
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [ canAccessProfile, requiresSelfOnboarding]);
+  }, [employeeSelfServeProfile, canAccessProfile, requiresSelfOnboarding]);
   useEffect(() => {
     if (!user || !hasHrAccess) return;
     const id = window.setTimeout(() => {
@@ -477,7 +480,9 @@ export function EmployeePageClient() {
     return () => window.clearTimeout(id);
   }, [ userRoles]);
   useEffect(() => {
-        if (hasManagerAccess) return;
+    // Only needed for employee self-service profile.
+    if (!employeeSelfServeProfile) return;
+    if (hasManagerAccess) return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -496,8 +501,12 @@ export function EmployeePageClient() {
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [ hasManagerAccess]);  useEffect(() => {
-        if (!hasHrAccess) return;
+  }, [employeeSelfServeProfile, hasManagerAccess]);
+
+  useEffect(() => {
+    // Only needed for HR "Team Timelog" view; don't load on initial onboarding screen.
+    if (!hasHrAccess) return;
+    if (timelogSubTab !== "team") return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -519,9 +528,11 @@ export function EmployeePageClient() {
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [ hasHrAccess, requiresSelfOnboarding]);
+  }, [hasHrAccess, timelogSubTab]);
   useEffect(() => {
-        const id = window.setTimeout(() => {
+    if (!hasManagerAccess) return;
+    if (timelogSubTab !== "team") return;
+    const id = window.setTimeout(() => {
       void (async () => {
         try {
           await loadManagerData();
@@ -534,7 +545,7 @@ export function EmployeePageClient() {
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [ timelogSubTab, hasManagerAccess, loadManagerData]);
+  }, [timelogSubTab, hasManagerAccess, loadManagerData]);
   useEffect(() => {
     if (!hasManagerAccess) return;
         const code = selectedManagerProjectCode.trim();
@@ -1739,13 +1750,15 @@ export function EmployeePageClient() {
     );
   }, [loadAllProjectsForHr]);
   useEffect(() => {
-        const id = window.setTimeout(() => {
+    if (!hasHrAccess) return;
+    if (inviteOnboardingRows.length) return;
+    const id = window.setTimeout(() => {
       void loadInviteOnboardingPreview().catch(() => {
         setInviteOnboardingRows([]);
       });
     }, 0);
     return () => window.clearTimeout(id);
-  }, [ hasHrAccess, loadInviteOnboardingPreview]);
+  }, [hasHrAccess, inviteOnboardingRows.length, loadInviteOnboardingPreview]);
 
   const filteredProjects = useMemo(() => {
     const search = projectFilters.search.trim().toLowerCase();
@@ -2204,9 +2217,9 @@ export function EmployeePageClient() {
 
   const renderProfileAssignedProjectsSection = () => (
     <div className="mt-8 border-t border-wt-border pt-6">
-      <h4 className="text-sm font-semibold mb-3">Assigned projects</h4>
+      <h4 className="text-sm font-semibold mb-3">Assigned Projects</h4>
       {profileAssignedProjectsLoading ? (
-        <p className="text-sm text-wt-text-muted">Loading assigned projects…</p>
+        <SectionLoading label="Loading assigned projects…" />
       ) : (
         <DataTable
           columns={profileAssignedProjectColumns}
@@ -2476,7 +2489,7 @@ export function EmployeePageClient() {
                               </div>
           
                               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                                <h3 className="font-semibold">Employee onboarding</h3>
+                                <h3 className="font-semibold">Employee Onboarding</h3>
                                 <div className="flex flex-wrap items-end gap-3">
                                   <InputField
                                     label="From date"

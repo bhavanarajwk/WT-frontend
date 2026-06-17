@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
@@ -190,7 +191,7 @@ export function EmployeeAttendancePanel() {
       ) : null}
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h3 className="font-semibold">Employee attendance &amp; leave</h3>
+        <h3 className="font-semibold">Employee Attendance & Leave</h3>
 
         <div className="flex flex-wrap items-end gap-3">
           <DatePickerField
@@ -244,7 +245,7 @@ export function EmployeeAttendancePanel() {
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
         {loading && !employees.length ? (
-          <p className="text-sm text-wt-text-muted">Loading attendance data…</p>
+          <SectionLoading label="Loading attendance data…" />
         ) : employees.length ? (
           <div className="mx-auto max-w-4xl">
             <div

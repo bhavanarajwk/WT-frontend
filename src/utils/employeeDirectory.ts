@@ -181,7 +181,14 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
   };
 }
 
-export function editFormToUpdatePayload(form: EmployeeProfileEditForm): Record<string, unknown> {
+export function editFormToUpdatePayload(
+  form: EmployeeProfileEditForm,
+  options?: { statusOnly?: boolean }
+): Record<string, unknown> {
+  if (options?.statusOnly) {
+    return { user_status: form.user_status.trim() };
+  }
+
   const primary = form.primary_skills
     .split(",")
     .map((s) => s.trim())
@@ -221,6 +228,8 @@ export type ProfileDisplayEntry = {
   /** When set, render a clickable “resume” link instead of plain text. */
   resumeShareHref?: string | null;
   fullWidth?: boolean;
+  /** When true, render value as a color-coded employee status badge. */
+  asStatusBadge?: boolean;
 };
 
 export type ProfileDisplaySection = {
@@ -231,7 +240,7 @@ export type ProfileDisplaySection = {
 function profileEntry(
   label: string,
   value: unknown,
-  options?: { resumeShareHref?: string | null; fullWidth?: boolean }
+  options?: { resumeShareHref?: string | null; fullWidth?: boolean; asStatusBadge?: boolean }
 ): ProfileDisplayEntry {
   return { label, value, ...options };
 }
@@ -261,7 +270,8 @@ export function buildGroupedProfileSections(
     profileEntry("Employee ID", pickProfileField(profile, ["emp_id", "empId", "employee_id"])),
     profileEntry(
       "Status",
-      normalizeStatusLabel(pickProfileField(profile, ["status", "user_status", "userStatus"]))
+      pickProfileField(profile, ["status", "user_status", "userStatus"]),
+      { asStatusBadge: true }
     ),
     profileEntry("Work Email", pickProfileField(profile, ["email"])),
     profileEntry("Department", pickProfileField(profile, ["department"])),

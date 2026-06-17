@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormField } from "@/types/exit-interview";
+import { ReadonlyDateField } from "@/components/dashboard/ui/forms";
 import { isReadonlyField, textareaPlaceholder } from "@/utils/exitInterview";
 
 function FieldError({ message }: { message?: string }) {
@@ -10,15 +11,7 @@ function FieldError({ message }: { message?: string }) {
 
 function ReadonlyControl({ field, value }: { field: FormField; value: string }) {
   if (field.widget === "readonly_date") {
-    return (
-      <input
-        type="date"
-        className="input-field px-3 py-2 text-sm opacity-80"
-        value={value}
-        disabled
-        readOnly
-      />
-    );
+    return <ReadonlyDateField value={value} />;
   }
   return <input className="input-field px-3 py-2 text-sm opacity-80" value={value} disabled readOnly />;
 }

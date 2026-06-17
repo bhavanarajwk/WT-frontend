@@ -4,6 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import {
   canEditEmployeeDirectory,
   canEditEmployeeProfile,
+  canEditEmployeeProfileStatusOnly,
+  canOpenEmployeeProfileEditor,
   canViewEmployeeDirectory,
 } from "@/utils/roles";
 
@@ -14,6 +16,8 @@ export function useEmployeeDirectoryAccess() {
   const canView = canViewEmployeeDirectory(roles);
   const canEdit = canEditEmployeeDirectory(roles);
   const canEditProfile = canEditEmployeeProfile(roles);
+  const canEditProfileStatusOnly = canEditEmployeeProfileStatusOnly(roles);
+  const canOpenProfileEditor = canOpenEmployeeProfileEditor(roles);
   const queriesEnabled = authStatus === "authenticated" && canView;
 
   return {
@@ -21,6 +25,8 @@ export function useEmployeeDirectoryAccess() {
     canView,
     canEdit,
     canEditProfile,
+    canEditProfileStatusOnly,
+    canOpenProfileEditor,
     queriesEnabled,
     roles,
   };
