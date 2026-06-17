@@ -8,6 +8,8 @@ export type LeaveRequestFormPayload = {
   is_half_day?: boolean;
   client_approval?: boolean;
   reference_file_url?: string | null;
+  selected_manager_emails?: string[];
+  additional_recipient_emails?: string[];
 };
 
 export function buildUserRequestBody(
@@ -35,6 +37,14 @@ export function buildUserRequestBody(
   if (form.client_approval !== undefined) {
     body.client_approval = form.client_approval;
     body.clientApproval = form.client_approval;
+  }
+  if (form.selected_manager_emails?.length) {
+    body.selected_manager_emails = form.selected_manager_emails;
+    body.selectedManagerEmails = form.selected_manager_emails;
+  }
+  if (form.additional_recipient_emails?.length) {
+    body.additional_recipient_emails = form.additional_recipient_emails;
+    body.additionalRecipientEmails = form.additional_recipient_emails;
   }
   if (options?.userRequestId != null) {
     body.user_request_id = options.userRequestId;
