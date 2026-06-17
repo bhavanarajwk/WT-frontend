@@ -61,7 +61,7 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "offboarding",
-        label: "Offboarding",
+        label: "Employee Offboarding",
         roles: ["ROLE_HR"],
         icon: "userMinus",
       },
@@ -259,6 +259,7 @@ export function accordionSectionForPathname(pathname: string, activeSection: str
 const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   profile: "Profile",
   overview: "Overview",
+  offboarding: "Employee Offboarding",
 };
 
 function toTitleCase(label: string): string {
