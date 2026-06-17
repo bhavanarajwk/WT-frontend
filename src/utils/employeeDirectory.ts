@@ -216,6 +216,14 @@ export function editFormToUpdatePayload(form: EmployeeProfileEditForm): Record<s
   const personalEmail = form.personal_email.trim();
   if (personalEmail) payload.personal_email = personalEmail;
 
+  const holidayCalendarId = form.holiday_calendar_id.trim();
+  if (holidayCalendarId) {
+    const parsed = Number(holidayCalendarId);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      payload.holiday_calendar_id = parsed;
+    }
+  }
+
   return payload;
 }
 
