@@ -190,7 +190,7 @@ export function ProfilePageLeanClient() {
     <div className="space-y-7">
       <div>
         <h4 className="mb-3 text-sm font-semibold text-wt-text">Personal &amp; Employment Information</h4>
-        <div className="space-y-7 rounded-xl border border-wt-border bg-wt-surface-2/50 p-4">
+        <div className="space-y-10 md:space-y-12 rounded-xl border border-wt-border bg-wt-surface-2/50 p-6 md:p-8">
           <section>
             <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Basic Information</h5>
             <dl className="space-y-3 text-sm">
@@ -279,7 +279,7 @@ export function ProfilePageLeanClient() {
   );
 
   const renderEditPanel = () => (
-    <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-7 md:p-8">
+    <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
       <h3 className="mb-1 font-semibold">Edit Profile</h3>
       <p className="mb-4 text-sm text-wt-text-muted">You are onboarded. Update your profile details anytime.</p>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -395,9 +395,9 @@ export function ProfilePageLeanClient() {
   return (
     <>
       <DashboardPageShell>
-        <section className="max-w-5xl">
+        <section className="w-full">
           {isProfileLoading ? (
-            <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10">
+            <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
               <div className="flex items-center gap-3 text-sm text-wt-text-muted">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-wt-border border-t-wt-text" />
                 Loading profile...
@@ -430,7 +430,7 @@ export function ProfilePageLeanClient() {
             isEditingOwnProfile ? (
               renderEditPanel()
             ) : (
-              <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-7 md:p-8">
+              <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
                 <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-5">
                     <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
