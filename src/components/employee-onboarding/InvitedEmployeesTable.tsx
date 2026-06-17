@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
+import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import {
   activeSortDirectionForColumn,
@@ -79,6 +80,7 @@ const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
 type Props = {
   rows: Array<Record<string, unknown>>;
   emptyLabel: string;
+  loading?: boolean;
   actionLoading?: boolean;
   resendingEmail?: string | null;
   onResendInvite: (email: string) => void;
@@ -87,11 +89,13 @@ type Props = {
 export function InvitedEmployeesTable({
   rows,
   emptyLabel,
+  loading = false,
   actionLoading = false,
   resendingEmail = null,
   onResendInvite,
 }: Props) {
   const [sortId, setSortId] = useState(SORT_OPTIONS[0]?.id ?? "");
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
 
   const { columns: displayColumns, rows: displaySourceRows } = useMemo(
     () => prepareTableForDisplay([...DATA_COLUMNS], rows),
@@ -105,13 +109,41 @@ export function InvitedEmployeesTable({
 
   const pagination = useClientPagination(sortedRows, { pageSize: 20, resetKeys: [sortId] });
 
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-wt-border bg-wt-surface-1 px-4 py-6">
+        <ProfileSectionLoader message="Loading employee onboarding list..." />
+      </div>
+    );
+  }
+
   if (!displaySourceRows.length) {
     return <p className="text-sm text-wt-text-muted">{emptyLabel}</p>;
   }
 
   return (
     <div className="space-y-2">
-      <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
+      <div
+        className="wt-scroll-both h-[200px] rounded-xl border border-wt-border"
+        style={{ overscrollBehaviorY: "auto" }}
+        ref={tableScrollRef}
+        onWheel={(event) => {
+          const el = tableScrollRef.current;
+          if (!el) return;
+          if (el.scrollHeight <= el.clientHeight) return;
+          const deltaY = event.deltaY;
+          const scrollingDown = deltaY > 0;
+          const atTop = el.scrollTop <= 0;
+          const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+          const blockedAtBoundary = (scrollingDown && atBottom) || (!scrollingDown && atTop);
+          if (!blockedAtBoundary) return;
+
+          const pageScroller = el.closest(".wt-page-scroll") as HTMLElement | null;
+          if (!pageScroller) return;
+          event.preventDefault();
+          pageScroller.scrollBy({ top: deltaY, behavior: "auto" });
+        }}
+      >
         <table className="min-w-full text-sm">
           <thead className="bg-wt-surface-2 text-wt-text-muted">
             <tr>
@@ -121,7 +153,10 @@ export function InvitedEmployeesTable({
                   ? activeSortDirectionForColumn(col, sortId, SORT_OPTIONS)
                   : null;
                 return (
-                  <th key={col} className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                  <th
+                    key={col}
+                    className="sticky top-0 z-10 bg-wt-surface-2 text-left px-3 py-2 font-medium whitespace-nowrap"
+                  >
                     <TableSortHeader
                       label={formatTableColumnHeader(col)}
                       activeDirection={activeDir}
@@ -135,7 +170,9 @@ export function InvitedEmployeesTable({
                   </th>
                 );
               })}
-              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Actions</th>
+              <th className="sticky top-0 z-10 bg-wt-surface-2 text-left px-3 py-2 font-medium whitespace-nowrap">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
