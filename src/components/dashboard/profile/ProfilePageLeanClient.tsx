@@ -187,7 +187,7 @@ export function ProfilePageLeanClient() {
     readProfileField(employeeProfile, "category") ||
     readProfileField(employeeProfile, "delivery_status", "deliveryStatus");
 
-  const renderProfileDetails = (extraFields?: React.ReactNode) => (
+  const renderProfileDetails = () => (
     <div className="space-y-7">
       <div>
         <h4 className="mb-3 text-sm font-semibold text-wt-text">Personal &amp; Employment Information</h4>
@@ -202,7 +202,6 @@ export function ProfilePageLeanClient() {
               <ProfileField label="Designation" value={readProfileField(employeeProfile, "role")} />
               <ProfileField label="Band" value={readProfileField(employeeProfile, "band_name", "bandName")} />
               <ProfileField label="Category" value={profileCategory} />
-              {extraFields}
             </dl>
           </section>
           <section>
@@ -450,12 +449,7 @@ export function ProfilePageLeanClient() {
                     </button>
                   ) : null}
                 </div>
-                {renderProfileDetails(
-                  <ProfileField
-                    label="Roles"
-                    value={(user?.roles ?? []).length ? (user?.roles ?? []).join(", ") : "—"}
-                  />
-                )}
+                {renderProfileDetails()}
                 {!requiresSelfOnboarding ? renderAssignedProjects() : null}
                 {!requiresSelfOnboarding ? <ProfileEmployeeTrainingsSection enabled /> : null}
               </div>
