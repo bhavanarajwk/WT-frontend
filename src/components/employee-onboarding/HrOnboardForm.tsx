@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
-import { InputField, SelectField } from "@/components/dashboard/ui/forms";
+import { DatePickerField, DropdownSelectField, InputField } from "@/components/dashboard/ui/forms";
+import { LoadingOverlay } from "@/components/dashboard/shared/BlackLoader";
+import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
   bandSelectOptions,
   bandsForDepartment,
@@ -31,19 +33,23 @@ function validateWorkStep(form: OnboardFormState, internBandId: number, defaultC
   const name = form.name.trim();
   const department = form.department.trim();
   const role = form.role.trim();
+  const reportingManagerId = Number(form.reporting_manager_id);
 
   if (!empId) throw new Error("Employee ID is required.");
   if (empId.length > 50) throw new Error("Employee ID must be at most 50 characters.");
-  if (!email || !name) throw new Error("Work email and name are required.");
+  if (!email || !name) throw new Error("Work Email and Name are required.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("Please enter a valid work email.");
+    throw new Error("Please enter a valid Work Email.");
   }
-  if (!form.user_type) throw new Error("User type is required.");
+  if (!form.user_type) throw new Error("User Type is required.");
   if (!department) throw new Error("Department is required.");
   if (!role) throw new Error("Designation is required.");
-  if (!form.work_mode) throw new Error("Work mode is required.");
-  if (!form.work_location_type) throw new Error("Work location is required.");
+  if (!form.work_mode) throw new Error("Work Mode is required.");
+  if (!form.work_location_type) throw new Error("Work Location is required.");
   if (!form.category) throw new Error("Category is required.");
+  if (!Number.isFinite(reportingManagerId) || reportingManagerId <= 0) {
+    throw new Error("Reporting Manager is required.");
+  }
   if (!isValidPersonName(name)) {
     throw new Error("Name should be 2–120 characters and contain letters (and spaces) only.");
   }
@@ -55,19 +61,19 @@ function validateWorkStep(form: OnboardFormState, internBandId: number, defaultC
         ? internBandId
         : Number(form.band_id);
   if (!Number.isFinite(bandId) || bandId <= 0) {
-    throw new Error("Please select a valid band.");
+    throw new Error("Please select a valid Band.");
   }
 
   if (form.user_type === "INTERN") {
-    if (!form.doi.trim()) throw new Error("Date of internship is required for interns.");
+    if (!form.doi.trim()) throw new Error("Date of Internship is required for interns.");
     if (!form.internship_duration.trim()) {
-      throw new Error("Internship duration is required for interns.");
+      throw new Error("Internship Duration is required for interns.");
     }
   } else if (!form.doj.trim()) {
-    throw new Error("Date of joining is required.");
+    throw new Error("Date of Joining is required.");
   }
 
-  return { empId, email, name, department, role, bandId };
+  return { empId, email, name, department, role, bandId, reportingManagerId };
 }
 
 export function HrOnboardForm({
@@ -76,7 +82,6 @@ export function HrOnboardForm({
   setForm,
   options,
   bands,
-  hasHrAccess,
   actionLoading,
   onSubmitSuccess,
   onError,
@@ -93,16 +98,22 @@ export function HrOnboardForm({
     return Number.isFinite(id) && id > 0 ? id : 0;
   }, [bands]);
 
-  useEffect(() => {
-    if (form.user_type !== "INTERN") return;
-    setForm((prev) => (prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }));
-  }, [form.user_type, internBandId, setForm]);
-
   const departmentBands = useMemo(
     () => bandsForDepartment(bands, form.department),
     [bands, form.department]
   );
   const bandOptions = useMemo(() => bandSelectOptions(departmentBands), [departmentBands]);
+
+  const designationBandId = useMemo(() => {
+    if (form.user_type === "CONSULTANT") return defaultConsultantBandId;
+    if (form.user_type === "INTERN") return internBandId;
+    return Number(form.band_id);
+  }, [defaultConsultantBandId, form.band_id, form.user_type, internBandId]);
+
+  useEffect(() => {
+    if (form.user_type !== "INTERN") return;
+    setForm((prev) => (prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }));
+  }, [form.user_type, internBandId, setForm]);
 
   useEffect(() => {
     if (!form.department.trim()) return;
@@ -115,9 +126,9 @@ export function HrOnboardForm({
   }, [departmentBands, form.band_id, form.department, setForm]);
 
   useEffect(() => {
-    const bandId = Number(form.band_id);
+    const bandId = designationBandId;
     const department = form.department.trim();
-    if (form.user_type === "CONSULTANT" || bandId <= 0 || !department) {
+    if (bandId <= 0 || !department) {
       setDesignationOptions([]);
       return;
     }
@@ -126,12 +137,11 @@ export function HrOnboardForm({
         setDesignationLoading(true);
         try {
           const res = await hrmsService.searchDesignations({ band_id: bandId, department });
-          setDesignationOptions(
-            parseDesignationList(res).map((item) => ({
-              value: item.name,
-              label: item.name,
-            }))
-          );
+          const next = parseDesignationList(res).map((item) => ({
+            value: item.name,
+            label: item.name,
+          }));
+          setDesignationOptions(next);
         } catch (error) {
           setDesignationOptions([]);
           onError(
@@ -143,11 +153,18 @@ export function HrOnboardForm({
       })();
     }, 200);
     return () => window.clearTimeout(handle);
-  }, [form.band_id, form.department, form.user_type, onError]);
+  }, [form.department, designationBandId, onError]);
+
+  useEffect(() => {
+    if (designationOptions.length !== 1) return;
+    const onlyRole = designationOptions[0]?.value ?? "";
+    if (!onlyRole) return;
+    setForm((prev) => (prev.role === onlyRole ? prev : { ...prev, role: onlyRole }));
+  }, [designationOptions, setForm]);
 
   function submit() {
-    void runAction("Create employee", async () => {
-      const { empId, email, name, department, role, bandId } = validateWorkStep(
+    void runAction("Create And Invite Employee", async () => {
+      const { empId, email, name, department, role, bandId, reportingManagerId } = validateWorkStep(
         form,
         internBandId,
         defaultConsultantBandId
@@ -164,6 +181,7 @@ export function HrOnboardForm({
         work_mode: form.work_mode,
         work_location_type: form.work_location_type,
         category: form.category,
+        reporting_manager_id: reportingManagerId,
       };
 
       if (form.user_type === "INTERN") {
@@ -187,12 +205,17 @@ export function HrOnboardForm({
   }
 
   return (
-    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-      <div className="mb-4">
-        <h3 className="font-semibold">Create New Employee</h3>
+    <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
+      {designationLoading ? <LoadingOverlay label="Loading Designations" /> : null}
+      <div className="mb-4 space-y-1">
+        <h3 className="font-semibold">Work Information</h3>
+        <p className="text-sm text-wt-text-muted">
+          Complete the required work fields to create and invite the employee. They will complete
+          personal details during self-service onboarding.
+        </p>
       </div>
 
-      <div key={`${formKey}-work`} className="grid sm:grid-cols-2 gap-3">
+      <div key={`${formKey}-work`} className="grid gap-3 sm:grid-cols-2">
         <InputField
           label="Employee ID"
           required
@@ -200,7 +223,7 @@ export function HrOnboardForm({
           onChange={(v) => setForm((p) => ({ ...p, emp_id: v }))}
         />
         <InputField
-          label="Work email"
+          label="Work Email"
           type="email"
           required
           value={form.email}
@@ -212,7 +235,7 @@ export function HrOnboardForm({
           value={form.name}
           onChange={(v) => setForm((p) => ({ ...p, name: v }))}
         />
-        <SelectField
+        <DropdownSelectField
           label="User Type"
           required
           placeholder="Select"
@@ -224,11 +247,11 @@ export function HrOnboardForm({
               if (ut === "INTERN") {
                 return { ...p, user_type: ut, band_id: internBandId, role: "" };
               }
-              return { ...p, user_type: ut, role: ut === "CONSULTANT" ? p.role : "" };
+              return { ...p, user_type: ut, role: "" };
             })
           }
         />
-        <SelectField
+        <DropdownSelectField
           label="Department"
           required
           placeholder="Select"
@@ -244,15 +267,15 @@ export function HrOnboardForm({
           }
         />
         {form.user_type !== "CONSULTANT" ? (
-          <SelectField
+          <DropdownSelectField
             label="Band"
             required
             placeholder={
               !form.department.trim()
-                ? "Select department first"
+                ? "Select Department First"
                 : bandOptions.length
                   ? "Select"
-                  : "No bands available"
+                  : "No Bands Available"
             }
             value={form.band_id ? String(form.band_id) : ""}
             disabled={form.user_type === "INTERN" || !form.department.trim() || !bandOptions.length}
@@ -266,35 +289,29 @@ export function HrOnboardForm({
             }
           />
         ) : null}
-        {form.user_type === "CONSULTANT" ? (
-          <InputField
-            label="Designation"
-            required
-            value={form.role}
-            onChange={(v) => setForm((p) => ({ ...p, role: v }))}
-          />
-        ) : (
-          <SelectField
-            label="Designation"
-            required
-            value={form.role}
-            placeholder={
-              !form.department.trim() || !form.band_id
-                ? "Select band and department first"
-                : designationLoading
-                  ? "Loading designations…"
-                  : designationOptions.length
-                    ? "Select"
-                    : "No designations for this band"
-            }
-            disabled={
-              !form.department.trim() || !form.band_id || designationLoading || !designationOptions.length
-            }
-            options={designationOptions}
-            onChange={(role) => setForm((p) => ({ ...p, role }))}
-          />
-        )}
-        <SelectField
+        <DropdownSelectField
+          label="Designation"
+          required
+          value={form.role}
+          placeholder={
+            !form.department.trim() || designationBandId <= 0
+              ? "Select Department And Band First"
+              : designationLoading
+                ? "Loading Designations…"
+                : designationOptions.length
+                  ? "Select"
+                  : "No Designations For This Band"
+          }
+          disabled={
+            !form.department.trim() ||
+            designationBandId <= 0 ||
+            designationLoading ||
+            !designationOptions.length
+          }
+          options={designationOptions}
+          onChange={(role) => setForm((p) => ({ ...p, role }))}
+        />
+        <DropdownSelectField
           label="Work Mode"
           required
           placeholder="Select"
@@ -302,7 +319,7 @@ export function HrOnboardForm({
           options={options.work_modes}
           onChange={(v) => setForm((p) => ({ ...p, work_mode: v }))}
         />
-        <SelectField
+        <DropdownSelectField
           label="Work Location"
           required
           placeholder="Select"
@@ -310,7 +327,7 @@ export function HrOnboardForm({
           options={options.work_location_types}
           onChange={(v) => setForm((p) => ({ ...p, work_location_type: v }))}
         />
-        <SelectField
+        <DropdownSelectField
           label="Category"
           required
           placeholder="Select"
@@ -318,29 +335,38 @@ export function HrOnboardForm({
           options={options.categories}
           onChange={(v) => setForm((p) => ({ ...p, category: v }))}
         />
+        <DropdownSelectField
+          label="Reporting Manager"
+          required
+          placeholder={
+            options.reporting_managers.length ? "Select" : "No Employees Available"
+          }
+          value={form.reporting_manager_id}
+          disabled={!options.reporting_managers.length}
+          options={options.reporting_managers}
+          onChange={(v) => setForm((p) => ({ ...p, reporting_manager_id: v }))}
+        />
         {form.user_type === "INTERN" ? (
           <>
-            <InputField
+            <DatePickerField
               label="Date of Internship"
               required
               value={form.doi}
               onChange={(v) => setForm((p) => ({ ...p, doi: v }))}
-              type="date"
             />
             <InputField
-              label="Internship Duration (months)"
+              label="Internship Duration (Months)"
               required
               value={form.internship_duration}
               onChange={(v) => setForm((p) => ({ ...p, internship_duration: v }))}
             />
           </>
         ) : (
-          <InputField
+          <DatePickerField
             label="Date of Joining"
             required
             value={form.doj}
             onChange={(v) => setForm((p) => ({ ...p, doj: v }))}
-            type="date"
           />
         )}
       </div>
@@ -352,7 +378,7 @@ export function HrOnboardForm({
           disabled={actionLoading}
           onClick={submit}
         >
-          Create employee
+          Create And Invite Employee
         </button>
       </div>
     </div>
