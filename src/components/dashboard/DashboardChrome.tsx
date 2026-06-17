@@ -95,6 +95,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasAccountManagerAccess = userRoles.includes("ROLE_AM");
   const canAccessProfile = Boolean(user) && !shouldSkipSelfProfileFetch(userRoles);
+  const isEmployeeDirectoryRoute = pathname.startsWith("/dashboard/employee-directory");
+  const isEmployeeOnboardingRoute =
+    pathname === DASHBOARD_ROUTES.employee ||
+    pathname.startsWith("/dashboard/employee/assign-account-manager");
+  const isAssignAccountManagerRoute = pathname.startsWith(
+    "/dashboard/employee/assign-account-manager"
+  );
+  const isEmployeeProfileRoute = Boolean(pathname.match(/^\/dashboard\/employee-directory\/[^/]+$/));
   const { isOffboarded } = useDashboardAccess();
   const exitProfileQ = useExitInterviewProfile({ enabled: Boolean(user) });
   const showExitSurveyNav = useMemo(() => {
@@ -186,6 +194,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     }
     return dashboardPageTitle(activeSection);
   }, [activeSection, isOffboarded, isExitSurveyRoute, isLearningRoute]);
+
+  const learningSectionTitle = useMemo(() => {
+    const hit = learningSubNav.find((l) => pathname === l.href || pathname.startsWith(`${l.href}/`));
+    return hit?.label ?? "Learning & Development";
+  }, [pathname]);
 
   return (
     <div className="wt-page-scroll h-dvh overflow-y-auto bg-wt-bg text-wt-text">
@@ -370,6 +383,54 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-10 shrink-0 border-b border-wt-border bg-wt-bg px-6 py-4 flex items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold">{pageTitle}</h2>
+            {isEmployeeDirectoryRoute && !isLearningRoute ? (
+              <nav
+                className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
+                aria-label="Breadcrumb"
+              >
+                <Link href="/dashboard" className="hover:text-wt-text transition">
+                  Dashboard
+                </Link>
+                <span aria-hidden>/</span>
+                {isEmployeeProfileRoute ? (
+                  <>
+                    <Link
+                      href={DASHBOARD_ROUTES["employee-directory"]}
+                      className="hover:text-wt-text transition"
+                    >
+                      Employee Directory
+                    </Link>
+                    <span aria-hidden>/</span>
+                    <span className="text-wt-text">Employee Profile</span>
+                  </>
+                ) : (
+                  <span className="text-wt-text">Employee Directory</span>
+                )}
+              </nav>
+            ) : isEmployeeOnboardingRoute && !isLearningRoute ? (
+              <nav
+                className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
+                aria-label="Breadcrumb"
+              >
+                <Link href="/dashboard" className="hover:text-wt-text transition">
+                  Dashboard
+                </Link>
+                <span aria-hidden>/</span>
+                {isAssignAccountManagerRoute ? (
+                  <>
+                    <Link href={DASHBOARD_ROUTES.employee} className="hover:text-wt-text transition">
+                      Employee Onboarding
+                    </Link>
+                    <span aria-hidden>/</span>
+                    <span className="text-wt-text">Assign</span>
+                  </>
+                ) : (
+                  <span className="text-wt-text">Employee Onboarding</span>
+                )}
+              </nav>
+            ) : isLearningRoute ? (
+              <p className="text-xs text-wt-text-muted">{learningSectionTitle}</p>
+            ) : null}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {!isOffboarded ? (
