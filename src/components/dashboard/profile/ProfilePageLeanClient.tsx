@@ -21,6 +21,7 @@ import { formatApiDateDisplay } from "@/utils/apiDate";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
+import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
 import { fetchSelfProfile, shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import {
   isActiveUserStatus,
@@ -398,10 +399,7 @@ export function ProfilePageLeanClient() {
         <section className="w-full">
           {isProfileLoading ? (
             <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
-              <div className="flex items-center gap-3 text-sm text-wt-text-muted">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-wt-border border-t-wt-text" />
-                Loading profile...
-              </div>
+              <ProfileSectionLoader message="Loading profile..." />
             </div>
           ) : null}
           {isOffboarded ? <OffboardedBanner /> : null}

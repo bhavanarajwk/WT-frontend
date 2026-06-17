@@ -1,6 +1,7 @@
 "use client";
 
 import { formatApiDateDisplay } from "@/utils/apiDate";
+import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
 import {
   PROFILE_TABLE_BODY_CELL,
   PROFILE_TABLE_HEAD_CELL,
@@ -61,13 +62,13 @@ export function ProfileAssignedProjectsSection({
     <div className="mt-8 border-t border-wt-border pt-6">
       <h4 className="mb-3 text-sm font-semibold text-wt-text">Project Details</h4>
         {loading ? (
-          <p className="text-sm text-wt-text-muted">Loading assigned projects…</p>
+          <ProfileSectionLoader message="Loading project details..." />
         ) : rows.length === 0 ? (
           <p className="text-sm text-wt-text-muted">No projects assigned.</p>
         ) : (
           <div className={PROFILE_TABLE_SCROLL}>
             <table className="min-w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted">
+              <thead className="bg-wt-surface-2 text-wt-text-muted">
                 <tr>
                   <th className={PROFILE_TABLE_HEAD_CELL}>Project Name</th>
                   <th className={PROFILE_TABLE_HEAD_CELL}>Role In Project</th>
