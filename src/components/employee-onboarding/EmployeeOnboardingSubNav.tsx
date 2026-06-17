@@ -6,11 +6,6 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 
 const TABS = [
   { href: DASHBOARD_ROUTES.employee, label: "Employee Onboarding", exact: true },
-  {
-    href: DASHBOARD_ROUTES["employee-assign-am"],
-    label: "Assign",
-    exact: false,
-  },
 ] as const;
 
 export function EmployeeOnboardingSubNav() {
