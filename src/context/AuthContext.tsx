@@ -58,20 +58,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const didInitialRefresh = useRef(false);
   const timeoutHandled = useRef(false);
+  const userRef = useRef<AuthUser | null>(null);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const refresh = useCallback(async (): Promise<AuthUser | null> => {
     setStatus("loading");
-    const freshUser = await refreshSession();
-    if (freshUser) {
-      const normalized = applyAuthenticatedUser(freshUser);
-      setUser(normalized);
-      setStatus("authenticated");
-      return normalized;
+    try {
+      const freshUser = await refreshSession();
+      if (freshUser) {
+        const normalized = applyAuthenticatedUser(freshUser);
+        setUser(normalized);
+        setStatus("authenticated");
+        return normalized;
+      }
+      clearSessionTiming();
+      setUser(null);
+      setStatus("unauthenticated");
+      return null;
+    } catch {
+      const keptUser = userRef.current;
+      if (keptUser) {
+        setStatus("authenticated");
+        return keptUser;
+      }
+      setStatus("unauthenticated");
+      return null;
     }
-    clearSessionTiming();
-    setUser(null);
-    setStatus("unauthenticated");
-    return null;
   }, []);
 
   const logout = useCallback(async () => {

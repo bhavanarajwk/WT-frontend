@@ -20,6 +20,13 @@ function readSessionStartMs(): number {
   return Number.isFinite(parsed) ? parsed : Date.now();
 }
 
+function readLastActivityMs(): number {
+  const raw = sessionStorage.getItem(SESSION_STORAGE_LAST_ACTIVITY);
+  if (!raw) return Date.now();
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : Date.now();
+}
+
 function touchLocalActivity() {
   const now = Date.now();
   sessionStorage.setItem(SESSION_STORAGE_LAST_ACTIVITY, String(now));
@@ -47,9 +54,9 @@ export function useSessionTimeout(
 ) {
   const pathname = usePathname();
   const onTimeoutRef = useRef(onTimeout);
-  const lastActivityRef = useRef(Date.now());
-  const lastPingRef = useRef(0);
-  const lastRefreshRef = useRef(0);
+  const lastActivityRef = useRef(readLastActivityMs());
+  const lastPingRef = useRef(Date.now());
+  const lastRefreshRef = useRef(Date.now());
 
   useEffect(() => {
     onTimeoutRef.current = onTimeout;
@@ -62,6 +69,11 @@ export function useSessionTimeout(
   useEffect(() => {
     if (!enabled) return;
 
+    const now = Date.now();
+    lastActivityRef.current = readLastActivityMs();
+    lastPingRef.current = now;
+    lastRefreshRef.current = now;
+
     const events: Array<keyof WindowEventMap> = [
       "mousedown",
       "keydown",
@@ -69,6 +81,8 @@ export function useSessionTimeout(
       "scroll",
       "touchstart",
       "focus",
+      "input",
+      "change",
     ];
 
     const onActivity = () => bumpActivity();
@@ -92,9 +106,7 @@ export function useSessionTimeout(
 
       if (idleFor < SESSION_INACTIVITY_MS && now - lastPingRef.current >= SESSION_ACTIVITY_PING_MS) {
         lastPingRef.current = now;
-        void recordSessionActivity().catch(() => {
-          onTimeoutRef.current("server");
-        });
+        void recordSessionActivity().catch(() => undefined);
       }
 
       if (
@@ -102,9 +114,11 @@ export function useSessionTimeout(
         now - lastRefreshRef.current >= SESSION_REFRESH_INTERVAL_MS
       ) {
         lastRefreshRef.current = now;
-        void refreshSession().then((user) => {
-          if (!user) onTimeoutRef.current("server");
-        });
+        void refreshSession()
+          .then((user) => {
+            if (user === null) onTimeoutRef.current("server");
+          })
+          .catch(() => undefined);
       }
     }, 30_000);
 
