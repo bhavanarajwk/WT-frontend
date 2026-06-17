@@ -12,4 +12,5 @@ export interface OnboardOptionsResponse {
   genders: OnboardOptionItem[];
   marital_statuses: OnboardOptionItem[];
   blood_groups: OnboardOptionItem[];
+  holiday_calendars: OnboardOptionItem[];
 }
