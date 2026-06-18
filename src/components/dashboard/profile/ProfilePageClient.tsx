@@ -1,12 +1,12 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
 import { hrmsService, type PagedData } from "@/services/hrms.service";
-import { useOverviewData } from "@/hooks/useOverviewData";
 import { ApiError } from "@/api/error";
 import { toRows, toPagedRows } from "@/utils/apiRows";
 import {
@@ -82,12 +82,7 @@ import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAc
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
-import { fetchSelfProfile, shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
-import {
-  isActiveUserStatus,
-  isOffboardedUserStatus,
-  resolveProfileStatus,
-} from "@/utils/userStatus";
+import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 
 
 
@@ -106,7 +101,18 @@ export function ProfilePageClient() {
   const { user, refresh: refreshSession } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { metrics, loading, refresh } = useOverviewData();
+  const {
+    userRoles,
+    hasHrAccess,
+    hasManagerAccess,
+    requiresSelfOnboarding,
+    employeeSelfServeProfile,
+    canAccessProfile,
+    isOffboarded,
+    isPortalLocked,
+    loadMyProfile,
+    profile: selfProfile,
+  } = useDashboardAccess();
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
@@ -291,12 +297,6 @@ export function ProfilePageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfProfileForm.yoe]);
-  const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(() =>
-    isActiveUserStatus(user?.status)
-  );
-  const [isOffboarded, setIsOffboarded] = useState<boolean>(() =>
-    isOffboardedUserStatus(user?.status)
-  );
   const [projectForm, setProjectForm] = useState({
     project_name: "",
     project_type: "IN_HOUSE" as "IN_HOUSE" | "STAFFING" | "PRODUCT",
@@ -335,20 +335,10 @@ export function ProfilePageClient() {
   );
   const [timelogSubTab, setTimelogSubTab] = useState<"my" | "team">("my");
   const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team">("my");
-  const userRoles = user?.roles ?? [];
-  const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
-  const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
   const timelogHrNoSelfProject =
     userRoles.includes("ROLE_HR") && !hasManagerAccess;
   const canExportTimelog = hasHrAccess || hasManagerAccess;
-  const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
-  const restrictForPendingOnboarding =
-    isEmployee && !hasHrAccess && !hasManagerAccess;
-  const requiresSelfOnboarding =
-    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded;
-  /** Self-service profile + onboarding (non-HR employees only) */
-  const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const onboardPrefillKey = useMemo(
     () =>
       [
@@ -360,7 +350,11 @@ export function ProfilePageClient() {
       ].join("|"),
     [employeeProfile, user?.email]
   );
-  const canAccessProfile = Boolean(user);
+  useEffect(() => {
+    if (selfProfile) {
+      setEmployeeProfile(selfProfile);
+    }
+  }, [selfProfile]);
   useEffect(() => {
         if (!hasManagerAccess && !hasHrAccess && timelogSubTab === "team") {
       setTimelogSubTab("my");
@@ -413,21 +407,6 @@ export function ProfilePageClient() {
     return () => window.clearTimeout(id);
   }, [toast]);
 
-  const loadMyProfile = useCallback(async () => {
-    const profile = await fetchSelfProfile(userRoles);
-    setEmployeeProfile(profile);
-    if (!profile) {
-      const status = resolveProfileStatus(null, user);
-      setIsSelfOnboarded(isActiveUserStatus(status));
-      setIsOffboarded(isOffboardedUserStatus(status));
-      return;
-    }
-
-    const status = resolveProfileStatus(profile, user);
-    setIsSelfOnboarded(isActiveUserStatus(status));
-    setIsOffboarded(isOffboardedUserStatus(status));
-  }, [user, userRoles]);
-
   const handleOnboardingSuccess = useCallback(async () => {
     await refreshSession();
     await loadMyProfile();
@@ -437,15 +416,11 @@ export function ProfilePageClient() {
     if (!user) return;
     if (shouldSkipSelfProfileFetch(userRoles)) {
       router.replace(DASHBOARD_ROUTES["leave-team"]);
-      return;
     }
-    const id = window.setTimeout(() => {
-      void loadMyProfile();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [user, userRoles, loadMyProfile, router]);
+  }, [user, userRoles, router]);
   useEffect(() => {
         if (requiresSelfOnboarding) return;
+    if (!employeeSelfServeProfile) return;
     const id = window.setTimeout(() => {
       void (async () => {
         setProfileAssignedProjectsLoading(true);
@@ -469,9 +444,11 @@ export function ProfilePageClient() {
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [canAccessProfile, requiresSelfOnboarding]);
+  }, [canAccessProfile, requiresSelfOnboarding, employeeSelfServeProfile]);
   useEffect(() => {
-        const id = window.setTimeout(() => {
+    // HR onboarding master data is not rendered on the profile page.
+    return;
+    const id = window.setTimeout(() => {
       void (async () => {
         try {
           const [bandsRes, departmentsRes] = await Promise.all([
@@ -532,6 +509,8 @@ export function ProfilePageClient() {
     return () => window.clearTimeout(id);
   }, []);
   useEffect(() => {
+    // Band/designation lookups are only needed on HR employee onboarding forms.
+    return;
         if (!onboardForm.band_id) {
       return;
     }
@@ -601,7 +580,9 @@ export function ProfilePageClient() {
     return () => window.clearTimeout(id);
   }, [ onboardForm.band_id, onboardForm.department, onboardForm.role, onboardDepartments]);
   useEffect(() => {
-        const hasAllocationAccess =
+    // Allocation CRUD data is not rendered on the profile page.
+    return;
+    const hasAllocationAccess =
       (user?.roles ?? []).includes("ROLE_HR") || (user?.roles ?? []).includes("ROLE_ADMIN");
     if (!hasAllocationAccess) return;
     const id = window.setTimeout(() => {
@@ -727,7 +708,10 @@ export function ProfilePageClient() {
     return () => window.clearTimeout(id);
   }, [ userRoles]);
   useEffect(() => {
-        if (hasManagerAccess) return;
+    // Assigned project lists for allocation views are not rendered on the profile page.
+    return;
+    if (requiresSelfOnboarding) return;
+    if (!hasManagerAccess) return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -748,6 +732,8 @@ export function ProfilePageClient() {
     return () => window.clearTimeout(id);
   }, [ hasManagerAccess]);  useEffect(() => {
         if (!hasHrAccess) return;
+    // HR timelog directory is not used on the profile page.
+    return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -771,6 +757,7 @@ export function ProfilePageClient() {
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, requiresSelfOnboarding]);
   useEffect(() => {
+    if (!hasManagerAccess) return;
         const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -819,6 +806,8 @@ export function ProfilePageClient() {
     return () => window.clearTimeout(id);
   }, [ timelogSubTab, hasManagerAccess, selectedManagerProjectCode]);
   useEffect(() => {
+    // Leave/WFH/comp-off requests are not shown on the profile page.
+    return;
         const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -830,6 +819,8 @@ export function ProfilePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ user]);  useEffect(() => {
+    // Leave request polling is not used on the profile page.
+    return;
         const timer = window.setInterval(() => {
       void loadMyLeaveRequests().catch(() => {
         /* ignore periodic refresh errors */
@@ -2372,6 +2363,8 @@ export function ProfilePageClient() {
       setTeamTimelogEmailFilter("ALL");
     }
   }, [teamTimelogEmployeeOptions, teamTimelogEmailFilter]);  useEffect(() => {
+    // Timelog views are not rendered on the profile page.
+    return;
         const selected = teamTimelogEmailFilter.trim();
     if (!selected || selected.toUpperCase() === "ALL") return;
     void loadTimelogsForCurrentRole(selected).catch(() => {
@@ -2545,6 +2538,7 @@ export function ProfilePageClient() {
     }));
     setBgvDashboardRows(rows);
   }, [bgvReportEmploymentFilter, bgvReportReferenceFilter, bgvReportSearch, bgvReportStatusFilter]);  useEffect(() => {
+    if (!hasHrAccess) return;
         const id = window.setTimeout(() => {
       void loadWorkforceOverviewReports().catch(() => {
         setHeadcountBreakdown([]);
@@ -2554,6 +2548,7 @@ export function ProfilePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadWorkforceOverviewReports]);  useEffect(() => {
+    if (!hasHrAccess) return;
         const id = window.setTimeout(() => {
       void loadUtilizationReports().catch(() => {
         setUtilizationByDepartmentRows([]);
@@ -2562,6 +2557,7 @@ export function ProfilePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadUtilizationReports]);  useEffect(() => {
+    if (!hasHrAccess) return;
         const id = window.setTimeout(() => {
       void loadAttritionReports().catch(() => {
         setAttritionOverallRows([]);
@@ -2576,6 +2572,7 @@ export function ProfilePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadAttritionReports]);  useEffect(() => {
+    if (!hasHrAccess) return;
         const id = window.setTimeout(() => {
       void loadSkillInventoryReport().catch(() => {
         setSkillInventoryRows([]);
@@ -2583,6 +2580,7 @@ export function ProfilePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadSkillInventoryReport]);  useEffect(() => {
+    if (!hasHrAccess) return;
         const id = window.setTimeout(() => {
       void loadContractDistributionReport().catch(() => {
         setContractDistributionRows([]);
@@ -2590,6 +2588,7 @@ export function ProfilePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadContractDistributionReport]);  useEffect(() => {
+    if (!hasHrAccess) return;
         const id = window.setTimeout(() => {
       void loadBgvDashboardReport().catch(() => {
         setBgvDashboardRows([]);
@@ -2597,6 +2596,7 @@ export function ProfilePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadBgvDashboardReport]);  useEffect(() => {
+    if (!hasHrAccess) return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -2751,9 +2751,9 @@ export function ProfilePageClient() {
 
   const renderProfileAssignedProjectsSection = () => (
     <div className="mt-8 border-t border-wt-border pt-6">
-      <h4 className="text-sm font-semibold mb-3">Assigned projects</h4>
+      <h4 className="text-sm font-semibold mb-3">Assigned Projects</h4>
       {profileAssignedProjectsLoading ? (
-        <p className="text-sm text-wt-text-muted">Loading assigned projects…</p>
+        <SectionLoading label="Loading assigned projects…" />
       ) : (
         <DataTable
           columns={profileAssignedProjectColumns}
@@ -2823,11 +2823,13 @@ export function ProfilePageClient() {
             <p className="text-sm text-wt-text-muted">
               {isOffboarded
                 ? "Your profile is read-only because your account is offboarded."
-                : "Review your profile details before editing."}
+                : isPortalLocked
+                  ? "Your profile is read-only because your last working day has been reached."
+                  : "Review your profile details before editing."}
             </p>
           </div>
         </div>
-        {!isOffboarded ? (
+        {!isOffboarded && !isPortalLocked ? (
           <button
             type="button"
             className="btn-primary px-4 py-2.5"

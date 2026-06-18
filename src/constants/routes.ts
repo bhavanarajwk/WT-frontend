@@ -95,7 +95,12 @@ export function isDashboardNavChildActive(
     pathname === "/dashboard/leave/team" || pathname.startsWith("/dashboard/leave/team/");
   if (!onTeamLeave) return false;
   if (childId === "leave-org" && options?.hasHrAccess) return true;
-  if (childId === "leave-team" && (options?.hasManagerAccess || options?.hasDmAccess)) return true;
+  if (
+    childId === "leave-team" &&
+    (options?.hasManagerAccess || options?.hasDmAccess || options?.hasHrAccess)
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -127,4 +132,9 @@ export function defaultDashboardPathForRoles(roles: string[]): string {
     return DASHBOARD_ROUTES.profile;
   }
   return DASHBOARD_ROUTES["employee-directory"];
+}
+
+export function exitInterviewSubmissionDetailPath(lookupId: string): string {
+  const token = lookupId.trim();
+  return `${DASHBOARD_ROUTES["exit-interview-submissions"]}/${encodeURIComponent(token)}`;
 }

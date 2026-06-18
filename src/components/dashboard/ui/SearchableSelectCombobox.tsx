@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDownIcon } from "@/components/dashboard/ui/DropdownSelect";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 export type SearchableSelectOption = { value: string; label: string };
@@ -23,6 +24,8 @@ export function SearchableSelectCombobox({
   inputClassName = "input-field px-3 py-2 text-sm w-full",
   id: idProp,
   "aria-label": ariaLabel,
+  dropdownAttached = false,
+  showChevron = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -34,6 +37,10 @@ export function SearchableSelectCombobox({
   inputClassName?: string;
   id?: string;
   "aria-label"?: string;
+  /** Drop the list flush on the input (no gap) so it overlays content below. */
+  dropdownAttached?: boolean;
+  /** Show a chevron like the native theme dropdown. */
+  showChevron?: boolean;
 }) {
   const autoId = useId();
   const id = idProp ?? autoId;
@@ -41,6 +48,7 @@ export function SearchableSelectCombobox({
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [filterActive, setFilterActive] = useState(false);
 
   const selected = useMemo(
     () => options.find((opt) => opt.value === value),
@@ -55,14 +63,16 @@ export function SearchableSelectCombobox({
   }, [selectedLabel, isOpen]);
 
   const filteredOptions = useMemo(() => {
+    if (isOpen && !filterActive) return options;
     const q = isOpen ? query : "";
     return options.filter((opt) => optionMatchesQuery(opt, q));
-  }, [options, query, isOpen]);
+  }, [options, query, isOpen, filterActive]);
 
   const selectOption = useCallback(
     (opt: SearchableSelectOption) => {
       onChange(opt.value);
       setQuery(opt.label);
+      setFilterActive(false);
       setIsOpen(false);
     },
     [onChange]
@@ -79,13 +89,27 @@ export function SearchableSelectCombobox({
   }, []);
 
   const displayValue = isOpen ? query : selectedLabel;
+  const resolvedInputClassName = showChevron
+    ? `${inputClassName}${inputClassName.includes("pr-") ? "" : " pr-10"}`
+    : inputClassName;
+
+  const openList = useCallback(() => {
+    if (disabled) return;
+    setIsOpen(true);
+    setFilterActive(false);
+    setQuery(selectedLabel);
+  }, [disabled, selectedLabel]);
+
+  const handleInputClick = useCallback(() => {
+    openList();
+  }, [openList]);
 
   return (
     <div ref={rootRef} className={`relative ${className}`.trim()}>
       <input
         type="text"
         id={id}
-        className={inputClassName}
+        className={resolvedInputClassName}
         value={displayValue}
         disabled={disabled}
         required={required && !value}
@@ -95,25 +119,24 @@ export function SearchableSelectCombobox({
         aria-autocomplete="list"
         aria-label={ariaLabel}
         placeholder={placeholder}
-        onFocus={() => {
-          if (!disabled) {
-            setIsOpen(true);
-            setQuery("");
-          }
-        }}
+        onClick={handleInputClick}
+        onFocus={openList}
         onChange={(e) => {
           setQuery(e.target.value);
+          setFilterActive(true);
           setIsOpen(true);
         }}
         onBlur={() => {
           window.setTimeout(() => {
             setQuery(selectedLabel);
+            setFilterActive(false);
           }, 150);
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
             setIsOpen(false);
             setQuery(selectedLabel);
+            setFilterActive(false);
           }
           if (e.key === "Enter" && isOpen && filteredOptions.length === 1) {
             e.preventDefault();
@@ -121,11 +144,28 @@ export function SearchableSelectCombobox({
           }
         }}
       />
+      {showChevron ? (
+        <button
+          type="button"
+          tabIndex={-1}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-wt-text-muted disabled:opacity-50"
+          disabled={disabled}
+          aria-label="Open options"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={openList}
+        >
+          <ChevronDownIcon />
+        </button>
+      ) : null}
       {isOpen && !disabled ? (
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-wt-border bg-wt-surface-1 py-1 text-sm shadow-lg"
+          className={`absolute z-50 max-h-56 w-full overflow-auto border border-wt-border bg-wt-surface-1 py-1 text-sm shadow-lg ${
+            dropdownAttached
+              ? "left-0 right-0 top-full -mt-px rounded-b-lg"
+              : "mt-1 rounded-lg"
+          }`}
         >
           {filteredOptions.length === 0 ? (
             <li className="px-3 py-2 text-wt-text-muted">No matches</li>
@@ -136,8 +176,10 @@ export function SearchableSelectCombobox({
                   type="button"
                   role="option"
                   aria-selected={value === opt.value}
-                  className={`block w-full px-3 py-2 text-left hover:bg-wt-surface-2 ${
-                    value === opt.value ? "bg-wt-surface-2 font-medium" : ""
+                  className={`block w-full px-3 py-2 text-left ${
+                    value === opt.value
+                      ? "bg-blue-600 font-medium text-white"
+                      : "hover:bg-blue-600 hover:text-white"
                   }`}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => selectOption(opt)}

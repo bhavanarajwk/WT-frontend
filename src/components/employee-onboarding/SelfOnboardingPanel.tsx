@@ -8,11 +8,8 @@ import { isValidIndiaMobile, isValidPersonName } from "@/utils/dashboard/validat
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import { validateResumeShareLink } from "@/utils/employeeResume";
 import { createEmptySelfOnboardForm } from "@/utils/selfOnboardFormState";
-import {
-  FALLBACK_ONBOARD_OPTIONS,
-  parseOnboardOptions,
-} from "@/utils/onboardFormOptions";
-import type { OnboardOptionsResponse } from "@/types/onboard-options";
+import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
+import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 
 type OnboardFiles = {
   profile_photo: File | null;
@@ -48,16 +45,10 @@ export function SelfOnboardingPanel({
   const [formKey, setFormKey] = useState(0);
   const [form, setForm] = useState(createEmptySelfOnboardForm);
   const [files, setFiles] = useState<OnboardFiles>(EMPTY_FILES);
-  const [options, setOptions] = useState<OnboardOptionsResponse>(FALLBACK_ONBOARD_OPTIONS);
+  const onboardOptionsQ = useOnboardOptions();
+  const options = onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS;
 
   const email = useMemo(() => workEmail.trim(), [workEmail]);
-
-  useEffect(() => {
-    void hrmsService
-      .getOnboardOptions()
-      .then((res) => setOptions(parseOnboardOptions(res)))
-      .catch(() => setOptions(FALLBACK_ONBOARD_OPTIONS));
-  }, []);
 
   useEffect(() => {
     setForm((prev) => ({

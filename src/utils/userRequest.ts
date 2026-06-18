@@ -311,7 +311,9 @@ export function canHrToggleLeaveWfh(
 
   if (!options.hasHrAccess) return false;
 
-  if (isLeaveRequestType(pickRowField(row, "request_type", "requestType"))) return false;
+  const requestType = pickRowField(row, "request_type", "requestType");
+
+  if (isLeaveOrWfhRequestType(requestType)) return false;
 
   if (isLeaveEmailOnlyWorkflow(row)) return false;
 
@@ -362,8 +364,8 @@ export function hrTeamActionBlockedHint(
 
   const requestType = pickRowField(row, "request_type", "requestType");
 
-  if (isLeaveRequestType(requestType)) {
-    return "Manager approval is final for leave";
+  if (isLeaveRequestType(requestType) || isLeaveOrWfhRequestType(requestType)) {
+    return "Manager approval is final for leave and WFH";
   }
 
   if (!isLeaveOrWfhRequestType(requestType) && !isCompOffRequestType(requestType)) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
@@ -214,18 +215,20 @@ export function EmployeeAttendancePanel() {
     <section className="space-y-4">
       {toast ? (
         <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
+          className={`sticky top-0 z-30 rounded-xl border px-4 py-3 text-sm shadow-sm ${
             toast.type === "success"
               ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-800"
               : "border-rose-600/30 bg-rose-500/10 text-rose-800"
           }`}
+          role="status"
+          aria-live="polite"
         >
           {toast.message}
         </div>
       ) : null}
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h3 className="font-semibold">Attendance And Leave Summary</h3>
+        <h3 className="font-semibold">Employee Attendance And Leave Summary</h3>
 
         <div
           className="flex flex-wrap gap-2 border-b border-wt-border pb-3"
@@ -332,7 +335,7 @@ export function EmployeeAttendancePanel() {
                   <col className="w-36" />
                   <col className="w-44" />
                 </colgroup>
-                <thead>
+                <thead className="wt-table-sticky-head text-wt-text-muted">
                   <tr>
                     <th className={`${STICKY_HEADER_CLASS} ${NAME_HEADER_CLASS}`}>Name</th>
                     <th className={`${STICKY_HEADER_CLASS} ${EMAIL_HEADER_CLASS}`}>Email</th>

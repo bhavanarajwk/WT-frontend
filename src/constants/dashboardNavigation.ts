@@ -1,4 +1,5 @@
 import type { SidebarIconName } from "@/constants/sidebarIcons";
+import { toTitleCase } from "@/utils/titleCase";
 
 export type NavChild = {
   id: string;
@@ -80,7 +81,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "leave-team",
         label: "Team Requests",
-        roles: ["ROLE_MANAGER", "ROLE_DM"],
+        roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
@@ -138,7 +139,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "leave",
         label: "Leave Request",
-        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM"],
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
@@ -205,12 +206,6 @@ function childVisible(
   options: { hasHrAccess: boolean }
 ): boolean {
   if (child.id === "employee" && !options.hasHrAccess) return false;
-  if (
-    child.id === "leave" &&
-    (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN"))
-  ) {
-    return false;
-  }
   return child.roles.length === 0 ? true : child.roles.some((r) => userRoles.includes(r));
 }
 
@@ -239,7 +234,7 @@ export function filterVisibleNavigation(
   return result;
 }
 
-/** Offboarded employees may only open Exit survey under Personal (during notice only). */
+/** Offboarded Employees may only open Exit survey under Personal (during notice only). */
 export function filterNavigationForOffboardedUser(
   _items: NavItem[],
   options?: { showExitSurvey?: boolean }
@@ -296,20 +291,13 @@ export function accordionSectionForPathname(pathname: string, activeSection: str
 const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   profile: "Profile",
   overview: "Overview",
+  "employee-directory": "Employee Directory",
   employee: "Onboarded Employees",
+  offboarding: "Employee Offboarding",
+  leave: "Employee Leave Requests",
+  "leave-team": "Team Requests",
+  "leave-org": "All Employee Requests",
 };
-
-function toTitleCase(label: string): string {
-  return label
-    .split(/\s+/)
-    .map((word) => {
-      if (word === "&") return word;
-      const lower = word.toLowerCase();
-      if (lower === "vs") return "vs";
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    })
-    .join(" ");
-}
 
 function groupChildPageTitle(groupLabel: string, childLabel: string): string {
   if (childLabel.toLowerCase().startsWith(groupLabel.toLowerCase())) {

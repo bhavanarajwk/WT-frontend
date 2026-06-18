@@ -324,6 +324,61 @@ export const TITLE_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   },
 ];
 
+export const ALLOCATION_LIST_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
+  {
+    id: "project_end_asc",
+    label: "Project",
+    columnKeys: ["allocated_project", "project_name", "project"],
+    direction: "asc",
+    getValue: (row) =>
+      pickRowField(row, ["project_name", "projectName", "allocated_project", "project_code"]),
+  },
+  {
+    id: "project_asc",
+    label: "Project",
+    columnKeys: ["allocated_project", "project_name", "project"],
+    direction: "asc",
+    getValue: (row) =>
+      pickRowField(row, ["project_name", "projectName", "allocated_project", "project_code"]),
+  },
+  {
+    id: "project_desc",
+    label: "Project",
+    columnKeys: ["allocated_project", "project_name", "project"],
+    direction: "desc",
+    getValue: (row) =>
+      pickRowField(row, ["project_name", "projectName", "allocated_project", "project_code"]),
+  },
+  {
+    id: "allocation_type_asc",
+    label: "Allocation type",
+    columnKeys: ["allocation_type"],
+    direction: "asc",
+    getValue: (row) => pickRowField(row, ["allocation_type", "allocationType"]),
+  },
+  {
+    id: "allocation_type_desc",
+    label: "Allocation type",
+    columnKeys: ["allocation_type"],
+    direction: "desc",
+    getValue: (row) => pickRowField(row, ["allocation_type", "allocationType"]),
+  },
+  {
+    id: "billing_status_asc",
+    label: "Billing status",
+    columnKeys: ["billing_status"],
+    direction: "asc",
+    getValue: (row) => pickRowField(row, ["billing_status", "billingStatus"]),
+  },
+  {
+    id: "billing_status_desc",
+    label: "Billing status",
+    columnKeys: ["billing_status"],
+    direction: "desc",
+    getValue: (row) => pickRowField(row, ["billing_status", "billingStatus"]),
+  },
+];
+
 export const ALLOCATION_FORECAST_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
     id: "employee_asc",

@@ -131,8 +131,8 @@ export function HolidayCalendarsPageClient() {
                   Holiday Calendar
                 </h1>
                 <p className="mt-1 max-w-2xl text-sm leading-relaxed text-wt-text-muted">
-                  Configure company holidays and associate calendars with employees during onboarding
-                  or via CSV import.
+                  Configure company holidays and associate calendars with employees during onboarding,
+                  from the employee profile, or via CSV import.
                 </p>
               </div>
             </div>
