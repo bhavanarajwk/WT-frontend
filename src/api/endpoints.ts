@@ -7,6 +7,7 @@ export const endpoints = {
     googleSignIn: `${api}/google-signin`,
     googleCallback: `${api}/auth/google/callback`,
     refresh: `${api}/auth/refresh`,
+    activity: `${api}/auth/activity`,
     logout: `${api}/auth/logout`,
     oauthBypass: (email: string) => `${api}/oauth/bypass/${encodeURIComponent(email)}`,
   },
@@ -102,6 +103,8 @@ export const endpoints = {
     getByEmployees: (empEmails: string, fromDate: string, toDate: string, requestType: string) =>
       `${api}/userRequest/get/${encodeURIComponent(empEmails)}/${encodeURIComponent(fromDate)}/${encodeURIComponent(toDate)}/${encodeURIComponent(requestType)}`,
     status: `${api}/userRequest/status`,
+    leaveManagerOptions: `${api}/leave-request/manager-options`,
+    leaveRecipientOptions: `${api}/leave-request/recipient-options`,
     leaveSummary: `${api}/leave-summary`,
     leaveBalances: `${api}/user/leave-balances`,
     managerTeamOnLeaveToday: `${api}/manager-team-on-leave-today`,
@@ -188,6 +191,17 @@ export const endpoints = {
     root: `${api}/annual-calendar`,
     byYear: (year: string | number) =>
       `${api}/annual-calendar/${encodeURIComponent(String(year))}`,
+  },
+
+  holidayCalendar: {
+    root: `${api}/holiday-calendars`,
+    company: `${api}/holiday-calendars/company`,
+    byId: (id: string | number) =>
+      `${api}/holiday-calendars/${encodeURIComponent(String(id))}`,
+    importCsv: `${api}/holiday-calendars/import-csv`,
+    exportCsv: `${api}/holiday-calendars/export-csv`,
+    importAssignmentsCsv: `${api}/holiday-calendars/employee-assignments/import-csv`,
+    exportAssignmentsCsv: `${api}/holiday-calendars/employee-assignments/export-csv`,
   },
 
   exitInterview: {

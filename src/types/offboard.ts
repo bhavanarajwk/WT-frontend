@@ -1,4 +1,22 @@
-/** GET /api/v1/user/offboard — `data.items[]` (exit survey follow-up list). */
+/** GET /api/v1/user/offboard — HR offboarding list (`data.items[]`). */
+export interface HrOffboardListItem {
+  emp_id: string;
+  status: string;
+  employee_name: string;
+  exit_type: string;
+  reason: string | null;
+  critical_skill: string | null;
+  is_regretted: boolean;
+  resignation_date: string;
+  last_working_day: string;
+  notice_period_days: number;
+  designation: string | null;
+  band_name: string | null;
+  band_role: string | null;
+  project_manager: string | null;
+}
+
+/** GET /api/v1/user/offboard — exit survey follow-up list (`data.items[]`). */
 export interface OffboardListItem {
   emp_id: string | null;
   employee_name: string;

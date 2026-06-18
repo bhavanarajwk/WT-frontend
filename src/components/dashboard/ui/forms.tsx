@@ -162,6 +162,7 @@ export function InputField({
   type = "text",
   required = false,
   placeholder,
+  disabled = false,
 }: {
   label: string;
   value: string;
@@ -169,10 +170,17 @@ export function InputField({
   type?: string;
   required?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   if (type === "date") {
     return (
-      <ApiDateField label={label} value={value} onChange={onChange} required={required} />
+      <ApiDateField
+        label={label}
+        value={value}
+        onChange={onChange}
+        required={required}
+        disabled={disabled}
+      />
     );
   }
 
@@ -187,6 +195,7 @@ export function InputField({
         placeholder={placeholder}
         required={required}
         aria-required={required || undefined}
+        disabled={disabled}
       />
     </label>
   );
@@ -200,6 +209,7 @@ export function TextAreaField({
   placeholder,
   rows = 4,
   className,
+  textareaClassName,
 }: {
   label: string;
   value: string;
@@ -208,12 +218,13 @@ export function TextAreaField({
   placeholder?: string;
   rows?: number;
   className?: string;
+  textareaClassName?: string;
 }) {
   return (
     <label className={`${FORM_FIELD_CLASS} ${className ?? ""}`.trim()}>
       <FieldLabel label={label} required={required} />
       <textarea
-        className="input-field min-h-[100px] w-full px-3 py-2 text-sm resize-y"
+        className={`input-field min-h-[100px] w-full px-3 py-2 text-sm resize-y break-words whitespace-pre-wrap ${textareaClassName ?? ""}`.trim()}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
