@@ -5,7 +5,7 @@ import { SelectField, type SelectFieldOption } from "@/components/dashboard/ui/f
 import { useProjectTypes } from "@/hooks/useProjectTypes";
 import { projectTypeSelectOptions } from "@/utils/projectTypes";
 
-/** Create project — options from GET /project/types (`code` stored, `label` shown e.g. Projects). */
+/** Create Project — options from GET /project/types (`code` stored, `label` shown e.g. Projects). */
 export function ProjectTypeSelect({
   value,
   onChange,

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useEmployeeLeaveBalances } from "@/hooks/employee-directory/useEmployeeLeaveBalances";
 
 function BalanceItem({ label, value }: { label: string; value: number | string }) {
@@ -22,14 +23,13 @@ export function EmployeeLeaveBalancesCard({
 
   return (
     <section className="rounded-xl border border-wt-border bg-wt-surface-1 shadow-sm">
-      <div className="border-b border-wt-border px-5 py-4 md:px-6">
-        <h4 className="text-base font-semibold">Leave & comp-off balances</h4>
-        <p className="mt-0.5 text-sm text-wt-text-muted">Current balance snapshot for this employee.</p>
-      </div>
+      <header className="border-b border-wt-border px-5 py-4 md:px-6">
+        <h4 className="text-base font-semibold tracking-tight">Leave & Comp-Off Balances</h4>
+      </header>
 
       <div className="p-5 md:p-6">
         {isLoading ? (
-          <p className="text-sm text-wt-text-muted">Loading balances…</p>
+          <SectionLoading label="Loading balances…" />
         ) : null}
 
         {isError ? (
@@ -43,8 +43,8 @@ export function EmployeeLeaveBalancesCard({
 
         {!isLoading && !isError && data ? (
           <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-            <BalanceItem label="Total leave" value={data.leave?.total ?? 0} />
-            <BalanceItem label="Comp-off balance" value={data.comp_off_balance ?? 0} />
+            <BalanceItem label="Total Leave" value={data.leave?.total ?? 0} />
+            <BalanceItem label="Comp-Off Balance" value={data.comp_off_balance ?? 0} />
           </div>
         ) : null}
 

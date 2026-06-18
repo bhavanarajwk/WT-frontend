@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
@@ -11,6 +11,13 @@ import { ExitInterviewResponsesView } from "@/components/exit-interview/ExitInte
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
 import { useUpdateExitInterviewMinutesOfMeeting } from "@/hooks/exit-interview/useExitInterviewMinutesOfMeeting";
 import { useExitInterviewSubmissionDetail } from "@/hooks/exit-interview/useExitInterviewSubmissionDetail";
+import { formatApiDateDisplay } from "@/utils/apiDate";
+import {
+  exitInterviewFieldsWithResponses,
+  formFieldForResponseItem,
+  formatResponseForDisplay,
+} from "@/utils/exitInterview";
+import { formatEmployeeStatusLabel } from "@/utils/userStatus";
 
 function formatDateTime(value: string | null): string {
   if (!value) return "—";
@@ -27,20 +34,36 @@ function formatDateTime(value: string | null): string {
   }
 }
 
-export function ExitInterviewSubmissionDetailPageClient({ empId }: { empId: string }) {
+export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId: string }) {
   const { hasHrAccess, userRoles } = useDashboardAccess();
   const canView = hasHrAccess || userRoles.includes("ROLE_ADMIN");
   const { toast, actionLoading, runAction } = useDashboardAction();
 
-  const detailQ = useExitInterviewSubmissionDetail(empId, { enabled: canView });
-  const formDefQ = useExitInterviewFormDefinition({ enabled: canView });
-  const updateMomMutation = useUpdateExitInterviewMinutesOfMeeting(empId);
+  const detailQ = useExitInterviewSubmissionDetail(lookupId, { enabled: canView });
+  const formDefQ = useExitInterviewFormDefinition({ enabled: canView && Boolean(detailQ.data) });
+  const updateMomMutation = useUpdateExitInterviewMinutesOfMeeting(lookupId);
   const [minutesOfMeeting, setMinutesOfMeeting] = useState("");
   const fields = formDefQ.data?.fields ?? [];
 
   useEffect(() => {
     setMinutesOfMeeting(detailQ.data?.minutes_of_meeting ?? "");
   }, [detailQ.data?.minutes_of_meeting]);
+
+  const responseFields = useMemo(() => {
+    const detail = detailQ.data;
+    if (!detail) return [];
+    if (detail.response_fields?.length) {
+      return detail.response_fields.map((item) => ({
+        item,
+        field: formFieldForResponseItem(item, fields),
+      }));
+    }
+    const visible = exitInterviewFieldsWithResponses(fields, detail.responses ?? {});
+    return visible.map((field) => ({
+      item: { field: field.key, label: field.label, value: detail.responses[field.key] },
+      field,
+    }));
+  }, [detailQ.data, fields]);
 
   if (!canView) {
     return (
@@ -70,14 +93,10 @@ export function ExitInterviewSubmissionDetailPageClient({ empId }: { empId: stri
           href={DASHBOARD_ROUTES["exit-interview-submissions"]}
           className="text-xs font-medium text-indigo-600 hover:underline"
         >
-          ← Back to exit survey
+          ← Back to Exit Survey
         </Link>
 
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 px-5 py-6 md:px-7">
-          {detailQ.isLoading || formDefQ.isLoading ? (
-            <p className="text-sm text-wt-text-muted">Loading submission…</p>
-          ) : null}
-
           {detailQ.isError ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               Could not load this submission.
@@ -88,6 +107,7 @@ export function ExitInterviewSubmissionDetailPageClient({ empId }: { empId: stri
           {detail ? (
             <>
               <h3 className="text-lg font-semibold">{detail.employee_name}</h3>
+              <p className="mt-1 text-sm text-wt-text-muted">{detail.email}</p>
 
               <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div>
@@ -95,34 +115,70 @@ export function ExitInterviewSubmissionDetailPageClient({ empId }: { empId: stri
                   <dd className="font-medium">{detail.department ?? "—"}</dd>
                 </div>
                 <div>
+                  <dt className="text-xs text-wt-text-muted">Employee ID</dt>
+                  <dd className="font-medium">{detail.emp_id ?? "—"}</dd>
+                </div>
+                <div>
                   <dt className="text-xs text-wt-text-muted">Submitted</dt>
                   <dd className="font-medium tabular-nums">{formatDateTime(detail.submitted_at)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-wt-text-muted">Exit type</dt>
+                  <dt className="text-xs text-wt-text-muted">Employee status</dt>
+                  <dd className="font-medium">
+                    {formatEmployeeStatusLabel(detail.employee_status)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-wt-text-muted">Resignation date</dt>
+                  <dd className="font-medium tabular-nums">
+                    {formatApiDateDisplay(detail.resignation_date) || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-wt-text-muted">Last working day</dt>
+                  <dd className="font-medium tabular-nums">
+                    {formatApiDateDisplay(detail.last_working_day) || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-wt-text-muted">Separation type</dt>
                   <dd className="font-medium">
                     {detail.exit_type ?? detail.separation_type ?? "—"}
                   </dd>
                 </div>
-                <div>
-                  <dt className="text-xs text-wt-text-muted">Employee ID</dt>
-                  <dd className="font-medium">{detail.emp_id}</dd>
-                </div>
               </dl>
 
-              {fields.length ? (
-                <div className="mt-8 border-t border-wt-border pt-6">
-                  <h4 className="mb-4 text-base font-semibold">Responses</h4>
+              <div className="mt-8 border-t border-wt-border pt-6">
+                <h4 className="mb-4 text-base font-semibold">Responses</h4>
+                {responseFields.length ? (
+                  <dl className="grid gap-4 sm:grid-cols-2">
+                    {responseFields.map(({ item, field }) => (
+                      <div
+                        key={item.field}
+                        className={`rounded-lg border border-wt-border bg-wt-surface-2/50 px-4 py-3 ${
+                          field.widget === "textarea" ? "sm:col-span-2" : ""
+                        }`}
+                      >
+                        <dt className="text-xs font-medium uppercase tracking-wide text-wt-text-muted">
+                          {item.label}
+                        </dt>
+                        <dd className="mt-1 text-sm text-wt-text whitespace-pre-wrap">
+                          {formatResponseForDisplay(field, item.value)}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : fields.length && detail.responses ? (
                   <ExitInterviewResponsesView fields={fields} responses={detail.responses} />
-                </div>
-              ) : (
-                <p className="mt-6 text-sm text-wt-text-muted">Form definition unavailable for labels.</p>
-              )}
+                ) : (
+                  <p className="text-sm text-wt-text-muted">No survey responses recorded.</p>
+                )}
+              </div>
 
               <div className="mt-8 border-t border-wt-border pt-6 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h4 className="text-base font-semibold">Minutes of meeting (MOM)</h4>
+                    <h4 className="text-base font-semibold">Minutes of Meeting (MOM)</h4>
                     <p className="mt-1 text-xs text-wt-text-muted">
                       HR notes from the exit survey discussion. Clear the field and save to remove.
                     </p>

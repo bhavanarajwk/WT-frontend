@@ -84,6 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setStatus("authenticated");
         return keptUser;
       }
+      clearSessionTiming();
+      setUser(null);
       setStatus("unauthenticated");
       return null;
     }

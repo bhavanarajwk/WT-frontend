@@ -115,7 +115,9 @@ export function useSessionTimeout(
 
       if (idleFor < SESSION_INACTIVITY_MS && now - lastPingRef.current >= SESSION_ACTIVITY_PING_MS) {
         lastPingRef.current = now;
-        void recordSessionActivity().catch(() => undefined);
+        void recordSessionActivity().catch(() => {
+          onTimeoutRef.current("server");
+        });
       }
 
       if (
@@ -125,7 +127,7 @@ export function useSessionTimeout(
         lastRefreshRef.current = now;
         void refreshSession()
           .then((user) => {
-            if (user === null) onTimeoutRef.current("server");
+            if (!user) onTimeoutRef.current("server");
           })
           .catch(() => undefined);
       }

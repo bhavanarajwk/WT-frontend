@@ -1,12 +1,21 @@
 "use client";
 
 import { Children, isValidElement, useRef, type ReactElement, type ReactNode } from "react";
+import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 import {
   SearchableSelectCombobox,
   type SearchableSelectOption,
 } from "@/components/dashboard/ui/SearchableSelectCombobox";
 
 export { SearchableSelectCombobox, type SearchableSelectOption };
+
+const ADAPTIVE_SELECT_SEARCH_THRESHOLD = 6;
+
+import {
+  FIELD_LABEL_CLASS,
+  FORM_FIELD_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
+import { formatUILabel } from "@/utils/titleCase";
 import {
   API_DATE_PLACEHOLDER,
   apiDateFieldValue,
@@ -18,8 +27,8 @@ import {
 
 export function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
-    <span className="inline-flex items-baseline gap-0.5">
-      <span>{label}</span>
+    <span className={`inline-flex items-baseline gap-0.5 ${FIELD_LABEL_CLASS}`}>
+      <span>{formatUILabel(label)}</span>
       {required ? (
         <span className="shrink-0 text-rose-600 leading-none" aria-hidden>
           *
@@ -79,7 +88,7 @@ export function ApiDateField({
   }
 
   return (
-    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
+    <label className={`${FORM_FIELD_CLASS} ${className ?? ""}`.trim()}>
       <FieldLabel label={label} required={required} />
       <div className="relative">
         <input
@@ -127,6 +136,25 @@ export function ApiDateField({
   );
 }
 
+export function ReadonlyDateField({ value, className }: { value: string; className?: string }) {
+  return (
+    <div className={`relative ${className ?? ""}`.trim()}>
+      <input
+        type="text"
+        className="input-field api-date-field w-full px-3 py-2 pr-10 text-sm opacity-80"
+        value={apiDateFieldValue(value)}
+        placeholder={API_DATE_PLACEHOLDER}
+        disabled
+        readOnly
+        aria-readonly
+      />
+      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-wt-text-muted">
+        <CalendarIcon />
+      </span>
+    </div>
+  );
+}
+
 export function InputField({
   label,
   value,
@@ -134,6 +162,7 @@ export function InputField({
   type = "text",
   required = false,
   placeholder,
+  disabled = false,
 }: {
   label: string;
   value: string;
@@ -141,15 +170,22 @@ export function InputField({
   type?: string;
   required?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   if (type === "date") {
     return (
-      <ApiDateField label={label} value={value} onChange={onChange} required={required} />
+      <ApiDateField
+        label={label}
+        value={value}
+        onChange={onChange}
+        required={required}
+        disabled={disabled}
+      />
     );
   }
 
   return (
-    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+    <label className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} />
       <input
         className="input-field px-3 py-2 text-sm"
@@ -159,6 +195,7 @@ export function InputField({
         placeholder={placeholder}
         required={required}
         aria-required={required || undefined}
+        disabled={disabled}
       />
     </label>
   );
@@ -172,6 +209,7 @@ export function TextAreaField({
   placeholder,
   rows = 4,
   className,
+  textareaClassName,
 }: {
   label: string;
   value: string;
@@ -180,12 +218,13 @@ export function TextAreaField({
   placeholder?: string;
   rows?: number;
   className?: string;
+  textareaClassName?: string;
 }) {
   return (
-    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
+    <label className={`${FORM_FIELD_CLASS} ${className ?? ""}`.trim()}>
       <FieldLabel label={label} required={required} />
       <textarea
-        className="input-field min-h-[100px] w-full px-3 py-2 text-sm resize-y"
+        className={`input-field min-h-[100px] w-full px-3 py-2 text-sm resize-y break-words whitespace-pre-wrap ${textareaClassName ?? ""}`.trim()}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -234,6 +273,129 @@ function withPlaceholderOption(
   return [{ value: "", label: placeholder }, ...items];
 }
 
+function ChevronDownIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-wt-text-muted"
+      aria-hidden
+    >
+      <path
+        fillRule="evenodd"
+        d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+/** Selection-only dropdown with a visible chevron (no free-text entry). */
+export function DropdownSelectField({
+  label,
+  value,
+  options,
+  onChange,
+  required = false,
+  placeholder = "Select",
+  disabled = false,
+  className,
+}: {
+  label: string;
+  value: string;
+  options: SelectFieldOption[];
+  onChange: (value: string) => void;
+  required?: boolean;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const items = normalizeSelectOptions(options);
+  return (
+    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
+      <FieldLabel label={label} required={required} />
+      <div className="relative">
+        <select
+          className="input-field w-full appearance-none pr-9"
+          value={value}
+          required={required}
+          disabled={disabled}
+          aria-label={label}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          <option value="" disabled={required}>
+            {placeholder}
+          </option>
+          {items.map((option) => (
+            <option key={`${option.value}-${option.label}`} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDownIcon />
+      </div>
+    </label>
+  );
+}
+
+export function AdaptiveSelectField({
+  label,
+  value,
+  options,
+  onChange,
+  required = false,
+  placeholder,
+  disabled = false,
+  className,
+  searchPlaceholder = "Search…",
+}: {
+  label: string;
+  value: string;
+  options: SelectFieldOption[];
+  onChange: (value: string) => void;
+  required?: boolean;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+  searchPlaceholder?: string;
+}) {
+  const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
+  const selectableCount = items.filter((opt) => opt.value !== "").length;
+  const useSearch = selectableCount > ADAPTIVE_SELECT_SEARCH_THRESHOLD;
+  const dropdownInputClassName =
+    "input-field appearance-none px-3 py-2 pr-10 text-sm w-full";
+
+  return (
+    <label className={`${FORM_FIELD_CLASS} ${className ?? ""}`.trim()}>
+      <FieldLabel label={label} required={required} />
+      {useSearch ? (
+        <SearchableSelectCombobox
+          value={value}
+          onChange={onChange}
+          options={items}
+          placeholder={searchPlaceholder}
+          required={required}
+          disabled={disabled}
+          aria-label={label}
+          showChevron
+          inputClassName={dropdownInputClassName}
+        />
+      ) : (
+        <DropdownSelect
+          value={value}
+          onChange={onChange}
+          options={items}
+          required={required}
+          disabled={disabled}
+          aria-label={label}
+          selectClassName={dropdownInputClassName}
+        />
+      )}
+    </label>
+  );
+}
+
 export function SelectField({
   label,
   value,
@@ -253,20 +415,18 @@ export function SelectField({
   disabled?: boolean;
   className?: string;
 }) {
-  const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
   return (
-    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
-      <FieldLabel label={label} required={required} />
-      <SearchableSelectCombobox
-        value={value}
-        onChange={onChange}
-        options={items}
-        placeholder={placeholder ?? "Search…"}
-        required={required}
-        disabled={disabled}
-        aria-label={label}
-      />
-    </label>
+    <AdaptiveSelectField
+      label={label}
+      value={value}
+      options={options}
+      onChange={onChange}
+      required={required}
+      placeholder={placeholder}
+      disabled={disabled}
+      className={className}
+      searchPlaceholder={placeholder ?? "Search…"}
+    />
   );
 }
 
@@ -291,7 +451,7 @@ export function NativeSelectField({
 }) {
   const items = withPlaceholderOption(optionsFromSelectChildren(children), placeholder, required);
   return (
-    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
+    <label className={`${FORM_FIELD_CLASS} ${className ?? ""}`.trim()}>
       <FieldLabel label={label} required={required} />
       <SearchableSelectCombobox
         value={value}
@@ -356,7 +516,7 @@ export function FileField({
 }) {
   const isMulti = Boolean(multiple);
   return (
-    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+    <label className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} />
       <input
         type="file"

@@ -1,3 +1,4 @@
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import dynamic from "next/dynamic";
 
 const EmployeePageClient = dynamic(
@@ -8,7 +9,7 @@ const EmployeePageClient = dynamic(
   {
     loading: () => (
       <div className="flex min-h-[40vh] items-center justify-center p-8">
-        <p className="text-sm text-wt-text-muted">Loading employee workspace…</p>
+        <SectionLoading label="Loading employee workspace…" />
       </div>
     ),
   }

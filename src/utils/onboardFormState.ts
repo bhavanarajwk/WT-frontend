@@ -12,6 +12,7 @@ export type OnboardFormState = {
   doj: string;
   doi: string;
   internship_duration: string;
+  reporting_manager_id: string;
   local_address: string;
   permanent_address: string;
   gender: string;
@@ -19,6 +20,7 @@ export type OnboardFormState = {
   personal_email: string;
   phone_number: string;
   date_of_birth: string;
+  holiday_calendar_id: string;
 };
 
 export function createEmptyOnboardForm(): OnboardFormState {
@@ -36,6 +38,7 @@ export function createEmptyOnboardForm(): OnboardFormState {
     doj: "",
     doi: "",
     internship_duration: "",
+    reporting_manager_id: "",
     local_address: "",
     permanent_address: "",
     gender: "",
@@ -43,5 +46,6 @@ export function createEmptyOnboardForm(): OnboardFormState {
     personal_email: "",
     phone_number: "",
     date_of_birth: "",
+    holiday_calendar_id: "",
   };
 }

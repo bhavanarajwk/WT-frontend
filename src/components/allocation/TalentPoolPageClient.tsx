@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -43,7 +44,7 @@ export function TalentPoolPageClient() {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
-          <h3 className="text-lg font-semibold">Access restricted</h3>
+          <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="mt-2 text-sm text-wt-text-muted">
             Talent pool is available to HR and admin only.
           </p>
@@ -93,7 +94,7 @@ export function TalentPoolPageClient() {
           ) : null}
 
           {loading && !data ? (
-            <p className="text-sm text-wt-text-muted">Loading talent pool…</p>
+            <SectionLoading label="Loading talent pool…" />
           ) : unallocated ? (
             <TalentPoolSection
               title={unallocated.label}
@@ -103,8 +104,8 @@ export function TalentPoolPageClient() {
               onPageChange={(p) => void loadUnallocatedPage(p)}
             >
               {unallocated.items.length ? (
-                <table className="min-w-full text-sm">
-                  <thead className="bg-wt-surface-2 text-wt-text-muted">
+                <table className="wt-scrollable-table text-sm">
+                  <thead className="wt-table-sticky-head text-wt-text-muted">
                     <tr>
                       <th className="text-left px-3 py-2 font-medium">Name</th>
                       <th className="text-left px-3 py-2 font-medium">Days without project</th>
@@ -175,7 +176,7 @@ function TalentPoolSection({
           onPageChange={onPageChange}
         />
       </div>
-      <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
+      <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
         {children}
       </div>
     </section>
@@ -230,7 +231,7 @@ function AllocateButton({
   return (
     <Link
       href={buildAllocateHref(item)}
-      className="inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 p-2 text-indigo-700 hover:bg-indigo-100"
+      className="btn-action-icon inline-flex items-center justify-center p-2"
       title={`Allocate ${label}`}
       aria-label={`Allocate ${label}`}
     >
