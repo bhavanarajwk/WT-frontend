@@ -22,6 +22,32 @@ type AttendanceSummary = {
 
 const PAGE_SIZE = 25;
 
+type AttendanceUserTypeTab = "FULLTIME" | "INTERN";
+
+const ATTENDANCE_USER_TYPE_TABS: { id: AttendanceUserTypeTab; label: string }[] = [
+  { id: "FULLTIME", label: "Full-Time Employees" },
+  { id: "INTERN", label: "Interns" },
+];
+
+const ATTENDANCE_USER_TYPE_LABEL: Record<AttendanceUserTypeTab, string> = {
+  FULLTIME: "Full-Time Employees",
+  INTERN: "Interns",
+};
+
+const NAME_HEADER_CLASS = "px-3 py-2 text-left font-medium";
+const EMAIL_HEADER_CLASS = "px-3 py-2 text-left font-medium hidden sm:table-cell";
+const NUMERIC_HEADER_CLASS =
+  "px-3 py-2 text-center font-medium whitespace-nowrap tabular-nums";
+const LEAVE_COLUMN_CLASS = `${NUMERIC_HEADER_CLASS} w-36`;
+const ATTENDANCE_COLUMN_CLASS = `${NUMERIC_HEADER_CLASS} w-44`;
+const STICKY_HEADER_CLASS =
+  "sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted shadow-[inset_0_-1px_0_var(--wt-border)]";
+const NAME_CELL_CLASS = "px-3 py-2 text-left truncate";
+const EMAIL_CELL_CLASS = "px-3 py-2 text-left truncate hidden sm:table-cell text-wt-text-muted";
+const NUMERIC_CELL_CLASS = "px-3 py-2 text-center tabular-nums whitespace-nowrap";
+const LEAVE_CELL_CLASS = `${NUMERIC_CELL_CLASS} w-36`;
+const ATTENDANCE_CELL_CLASS = `${NUMERIC_CELL_CLASS} w-44`;
+
 function defaultAttendanceDateRange(): { from: string; to: string } {
   const to = new Date();
   const from = new Date(2026, 0, 1);
@@ -31,7 +57,7 @@ function defaultAttendanceDateRange(): { from: string; to: string } {
 function formatLeaveDatesHover(row: EmployeeAttendanceLeaveEmployeeRow): string {
   const dates = row.leave_dates ?? [];
   if (!dates.length) {
-    return "No leave dates in this range";
+    return "No Leave Dates In This Range";
   }
   return dates
     .map((d) => formatApiDateDisplay(String(d.leave_date ?? "")).trim())
@@ -41,6 +67,7 @@ function formatLeaveDatesHover(row: EmployeeAttendanceLeaveEmployeeRow): string 
 
 export function EmployeeAttendancePanel() {
   const defaults = useMemo(() => defaultAttendanceDateRange(), []);
+  const [userTypeTab, setUserTypeTab] = useState<AttendanceUserTypeTab>("FULLTIME");
   const [fromDate, setFromDate] = useState(defaults.from);
   const [toDate, setToDate] = useState(defaults.to);
   const [search, setSearch] = useState("");
@@ -56,7 +83,12 @@ export function EmployeeAttendancePanel() {
   const nextPageRef = useRef(0);
   const hasMoreRef = useRef(true);
   const loadingLockRef = useRef(false);
-  const filtersRef = useRef({ from: defaults.from, to: defaults.to, search: "" });
+  const filtersRef = useRef({
+    from: defaults.from,
+    to: defaults.to,
+    search: "",
+    userType: "FULLTIME" as AttendanceUserTypeTab,
+  });
 
   const fetchNextPage = useCallback(async () => {
     if (loadingLockRef.current || !hasMoreRef.current) return;
@@ -64,11 +96,11 @@ export function EmployeeAttendancePanel() {
     const from = filtersRef.current.from;
     const to = filtersRef.current.to;
     if (!from || !to) {
-      setToast({ type: "error", message: "From date and to date are required." });
+      setToast({ type: "error", message: "From Date And To Date Are Required." });
       return;
     }
     if (Date.parse(to) < Date.parse(from)) {
-      setToast({ type: "error", message: "To date cannot be earlier than from date." });
+      setToast({ type: "error", message: "To Date Cannot Be Earlier Than From Date." });
       return;
     }
 
@@ -90,6 +122,7 @@ export function EmployeeAttendancePanel() {
         page,
         size: PAGE_SIZE,
         search: filtersRef.current.search || undefined,
+        type: filtersRef.current.userType,
       });
       const data = res.data;
       const rows = data?.employees ?? [];
@@ -117,7 +150,7 @@ export function EmployeeAttendancePanel() {
           ? error.message
           : error instanceof Error
             ? error.message
-            : "Failed to load employee attendance.";
+            : "Failed To Load Employee Attendance.";
       if (isFirstPage) {
         setEmployees([]);
         setSummary(null);
@@ -144,9 +177,10 @@ export function EmployeeAttendancePanel() {
       from: fromDate.trim(),
       to: toDate.trim(),
       search: debouncedSearch.trim(),
+      userType: userTypeTab,
     };
     resetAndLoad();
-  }, [fromDate, toDate, debouncedSearch, resetAndLoad]);
+  }, [fromDate, toDate, debouncedSearch, userTypeTab, resetAndLoad]);
 
   useEffect(() => {
     const root = scrollRootRef.current;
@@ -159,7 +193,7 @@ export function EmployeeAttendancePanel() {
           void fetchNextPage();
         }
       },
-      { root, rootMargin: "120px", threshold: 0 }
+      { root, rootMargin: "160px", threshold: 0 }
     );
 
     observer.observe(sentinel);
@@ -175,40 +209,69 @@ export function EmployeeAttendancePanel() {
   const workingWeekdays = summary?.working_weekdays_in_range ?? 0;
   const totalItems = summary?.total_element ?? 0;
   const allLoaded = totalItems > 0 && employees.length >= totalItems;
+  const audienceLabel = ATTENDANCE_USER_TYPE_LABEL[userTypeTab];
 
   return (
     <section className="space-y-4">
       {toast ? (
         <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
+          className={`sticky top-0 z-30 rounded-xl border px-4 py-3 text-sm shadow-sm ${
             toast.type === "success"
               ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-800"
               : "border-rose-600/30 bg-rose-500/10 text-rose-800"
           }`}
+          role="status"
+          aria-live="polite"
         >
           {toast.message}
         </div>
       ) : null}
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h3 className="font-semibold">Employee Attendance & Leave</h3>
+        <h3 className="font-semibold">Employee Attendance And Leave Summary</h3>
+
+        <div
+          className="flex flex-wrap gap-2 border-b border-wt-border pb-3"
+          role="tablist"
+          aria-label="Employee User Type"
+        >
+          {ATTENDANCE_USER_TYPE_TABS.map((tab) => {
+            const isActive = userTypeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  isActive
+                    ? "bg-wt-surface-3 text-wt-text"
+                    : "text-wt-text-muted hover:bg-wt-surface-2"
+                }`}
+                onClick={() => setUserTypeTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
         <div className="flex flex-wrap items-end gap-3">
           <DatePickerField
-            label="From date"
+            label="From Date"
             value={fromDate}
             onChange={setFromDate}
             className="w-[10.5rem] shrink-0"
           />
           <DatePickerField
-            label="To date"
+            label="To Date"
             value={toDate}
             onChange={setToDate}
             className="w-[10.5rem] shrink-0"
           />
           {summary ? (
             <div className="flex w-[10.5rem] shrink-0 flex-col gap-1 text-xs text-wt-text-muted">
-              <span>Working days</span>
+              <span>Working Days</span>
               <div
                 className="input-field flex w-full items-center justify-center px-3 py-2 text-sm font-semibold tabular-nums"
                 aria-live="polite"
@@ -236,28 +299,50 @@ export function EmployeeAttendancePanel() {
             {totalItems > 0 ? (
               <>
                 {" "}
-                · Showing {employees.length} of {totalItems} employees
+                · Showing {employees.length} of {totalItems} {audienceLabel}
               </>
             ) : null}
           </p>
         ) : null}
-      </div>
 
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
         {loading && !employees.length ? (
-          <SectionLoading label="Loading attendance data…" />
+          <div
+            className="flex min-h-[12rem] items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2/30"
+            aria-busy="true"
+            aria-live="polite"
+          >
+            <span className="spinner-dark" role="status" aria-label="Loading Attendance Data" />
+          </div>
         ) : employees.length ? (
-          <div className="mx-auto max-w-4xl">
+          <div className="relative min-h-[12rem]">
+            {loading ? (
+              <div
+                className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-wt-surface-1/80"
+                aria-busy="true"
+                aria-live="polite"
+              >
+                <span className="spinner-dark" role="status" aria-label="Loading Attendance Data" />
+              </div>
+            ) : null}
             <div
               ref={scrollRootRef}
-              className="wt-scroll-both max-h-[min(70vh,560px)] overflow-y-auto rounded-xl border border-wt-border"
+              className="wt-scroll-both max-h-[min(70vh,560px)] overflow-auto rounded-xl border border-wt-border"
             >
-              <table className="w-full text-sm">
+              <table className="w-full min-w-full border-separate border-spacing-0 text-sm">
+                <colgroup>
+                  <col className="min-w-0" />
+                  <col className="min-w-[12rem]" />
+                  <col className="w-36" />
+                  <col className="w-44" />
+                </colgroup>
                 <thead className="wt-table-sticky-head text-wt-text-muted">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Name</th>
-                    <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Leave days</th>
-                    <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Attendance days</th>
+                    <th className={`${STICKY_HEADER_CLASS} ${NAME_HEADER_CLASS}`}>Name</th>
+                    <th className={`${STICKY_HEADER_CLASS} ${EMAIL_HEADER_CLASS}`}>Email</th>
+                    <th className={`${STICKY_HEADER_CLASS} ${LEAVE_COLUMN_CLASS}`}>Leave Days</th>
+                    <th className={`${STICKY_HEADER_CLASS} ${ATTENDANCE_COLUMN_CLASS}`}>
+                      Attendance Days
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -266,28 +351,40 @@ export function EmployeeAttendancePanel() {
                       key={String(row.user_id ?? row.emp_id ?? row.name)}
                       className="border-t border-wt-border hover:bg-wt-surface-2/50"
                     >
-                      <td className="px-3 py-2 whitespace-nowrap">{row.name?.trim() || "—"}</td>
+                      <td className={NAME_CELL_CLASS} title={row.name?.trim() || undefined}>
+                        {row.name?.trim() || "—"}
+                      </td>
+                      <td className={EMAIL_CELL_CLASS} title={row.email?.trim() || undefined}>
+                        {row.email?.trim() || "—"}
+                      </td>
                       <td
-                        className="px-3 py-2 text-right whitespace-nowrap cursor-default"
+                        className={`${LEAVE_CELL_CLASS} cursor-default`}
                         title={formatLeaveDatesHover(row)}
                       >
                         {row.leave_days_taken}
                       </td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap">
-                        {row.total_attendance_days}
-                      </td>
+                      <td className={ATTENDANCE_CELL_CLASS}>{row.total_attendance_days}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <div ref={loadMoreRef} className="px-3 py-3 text-center text-xs text-wt-text-muted">
-                {loadingMore ? "Loading more employees…" : allLoaded ? "All employees loaded" : null}
+                {loadingMore ? (
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <span className="spinner-dark" role="status" aria-label="Loading More Employees" />
+                    <span>Loading More Employees…</span>
+                  </span>
+                ) : allLoaded ? (
+                  `All ${audienceLabel} Loaded`
+                ) : null}
               </div>
             </div>
           </div>
-        ) : (
-          <p className="text-sm text-wt-text-muted">No employees found for this range.</p>
-        )}
+        ) : !loading ? (
+          <p className="text-sm text-wt-text-muted">
+            No {audienceLabel} Found For This Range.
+          </p>
+        ) : null}
       </div>
     </section>
   );
