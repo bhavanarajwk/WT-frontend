@@ -4,6 +4,7 @@ import {
   allocationProjectCode,
 } from "@/utils/dashboard/allocationDisplay";
 import { formatAllocatedHoursPercentLabel } from "@/utils/dashboard/validation";
+import { toPagedRows } from "@/utils/apiRows";
 
 export function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) {
   return rows.map((row) => {
@@ -25,6 +26,17 @@ export function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) 
       end_date: row.end_date ?? row.endDate ?? "—",
     } as Record<string, unknown>;
   });
+}
+
+export function buildProfileAssignedProjects(
+  assignedInput: unknown,
+  allocationInput?: unknown
+): Array<Record<string, unknown>> {
+  const normalizedProjects = normalizeAssignedProjects(toPagedRows(assignedInput));
+  if (allocationInput === undefined) {
+    return normalizedProjects;
+  }
+  return mergeProjectAndAllocationData(normalizedProjects, toPagedRows(allocationInput));
 }
 
 export function mergeProjectAndAllocationData(
