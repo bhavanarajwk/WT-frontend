@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMyLeaveBalance } from "@/hooks/leave/useMyLeaveBalance";
 
 function BalanceTile({ label, value }: { label: string; value: number | string }) {
@@ -15,7 +16,7 @@ export function LeaveBalanceSummary() {
   const { data, isLoading, isError, refetch } = useMyLeaveBalance();
 
   if (isLoading) {
-    return <p className="text-sm text-wt-text-muted">Loading leave balance…</p>;
+    return <SectionLoading label="Loading leave balance…" />;
   }
 
   if (isError) {

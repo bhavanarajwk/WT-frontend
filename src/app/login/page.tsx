@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
+import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 
 const TAGLINE =
   "Workforce visibility and project allocation—aligned in one secure workspace.";
@@ -149,17 +150,8 @@ function LoginPageInner() {
     return (
       <div className="relative flex min-h-screen items-center justify-center px-6">
         <MeshBackground />
-        <div className="relative z-10 flex flex-col items-center gap-8">
-          <WebTrakBrand variant="login" />
-          <div
-            className="h-10 w-10 rounded-full border-2 border-t-transparent"
-            style={{
-              borderColor: "var(--wt-indigo-400)",
-              borderTopColor: "transparent",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <p className="text-sm text-slate-400">Checking session…</p>
+        <div className="relative z-10">
+          <WtLoaderCentered label="Checking session…" />
         </div>
       </div>
     );
@@ -227,7 +219,9 @@ export default function LoginPage() {
       fallback={
         <div className="relative flex min-h-screen items-center justify-center px-6">
           <MeshBackground />
-          <p className="relative z-10 text-sm text-slate-400">Loading…</p>
+          <div className="relative z-10">
+            <WtLoaderCentered label="Loading" />
+          </div>
         </div>
       }
     >

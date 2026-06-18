@@ -63,9 +63,18 @@ export function canEditEmployeeDirectory(roles: string[]): boolean {
   return hasHrRole(roles);
 }
 
-/** PUT /employee-profile/{empId} — ROLE_HR only (not admin-only). */
+/** PUT /employee-profile/{empId} — full profile (ROLE_HR). */
 export function canEditEmployeeProfile(roles: string[]): boolean {
   return roles.includes("ROLE_HR");
+}
+
+/** PUT /employee-profile/{empId} — status field only (ROLE_ADMIN, not HR). */
+export function canEditEmployeeProfileStatusOnly(roles: string[]): boolean {
+  return roles.includes("ROLE_ADMIN") && !roles.includes("ROLE_HR");
+}
+
+export function canOpenEmployeeProfileEditor(roles: string[]): boolean {
+  return canEditEmployeeProfile(roles) || canEditEmployeeProfileStatusOnly(roles);
 }
 
 /** Leave and comp-off from AM employees are reviewed by HR. */

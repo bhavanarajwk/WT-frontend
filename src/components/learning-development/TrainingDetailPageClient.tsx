@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -335,9 +336,9 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
       {safeTab === "overview" && !detailQ.isError ? (
         hasHrAccess ? (
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
-            <h2 className="font-semibold">Training analytics</h2>
+            <h2 className="font-semibold">Training Analytics</h2>
             {analyticsQ.isLoading ? (
-              <p className="text-sm text-wt-text-muted">Loading analytics…</p>
+              <SectionLoading label="Loading analytics…" />
             ) : analyticsCards.length ? (
               <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
                 {analyticsCards.map(([k, v]) => (
@@ -357,7 +358,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           </section>
         ) : (
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-            <h2 className="font-semibold">Training details</h2>
+            <h2 className="font-semibold">Training Details</h2>
             <dl className="grid sm:grid-cols-2 gap-3 text-sm">
               <div>
                 <dt className="text-wt-text-muted">Category</dt>
@@ -390,7 +391,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         <div className="space-y-6">
           {hasHrAccess ? (
             <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-              <h2 className="font-semibold">Add session</h2>
+              <h2 className="font-semibold">Add Session</h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 <InputField label="Session date" type="date" required value={sessionForm.session_date} onChange={(v) => setSessionForm((p) => ({ ...p, session_date: v }))} />
                 <SelectField

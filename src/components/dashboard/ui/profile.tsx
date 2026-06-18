@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatUILabel } from "@/utils/titleCase";
 
 export function resolveProfilePhotoSrc(profile: Record<string, unknown> | null | undefined): string | null {
   if (!profile) return null;
@@ -107,8 +108,8 @@ export function ProfileField({
   const spanClass = fullWidth ? "sm:col-span-2" : "";
   return (
     <>
-      <dt className={`text-wt-text-muted ${spanClass}`}>{label}</dt>
-      <dd className={`font-medium ${spanClass}`}>{value ? String(value) : "—"}</dd>
+      <dt className={`text-sm text-wt-text-muted ${spanClass}`}>{formatUILabel(label)}</dt>
+      <dd className={`text-sm font-medium text-wt-text ${spanClass}`}>{value ? String(value) : "—"}</dd>
     </>
   );
 }
