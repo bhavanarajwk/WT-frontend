@@ -293,6 +293,7 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   overview: "Overview",
   "employee-directory": "Employee Directory",
   employee: "Onboarded Employees",
+  offboarding: "Employee Offboarding",
   leave: "Employee Leave Requests",
   "leave-team": "Team Requests",
   "leave-org": "All Employee Requests",

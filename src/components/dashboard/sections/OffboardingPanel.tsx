@@ -5,9 +5,14 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
 import type { HrOffboardListItem } from "@/types/offboard";
-import { DatePickerField, InputField, SelectField, TextAreaField } from "@/components/dashboard/ui/forms";
+import {
+  DatePickerField,
+  DropdownSelectField,
+  TextAreaField,
+} from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
+import { BlackLoader, LoadingOverlay, LoadingPanel } from "@/components/dashboard/shared/BlackLoader";
 import { toPagedRows } from "@/utils/apiRows";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
@@ -15,7 +20,10 @@ import {
   DEFAULT_NOTICE_PERIOD_DAYS,
   createEmptyOffboardingForm,
   defaultLastWorkingDayFromResignation,
-  EXIT_TYPE_SELECT_OPTIONS,
+  EXIT_TYPE_OPTIONS,
+  formatExitTypeLabel,
+  formatUserTypeLabel,
+  isOffboardingFormValid,
   type ExitType,
 } from "@/utils/offboardingFormState";
 import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
@@ -32,12 +40,6 @@ type OffboardCandidate = {
 const DEFAULT_PAGE_SIZE = 10;
 
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
-
-const USER_TYPE_FILTER_LABELS: Record<string, string> = {
-  FULLTIME: "Full Time",
-  INTERN: "Intern",
-  CONSULTANT: "Consultant",
-};
 
 const STICKY_HEADER_CLASS =
   "sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted shadow-[inset_0_-1px_0_var(--wt-border)]";
@@ -74,37 +76,6 @@ function formatBool(value: boolean): string {
   return value ? "Yes" : "No";
 }
 
-function formatExitType(value: string): string {
-  const v = String(value ?? "").trim().toUpperCase();
-  const hit = EXIT_TYPE_SELECT_OPTIONS.find((opt) => opt.value === v);
-  if (hit) return hit.label;
-  return v || "—";
-}
-
-function OffboardingLoader({ label }: { label: string }) {
-  return (
-    <div
-      className="flex min-h-[12rem] items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2/30"
-      aria-busy="true"
-      aria-live="polite"
-    >
-      <span className="spinner-dark" role="status" aria-label={label} />
-    </div>
-  );
-}
-
-function OffboardingLoaderOverlay({ label }: { label: string }) {
-  return (
-    <div
-      className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-wt-surface-1/80"
-      aria-busy="true"
-      aria-live="polite"
-    >
-      <span className="spinner-dark" role="status" aria-label={label} />
-    </div>
-  );
-}
-
 export function OffboardingPanel() {
   const [offboardingForm, setOffboardingForm] = useState(createEmptyOffboardingForm);
   const [offboardCandidates, setOffboardCandidates] = useState<OffboardCandidate[]>([]);
@@ -130,6 +101,16 @@ export function OffboardingPanel() {
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<Toast>(null);
+
+  const selectedCandidate = useMemo(
+    () => offboardCandidates.find((row) => row.emp_id === offboardingForm.emp_id) ?? null,
+    [offboardCandidates, offboardingForm.emp_id]
+  );
+  const selectedUserType = selectedCandidate?.user_type ?? "";
+  const isInternOffboarding = selectedUserType.toUpperCase() === "INTERN";
+  const isConsultantOffboarding = selectedUserType.toUpperCase() === "CONSULTANT";
+
+  const canSubmit = isOffboardingFormValid(offboardingForm, selectedUserType);
 
   const loadAttritionSummary = useCallback(async () => {
     const parsedFy = Number.parseInt(fyStartYear, 10);
@@ -228,6 +209,7 @@ export function OffboardingPanel() {
       setOffboardCandidates(candidates);
     } catch {
       setOffboardCandidates([]);
+      setToast({ type: "error", message: "Failed to load active employees for offboarding." });
     } finally {
       setLoadingCandidates(false);
     }
@@ -251,22 +233,13 @@ export function OffboardingPanel() {
 
   useEffect(() => {
     if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 3200);
+    const id = window.setTimeout(() => setToast(null), 4200);
     return () => window.clearTimeout(id);
   }, [toast]);
 
   const totalPages = Math.max(1, Math.ceil(listTotal / listPageSize) || 1);
   const rangeStart = listTotal === 0 ? 0 : listPage * listPageSize + 1;
   const rangeEnd = Math.min(listTotal, (listPage + 1) * listPageSize);
-
-  const selectedCandidate = useMemo(
-    () => offboardCandidates.find((emp) => emp.emp_id === offboardingForm.emp_id),
-    [offboardCandidates, offboardingForm.emp_id]
-  );
-
-  const isInternOffboarding = selectedCandidate?.user_type === "INTERN";
-  const isConsultantOffboarding = selectedCandidate?.user_type === "CONSULTANT";
-  const showExitTypeField = !isConsultantOffboarding;
 
   const candidateOptions = useMemo(
     () =>
@@ -276,19 +249,6 @@ export function OffboardingPanel() {
       })),
     [offboardCandidates]
   );
-
-  const canSubmitOffboarding = useMemo(() => {
-    if (!offboardingForm.emp_id.trim()) return false;
-    const exitType = isConsultantOffboarding
-      ? CONSULTANT_EXIT_TYPE
-      : offboardingForm.exit_type;
-    if (!exitType) return false;
-    if (isInternOffboarding) {
-      const lwd = offboardingForm.last_working_day.trim();
-      return Boolean(lwd && offboardingForm.resignation_date.trim() === lwd);
-    }
-    return Boolean(offboardingForm.resignation_date.trim());
-  }, [offboardingForm, isInternOffboarding, isConsultantOffboarding]);
 
   const offboardingNoticeLabel = useMemo(() => {
     const r = offboardingForm.resignation_date.trim();
@@ -316,27 +276,31 @@ export function OffboardingPanel() {
     }
     const days = Math.round((b.getTime() - a.getTime()) / 86400000);
     return `Notice period (resignation → last working day): ${Math.max(0, days)} calendar day(s).`;
-  }, [offboardingForm.resignation_date, offboardingForm.last_working_day, isInternOffboarding, isConsultantOffboarding]);
+  }, [
+    offboardingForm.resignation_date,
+    offboardingForm.last_working_day,
+    isInternOffboarding,
+    isConsultantOffboarding,
+  ]);
 
   function resolveExitTypeForSubmit(): ExitType {
     if (isConsultantOffboarding) return CONSULTANT_EXIT_TYPE;
     return offboardingForm.exit_type as ExitType;
   }
 
-  function handleEmployeeChange(emp_id: string) {
-    const candidate = offboardCandidates.find((emp) => emp.emp_id === emp_id);
+  function handleEmployeeChange(empId: string) {
+    const candidate = offboardCandidates.find((row) => row.emp_id === empId);
     const isIntern = candidate?.user_type === "INTERN";
     const isConsultant = candidate?.user_type === "CONSULTANT";
     setOffboardingForm((prev) => {
       const next = {
-        ...prev,
-        emp_id,
+        ...createEmptyOffboardingForm(),
+        emp_id: empId,
         exit_type: (isConsultant ? CONSULTANT_EXIT_TYPE : "") as "" | ExitType,
       };
       if (isIntern && prev.last_working_day.trim()) {
+        next.last_working_day = prev.last_working_day;
         next.resignation_date = prev.last_working_day;
-      } else if (isIntern) {
-        next.resignation_date = "";
       }
       return next;
     });
@@ -351,7 +315,7 @@ export function OffboardingPanel() {
   }
 
   async function submitOffboarding() {
-    if (!canSubmitOffboarding) return;
+    if (!canSubmit) return;
 
     const empIdValue = offboardingForm.emp_id.trim();
     const resignationDate = offboardingForm.resignation_date.trim();
@@ -365,6 +329,7 @@ export function OffboardingPanel() {
         exit_type: resolveExitTypeForSubmit(),
         last_working_day: lastWorkingDay || undefined,
         reason: offboardingForm.reason.trim() || null,
+        expected_behavior: offboardingForm.expected_behavior.trim() || null,
         critical_skill: offboardingForm.critical_skill.trim() || null,
         is_regretted: offboardingForm.is_regretted,
       });
@@ -372,16 +337,7 @@ export function OffboardingPanel() {
       setListPage(0);
       setToast({ type: "success", message: "Employee offboarded successfully." });
       await loadOffboardCandidates();
-      const res = await hrmsService.getOffboardList({
-        page: 0,
-        size: listPageSize,
-        search: debouncedSearch.trim() || undefined,
-        type: filterType.trim() || undefined,
-        fromDate: filterFromDate.trim() || undefined,
-        toDate: filterToDate.trim() || undefined,
-      });
-      setOffboardedRows((res.data?.items ?? []) as unknown as HrOffboardListItem[]);
-      setListTotal(res.data?.total ?? 0);
+      await loadOffboardList();
       await loadAttritionSummary();
     } catch (error) {
       const msg =
@@ -397,7 +353,7 @@ export function OffboardingPanel() {
   }
 
   return (
-    <section className="flex min-h-0 flex-col gap-4">
+    <section className="relative flex min-h-0 flex-col gap-4">
       {toast ? (
         <div
           className={`sticky top-0 z-30 rounded-xl border px-4 py-3 text-sm shadow-sm ${
@@ -413,16 +369,16 @@ export function OffboardingPanel() {
       ) : null}
 
       <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        {loadingAttrition ? <OffboardingLoaderOverlay label="Loading Attrition Summary" /> : null}
+        {loadingAttrition ? <LoadingOverlay label="Loading Attrition Summary" /> : null}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h3 className="font-semibold">Attrition Summary</h3>
             <p className="text-xs text-wt-text-muted mt-1">
-              Financial-year exit metrics (Apr–Mar)
+              Financial-year exit metrics (Apr–Mar). Contractual exits are excluded.
               {attritionExitCount != null ? ` · ${attritionExitCount} exit(s)` : ""}
             </p>
           </div>
-          <SelectField
+          <DropdownSelectField
             label="Financial Year (Start)"
             className="min-w-[10rem]"
             value={fyStartYear}
@@ -439,7 +395,11 @@ export function OffboardingPanel() {
               Attrition %
             </p>
             <p className="text-2xl font-semibold mt-2 tabular-nums text-rose-700">
-              {loadingAttrition ? "…" : formatPercent(attritionPercent)}
+              {loadingAttrition ? (
+                <BlackLoader label="Loading Attrition %" size="sm" />
+              ) : (
+                formatPercent(attritionPercent)
+              )}
             </p>
           </article>
           <article className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
@@ -447,7 +407,11 @@ export function OffboardingPanel() {
               Voluntary %
             </p>
             <p className="text-2xl font-semibold mt-2 tabular-nums text-sky-700">
-              {loadingAttrition ? "…" : formatPercent(voluntaryPercent)}
+              {loadingAttrition ? (
+                <BlackLoader label="Loading Voluntary %" size="sm" />
+              ) : (
+                formatPercent(voluntaryPercent)
+              )}
             </p>
             <p className="text-xs text-wt-text-muted mt-1">Share of FY exits</p>
           </article>
@@ -456,7 +420,11 @@ export function OffboardingPanel() {
               Involuntary %
             </p>
             <p className="text-2xl font-semibold mt-2 tabular-nums text-amber-700">
-              {loadingAttrition ? "…" : formatPercent(involuntaryPercent)}
+              {loadingAttrition ? (
+                <BlackLoader label="Loading Involuntary %" size="sm" />
+              ) : (
+                formatPercent(involuntaryPercent)
+              )}
             </p>
             <p className="text-xs text-wt-text-muted mt-1">Share of FY exits</p>
           </article>
@@ -464,131 +432,162 @@ export function OffboardingPanel() {
       </div>
 
       <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        {submitting || loadingCandidates ? (
-          <OffboardingLoaderOverlay
-            label={submitting ? "Submitting Offboarding" : "Loading Employees"}
-          />
-        ) : null}
-        <h3 className="font-semibold mb-4">Employee Offboarding</h3>
-        <div className="grid md:grid-cols-2 gap-3">
-          <SelectField
-            label="Employee"
-            required
-            disabled={loadingCandidates || submitting}
-            placeholder={
-              loadingCandidates
-                ? "Loading Employees…"
-                : candidateOptions.length
-                  ? "Select Employee"
-                  : "No Active Employees Available"
-            }
-            value={offboardingForm.emp_id}
-            onChange={handleEmployeeChange}
-            options={candidateOptions}
-          />
-          {isInternOffboarding ? (
-            <InputField
-              label="Last Working Day"
-              required
-              type="date"
-              value={offboardingForm.last_working_day}
-              onChange={handleLastWorkingDayChange}
-              disabled={submitting}
-            />
-          ) : (
-            <>
-              <InputField
-                label="Resignation Date"
+        {submitting ? <LoadingOverlay label="Submitting Offboarding" /> : null}
+        {loadingCandidates && !offboardCandidates.length ? (
+          <LoadingPanel label="Loading Active Employees" className="min-h-[16rem]" />
+        ) : (
+          <>
+            <h3 className="font-semibold mb-4">Employee Offboarding</h3>
+            <div className="grid md:grid-cols-2 gap-3">
+              <DropdownSelectField
+                label="Employee"
                 required
-                type="date"
-                value={offboardingForm.resignation_date}
-                onChange={(v) =>
-                  setOffboardingForm((p) => ({
-                    ...p,
-                    resignation_date: v,
-                    last_working_day: v.trim()
-                      ? defaultLastWorkingDayFromResignation(v)
-                      : "",
-                  }))
+                disabled={loadingCandidates || submitting}
+                placeholder={
+                  loadingCandidates
+                    ? "Loading Employees…"
+                    : candidateOptions.length
+                      ? "Select Employee"
+                      : "No Active Employees Available"
                 }
-                disabled={submitting}
+                value={offboardingForm.emp_id}
+                onChange={handleEmployeeChange}
+                options={candidateOptions}
               />
-              <InputField
-                label="Last Working Day"
-                type="date"
-                value={offboardingForm.last_working_day}
-                onChange={handleLastWorkingDayChange}
-                disabled={submitting}
+              {isInternOffboarding ? (
+                <DatePickerField
+                  label="Last Working Day"
+                  required
+                  value={offboardingForm.last_working_day}
+                  onChange={handleLastWorkingDayChange}
+                  disabled={submitting}
+                />
+              ) : (
+                <>
+                  <DatePickerField
+                    label="Resignation Date"
+                    required
+                    value={offboardingForm.resignation_date}
+                    onChange={(v) =>
+                      setOffboardingForm((p) => ({
+                        ...p,
+                        resignation_date: v,
+                        last_working_day: v.trim()
+                          ? defaultLastWorkingDayFromResignation(v)
+                          : "",
+                      }))
+                    }
+                    disabled={submitting}
+                  />
+                  <DatePickerField
+                    label="Last Working Day"
+                    value={offboardingForm.last_working_day}
+                    onChange={handleLastWorkingDayChange}
+                    disabled={submitting}
+                  />
+                </>
+              )}
+              {!isConsultantOffboarding ? (
+                <DropdownSelectField
+                  label="Exit Type"
+                  required
+                  placeholder="Select Exit Type"
+                  value={offboardingForm.exit_type}
+                  options={EXIT_TYPE_OPTIONS}
+                  onChange={(v) =>
+                    setOffboardingForm((p) => ({
+                      ...p,
+                      exit_type:
+                        v === "INVOLUNTARY" || v === "VOLUNTARY" || v === "CONTRACTUAL"
+                          ? (v as ExitType)
+                          : "",
+                    }))
+                  }
+                  disabled={submitting}
+                />
+              ) : (
+                <div className="text-xs text-wt-text-muted flex flex-col gap-1">
+                  <span>Exit Type</span>
+                  <p className="rounded-lg border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm text-wt-text">
+                    Contractual (applied automatically for consultants)
+                  </p>
+                </div>
+              )}
+              <TextAreaField
+                label="Reason"
+                className="md:col-span-2"
+                rows={5}
+                value={offboardingForm.reason}
+                onChange={(v) => setOffboardingForm((p) => ({ ...p, reason: v }))}
+                placeholder="Enter a detailed reason for offboarding"
               />
-            </>
-          )}
-          {showExitTypeField ? (
-            <SelectField
-              label="Exit Type"
-              required
-              placeholder="Select Exit Type"
-              value={offboardingForm.exit_type}
-              options={EXIT_TYPE_SELECT_OPTIONS}
-              onChange={(v) =>
-                setOffboardingForm((p) => ({
-                  ...p,
-                  exit_type:
-                    v === "INVOLUNTARY" || v === "VOLUNTARY" || v === "CONTRACTUAL"
-                      ? (v as ExitType)
-                      : "",
-                }))
-              }
-              disabled={submitting}
-            />
-          ) : null}
-          <TextAreaField
-            className="md:col-span-2"
-            label="Reason"
-            rows={5}
-            value={offboardingForm.reason}
-            onChange={(v) => setOffboardingForm((p) => ({ ...p, reason: v }))}
-            placeholder="Enter a detailed reason for offboarding"
-          />
-          <TextAreaField
-            className="md:col-span-2"
-            label="Critical Skill"
-            rows={5}
-            value={offboardingForm.critical_skill}
-            onChange={(v) => setOffboardingForm((p) => ({ ...p, critical_skill: v }))}
-            placeholder="Describe critical skills impacted by this exit"
-          />
-          <label className="text-xs text-wt-text-muted flex items-center gap-2 md:col-span-2">
-            <input
-              type="checkbox"
-              checked={offboardingForm.is_regretted}
-              disabled={submitting}
-              onChange={(e) =>
-                setOffboardingForm((p) => ({ ...p, is_regretted: e.target.checked }))
-              }
-            />
-            Is Regretted
-          </label>
-        </div>
-        {offboardingNoticeLabel ? (
-          <p className="text-sm text-wt-text-muted mt-2">{offboardingNoticeLabel}</p>
-        ) : null}
-        <div className="mt-4">
-          <button
-            type="button"
-            className="btn-primary px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!canSubmitOffboarding || submitting || loadingCandidates}
-            onClick={() => void submitOffboarding()}
-          >
-            {submitting ? "Submitting…" : "Submit Offboarding"}
-          </button>
-        </div>
+              <TextAreaField
+                label="Critical Skill"
+                className="md:col-span-2"
+                rows={5}
+                value={offboardingForm.critical_skill}
+                onChange={(v) => setOffboardingForm((p) => ({ ...p, critical_skill: v }))}
+                placeholder="Describe critical skills impacted by this exit"
+              />
+              <TextAreaField
+                label="Expected Behavior"
+                className="md:col-span-2"
+                rows={5}
+                value={offboardingForm.expected_behavior}
+                onChange={(v) => setOffboardingForm((p) => ({ ...p, expected_behavior: v }))}
+                placeholder="Describe expected behavior during notice period"
+              />
+              <label className="text-xs text-wt-text-muted flex items-center gap-2 md:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={offboardingForm.is_regretted}
+                  disabled={submitting}
+                  onChange={(e) =>
+                    setOffboardingForm((p) => ({ ...p, is_regretted: e.target.checked }))
+                  }
+                />
+                Is Regretted
+              </label>
+            </div>
+            {offboardingNoticeLabel ? (
+              <p className="text-sm text-wt-text-muted mt-2">{offboardingNoticeLabel}</p>
+            ) : null}
+            <div className="mt-4">
+              <button
+                type="button"
+                className="btn-primary px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!canSubmit || submitting || loadingCandidates}
+                onClick={() => void submitOffboarding()}
+              >
+                {submitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <BlackLoader label="Submitting Offboarding" size="sm" />
+                    Submitting Offboarding…
+                  </span>
+                ) : (
+                  "Submit Offboarding"
+                )}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4 min-h-0">
+      <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4 min-h-0">
+        {loadingList && offboardedRows.length ? (
+          <LoadingOverlay label="Loading Offboarded Employees" />
+        ) : null}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-semibold">Offboarded Employees</h3>
           <p className="text-xs text-wt-text-muted tabular-nums">
-            {loadingList ? "Loading…" : `${listTotal} total`}
+            {loadingList ? (
+              <span className="inline-flex items-center gap-2">
+                <BlackLoader label="Loading Offboarded Employees" size="sm" />
+                Loading…
+              </span>
+            ) : (
+              `${listTotal} total`
+            )}
           </p>
         </div>
 
@@ -603,7 +602,7 @@ export function OffboardingPanel() {
             placeholder="Search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search"
+            aria-label="Search offboarded employees"
             disabled={loadingList}
           />
           <DatePickerField
@@ -624,7 +623,7 @@ export function OffboardingPanel() {
             }}
             className="w-[10.5rem] shrink-0"
           />
-          <SelectField
+          <DropdownSelectField
             label="User Type"
             className="w-[10.5rem] shrink-0"
             value={filterType}
@@ -637,7 +636,7 @@ export function OffboardingPanel() {
               { value: "", label: "All types" },
               ...USER_TYPE_FILTER_OPTIONS.filter(Boolean).map((t) => ({
                 value: t,
-                label: USER_TYPE_FILTER_LABELS[t] ?? t,
+                label: formatUserTypeLabel(t),
               })),
             ]}
           />
@@ -652,76 +651,75 @@ export function OffboardingPanel() {
         </div>
 
         {loadingList && !offboardedRows.length ? (
-          <OffboardingLoader label="Loading Offboarded Employees" />
+          <LoadingPanel label="Loading Offboarded Employees" />
         ) : offboardedRows.length ? (
           <>
-            <div className="relative min-h-[12rem]">
-              {loadingList ? <OffboardingLoaderOverlay label="Loading Offboarded Employees" /> : null}
-              <div className={INNER_SCROLL_CLASS}>
-                <table className="w-full min-w-full border-separate border-spacing-0 text-sm">
-                  <thead>
-                    <tr>
-                      <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                        Name
-                      </th>
-                      <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                        Status
-                      </th>
-                      <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                        Exit Type
-                      </th>
-                      <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                        Resignation
-                      </th>
-                      <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                        Last Working Day
-                      </th>
-                      <th className={`${STICKY_HEADER_CLASS} text-right px-3 py-2 font-medium whitespace-nowrap`}>
-                        Notice (days)
-                      </th>
-                      <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                        Designation
-                      </th>
-                      <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                        Band
-                      </th>
-                      <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                        Regretted
-                      </th>
+            <div className={INNER_SCROLL_CLASS}>
+              <table className="w-full min-w-full border-separate border-spacing-0 text-sm">
+                <thead>
+                  <tr>
+                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
+                      Name
+                    </th>
+                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
+                      Status
+                    </th>
+                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
+                      Exit Type
+                    </th>
+                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
+                      Resignation
+                    </th>
+                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
+                      Last Working Day
+                    </th>
+                    <th className={`${STICKY_HEADER_CLASS} text-right px-3 py-2 font-medium whitespace-nowrap`}>
+                      Notice (days)
+                    </th>
+                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
+                      Designation
+                    </th>
+                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
+                      Band
+                    </th>
+                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
+                      Regretted
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {offboardedRows.map((row) => (
+                    <tr
+                      key={row.emp_id}
+                      className="border-t border-wt-border hover:bg-wt-surface-2/50"
+                    >
+                      <td className="px-3 py-2 whitespace-nowrap">{row.employee_name || "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <EmployeeStatusBadge status={row.status} />
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {formatExitTypeLabel(row.exit_type)}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap tabular-nums">
+                        {formatApiDateDisplay(row.resignation_date) || "—"}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap tabular-nums">
+                        {formatApiDateDisplay(row.last_working_day) || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
+                        {row.notice_period_days ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap max-w-[200px] truncate">
+                        {row.designation ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap max-w-[160px] truncate">
+                        {row.band_name ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{formatBool(row.is_regretted)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {offboardedRows.map((row) => (
-                      <tr
-                        key={row.emp_id}
-                        className="border-t border-wt-border hover:bg-wt-surface-2/50"
-                      >
-                        <td className="px-3 py-2 whitespace-nowrap">{row.employee_name || "—"}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          <EmployeeStatusBadge status={row.status} />
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">{formatExitType(row.exit_type)}</td>
-                        <td className="px-3 py-2 whitespace-nowrap tabular-nums">
-                          {formatApiDateDisplay(row.resignation_date) || "—"}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap tabular-nums">
-                          {formatApiDateDisplay(row.last_working_day) || "—"}
-                        </td>
-                        <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
-                          {row.notice_period_days ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap max-w-[200px] truncate">
-                          {row.designation ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap max-w-[160px] truncate">
-                          {row.band_name ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">{formatBool(row.is_regretted)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
             <ListPagination
               page={listPage}
@@ -734,7 +732,7 @@ export function OffboardingPanel() {
             />
           </>
         ) : (
-          <p className="text-sm text-wt-text-muted">No Offboarded Employees Found.</p>
+          <p className="text-sm text-wt-text-muted">No offboarded employees found.</p>
         )}
       </div>
     </section>
