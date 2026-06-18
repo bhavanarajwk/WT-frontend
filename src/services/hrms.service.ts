@@ -143,6 +143,19 @@ export interface EmployeeAttendanceLeaveQuery {
   band?: string;
 }
 
+export interface LeaveManagerOption {
+  email: string;
+  name: string;
+  project_code?: string | null;
+  project_name?: string | null;
+}
+
+export interface LeaveRecipientOption {
+  email: string;
+  name: string;
+  emp_id?: string | null;
+}
+
 export interface AllocationExtensionRequestRow {
   id: number;
   employee_name: string;
@@ -269,7 +282,7 @@ export const hrmsService = {
     empId: string,
     payload: {
       resignation_date: string;
-      exit_type: "VOLUNTARY" | "INVOLUNTARY";
+      exit_type: "VOLUNTARY" | "INVOLUNTARY" | "CONTRACTUAL";
       last_working_day?: string;
       reason?: string | null;
       critical_skill?: string | null;
@@ -750,6 +763,21 @@ export const hrmsService = {
     if (params.asOfDate?.trim()) query.asOfDate = params.asOfDate.trim();
     return apiClient.get<ApiEnvelope<ManagerTeamOnLeaveRow[]>>(
       endpoints.userRequest.managerTeamOnLeaveToday,
+      { query }
+    );
+  },
+
+  getLeaveManagerOptions() {
+    return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
+      endpoints.userRequest.leaveManagerOptions
+    );
+  },
+
+  getLeaveRecipientOptions(params?: { search?: string }) {
+    const query: Record<string, string> = {};
+    if (params?.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<{ items: LeaveRecipientOption[] }>>(
+      endpoints.userRequest.leaveRecipientOptions,
       { query }
     );
   },

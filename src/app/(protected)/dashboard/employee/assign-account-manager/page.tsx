@@ -1,5 +1,16 @@
-import { AssignAccountManagerPageClient } from "@/components/employee-onboarding/AssignAccountManagerPageClient";
+"use client";
 
-export default function AssignAccountManagerPage() {
-  return <AssignAccountManagerPageClient />;
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
+
+/** Legacy assign route — redirect to Onboarded Employees. */
+export default function AssignAccountManagerRedirectPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace(DASHBOARD_ROUTES.employee);
+  }, [router]);
+
+  return null;
 }

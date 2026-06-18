@@ -48,6 +48,7 @@ export function parseOnboardOptions(raw: unknown): OnboardOptionsResponse {
     marital_statuses: parseOptionItems(row.marital_statuses),
     blood_groups: parseOptionItems(row.blood_groups),
     holiday_calendars: parseOptionItems(row.holiday_calendars),
+    reporting_managers: parseOptionItems(row.reporting_managers),
   };
 
   if (!isCompleteOptions(parsed)) {
@@ -115,4 +116,5 @@ export const FALLBACK_ONBOARD_OPTIONS: OnboardOptionsResponse = {
     { value: "O-", label: "O-" },
   ],
   holiday_calendars: [],
+  reporting_managers: [],
 };

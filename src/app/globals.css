@@ -365,6 +365,16 @@ body::-webkit-scrollbar {
   animation: spin 0.7s linear infinite;
 }
 
+.spinner-dark-sm {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid color-mix(in oklab, var(--wt-text) 18%, transparent);
+  border-top-color: var(--wt-text);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
 /* Fade-in */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
