@@ -96,9 +96,9 @@ export function WeeklyTimelogGrid({
 
   return (
     <div className="space-y-3">
-      <div className="wt-scroll-both overflow-x-auto rounded-xl border border-wt-border">
-        <table className="min-w-[1040px] w-full text-sm border-collapse">
-          <thead className="bg-wt-surface-2 text-wt-text-muted">
+      <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
+        <table className="min-w-[1040px] w-full text-sm wt-scrollable-table">
+          <thead className="wt-table-sticky-head text-wt-text-muted">
             <tr>
               <th className="text-left px-2 py-2 font-medium min-w-[120px]">Project</th>
               <th className="text-left px-2 py-2 font-medium min-w-[108px]">Task Category</th>

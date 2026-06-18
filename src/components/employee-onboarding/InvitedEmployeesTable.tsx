@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
-import { useClientPagination } from "@/hooks/useClientPagination";
+import { DEFAULT_PAGE_SIZE, useClientPagination } from "@/hooks/useClientPagination";
 import {
   activeSortDirectionForColumn,
   applyListSort,
@@ -104,7 +104,10 @@ export function InvitedEmployeesTable({
     [displaySourceRows, sortId]
   );
 
-  const pagination = useClientPagination(sortedRows, { pageSize: 20, resetKeys: [sortId] });
+  const pagination = useClientPagination(sortedRows, {
+    pageSize: DEFAULT_PAGE_SIZE,
+    resetKeys: [sortId],
+  });
 
   if (!displaySourceRows.length) {
     return <p className="text-sm text-wt-text-muted">{emptyLabel}</p>;
@@ -113,8 +116,8 @@ export function InvitedEmployeesTable({
   return (
     <div className="space-y-2">
       <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
-        <table className="min-w-full text-sm">
-          <thead className="bg-wt-surface-2 text-wt-text-muted">
+        <table className="wt-scrollable-table text-sm">
+          <thead className="wt-table-sticky-head text-wt-text-muted">
             <tr>
               {displayColumns.map((col) => {
                 const columnSortOpts = sortOptionsForColumn(col, SORT_OPTIONS);
@@ -157,7 +160,7 @@ export function InvitedEmployeesTable({
                     {canResend ? (
                       <button
                         type="button"
-                        className="rounded-lg border border-wt-border bg-wt-surface-1 px-2.5 py-1 text-xs font-medium text-wt-text hover:bg-wt-surface-2 disabled:opacity-50"
+                        className="btn-action px-2.5 py-1 text-xs"
                         disabled={actionLoading || isResending}
                         onClick={() => onResendInvite(email)}
                       >
@@ -180,19 +183,14 @@ export function InvitedEmployeesTable({
           </tbody>
         </table>
       </div>
-      {pagination.totalPages > 1 ? (
-        <ListPagination
-          page={pagination.page}
-          totalPages={pagination.totalPages}
-          totalItems={pagination.totalItems}
-          rangeStart={pagination.rangeStart}
-          rangeEnd={pagination.rangeEnd}
-          pageSize={pagination.pageSize}
-          pageSizeOptions={pagination.pageSizeOptions}
-          onPageChange={pagination.setPage}
-          onPageSizeChange={pagination.setPageSize}
-        />
-      ) : null}
+      <ListPagination
+        className="mt-2"
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.totalItems}
+        pageSize={pagination.pageSize}
+        onPageChange={pagination.setPage}
+      />
     </div>
   );
 }
