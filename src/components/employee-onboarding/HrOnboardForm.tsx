@@ -182,6 +182,9 @@ export function HrOnboardForm({
         work_location_type: form.work_location_type,
         category: form.category,
         reporting_manager_id: reportingManagerId,
+        ...(form.holiday_calendar_id.trim()
+          ? { holiday_calendar_id: Number(form.holiday_calendar_id) }
+          : {}),
       };
 
       if (form.user_type === "INTERN") {
@@ -345,6 +348,13 @@ export function HrOnboardForm({
           disabled={!options.reporting_managers.length}
           options={options.reporting_managers}
           onChange={(v) => setForm((p) => ({ ...p, reporting_manager_id: v }))}
+        />
+        <DropdownSelectField
+          label="Holiday Calendar"
+          placeholder="Optional"
+          value={form.holiday_calendar_id}
+          options={[{ value: "", label: "None" }, ...options.holiday_calendars]}
+          onChange={(v) => setForm((p) => ({ ...p, holiday_calendar_id: v }))}
         />
         {form.user_type === "INTERN" ? (
           <>
