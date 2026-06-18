@@ -14,9 +14,6 @@ export interface AuthUser {
   status: string;
   user_type: string;
   requiresSelfOnboarding?: boolean;
-  session_started_at?: string;
-  session_max_hours?: number;
-  session_inactivity_minutes?: number;
 }
 
 export interface ApiResponse<T> {
@@ -49,17 +46,8 @@ export async function refreshSession(): Promise<AuthUser | null> {
 }
 
 /**
- * Records user activity server-side to reset the inactivity timer.
- */
-export async function recordSessionActivity(): Promise<void> {
-  await apiClient.post<ApiResponse<null>>(endpoints.auth.activity, {
-    skipAuth: true,
-  });
-}
-
-/**
  * Logs out the current session and clears auth cookies server-side.
- * Best-effort: network or server errors are ignored so the client can still log out locally.
+ * Best-effort: network or server errors are ignored so the client can still sign out locally.
  */
 export async function logout(): Promise<void> {
   try {
@@ -67,7 +55,7 @@ export async function logout(): Promise<void> {
       skipAuth: true,
     });
   } catch {
-    // Backend unreachable or logout endpoint failed — local session is cleared by logout.
+    // Backend unreachable or logout endpoint failed — local session is cleared by signOut.
   }
 }
 
@@ -96,6 +84,4 @@ export const oauthErrorMessages: Record<string, string> = {
   google_token_exchange_failed:
     "Google could not complete sign-in. Try again or contact support if it persists.",
   oauth_login_failed: "Sign-in failed. Please try again.",
-  session_idle_timeout: "You were logged out after 30 minutes of inactivity.",
-  session_expired: "Your session has expired after 8 hours. Please sign in again.",
 };

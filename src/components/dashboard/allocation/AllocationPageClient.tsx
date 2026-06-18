@@ -166,7 +166,7 @@ export function AllocationPageClient() {
     COMP_OFF: ["COMP_OFF", "COMPOFF", "COMP-OFF", "COMP OFF"],
   };
 
-  const { user, refresh: refreshSession } = useAuth();
+  const { user, signOut, refresh: refreshSession } = useAuth();
   const {
     requiresSelfOnboarding,
     isSelfOnboarded,

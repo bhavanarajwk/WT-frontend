@@ -56,19 +56,13 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "employee-attendance",
-        label: "Employee Attendance And Leave Summary",
+        label: "Attendance",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarCheck",
       },
       {
-        id: "holiday-calendars",
-        label: "Holiday Calendar",
-        roles: ["ROLE_HR", "ROLE_ADMIN"],
-        icon: "calendarDays",
-      },
-      {
         id: "offboarding",
-        label: "Employee Offboarding",
+        label: "Offboarding",
         roles: ["ROLE_HR"],
         icon: "userMinus",
       },
@@ -80,14 +74,8 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "leave-team",
-        label: "Team Requests",
-        roles: ["ROLE_MANAGER", "ROLE_DM"],
-        icon: "calendarDays",
-      },
-      {
-        id: "leave-org",
-        label: "All Employee Requests",
-        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        label: "Leave Requests",
+        roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
@@ -139,7 +127,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "leave",
         label: "Leave Request",
-        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM"],
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
@@ -206,12 +194,6 @@ function childVisible(
   options: { hasHrAccess: boolean }
 ): boolean {
   if (child.id === "employee" && !options.hasHrAccess) return false;
-  if (
-    child.id === "leave" &&
-    (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN"))
-  ) {
-    return false;
-  }
   return child.roles.length === 0 ? true : child.roles.some((r) => userRoles.includes(r));
 }
 
@@ -253,25 +235,6 @@ export function filterNavigationForOffboardedUser(
   const exitSurvey = personal.children.find((child) => child.id === "exit-interview");
   if (!exitSurvey) return [];
   return [{ ...personal, children: [exitSurvey] }];
-}
-
-export function getDashboardSectionLabel(sectionId: string): string | undefined {
-  for (const item of dashboardNavigation) {
-    if (item.kind === "group") {
-      const hit = item.children.find((child) => child.id === sectionId);
-      if (hit) return hit.label;
-      continue;
-    }
-    if (item.kind === "link" && item.id === sectionId) {
-      return item.label;
-    }
-    if (item.kind === "expandable") {
-      if (item.id === sectionId) return item.label;
-      const hit = item.children.find((child) => child.id === sectionId);
-      if (hit) return hit.label;
-    }
-  }
-  return undefined;
 }
 
 /** Map nav id to sidebar group id for accordion auto-expand. */

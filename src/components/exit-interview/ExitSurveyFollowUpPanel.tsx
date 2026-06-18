@@ -8,7 +8,6 @@ import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
 import { exitInterviewService } from "@/services/exitInterview.service";
 import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
-import type { OffboardListItem } from "@/types/offboard";
 import { DatePickerField, SelectField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
@@ -112,10 +111,7 @@ export function ExitSurveyFollowUpPanel() {
         fromDate: hasCustomLwdFilter ? filterFromDate : undefined,
         toDate: hasCustomLwdFilter ? filterToDate : undefined,
       });
-      const merged = mergeExitSurveyFollowUpRows(
-        (data?.items ?? []) as OffboardListItem[],
-        inNoticeRows
-      );
+      const merged = mergeExitSurveyFollowUpRows(data?.items ?? [], inNoticeRows);
       setAllRows(merged);
 
       if (offboardResult.status === "rejected") {

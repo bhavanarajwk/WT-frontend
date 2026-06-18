@@ -7,24 +7,24 @@ export function LeaveWorkflowNotice({
 }) {
   const copy: Record<typeof variant, { title: string; body: string }> = {
     employee: {
-      title: "Leave request",
-      body: "Select one or more managers to approve your leave. You can optionally add employees who should receive the notification email. Manager approval is final.",
+      title: "Approval workflow",
+      body: "Your request goes to your project manager first, then HR for final approval. Leave is deducted only after HR approves.",
     },
     manager: {
-      title: "Leave request",
-      body: "Select managers when submitting leave. Optional additional recipients receive the same notification email at their work address.",
+      title: "Approval workflow",
+      body: "Your leave is reviewed by a Delivery Manager first, then HR finalizes and deducts balance.",
     },
     dm: {
-      title: "Team leave requests",
-      body: "Review and approve or reject leave requests from managers on your team. Manager approval is final for employee leave.",
+      title: "Delivery Manager review",
+      body: "Approve or reject manager leave/WFH requests. HR must approve after you to finalize and deduct leave.",
     },
     hr: {
-      title: "All employee leave requests",
-      body: "Search and review leave requests across the organization. Managers approve employee leave in WebTrak; HR does not perform a separate final approval step.",
+      title: "HR final approval",
+      body: "First-line manager or DM must approve before you can finalize leave/WFH. Final approval deducts leave balance.",
     },
     "hr-dual-required": {
-      title: "Leave request",
-      body: "Select managers to notify. HR-submitted requests follow the HR and Admin dual-approval path.",
+      title: "HR employee leave",
+      body: "Your leave requires approval from a user with both HR and Admin roles before it is finalized.",
     },
   };
 

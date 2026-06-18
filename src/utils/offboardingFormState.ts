@@ -1,12 +1,4 @@
-export type ExitType = "VOLUNTARY" | "INVOLUNTARY" | "CONTRACTUAL";
-
-export const CONSULTANT_EXIT_TYPE: ExitType = "CONTRACTUAL";
-
-export const EXIT_TYPE_SELECT_OPTIONS: Array<{ value: ExitType; label: string }> = [
-  { value: "VOLUNTARY", label: "Voluntary" },
-  { value: "INVOLUNTARY", label: "Involuntary" },
-  { value: "CONTRACTUAL", label: "Contractual" },
-];
+export type ExitType = "VOLUNTARY" | "INVOLUNTARY";
 
 export type OffboardingFormState = {
   emp_id: string;

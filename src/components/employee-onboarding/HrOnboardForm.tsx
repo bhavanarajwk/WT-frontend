@@ -224,9 +224,6 @@ export function HrOnboardForm({
         work_mode: form.work_mode,
         work_location_type: form.work_location_type,
         category: form.category,
-        ...(form.holiday_calendar_id.trim()
-          ? { holiday_calendar_id: Number(form.holiday_calendar_id) }
-          : {}),
         ...(includePersonal ? buildPersonalPayload(form) : {}),
       };
 
@@ -405,13 +402,6 @@ export function HrOnboardForm({
             value={form.category}
             options={options.categories}
             onChange={(v) => setForm((p) => ({ ...p, category: v }))}
-          />
-          <SelectField
-            label="Holiday Calendar"
-            placeholder="Optional"
-            value={form.holiday_calendar_id}
-            options={[{ value: "", label: "None" }, ...options.holiday_calendars]}
-            onChange={(v) => setForm((p) => ({ ...p, holiday_calendar_id: v }))}
           />
           {form.user_type === "INTERN" ? (
             <>

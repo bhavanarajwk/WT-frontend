@@ -68,4 +68,4 @@ Account: `status` (`INVITED`, `ACTIVE`, `OFFBOARDED`), `roles` (comma-separated,
 | marital_status | SINGLE, MARRIED |
 | blood_group | A+, A-, B+, B-, AB+, AB-, O+, O- |
 | request_type (leave) | LEAVE, WFH, COMP_OFF |
-| exit_type (offboard) | VOLUNTARY, INVOLUNTARY, CONTRACTUAL (consultants: CONTRACTUAL; excluded from attrition) |
+| exit_type (offboard) | VOLUNTARY, INVOLUNTARY |

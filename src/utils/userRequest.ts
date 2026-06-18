@@ -175,19 +175,6 @@ export function isLeaveOrWfhRequestType(value: unknown): boolean {
 
 
 
-export function isLeaveRequestType(value: unknown): boolean {
-  return String(value ?? "").trim().toUpperCase() === "LEAVE";
-}
-
-
-
-/** @deprecated Legacy Phase 1 email-only leave is superseded; always false. */
-export function isLeaveEmailOnlyWorkflow(_row: Record<string, unknown>): boolean {
-  return false;
-}
-
-
-
 export function isCompOffRequestType(value: unknown): boolean {
 
   const raw = String(value ?? "")
@@ -235,16 +222,13 @@ export function requestHrStatus(row: Record<string, unknown>): string {
 
 
 export function requestFinalStatus(row: Record<string, unknown>): string {
-  const raw = normalizeRequestStatus(
+
+  return normalizeRequestStatus(
+
     pickRowField(row, "user_request_status", "userRequestStatus", "status") ?? "PENDING"
+
   );
-  if (
-    raw === "SUBMITTED" &&
-    isLeaveRequestType(pickRowField(row, "request_type", "requestType"))
-  ) {
-    return "PENDING";
-  }
-  return raw;
+
 }
 
 
@@ -311,9 +295,7 @@ export function canHrToggleLeaveWfh(
 
   if (!options.hasHrAccess) return false;
 
-  if (isLeaveRequestType(pickRowField(row, "request_type", "requestType"))) return false;
-
-  if (isLeaveEmailOnlyWorkflow(row)) return false;
+  if (!isLeaveOrWfhRequestType(pickRowField(row, "request_type", "requestType"))) return false;
 
   return canHrReviewUserRequest(row, options);
 
@@ -362,10 +344,6 @@ export function hrTeamActionBlockedHint(
 
   const requestType = pickRowField(row, "request_type", "requestType");
 
-  if (isLeaveRequestType(requestType)) {
-    return "Manager approval is final for leave";
-  }
-
   if (!isLeaveOrWfhRequestType(requestType) && !isCompOffRequestType(requestType)) {
 
     return null;
@@ -394,7 +372,6 @@ export function canManagerActOnRequest(
   row: Record<string, unknown>,
   options: { hasManagerAccess: boolean; hasDmAccess?: boolean }
 ): boolean {
-  if (isLeaveEmailOnlyWorkflow(row)) return false;
   const hasManager = Boolean(options.hasManagerAccess);
   const hasDm = Boolean(options.hasDmAccess);
   if (!hasManager && !hasDm) return false;
@@ -624,8 +601,6 @@ export function formatApprovalStageLabel(value: unknown): string {
 
   const s = normalizeRequestStatus(value);
 
-  if (s === "SUBMITTED") return "Submitted";
-
   return s || "—";
 
 }
@@ -635,8 +610,6 @@ export function formatApprovalStageLabel(value: unknown): string {
 export function approvalStageTone(value: unknown): string {
 
   const s = normalizeRequestStatus(value);
-
-  if (s === "SUBMITTED") return "text-indigo-700";
 
   if (s === "APPROVED") return "text-emerald-700";
 

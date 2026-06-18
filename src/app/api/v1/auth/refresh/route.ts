@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
         roles: data.roles ?? [],
         status: data.status ?? "",
         user_type: data.user_type ?? "",
-        session_started_at: (data as { session_started_at?: string }).session_started_at,
       });
     }
   } catch {

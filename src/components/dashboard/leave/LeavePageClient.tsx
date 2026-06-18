@@ -28,7 +28,7 @@ import {
 } from "@/utils/learning/onboardOptions";
 import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
 import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
-import { hasDmRole, isAccountManagerEmployeeUser } from "@/utils/roles";
+import { hasDmRole, isAccountManagerEmployeeUser, isDeliveryManagerUser } from "@/utils/roles";
 import { loadSelfProfileState } from "@/utils/selfProfile";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import {
@@ -127,9 +127,6 @@ import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSu
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
 import { ManagerTeamOnLeavePanel } from "@/components/dashboard/leave/ManagerTeamOnLeavePanel";
 import { LeaveWorkflowNotice } from "@/components/dashboard/leave/LeaveWorkflowNotice";
-import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
-import { LeaveAdditionalRecipientsSelector } from "@/components/dashboard/leave/LeaveAdditionalRecipientsSelector";
-
 import {
   calendarDaysInclusive,
   normalizeCompOffRequestType,
@@ -193,7 +190,7 @@ export function LeavePageClient() {
       .trim()
       .toLowerCase()
       .includes("manager");
-  const { user, refresh: refreshSession } = useAuth();
+  const { user, signOut, refresh: refreshSession } = useAuth();
   const userEmail = useMemo(() => String(user?.email ?? "").trim(), [user?.email]);
   const leaveRequestsLoadInFlight = useRef(false);
   const router = useRouter();
@@ -328,8 +325,6 @@ export function LeavePageClient() {
   const [roleAssignUsers, setRoleAssignUsers] = useState<Array<{ name: string; email: string }>>([]);
 
   const [leaveRequestForm, setLeaveRequestForm] = useState(createDefaultLeaveRequestForm);
-  const [selectedLeaveManagerEmails, setSelectedLeaveManagerEmails] = useState<string[]>([]);
-  const [selectedAdditionalRecipientEmails, setSelectedAdditionalRecipientEmails] = useState<string[]>([]);
   const [editingLeaveRequestId, setEditingLeaveRequestId] = useState<string>("");
   const [employeeRequestFilters, setEmployeeRequestFilters] = useState({
     fromDate: "",
@@ -458,32 +453,21 @@ export function LeavePageClient() {
   );
   const [timelogSubTab, setTimelogSubTab] = useState<"my" | "team">("my");
   const pathname = usePathname();
-  const isTeamLeaveRoute = pathname.includes("/dashboard/leave/team");
   const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team" | "comp-off" | "wfh" | "balances">(
-    isTeamLeaveRoute ? "team" : "my"
+    pathname.includes("/dashboard/leave/team") ? "team" : "my"
   );
   useEffect(() => {
-    if (isTeamLeaveRoute) setLeaveSubTab("team");
+    if (pathname.includes("/dashboard/leave/team")) setLeaveSubTab("team");
     else if (pathname.includes("/dashboard/leave")) setLeaveSubTab("my");
-  }, [isTeamLeaveRoute, pathname]);
+  }, [pathname]);
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasAdminAccess = userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const hasDmAccess = hasDmRole(userRoles);
-
-  useEffect(() => {
-    if (
-      pathname.includes("/dashboard/leave") &&
-      !pathname.includes("/dashboard/leave/team") &&
-      hasHrAccess &&
-      !hasManagerAccess &&
-      !hasDmAccess
-    ) {
-      router.replace("/dashboard/leave/team");
-    }
-  }, [pathname, hasHrAccess, hasManagerAccess, hasDmAccess, router]);
+  const isDmOnlyUser = isDeliveryManagerUser(userRoles);
   const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess;
+  const teamLeaveTabLabel = isDmOnlyUser ? "Manager leave requests" : "Team requests";
   const firstLineStatusColumnLabel = hasHrAccess
     ? "Manager/DM status"
     : hasDmAccess && !hasManagerAccess
@@ -504,7 +488,6 @@ export function LeavePageClient() {
   const canApplyCompOff = !hasHrAccess && !hasManagerAccess;
   const teamRequestType = employeeRequestFilters.requestType || "ALL";
   const showCompOffTab = canApplyCompOff || hasManagerAccess || hasHrAccess || hasDmAccess;
-  const showLeaveSubTabBar = showCompOffTab || hasHrAccess || !isTeamLeaveRoute;
   const compOffForcedTab: "my" | "team" = canApplyCompOff ? "my" : "team";
 
   const leaveRequestTypeOptions = useMemo(() => {
@@ -532,7 +515,6 @@ export function LeavePageClient() {
     if (hasManagerAccess) return "manager";
     return "employee";
   }, [hasAdminAccess, hasDmAccess, hasHrAccess, hasManagerAccess, userRoles]);
-
   useEffect(() => {
     if (leaveSubTab === "wfh") {
       setLeaveRequestForm((prev) =>
@@ -3378,8 +3360,47 @@ export function LeavePageClient() {
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className="space-y-4">
-                          {showLeaveSubTabBar ? (
+                          {canViewTeamLeave || canApplyCompOff ? (
                             <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
+                              {canViewTeamLeave ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => setLeaveSubTab("my")}
+                                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                      leaveSubTab === "my"
+                                        ? "bg-wt-surface-3 text-wt-text"
+                                        : "text-wt-text-muted hover:bg-wt-surface-2"
+                                    }`}
+                                  >
+                                    Leave requests
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setLeaveSubTab("team")}
+                                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                      leaveSubTab === "team"
+                                        ? "bg-wt-surface-3 text-wt-text"
+                                        : "text-wt-text-muted hover:bg-wt-surface-2"
+                                    }`}
+                                  >
+                                    {teamLeaveTabLabel}
+                                  </button>
+                                </>
+                              ) : null}
+                              {canApplyCompOff && !hasManagerAccess && !hasHrAccess ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setLeaveSubTab("my")}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    leaveSubTab === "my"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Leave requests
+                                </button>
+                              ) : null}
                               {showCompOffTab ? (
                                 <button
                                   type="button"
@@ -3393,19 +3414,17 @@ export function LeavePageClient() {
                                   Comp off credit
                                 </button>
                               ) : null}
-                              {!isTeamLeaveRoute ? (
-                                <button
-                                  type="button"
-                                  onClick={() => setLeaveSubTab("wfh")}
-                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                                    leaveSubTab === "wfh"
-                                      ? "bg-wt-surface-3 text-wt-text"
-                                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                                  }`}
-                                >
-                                  WFH
-                                </button>
-                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => setLeaveSubTab("wfh")}
+                                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  leaveSubTab === "wfh"
+                                    ? "bg-wt-surface-3 text-wt-text"
+                                    : "text-wt-text-muted hover:bg-wt-surface-2"
+                                }`}
+                              >
+                                WFH
+                              </button>
                               {hasHrAccess ? (
                                 <button
                                   type="button"
@@ -3524,22 +3543,6 @@ export function LeavePageClient() {
                                     </span>
                                   </label>
                                 ) : null}
-                                {leaveSubTab === "my" &&
-                                normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
-                                  <LeaveManagerSelector
-                                    selectedEmails={selectedLeaveManagerEmails}
-                                    onChange={setSelectedLeaveManagerEmails}
-                                    disabled={actionLoading}
-                                  />
-                                ) : null}
-                                {leaveSubTab === "my" &&
-                                normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
-                                  <LeaveAdditionalRecipientsSelector
-                                    selectedEmails={selectedAdditionalRecipientEmails}
-                                    onChange={setSelectedAdditionalRecipientEmails}
-                                    disabled={actionLoading}
-                                  />
-                                ) : null}
                                 <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                               </div>
                               <div className="mt-4 flex gap-2">
@@ -3620,8 +3623,6 @@ export function LeavePageClient() {
                                           manager_comp_off_email: managerCompOffEmail,
                                         });
                                         setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                        setSelectedLeaveManagerEmails([]);
-                                        setSelectedAdditionalRecipientEmails([]);
                                         setEditingLeaveRequestId("");
                                         try {
                                           await loadMyLeaveRequests();
@@ -3640,17 +3641,6 @@ export function LeavePageClient() {
                                           client_approval: needsClientApproval
                                             ? leaveRequestForm.client_approval
                                             : undefined,
-                                          selected_manager_emails:
-                                            leaveSubTab === "my" &&
-                                            normalizeUserRequestType(requestType) === "LEAVE"
-                                              ? selectedLeaveManagerEmails
-                                              : undefined,
-                                          additional_recipient_emails:
-                                            leaveSubTab === "my" &&
-                                            normalizeUserRequestType(requestType) === "LEAVE" &&
-                                            selectedAdditionalRecipientEmails.length
-                                              ? selectedAdditionalRecipientEmails
-                                              : undefined,
                                         },
                                         editingLeaveRequestId
                                           ? { userRequestId: Number(editingLeaveRequestId) }
@@ -3668,8 +3658,6 @@ export function LeavePageClient() {
                                         });
                                       }
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                      setSelectedLeaveManagerEmails([]);
-                                      setSelectedAdditionalRecipientEmails([]);
                                       setEditingLeaveRequestId("");
                                       try {
                                         await loadMyLeaveRequests();
@@ -3888,7 +3876,7 @@ export function LeavePageClient() {
                             </div>
                           </div>
                         </section>
-                          ) : isTeamLeaveRoute && canViewTeamLeave ? (
+                          ) : canViewTeamLeave ? (
                         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
                           {hasManagerAccess && !hasHrAccess ? <ManagerTeamOnLeavePanel /> : null}
                           {hasHrAccess ? (
