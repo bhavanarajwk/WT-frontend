@@ -13,4 +13,5 @@ export interface OnboardOptionsResponse {
   marital_statuses: OnboardOptionItem[];
   blood_groups: OnboardOptionItem[];
   holiday_calendars: OnboardOptionItem[];
+  reporting_managers: OnboardOptionItem[];
 }

@@ -273,6 +273,72 @@ function withPlaceholderOption(
   return [{ value: "", label: placeholder }, ...items];
 }
 
+function ChevronDownIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-wt-text-muted"
+      aria-hidden
+    >
+      <path
+        fillRule="evenodd"
+        d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+/** Selection-only dropdown with a visible chevron (no free-text entry). */
+export function DropdownSelectField({
+  label,
+  value,
+  options,
+  onChange,
+  required = false,
+  placeholder = "Select",
+  disabled = false,
+  className,
+}: {
+  label: string;
+  value: string;
+  options: SelectFieldOption[];
+  onChange: (value: string) => void;
+  required?: boolean;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const items = normalizeSelectOptions(options);
+  return (
+    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
+      <FieldLabel label={label} required={required} />
+      <div className="relative">
+        <select
+          className="input-field w-full appearance-none pr-9"
+          value={value}
+          required={required}
+          disabled={disabled}
+          aria-label={label}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          <option value="" disabled={required}>
+            {placeholder}
+          </option>
+          {items.map((option) => (
+            <option key={`${option.value}-${option.label}`} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDownIcon />
+      </div>
+    </label>
+  );
+}
+
 export function AdaptiveSelectField({
   label,
   value,

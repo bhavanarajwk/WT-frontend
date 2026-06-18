@@ -17,6 +17,7 @@ import {
   invitedEmployeeWorkEmail,
 } from "@/utils/dashboard/invitedEmployees";
 import { formatTableColumnHeader, prepareTableForDisplay } from "@/utils/tableDisplay";
+import { BlackLoader } from "@/components/dashboard/shared/BlackLoader";
 
 const DATA_COLUMNS = [
   "emp_id",
@@ -163,7 +164,14 @@ export function InvitedEmployeesTable({
                         disabled={actionLoading || isResending}
                         onClick={() => onResendInvite(email)}
                       >
-                        {isResending ? "Sending…" : "Resend"}
+                        {isResending ? (
+                          <span className="inline-flex items-center gap-2">
+                            <BlackLoader label="Resending Invite" size="sm" />
+                            <span>Resending Invite…</span>
+                          </span>
+                        ) : (
+                          "Resend Invite"
+                        )}
                       </button>
                     ) : (
                       <span className="text-xs text-wt-text-muted">—</span>
