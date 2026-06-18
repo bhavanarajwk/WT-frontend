@@ -3753,7 +3753,9 @@ export function LeavePageClient() {
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager status</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager reason</th>
-                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">HR status</th>
+                                        {leaveSubTab === "wfh" ? (
+                                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">HR status</th>
+                                        ) : null}
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Final status</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Comments</th>
                                         <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Actions</th>
@@ -3794,9 +3796,11 @@ export function LeavePageClient() {
                                             >
                                               {managerReason}
                                             </td>
-                                            <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(hrStatus)}`}>
-                                              {formatApprovalStageLabel(hrStatus)}
-                                            </td>
+                                            {leaveSubTab === "wfh" ? (
+                                              <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(hrStatus)}`}>
+                                                {formatApprovalStageLabel(hrStatus)}
+                                              </td>
+                                            ) : null}
                                             <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(finalStatus)}`}>
                                               {formatApprovalStageLabel(finalStatus)}
                                             </td>
