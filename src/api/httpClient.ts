@@ -50,10 +50,14 @@ export function normalizeApiBaseUrl(url: string): string {
  */
 export function resolveClientApiBaseUrl(): string {
   const configured = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL ?? "");
-  if (process.env.NODE_ENV === "production") {
-    return "";
-  }
-  return configured;
+  // If an explicit base URL is configured, prefer it in all environments.
+  // This unblocks deployments where the frontend does not provide a BFF/rewrite for `/api/v1`.
+  if (configured) return configured;
+
+  // Default production behavior: same-origin so cookies remain scoped to the frontend domain.
+  if (process.env.NODE_ENV === "production") return "";
+
+  return "";
 }
 
 const DEFAULT_BASE_URL = resolveClientApiBaseUrl();
