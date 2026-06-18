@@ -16,7 +16,6 @@ import {
   userRequestActionLabel,
 } from "@/utils/actionToast";
 import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
-import { EmployeeAttendancePanel } from "@/components/dashboard/sections/EmployeeAttendancePanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { AllocatedPercentSelect } from "@/components/allocation/AllocatedPercentSelect";
 import { AssignProjectManagerPanel } from "@/components/allocation/AssignProjectManagerPanel";

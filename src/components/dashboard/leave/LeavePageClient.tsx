@@ -20,7 +20,6 @@ import {
   USER_REQUEST_TYPE_SELECT_OPTIONS,
 } from "@/utils/actionToast";
 import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
-import { EmployeeAttendancePanel } from "@/components/dashboard/sections/EmployeeAttendancePanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import {
   normalizePickerEmail,

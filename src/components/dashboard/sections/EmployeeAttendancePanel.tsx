@@ -83,6 +83,7 @@ export function EmployeeAttendancePanel() {
   const nextPageRef = useRef(0);
   const hasMoreRef = useRef(true);
   const loadingLockRef = useRef(false);
+  const scrollOverflowRef = useRef(false);
   const filtersRef = useRef({
     from: defaults.from,
     to: defaults.to,
@@ -184,21 +185,34 @@ export function EmployeeAttendancePanel() {
 
   useEffect(() => {
     const root = scrollRootRef.current;
+    if (!root || loading) return;
+    scrollOverflowRef.current = root.scrollHeight > root.clientHeight + 8;
+  }, [employees.length, loading]);
+
+  useEffect(() => {
+    const root = scrollRootRef.current;
     const sentinel = loadMoreRef.current;
-    if (!root || !sentinel) return;
+    if (!root || !sentinel || loading || loadingMore || !hasMoreRef.current) return;
+    if (!scrollOverflowRef.current && employees.length > 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
+        if (
+          entries[0]?.isIntersecting &&
+          !loadingLockRef.current &&
+          hasMoreRef.current &&
+          !loading &&
+          !loadingMore
+        ) {
           void fetchNextPage();
         }
       },
-      { root, rootMargin: "160px", threshold: 0 }
+      { root, rootMargin: "120px", threshold: 0 }
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [fetchNextPage, employees.length, loading, loadingMore]);
+  }, [fetchNextPage, loading, loadingMore, employees.length]);
 
   useEffect(() => {
     if (!toast) return;
