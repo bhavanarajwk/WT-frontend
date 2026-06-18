@@ -56,23 +56,134 @@ export function isEditableAllocationRow(row: Record<string, unknown>): boolean {
   return true;
 }
 
+export const ALLOCATION_LIST_DEFAULT_SORT_ID = "project_end_asc";
+
+function allocationListProjectKey(row: Record<string, unknown>): string {
+  return String(
+    row.project_name ??
+      row.projectName ??
+      row.allocated_project ??
+      row.project_code ??
+      row.projectCode ??
+      ""
+  )
+    .trim()
+    .toLowerCase();
+}
+
+function allocationListBillingKey(row: Record<string, unknown>): string {
+  return String(row.billing_status ?? row.billingStatus ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function allocationListTypeKey(row: Record<string, unknown>): string {
+  return String(row.allocation_type ?? row.allocationType ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function allocationListEndDateKey(row: Record<string, unknown>): number {
+  return parseApiDate(String(row.end_date ?? row.endDate ?? ""))?.getTime() ?? Number.POSITIVE_INFINITY;
+}
+
+function compareAllocationListSuperseded(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>
+): number {
+  const aSup = isSupersededAllocationRow(a) ? 1 : 0;
+  const bSup = isSupersededAllocationRow(b) ? 1 : 0;
+  return aSup - bSup;
+}
+
+/** Default list order: project asc, then end date asc. Superseded rows last. */
+export function sortAllocationListForDisplay(
+  rows: Array<Record<string, unknown>>,
+  sortId: string = ALLOCATION_LIST_DEFAULT_SORT_ID
+): Array<Record<string, unknown>> {
+  const id = sortId.trim() || ALLOCATION_LIST_DEFAULT_SORT_ID;
+  return [...rows].sort((a, b) => {
+    const supersededCmp = compareAllocationListSuperseded(a, b);
+    if (supersededCmp !== 0) return supersededCmp;
+
+    if (id.startsWith("billing_status")) {
+      let cmp = allocationListBillingKey(a).localeCompare(allocationListBillingKey(b));
+      if (cmp === 0) cmp = allocationListProjectKey(a).localeCompare(allocationListProjectKey(b));
+      if (cmp === 0) cmp = allocationListEndDateKey(a) - allocationListEndDateKey(b);
+      return id.endsWith("_desc") ? -cmp : cmp;
+    }
+
+    if (id.startsWith("allocation_type")) {
+      let cmp = allocationListTypeKey(a).localeCompare(allocationListTypeKey(b));
+      if (cmp === 0) cmp = allocationListProjectKey(a).localeCompare(allocationListProjectKey(b));
+      if (cmp === 0) cmp = allocationListEndDateKey(a) - allocationListEndDateKey(b);
+      return id.endsWith("_desc") ? -cmp : cmp;
+    }
+
+    const projectCmp = allocationListProjectKey(a).localeCompare(allocationListProjectKey(b));
+    const endCmp = allocationListEndDateKey(a) - allocationListEndDateKey(b);
+    if (id === "project_desc") {
+      if (projectCmp !== 0) return -projectCmp;
+      return endCmp;
+    }
+    if (projectCmp !== 0) return projectCmp;
+    return endCmp;
+  });
+}
+
+export function filterAllocationListBySearch(
+  rows: Array<Record<string, unknown>>,
+  query: string
+): Array<Record<string, unknown>> {
+  const q = query.trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter((row) => {
+    const haystack = [
+      row.project_name,
+      row.projectName,
+      row.project_code,
+      row.projectCode,
+      row.allocated_project,
+      row.employee_name,
+      row.employeeName,
+      row.employee_email,
+      row.employeeEmail,
+      row.email,
+      row.role,
+      row.allocation_type,
+      row.allocationType,
+      row.billing_status,
+      row.billingStatus,
+      row.start_date,
+      row.startDate,
+      row.end_date,
+      row.endDate,
+      row.allocation_status,
+      row.allocationStatus,
+      row.status,
+    ]
+      .map((value) => String(value ?? "").toLowerCase())
+      .join(" ");
+    return haystack.includes(q);
+  });
+}
+
+export function mergeUniqueAllocationListRows(
+  rows: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  const seen = new Map<string, Record<string, unknown>>();
+  for (const row of rows) {
+    const id = allocationRowId(row);
+    const key = id || JSON.stringify(row);
+    if (!seen.has(key)) seen.set(key, row);
+  }
+  return Array.from(seen.values());
+}
+
 export function sortAllocationListRows(
   rows: Array<Record<string, unknown>>
 ): Array<Record<string, unknown>> {
-  return [...rows].sort((a, b) => {
-    const aSup = isSupersededAllocationRow(a) ? 1 : 0;
-    const bSup = isSupersededAllocationRow(b) ? 1 : 0;
-    if (aSup !== bSup) return aSup - bSup;
-
-    const nameA = String(a.employee_name ?? a.employeeName ?? "").toLowerCase();
-    const nameB = String(b.employee_name ?? b.employeeName ?? "").toLowerCase();
-    const byName = nameA.localeCompare(nameB);
-    if (byName !== 0) return byName;
-
-    const startA = parseApiDate(String(a.start_date ?? a.startDate ?? ""))?.getTime() ?? 0;
-    const startB = parseApiDate(String(b.start_date ?? b.startDate ?? ""))?.getTime() ?? 0;
-    return startA - startB;
-  });
+  return sortAllocationListForDisplay(rows, ALLOCATION_LIST_DEFAULT_SORT_ID);
 }
 
 export type AllocationUpdateResponse = {

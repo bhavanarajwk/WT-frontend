@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
-import type { OffboardListItem } from "@/types/offboard";
+import type { HrOffboardListItem } from "@/types/offboard";
 import { DatePickerField, InputField, SelectField, TextAreaField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
@@ -16,6 +16,7 @@ import {
   EXIT_TYPE_SELECT_OPTIONS,
   type ExitType,
 } from "@/utils/offboardingFormState";
+import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
 
 type Toast = { type: "success" | "error"; message: string } | null;
 
@@ -105,7 +106,7 @@ function OffboardingLoaderOverlay({ label }: { label: string }) {
 export function OffboardingPanel() {
   const [offboardingForm, setOffboardingForm] = useState(createEmptyOffboardingForm);
   const [offboardCandidates, setOffboardCandidates] = useState<OffboardCandidate[]>([]);
-  const [offboardedRows, setOffboardedRows] = useState<OffboardListItem[]>([]);
+  const [offboardedRows, setOffboardedRows] = useState<HrOffboardListItem[]>([]);
   const [listTotal, setListTotal] = useState(0);
   const [listPage, setListPage] = useState(0);
   const [listPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -171,7 +172,7 @@ export function OffboardingPanel() {
         toDate: filterToDate.trim() || undefined,
       });
       const data = res.data;
-      setOffboardedRows(data?.items ?? []);
+      setOffboardedRows((data?.items ?? []) as unknown as HrOffboardListItem[]);
       setListTotal(data?.total ?? 0);
     } catch (error) {
       setOffboardedRows([]);
@@ -194,7 +195,7 @@ export function OffboardingPanel() {
       const [onboardRes, offboardRes] = await Promise.all([
         hrmsService.getOnboardList({ page: "0", size: "500", onboardingStatus: "ACTIVE" }),
         hrmsService.getOffboardList({ page: 0, size: 200 }).catch(() => ({
-          data: { items: [] as OffboardListItem[], total: 0, page: 0, size: 0 },
+          data: { items: [] as HrOffboardListItem[], total: 0, page: 0, size: 0 },
         })),
       ]);
       const onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
@@ -208,7 +209,12 @@ export function OffboardingPanel() {
               const emp_id = String(row.emp_id ?? row.empId ?? "").trim();
               if (!emp_id || offboardedIds.has(emp_id.toLowerCase())) return null;
               const status = String(row.status ?? "").trim().toUpperCase();
-              if (status !== "ACTIVE") return null;
+              if (
+                status === "INACTIVE" ||
+                normalizeEmployeeStatusKey(status) === "IN_NOTICE"
+              ) {
+                return null;
+              }
               const name = String(row.name ?? "—").trim() || "—";
               const email = String(row.email ?? "—").trim() || "—";
               const user_type = String(row.user_type ?? row.userType ?? "").trim().toUpperCase();
@@ -363,7 +369,7 @@ export function OffboardingPanel() {
         fromDate: filterFromDate.trim() || undefined,
         toDate: filterToDate.trim() || undefined,
       });
-      setOffboardedRows(res.data?.items ?? []);
+      setOffboardedRows((res.data?.items ?? []) as unknown as HrOffboardListItem[]);
       setListTotal(res.data?.total ?? 0);
       await loadAttritionSummary();
     } catch (error) {

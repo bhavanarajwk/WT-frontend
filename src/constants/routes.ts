@@ -128,3 +128,8 @@ export function defaultDashboardPathForRoles(roles: string[]): string {
   }
   return DASHBOARD_ROUTES["employee-directory"];
 }
+
+export function exitInterviewSubmissionDetailPath(lookupId: string): string {
+  const token = lookupId.trim();
+  return `${DASHBOARD_ROUTES["exit-interview-submissions"]}/${encodeURIComponent(token)}`;
+}

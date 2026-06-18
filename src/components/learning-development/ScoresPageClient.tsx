@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -149,7 +150,7 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
       {!embedded ? (
         <>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Scores &amp; completion</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Scores & Completion</h1>
             <p className="text-sm text-wt-text-muted mt-1">
               Select a training and assessment, enter scores for each trainee, then save.
             </p>
@@ -185,7 +186,7 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wt-border pb-4">
           <div>
-            <h2 className="font-semibold">Trainee scores</h2>
+            <h2 className="font-semibold">Trainee Scores</h2>
             {!marksAlreadyPublished && hasHrAccess ? (
               <p className="text-xs text-wt-text-muted mt-1">
                 Save scores for all trainees, then publish to email marks to each employee.
@@ -233,15 +234,15 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
         {!trainingId ? (
           <p className="text-sm text-wt-text-muted">Select a training to load trainees.</p>
         ) : traineesQ.isLoading ? (
-          <p className="text-sm text-wt-text-muted">Loading trainees…</p>
+          <SectionLoading label="Loading trainees…" />
         ) : traineeRows.length === 0 ? (
           <p className="text-sm text-wt-text-muted">No trainees enrolled for this training.</p>
         ) : !assessmentId ? (
           <p className="text-sm text-wt-text-muted">Select an assessment before saving scores.</p>
         ) : (
-          <div className="wt-scroll-both overflow-x-auto rounded-xl border border-wt-border">
-            <table className="min-w-full text-sm">
-              <thead className="bg-wt-surface-2 text-wt-text-muted">
+          <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
+            <table className="wt-scrollable-table text-sm">
+              <thead className="wt-table-sticky-head text-wt-text-muted">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium">Trainee</th>
                   <th className="text-left px-3 py-2 font-medium w-28">Score (%)</th>
@@ -304,7 +305,7 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
       </section>
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h2 className="font-semibold">Score analytics</h2>
+        <h2 className="font-semibold">Score Analytics</h2>
         <TraineeScoreAnalytics
           traineeRows={traineeRows}
           assessments={assessments}

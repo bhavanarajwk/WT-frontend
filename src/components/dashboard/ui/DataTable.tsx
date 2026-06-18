@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import {
+  SCROLLABLE_TABLE_CLASS,
+  ScrollableTable,
+  STICKY_TABLE_HEAD_CLASS,
+} from "@/components/dashboard/ui/ScrollableTable";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import {
@@ -61,7 +65,7 @@ export function DataTable({
     resetKeys: resetPaginationKeys ?? (sortOptions?.length ? [sortId] : undefined),
   });
 
-  const displayRows = paginate ? pagination.pageItems : sortedRows;
+  const displayRows = sortedRows;
 
   if (!displaySourceRows.length) {
     return (
@@ -80,9 +84,9 @@ export function DataTable({
   return (
     <div className="space-y-2">
       {title ? <p className="text-sm font-medium">{title}</p> : null}
-      <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
-        <table className="min-w-full text-sm">
-          <thead className="bg-wt-surface-2 text-wt-text-muted">
+      <ScrollableTable>
+        <table className={SCROLLABLE_TABLE_CLASS}>
+          <thead className={STICKY_TABLE_HEAD_CLASS}>
             <tr>
               {displayColumns.map((col) => {
                 const columnSortOpts = sortOptions?.length ? sortOptionsForColumn(col, sortOptions) : [];
@@ -119,20 +123,7 @@ export function DataTable({
             ))}
           </tbody>
         </table>
-      </div>
-      {paginate && pagination.totalPages > 1 ? (
-        <ListPagination
-          page={pagination.page}
-          totalPages={pagination.totalPages}
-          totalItems={pagination.totalItems}
-          rangeStart={pagination.rangeStart}
-          rangeEnd={pagination.rangeEnd}
-          pageSize={pagination.pageSize}
-          pageSizeOptions={pagination.pageSizeOptions}
-          onPageChange={pagination.setPage}
-          onPageSizeChange={pagination.setPageSize}
-        />
-      ) : null}
+      </ScrollableTable>
     </div>
   );
 }
