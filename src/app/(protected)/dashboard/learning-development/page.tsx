@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { EmployeeLearningCatalog } from "@/components/learning-development/EmployeeLearningCatalog";
@@ -29,7 +30,7 @@ function HrLearningDashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Learning overview</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Learning Overview</h1>
           <p className="text-sm text-wt-text-muted mt-1">
             Open a training card to manage sessions, trainers, trainees, attendance, and scores.
           </p>
@@ -50,7 +51,7 @@ function HrLearningDashboard() {
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Trainings</h2>
         {isLoading ? (
-          <p className="text-sm text-wt-text-muted">Loading trainings…</p>
+          <SectionLoading label="Loading trainings…" />
         ) : trainings.length === 0 ? (
           <p className="text-sm text-wt-text-muted">No trainings yet.</p>
         ) : (

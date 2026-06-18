@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -61,9 +62,7 @@ export function ResumesPageClient() {
   if (authStatus === "loading") {
     return (
       <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-sm text-wt-text-muted shadow-sm">
-          Loading…
-        </div>
+        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm"><SectionLoading label="Loading" /></div>
       </DashboardPageShell>
     );
   }
@@ -72,7 +71,7 @@ export function ResumesPageClient() {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
-          <h3 className="text-lg font-semibold">Access restricted</h3>
+          <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="mt-2 text-sm text-wt-text-muted">
             Resumes are available to account manager users only.
           </p>
@@ -127,7 +126,7 @@ export function ResumesPageClient() {
             </button>
           </div>
 
-          {isLoading ? <p className="text-sm text-wt-text-muted">Loading resumes…</p> : null}
+          {isLoading ? <SectionLoading label="Loading resumes…" /> : null}
 
           {isError ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
@@ -140,8 +139,8 @@ export function ResumesPageClient() {
 
           {!isLoading && !isError && filteredRows.length > 0 ? (
             <div className="wt-scroll-both max-h-[min(65vh,560px)] overflow-auto rounded-xl border border-wt-border">
-              <table className="min-w-full text-sm">
-                <thead className="sticky top-0 z-[1] bg-wt-surface-2 text-wt-text-muted">
+              <table className="wt-scrollable-table text-sm">
+                <thead className="wt-table-sticky-head text-wt-text-muted">
                   <tr>
                     {columns.map((col) => {
                       const columnSortOpts = sortOptions.length

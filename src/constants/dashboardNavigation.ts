@@ -1,4 +1,5 @@
 import type { SidebarIconName } from "@/constants/sidebarIcons";
+import { toTitleCase } from "@/utils/titleCase";
 
 export type NavChild = {
   id: string;
@@ -67,13 +68,13 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "exit-interview-submissions",
-        label: "Exit survey",
+        label: "Exit Survey",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "fileText",
       },
       {
         id: "leave-team",
-        label: "Leave requests",
+        label: "Leave Requests",
         roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
@@ -93,13 +94,13 @@ export const dashboardNavigation: NavItem[] = [
     children: [
       {
         id: "allocation",
-        label: "Projects allocation",
+        label: "Projects Allocation",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "layoutGrid",
       },
       {
         id: "allocation-extension",
-        label: "Allocation extension",
+        label: "Allocation Extension",
         roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarRange",
       },
@@ -125,13 +126,13 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "leave",
-        label: "Leave request",
+        label: "Leave Request",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
         id: "annual-calendar",
-        label: "Annual calendar",
+        label: "Annual Calendar",
         roles: [
           "ROLE_EMPLOYEE",
           "ROLE_MANAGER",
@@ -144,7 +145,7 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "exit-interview",
-        label: "Exit survey",
+        label: "Exit Survey",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
         icon: "fileText",
       },
@@ -221,7 +222,7 @@ export function filterVisibleNavigation(
   return result;
 }
 
-/** Offboarded employees may only open Exit survey under Personal (during notice only). */
+/** Offboarded Employees may only open Exit survey under Personal (during notice only). */
 export function filterNavigationForOffboardedUser(
   _items: NavItem[],
   options?: { showExitSurvey?: boolean }
@@ -254,4 +255,41 @@ export function accordionSectionForPathname(pathname: string, activeSection: str
   if (activeSection.startsWith("reports-")) return "reports";
   if (pathname.startsWith("/dashboard/learning-development")) return "learning";
   return null;
+}
+
+const PAGE_TITLE_OVERRIDES: Record<string, string> = {
+  profile: "Profile",
+  overview: "Overview",
+  "employee-directory": "Employee Directory",
+};
+
+function groupChildPageTitle(groupLabel: string, childLabel: string): string {
+  if (childLabel.toLowerCase().startsWith(groupLabel.toLowerCase())) {
+    return toTitleCase(childLabel);
+  }
+  return `${groupLabel} ${toTitleCase(childLabel)}`;
+}
+
+/** Page header title for the active dashboard section. */
+export function dashboardPageTitle(sectionId: string): string {
+  if (PAGE_TITLE_OVERRIDES[sectionId]) {
+    return PAGE_TITLE_OVERRIDES[sectionId];
+  }
+
+  for (const item of dashboardNavigation) {
+    if (item.kind === "group") {
+      const child = item.children.find((c) => c.id === sectionId);
+      if (child) return groupChildPageTitle(item.label, child.label);
+    }
+    if (item.kind === "link" && item.id === sectionId) {
+      return item.label;
+    }
+    if (item.kind === "expandable") {
+      if (item.id === sectionId) return item.label;
+      const child = item.children.find((c) => c.id === sectionId);
+      if (child) return child.label;
+    }
+  }
+
+  return toTitleCase(sectionId.replace(/-/g, " "));
 }
