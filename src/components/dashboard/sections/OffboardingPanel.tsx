@@ -12,7 +12,9 @@ import { toPagedRows } from "@/utils/apiRows";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
   CONSULTANT_EXIT_TYPE,
+  DEFAULT_NOTICE_PERIOD_DAYS,
   createEmptyOffboardingForm,
+  defaultLastWorkingDayFromResignation,
   EXIT_TYPE_SELECT_OPTIONS,
   type ExitType,
 } from "@/utils/offboardingFormState";
@@ -297,7 +299,16 @@ export function OffboardingPanel() {
     if (isConsultantOffboarding) {
       return "Consultant offboarding is recorded as a Contractual exit and is excluded from attrition metrics.";
     }
-    if (!r || !l) return null;
+    if (!r) {
+      return `Last working day defaults to ${DEFAULT_NOTICE_PERIOD_DAYS} calendar days after resignation when not set.`;
+    }
+    if (!l) {
+      const defaultLwd = defaultLastWorkingDayFromResignation(r);
+      if (defaultLwd) {
+        return `Last working day will default to ${DEFAULT_NOTICE_PERIOD_DAYS} calendar days after resignation (${defaultLwd}).`;
+      }
+      return null;
+    }
     const a = new Date(r);
     const b = new Date(l);
     if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) {
@@ -491,7 +502,15 @@ export function OffboardingPanel() {
                 required
                 type="date"
                 value={offboardingForm.resignation_date}
-                onChange={(v) => setOffboardingForm((p) => ({ ...p, resignation_date: v }))}
+                onChange={(v) =>
+                  setOffboardingForm((p) => ({
+                    ...p,
+                    resignation_date: v,
+                    last_working_day: v.trim()
+                      ? defaultLastWorkingDayFromResignation(v)
+                      : "",
+                  }))
+                }
                 disabled={submitting}
               />
               <InputField
