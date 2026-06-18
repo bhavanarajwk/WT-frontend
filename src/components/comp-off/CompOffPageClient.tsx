@@ -879,7 +879,7 @@ export function CompOffPageClient({
                   <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="font-semibold text-sm">Next expiry</h3>
+                        <h3 className="font-semibold text-sm">Next Expiry</h3>
                         <p className="text-xs text-wt-text-muted mt-1">Nearest credit expiry date</p>
                       </div>
                       <div className="text-right shrink-0">
@@ -894,7 +894,7 @@ export function CompOffPageClient({
                 <div className={`grid gap-4 ${earnOnly ? "lg:grid-cols-1" : "lg:grid-cols-2"}`}>
                   <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
                     <div>
-                      <h3 className="font-semibold">Earn credit</h3>
+                      <h3 className="font-semibold">Earn Credit</h3>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <ProjectSelectField
@@ -943,7 +943,7 @@ export function CompOffPageClient({
                     }`}
                   >
                     <div>
-                      <h3 className="font-semibold">Use comp-off</h3>
+                      <h3 className="font-semibold">Use Comp-Off</h3>
                       <p className="text-xs text-wt-text-muted mt-1">
                         To use comp-off balance, submit a request from{" "}
                         <strong>My leave requests</strong>.
@@ -979,8 +979,8 @@ export function CompOffPageClient({
                   </div>
                   {filteredMyRequests.length ? (
                     <div className="wt-scroll-both max-h-[min(50vh,400px)] rounded-xl border border-wt-border">
-                      <table className="min-w-full text-sm">
-                        <thead className="bg-wt-surface-2 text-wt-text-muted">
+                      <table className="wt-scrollable-table text-sm">
+                        <thead className="wt-table-sticky-head text-wt-text-muted">
                           <tr>
                             {earnOnly ? (
                               <>
@@ -1093,7 +1093,7 @@ export function CompOffPageClient({
                                       {canEdit ? (
                                         <button
                                           type="button"
-                                          className="rounded-lg px-2 py-1 text-xs border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                          className="btn-action px-2 py-1 text-xs"
                                           disabled={actionLoading}
                                           onClick={() => {
                                             setUsageForm({
@@ -1179,7 +1179,7 @@ export function CompOffPageClient({
                       value={teamFilters.flow}
                       options={[
                         { value: "ALL", label: "All" },
-                        { value: "EARN", label: "Earn credit" },
+                        { value: "EARN", label: "Earn Credit" },
                         { value: "USAGE", label: "Usage" },
                       ]}
                       onChange={(v) =>
@@ -1206,8 +1206,8 @@ export function CompOffPageClient({
 
                 {teamRequests.length ? (
                   <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-wt-surface-2 text-wt-text-muted">
+                    <table className="wt-scrollable-table text-sm">
+                      <thead className="wt-table-sticky-head text-wt-text-muted">
                         <tr>
                           <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Employee</th>
                           <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Type</th>

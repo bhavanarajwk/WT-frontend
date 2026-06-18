@@ -1,4 +1,5 @@
 import { ApiError, parseApiErrorMessage } from "@/api/error";
+import { attachApiLoadingTelemetry } from "@/api/apiLoading";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type ResponseType = "json" | "text" | "blob" | "raw";
@@ -241,6 +242,9 @@ export class HttpClient {
 }
 
 export const apiClient = new HttpClient({ baseUrl: DEFAULT_BASE_URL });
+if (typeof window !== "undefined") {
+  attachApiLoadingTelemetry(apiClient);
+}
 
 apiClient.setUnauthorizedHandler(() => {
   if (typeof window === "undefined") return;

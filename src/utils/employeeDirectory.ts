@@ -181,7 +181,14 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
   };
 }
 
-export function editFormToUpdatePayload(form: EmployeeProfileEditForm): Record<string, unknown> {
+export function editFormToUpdatePayload(
+  form: EmployeeProfileEditForm,
+  options?: { statusOnly?: boolean }
+): Record<string, unknown> {
+  if (options?.statusOnly) {
+    return { user_status: form.user_status.trim() };
+  }
+
   const primary = form.primary_skills
     .split(",")
     .map((s) => s.trim())
@@ -220,217 +227,129 @@ export type ProfileDisplayEntry = {
   value: unknown;
   /** When set, render a clickable “resume” link instead of plain text. */
   resumeShareHref?: string | null;
+  fullWidth?: boolean;
+  /** When true, render value as a color-coded employee status badge. */
+  asStatusBadge?: boolean;
 };
 
-/** Fields hidden from the HR employee profile view. */
-const PROFILE_HIDDEN_LABELS = new Set([
-  "Status",
-  "Resume",
-  "Aadhaar",
-  "PAN Card",
-  "PAN card",
-  "Relieving Letter",
-  "Relieving letter",
-  "Manager",
-  "Stream",
-  "Leave remaining",
-  "Leave Remaining",
-  "Comp-off remaining",
-  "Comp-off Remaining",
-  "Comp Off Balance",
-  "Primary",
-  "Secondary",
-  "Carry Forward",
-  "Total Leave",
-  "Exit Survey Applicable",
-  "Can Fill Exit Survey",
-  "Exit Survey Submitted",
-  "Exit Survey Resignation Date",
-  "Exit Survey Last Working Day",
-  "Exit Survey Days Until Last Working Day",
-]);
+export type ProfileDisplaySection = {
+  title: string;
+  entries: ProfileDisplayEntry[];
+};
 
-const PROFILE_EXCLUDED_KEYS = new Set([
-  "status",
-  "user_status",
-  "userStatus",
-  "resume",
-  "resume_url",
-  "resumeUrl",
-  "resume_share_link",
-  "resumeShareLink",
-  "personal_resume",
-  "personalResume",
-  "aadhaar",
-  "aadhaar_url",
-  "aadhaarUrl",
-  "pan_card",
-  "panCard",
-  "pan_url",
-  "panUrl",
-  "reliving_letter",
-  "relieving_letter",
-  "relievingLetter",
-  "manager",
-  "manager_name",
-  "managerName",
-  "reporting_manager",
-  "stream",
-  "leave_remaining",
-  "leaveRemaining",
-  "comp_off_remaining",
-  "compOffRemaining",
-  "comp_off_balance",
-  "compOffBalance",
-  "leave",
-  "exit_interview_applicable",
-  "can_fill_exit_interview",
-  "exit_interview_submitted",
-  "exit_interview_resignation_date",
-  "exit_interview_last_working_day",
-  "exit_interview_days_until_last_working_day",
-]);
-
-const PROFILE_SKIP_KEYS = new Set([
-  "profile_photo_url",
-  "profilePhotoUrl",
-  "profile_pic_url",
-  "profilePicUrl",
-  "photo_url",
-  "photoUrl",
-  "avatar_url",
-  "avatarUrl",
-  "image_url",
-  "imageUrl",
-  "profile_photo",
-  "profilePhoto",
-]);
-
-function humanizeFieldKey(key: string): string {
-  return key
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+function profileEntry(
+  label: string,
+  value: unknown,
+  options?: { resumeShareHref?: string | null; fullWidth?: boolean; asStatusBadge?: boolean }
+): ProfileDisplayEntry {
+  return { label, value, ...options };
 }
 
-/** Ordered profile fields for a single-page HR employee profile view. */
+/** Grouped profile fields for the HR employee directory profile view. */
+export function buildGroupedProfileSections(
+  profile: Record<string, unknown>,
+  resumeShareHref?: string | null
+): ProfileDisplaySection[] {
+  const resumeHref =
+    resumeShareHref !== undefined ? resumeShareHref : pickResumeShareLink(profile);
+
+  const category =
+    pickProfileField(profile, ["category"]) ??
+    pickProfileField(profile, ["delivery_status", "deliveryStatus"]);
+
+  const reportingManager = pickProfileField(profile, [
+    "reporting_manager",
+    "reportingManager",
+    "manager_name",
+    "managerName",
+    "manager",
+  ]);
+
+  const workInformation: ProfileDisplayEntry[] = [
+    profileEntry("Name", cleanEmployeeName(profile) || pickProfileField(profile, ["name"])),
+    profileEntry("Employee ID", pickProfileField(profile, ["emp_id", "empId", "employee_id"])),
+    profileEntry(
+      "Status",
+      pickProfileField(profile, ["status", "user_status", "userStatus"]),
+      { asStatusBadge: true }
+    ),
+    profileEntry("Work Email", pickProfileField(profile, ["email"])),
+    profileEntry("Department", pickProfileField(profile, ["department"])),
+    profileEntry("Designation / Role", pickEmployeeRole(profile) || null),
+    profileEntry(
+      "Band",
+      pickProfileField(profile, ["band", "band_name", "bandName", "band_id", "bandId"])
+    ),
+    profileEntry("User Type", pickProfileField(profile, ["user_type", "userType"])),
+    profileEntry("Category", category),
+    profileEntry("Work Mode", pickProfileField(profile, ["work_mode", "workMode"])),
+    profileEntry(
+      "Work Location",
+      pickProfileField(profile, ["work_location", "work_location_type", "workLocationType"])
+    ),
+    profileEntry(
+      "Date of Joining",
+      formatDirectoryDate(
+        pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate"])
+      )
+    ),
+    profileEntry("Reporting Manager", reportingManager),
+    profileEntry("Primary Skills", formatPrimarySkills(profile)),
+    profileEntry("Secondary Skills", formatSecondarySkills(profile)),
+    profileEntry(
+      "Webknot Experience",
+      pickProfileField(profile, ["webknot_experience", "webknotExperience"])
+    ),
+    profileEntry(
+      "Total Experience",
+      pickProfileField(profile, ["total_experience", "totalExperience", "yoe", "years_of_experience", "experience"])
+    ),
+  ];
+
+  const personalInformation: ProfileDisplayEntry[] = [
+    profileEntry("Personal Email", pickProfileField(profile, ["personal_email", "personalEmail"])),
+    profileEntry("Phone Number", pickProfileField(profile, ["phone_number", "phoneNumber"])),
+    profileEntry(
+      "Date of Birth",
+      formatDirectoryDate(pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]))
+    ),
+    profileEntry("Gender", pickProfileField(profile, ["gender"])),
+    profileEntry("Marital Status", pickProfileField(profile, ["marital_status", "maritalStatus"])),
+    profileEntry("Local Address", pickProfileField(profile, ["local_address", "localAddress"]), {
+      fullWidth: true,
+    }),
+    profileEntry(
+      "Permanent Address",
+      pickProfileField(profile, ["permanent_address", "permanentAddress"]),
+      { fullWidth: true }
+    ),
+    profileEntry(
+      "Emergency Contact",
+      pickProfileField(profile, ["emergency_contact_name", "emergencyContactName"])
+    ),
+    profileEntry(
+      "Emergency Number",
+      pickProfileField(profile, ["emergency_contact_number", "emergencyContactNumber"])
+    ),
+    profileEntry("Blood Group", pickProfileField(profile, ["blood_group", "bloodGroup"])),
+    profileEntry("Resume Link", resumeHref ? "resume" : null, {
+      resumeShareHref: resumeHref,
+      fullWidth: true,
+    }),
+  ];
+
+  return [
+    { title: "Work Information", entries: workInformation },
+    { title: "Personal Information", entries: personalInformation },
+  ];
+}
+
+/** @deprecated Prefer buildGroupedProfileSections for directory profile layout. */
 export function buildProfileDisplayEntries(
   profile: Record<string, unknown>,
   resumeShareHref?: string | null
 ): ProfileDisplayEntry[] {
-  const entries: ProfileDisplayEntry[] = [
-    {
-      label: "Name",
-      value: cleanEmployeeName(profile) || pickProfileField(profile, ["name"]),
-    },
-    { label: "Employee ID", value: pickProfileField(profile, ["emp_id", "empId", "employee_id"]) },
-    { label: "Work email", value: pickProfileField(profile, ["email"]) },
-    {
-      label: "Status",
-      value: normalizeStatusLabel(pickProfileField(profile, ["status", "user_status", "userStatus"])),
-    },
-    { label: "Personal mail ID", value: pickProfileField(profile, ["personal_email"]) },
-    { label: "User type", value: pickProfileField(profile, ["user_type", "userType"]) },
-    { label: "Phone number", value: pickProfileField(profile, ["phone_number", "phoneNumber"]) },
-    { label: "Department", value: pickProfileField(profile, ["department"]) },
-    { label: "Role", value: pickEmployeeRole(profile) || null },
-    { label: "Band", value: pickProfileField(profile, ["band", "band_name", "bandName", "band_id", "bandId"]) },
-    {
-      label: "Date of joining",
-      value: formatDirectoryDate(
-        pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate"])
-      ),
-    },
-    {
-      label: "Date of birth",
-      value: formatDirectoryDate(pickProfileField(profile, ["date_of_birth", "dob"])),
-    },
-    { label: "Work location", value: pickProfileField(profile, ["work_location", "work_location_type", "workLocationType"]) },
-    { label: "Work mode", value: pickProfileField(profile, ["work_mode", "workMode"]) },
-    { label: "Primary skills", value: formatPrimarySkills(profile) },
-    { label: "Secondary skills", value: formatSecondarySkills(profile) },
-    {
-      label: "Webknot experience",
-      value: pickProfileField(profile, ["webknot_experience", "webknotExperience"]),
-    },
-    {
-      label: "Total experience",
-      value: pickProfileField(profile, ["total_experience", "totalExperience"]),
-    },
-    ...((): ProfileDisplayEntry[] => {
-      const href =
-        resumeShareHref !== undefined ? resumeShareHref : pickResumeShareLink(profile);
-      return [
-        {
-          label: "Resume",
-          value: href ? "resume" : null,
-          resumeShareHref: href,
-        },
-      ];
-    })(),
-  ];
-
-  const coveredKeys = new Set<string>([...PROFILE_EXCLUDED_KEYS, ...PROFILE_SKIP_KEYS]);
-  for (const def of [
-    "name",
-    "emp_id",
-    "empId",
-    "employee_id",
-    "email",
-    "user_type",
-    "userType",
-    "phone_number",
-    "phoneNumber",
-    "department",
-    "designation",
-    "job_title",
-    "title",
-    "band",
-    "band_name",
-    "bandName",
-    "band_id",
-    "bandId",
-    "date_of_joining",
-    "doj",
-    "joining_date",
-    "joiningDate",
-    "date_of_birth",
-    "dob",
-    "work_location",
-    "work_location_type",
-    "workLocationType",
-    "work_mode",
-    "workMode",
-    "primary_skills",
-    "primarySkills",
-    "secondary_skills",
-    "secondarySkills",
-    "webknot_experience",
-    "webknotExperience",
-    "total_experience",
-    "totalExperience",
-    "yoe",
-    "years_of_experience",
-    "experience",
-    "leave_remaining",
-    "leaveRemaining",
-    "comp_off_remaining",
-    "compOffRemaining",
-    "role",
-  ]) {
-    coveredKeys.add(def);
-  }
-
-  for (const [key, raw] of Object.entries(profile)) {
-    if (coveredKeys.has(key)) continue;
-    if (raw === null || raw === undefined) continue;
-    if (typeof raw === "object" && !Array.isArray(raw)) continue;
-    entries.push({
-      label: humanizeFieldKey(key),
-      value: Array.isArray(raw) ? formatProfileDisplayValue(raw) : raw,
-    });
-    coveredKeys.add(key);
-  }
-
-  return entries.filter((entry) => !PROFILE_HIDDEN_LABELS.has(entry.label));
+  return buildGroupedProfileSections(profile, resumeShareHref).flatMap(
+    (section) => section.entries
+  );
 }
