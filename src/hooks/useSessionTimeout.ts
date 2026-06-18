@@ -13,26 +13,42 @@ import {
 } from "@/constants/sessionPolicy";
 import { recordSessionActivity, refreshSession } from "@/lib/auth";
 
+function isBrowser(): boolean {
+  return typeof window !== "undefined";
+}
+
 function readSessionStartMs(): number {
+  if (!isBrowser()) return Date.now();
   const raw = sessionStorage.getItem(SESSION_STORAGE_STARTED_AT);
   if (!raw) return Date.now();
   const parsed = Date.parse(raw);
   return Number.isFinite(parsed) ? parsed : Date.now();
 }
 
+function readLastActivityMs(): number {
+  if (!isBrowser()) return Date.now();
+  const raw = sessionStorage.getItem(SESSION_STORAGE_LAST_ACTIVITY);
+  if (!raw) return Date.now();
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : Date.now();
+}
+
 function touchLocalActivity() {
   const now = Date.now();
+  if (!isBrowser()) return now;
   sessionStorage.setItem(SESSION_STORAGE_LAST_ACTIVITY, String(now));
   return now;
 }
 
 export function persistSessionTiming(sessionStartedAt?: string | null) {
+  if (!isBrowser()) return;
   const started = sessionStartedAt ? Date.parse(sessionStartedAt) : Date.now();
   sessionStorage.setItem(SESSION_STORAGE_STARTED_AT, new Date(started).toISOString());
   touchLocalActivity();
 }
 
 export function clearSessionTiming() {
+  if (!isBrowser()) return;
   sessionStorage.removeItem(SESSION_STORAGE_STARTED_AT);
   sessionStorage.removeItem(SESSION_STORAGE_LAST_ACTIVITY);
 }
@@ -48,8 +64,8 @@ export function useSessionTimeout(
   const pathname = usePathname();
   const onTimeoutRef = useRef(onTimeout);
   const lastActivityRef = useRef(Date.now());
-  const lastPingRef = useRef(0);
-  const lastRefreshRef = useRef(0);
+  const lastPingRef = useRef(Date.now());
+  const lastRefreshRef = useRef(Date.now());
 
   useEffect(() => {
     onTimeoutRef.current = onTimeout;
@@ -62,6 +78,11 @@ export function useSessionTimeout(
   useEffect(() => {
     if (!enabled) return;
 
+    const now = Date.now();
+    lastActivityRef.current = readLastActivityMs();
+    lastPingRef.current = now;
+    lastRefreshRef.current = now;
+
     const events: Array<keyof WindowEventMap> = [
       "mousedown",
       "keydown",
@@ -69,6 +90,8 @@ export function useSessionTimeout(
       "scroll",
       "touchstart",
       "focus",
+      "input",
+      "change",
     ];
 
     const onActivity = () => bumpActivity();
@@ -102,9 +125,11 @@ export function useSessionTimeout(
         now - lastRefreshRef.current >= SESSION_REFRESH_INTERVAL_MS
       ) {
         lastRefreshRef.current = now;
-        void refreshSession().then((user) => {
-          if (!user) onTimeoutRef.current("server");
-        });
+        void refreshSession()
+          .then((user) => {
+            if (!user) onTimeoutRef.current("server");
+          })
+          .catch(() => undefined);
       }
     }, 30_000);
 
