@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
@@ -190,7 +191,7 @@ export function EmployeeAttendancePanel() {
       ) : null}
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h3 className="font-semibold">Employee attendance &amp; leave</h3>
+        <h3 className="font-semibold">Employee Attendance & Leave</h3>
 
         <div className="flex flex-wrap items-end gap-3">
           <DatePickerField
@@ -244,7 +245,7 @@ export function EmployeeAttendancePanel() {
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
         {loading && !employees.length ? (
-          <p className="text-sm text-wt-text-muted">Loading attendance data…</p>
+          <SectionLoading label="Loading attendance data…" />
         ) : employees.length ? (
           <div className="mx-auto max-w-4xl">
             <div
@@ -252,7 +253,7 @@ export function EmployeeAttendancePanel() {
               className="wt-scroll-both max-h-[min(70vh,560px)] overflow-y-auto rounded-xl border border-wt-border"
             >
               <table className="w-full text-sm">
-                <thead className="bg-wt-surface-2 text-wt-text-muted sticky top-0 z-10">
+                <thead className="wt-table-sticky-head text-wt-text-muted">
                   <tr>
                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Name</th>
                     <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Leave days</th>

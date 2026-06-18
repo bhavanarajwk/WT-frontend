@@ -1,0 +1,45 @@
+---
+description: Title Case UI copy and consistent section/form layout across WebTrak
+alwaysApply: true
+---
+
+# UI Title Case & Layout Standards
+
+Use **Title Case** for all user-visible UI copy: screen titles, section headers, field labels, table column headers, and action buttons.
+
+## Title Case examples
+
+- Work Information
+- Personal Information
+- Save Changes
+- Training Scores
+- Leave Requests
+- Exit Survey
+
+Do **not** use sentence case (`Work information`) or ALL CAPS for section headers.
+
+## Shared utilities
+
+- `formatUILabel()` — `src/utils/titleCase.ts` (auto-applied in `FieldLabel`, `ProfileField`, `FormSection`, `MetricCard`)
+- `toTitleCase()` — full string Title Case for API-derived keys
+- `UI_COPY` — `src/constants/uiCopy.ts` for common buttons (`Save Changes`, `Cancel`, etc.)
+- Layout classes — `src/components/dashboard/ui/uiLayout.ts`
+- Section cards — `FormSection`, `FormSubsection` in `FormSection.tsx`
+- Action footer — `FormActionBar`
+
+## Layout
+
+- Section spacing: `SECTION_STACK_CLASS` (`space-y-6`)
+- Section headers: `SECTION_HEADER_CLASS` + `SECTION_TITLE_CLASS`
+- Form fields: `FORM_FIELD_CLASS` + `FieldLabel` (via `forms.tsx`)
+- Detail tables: `DETAIL_LABEL_CELL_CLASS` / `DETAIL_VALUE_CELL_CLASS` for Field | Value alignment
+- Page shells: `wt-detail-page`, `wt-detail-panel`, `wt-detail-panel__body` for scroll hierarchy
+- **Tables**: wrap in `ScrollableTable` (or `wt-scroll-both` shell) + `wt-scrollable-table` on `<table>`; headers stick automatically via `globals.css`
+- **Loading**: black `WtLoader` / `SectionLoading` for inline states; `GlobalLoadingOverlay` for fetch/submit/refresh (via `apiClient` + React Query)
+
+## When adding UI
+
+1. Import `UI_COPY` for standard buttons instead of hardcoding strings.
+2. Use `FormSection` for grouped form content.
+3. Use `toTitleCase()` for dynamic labels derived from API keys when no explicit label exists.
+4. Keep label and value columns aligned in read-only profile/detail tables.

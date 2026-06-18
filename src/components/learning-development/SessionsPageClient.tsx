@@ -56,7 +56,7 @@ export function SessionsPageClient() {
 
       {hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-          <h2 className="font-semibold">New session</h2>
+          <h2 className="font-semibold">New Session</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             <InputField label="Session date" type="date" required value={sessionForm.session_date} onChange={(v) => setSessionForm((p) => ({ ...p, session_date: v }))} />
             <SelectField
@@ -78,7 +78,7 @@ export function SessionsPageClient() {
             disabled={sessionMut.isPending || !trainingId.trim()}
             onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
           >
-            Add session
+            Add Session
           </button>
         </section>
       ) : (

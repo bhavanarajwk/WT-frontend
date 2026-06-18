@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { WeeklyTimelogGrid } from "@/components/dashboard/timelog/WeeklyTimelogGrid";
@@ -161,7 +162,7 @@ export function HrEmployeeTimelogWeekModal({
           ) : null}
 
           {loading ? (
-            <p className="py-10 text-center text-sm text-wt-text-muted">Loading timelog details…</p>
+            <SectionLoading className="py-10" label="Loading timelog details…" />
           ) : !gridRows.length ? (
             <p className="py-10 text-center text-sm text-wt-text-muted">
               No approved timelog entries for this week.

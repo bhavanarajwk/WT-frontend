@@ -382,7 +382,7 @@ export function AllocationExtensionPanel() {
 
       {canCreateRequest ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-          <h3 className="font-semibold">Request allocation end-date extension</h3>
+          <h3 className="font-semibold">Request Allocation End-Date Extension</h3>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <SelectField
@@ -507,7 +507,7 @@ export function AllocationExtensionPanel() {
                 (allocationContext != null && !allocationContext.extension_allowed)
               }
               onClick={() => void submitCreate()}
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              className="btn-primary px-4 py-2 text-sm"
             >
               {creating ? "Submitting…" : "Submit request"}
             </button>
@@ -576,8 +576,8 @@ export function AllocationExtensionPanel() {
 
         {rows.length ? (
           <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
-            <table className="min-w-full text-sm">
-              <thead className="bg-wt-surface-2 text-wt-text-muted">
+            <table className="wt-scrollable-table text-sm">
+              <thead className="wt-table-sticky-head text-wt-text-muted">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Employee</th>
                   <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Project</th>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { prepareTableForDisplay } from "@/utils/tableDisplay";
+import { formatUILabel } from "@/utils/titleCase";
 
 const COLUMN_LABELS: Record<string, string> = {
   fy_start_year: "FY start year",
@@ -82,7 +83,7 @@ function ReportMetricCard({
 
   return (
     <article className="rounded-xl border border-wt-border bg-wt-surface-1 p-4 shadow-sm">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">{label}</p>
+      <p className="text-[11px] font-medium tracking-tight text-wt-text-muted">{formatUILabel(label)}</p>
       <p className={`text-2xl font-semibold mt-2 tabular-nums ${accentClass}`}>{value}</p>
       {hint ? <p className="text-xs text-wt-text-muted mt-1">{hint}</p> : null}
     </article>
@@ -117,8 +118,8 @@ function ReportTableCard({
         <p className="px-4 py-8 text-sm text-wt-text-muted text-center sm:px-5">{emptyLabel}</p>
       ) : (
         <div className="wt-scroll-both max-h-[min(360px,50vh)] overflow-auto">
-          <table className="min-w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted">
+          <table className="wt-scrollable-table text-sm">
+            <thead className="wt-table-sticky-head text-wt-text-muted">
               <tr>
                 {displayColumns.map((col) => (
                   <th
@@ -194,7 +195,7 @@ export function AttritionRetentionReports({
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h4 className="text-lg font-semibold">Attrition &amp; retention</h4>
+          <h4 className="text-lg font-semibold">Attrition & Retention</h4>
           <p className="text-sm text-wt-text-muted mt-1 max-w-2xl">
             Financial-year metrics for exits, regretted loss, tenure, and voluntary vs involuntary split.
           </p>
@@ -242,7 +243,7 @@ export function AttritionRetentionReports({
       </div>
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4 sm:p-5">
-        <h4 className="text-sm font-semibold mb-4">Voluntary vs involuntary</h4>
+        <h4 className="text-sm font-semibold mb-4">Voluntary vs Involuntary</h4>
         <div className="grid gap-4 sm:grid-cols-3">
           <ReportMetricCard
             label="Voluntary"
