@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -3093,9 +3094,9 @@ export function LeavePageClient() {
 
   const renderProfileAssignedProjectsSection = () => (
     <div className="mt-8 border-t border-wt-border pt-6">
-      <h4 className="text-sm font-semibold mb-3">Assigned projects</h4>
+      <h4 className="text-sm font-semibold mb-3">Assigned Projects</h4>
       {profileAssignedProjectsLoading ? (
-        <p className="text-sm text-wt-text-muted">Loading assigned projects…</p>
+        <SectionLoading label="Loading assigned projects…" />
       ) : (
         <DataTable
           columns={profileAssignedProjectColumns}
@@ -3725,8 +3726,8 @@ export function LeavePageClient() {
                               </div>
                               {activeSelfServeRequests.length ? (
                                 <div className="wt-scroll-both max-h-[min(50vh,380px)] rounded-xl border border-wt-border">
-                                  <table className="min-w-full text-sm">
-                                    <thead className="bg-wt-surface-2 text-wt-text-muted">
+                                  <table className="wt-scrollable-table text-sm">
+                                    <thead className="wt-table-sticky-head text-wt-text-muted">
                                       <tr>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Request Type</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
@@ -3808,7 +3809,7 @@ export function LeavePageClient() {
                                               <div className="inline-flex items-center justify-end gap-1">
                                                 <button
                                                   type="button"
-                                                  className="rounded-lg px-2.5 py-1.5 text-xs border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                                                  className="btn-action px-2.5 py-1.5 text-xs"
                                                   disabled={actionLoading || !requestId || !isPending}
                                                   onClick={() => {
                                                     const rowType = String(
@@ -3944,8 +3945,8 @@ export function LeavePageClient() {
 
                           {sortedEmployeeRequests.length ? (
                             <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
-                              <table className="min-w-full text-sm">
-                                <thead className="bg-wt-surface-2 text-wt-text-muted">
+                              <table className="wt-scrollable-table text-sm">
+                                <thead className="wt-table-sticky-head text-wt-text-muted">
                                   <tr>
                                     <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                       <TableSortHeader

@@ -23,7 +23,7 @@ export function OpenEnrollPageClient() {
 
   return (
     <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4 mt-8">
-      <h2 className="font-semibold">Open trainings (self-enroll)</h2>
+      <h2 className="font-semibold">Open Trainings (Self-Enroll)</h2>
       <DataTable columns={["name", "category", "type", "status", "duration_days"]} rows={openRows} emptyLabel="No open trainings." />
       <div className="flex flex-wrap gap-3 items-end">
         <label className="text-xs text-wt-text-muted flex flex-col gap-1">

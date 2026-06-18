@@ -5,10 +5,15 @@ import { endpoints } from "@/api/endpoints";
 import { exitInterviewService } from "@/services/exitInterview.service";
 import type { ExitInterviewSubmissionDetail } from "@/types/exit-interview";
 
-export function useUpdateExitInterviewMinutesOfMeeting(empId: string) {
+export function useUpdateExitInterviewMinutesOfMeeting(lookupId: string) {
   const queryClient = useQueryClient();
-  const id = empId.trim();
-  const queryKey = ["exit-interview", "submission", id, endpoints.exitInterview.submissionByEmpId(id)];
+  const id = decodeURIComponent(lookupId.trim());
+  const queryKey = [
+    "exit-interview",
+    "submission",
+    id,
+    endpoints.exitInterview.submissionByLookupId(id),
+  ];
 
   return useMutation({
     mutationFn: async (minutes_of_meeting: string) => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useState } from "react";
 import { hrmsService, type ManagerTeamOnLeaveRow } from "@/services/hrms.service";
 import { todayApiDate } from "@/utils/apiDate";
@@ -48,13 +49,13 @@ export function ManagerTeamOnLeavePanel() {
         </div>
       </div>
 
-      {loading ? <p className="text-sm text-wt-text-muted">Loading…</p> : null}
+      {loading ? <SectionLoading label="Loading…" /> : null}
       {error ? <p className="text-sm text-rose-700">{error}</p> : null}
 
       {!loading && !error && rows.length ? (
         <div className="wt-scroll-both max-h-48 rounded-lg border border-wt-border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-wt-surface-1 text-wt-text-muted">
+          <table className="wt-scrollable-table text-sm">
+            <thead className="wt-table-sticky-head text-wt-text-muted">
               <tr>
                 <th className="text-left px-3 py-2 font-medium">Employee</th>
                 <th className="text-left px-3 py-2 font-medium">Project</th>

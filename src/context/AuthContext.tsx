@@ -61,17 +61,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async (): Promise<AuthUser | null> => {
     setStatus("loading");
-    const freshUser = await refreshSession();
-    if (freshUser) {
-      const normalized = applyAuthenticatedUser(freshUser);
-      setUser(normalized);
-      setStatus("authenticated");
-      return normalized;
+    try {
+      const freshUser = await refreshSession();
+      if (freshUser) {
+        const normalized = applyAuthenticatedUser(freshUser);
+        setUser(normalized);
+        setStatus("authenticated");
+        return normalized;
+      }
+      clearSessionTiming();
+      setUser(null);
+      setStatus("unauthenticated");
+      return null;
+    } catch {
+      clearSessionTiming();
+      setUser(null);
+      setStatus("unauthenticated");
+      return null;
     }
-    clearSessionTiming();
-    setUser(null);
-    setStatus("unauthenticated");
-    return null;
   }, []);
 
   const logout = useCallback(async () => {
