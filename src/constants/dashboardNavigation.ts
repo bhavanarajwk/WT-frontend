@@ -81,7 +81,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "leave-team",
         label: "Team Requests",
-        roles: ["ROLE_MANAGER", "ROLE_DM"],
+        roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
@@ -139,7 +139,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "leave",
         label: "Leave Request",
-        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM"],
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
@@ -206,12 +206,6 @@ function childVisible(
   options: { hasHrAccess: boolean }
 ): boolean {
   if (child.id === "employee" && !options.hasHrAccess) return false;
-  if (
-    child.id === "leave" &&
-    (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN"))
-  ) {
-    return false;
-  }
   return child.roles.length === 0 ? true : child.roles.some((r) => userRoles.includes(r));
 }
 
@@ -299,6 +293,9 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   overview: "Overview",
   "employee-directory": "Employee Directory",
   employee: "Onboarded Employees",
+  leave: "Employee Leave Requests",
+  "leave-team": "Team Requests",
+  "leave-org": "All Employee Requests",
 };
 
 function groupChildPageTitle(groupLabel: string, childLabel: string): string {
