@@ -23,6 +23,9 @@ export function useEmployeeDirectoryList(options?: Options) {
       const res = await hrmsService.getOnboardList({ page: "0", size: "500" });
       return toPagedRows(res.data) as unknown as OnboardListItem[];
     },
-    staleTime: 60_000,
+    // Directory list changes infrequently; avoid re-fetching on simple navigation.
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
@@ -225,7 +226,7 @@ export function EmployeeAttendancePanel() {
       ) : null}
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h3 className="font-semibold">Attendance And Leave Summary</h3>
+        <h3 className="font-semibold">Employee Attendance And Leave Summary</h3>
 
         <div
           className="flex flex-wrap gap-2 border-b border-wt-border pb-3"
@@ -303,13 +304,7 @@ export function EmployeeAttendancePanel() {
         ) : null}
 
         {loading && !employees.length ? (
-          <div
-            className="flex min-h-[12rem] items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2/30"
-            aria-busy="true"
-            aria-live="polite"
-          >
-            <span className="spinner-dark" role="status" aria-label="Loading Attendance Data" />
-          </div>
+          <SectionLoading label="Loading attendance data…" />
         ) : employees.length ? (
           <div className="relative min-h-[12rem]">
             {loading ? (
@@ -332,7 +327,7 @@ export function EmployeeAttendancePanel() {
                   <col className="w-36" />
                   <col className="w-44" />
                 </colgroup>
-                <thead>
+                <thead className="wt-table-sticky-head text-wt-text-muted">
                   <tr>
                     <th className={`${STICKY_HEADER_CLASS} ${NAME_HEADER_CLASS}`}>Name</th>
                     <th className={`${STICKY_HEADER_CLASS} ${EMAIL_HEADER_CLASS}`}>Email</th>

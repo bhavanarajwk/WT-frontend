@@ -19,7 +19,7 @@ export function EmployeeOnboardingSubNav() {
   return (
     <nav
       className="mb-5 flex gap-1 overflow-x-auto border-b border-wt-border"
-      aria-label="Employee onboarding sections"
+      aria-label="Employee Onboarding sections"
     >
       {TABS.map((tab) => {
         const active = tab.exact

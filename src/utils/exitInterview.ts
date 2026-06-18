@@ -1,6 +1,7 @@
 import type {
   ExitInterviewFormDefinition,
   ExitInterviewProfileFlags,
+  ExitInterviewResponseField,
   ExitInterviewSubmitBody,
   FormField,
 } from "@/types/exit-interview";
@@ -34,6 +35,7 @@ export function parseExitInterviewProfileFlags(
     exit_interview_resignation_date: stringOrNull(p.exit_interview_resignation_date),
     exit_interview_last_working_day: stringOrNull(p.exit_interview_last_working_day),
     exit_interview_days_until_last_working_day: numberOrNull(p.exit_interview_days_until_last_working_day),
+    portal_locked: Boolean(p.portal_locked ?? p.portalLocked),
   };
 }
 
@@ -217,6 +219,39 @@ export function formatResponseForDisplay(field: FormField, value: unknown): stri
     return labelForOption(field, String(value));
   }
   return formatExitInterviewResponseValue(value);
+}
+
+export function formFieldForResponseItem(
+  item: ExitInterviewResponseField,
+  fields: FormField[]
+): FormField {
+  const hit = fields.find((f) => f.key === item.field);
+  if (hit) return hit;
+  const isArray = Array.isArray(item.value);
+  return {
+    key: item.field,
+    label: item.label,
+    widget: isArray ? "multi_select" : "textarea",
+    required: false,
+    options: isArray
+      ? (item.value as unknown[]).map((v) => {
+          const token = String(v);
+          return { value: token, label: token };
+        })
+      : undefined,
+  };
+}
+
+export function exitInterviewFieldsWithResponses(
+  fields: FormField[],
+  responses: Record<string, unknown>
+): FormField[] {
+  return fields.filter((field) => {
+    const value = responses[field.key];
+    if (value == null || value === "") return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    return true;
+  });
 }
 
 export function textareaPlaceholder(field: FormField): string | undefined {

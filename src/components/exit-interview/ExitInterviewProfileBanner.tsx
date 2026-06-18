@@ -24,7 +24,7 @@ export function ExitInterviewProfileBanner() {
     const days = flags.exit_interview_days_until_last_working_day;
     return (
       <div className="mb-6 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-950">
-        <p className="font-medium">Exit survey due</p>
+        <p className="font-medium">Exit Survey Due</p>
         <p className="mt-1 text-indigo-900/90">
           Please complete your exit survey before your last working day
           {days != null ? ` (${days} day${days === 1 ? "" : "s"} remaining)` : ""}.
@@ -33,7 +33,7 @@ export function ExitInterviewProfileBanner() {
           href={DASHBOARD_ROUTES["exit-interview"]}
           className="mt-2 inline-block text-sm font-medium text-indigo-700 hover:underline"
         >
-          Open exit survey →
+          Open Exit Survey →
         </Link>
       </div>
     );
