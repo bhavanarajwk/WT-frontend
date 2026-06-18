@@ -464,7 +464,11 @@ export function LeavePageClient() {
   );
   useEffect(() => {
     if (isTeamLeaveRoute) setLeaveSubTab("team");
-    else if (pathname.includes("/dashboard/leave")) setLeaveSubTab("my");
+    else if (pathname.includes("/dashboard/leave")) {
+      setLeaveSubTab((prev) =>
+        prev === "team" ? "my" : prev === "balances" || prev === "comp-off" ? prev : "my"
+      );
+    }
   }, [isTeamLeaveRoute, pathname]);
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
@@ -472,17 +476,6 @@ export function LeavePageClient() {
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const hasDmAccess = hasDmRole(userRoles);
 
-  useEffect(() => {
-    if (
-      pathname.includes("/dashboard/leave") &&
-      !pathname.includes("/dashboard/leave/team") &&
-      hasHrAccess &&
-      !hasManagerAccess &&
-      !hasDmAccess
-    ) {
-      router.replace("/dashboard/leave/team");
-    }
-  }, [pathname, hasHrAccess, hasManagerAccess, hasDmAccess, router]);
   const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess;
   const firstLineStatusColumnLabel = hasHrAccess
     ? "Manager/DM status"
@@ -524,14 +517,11 @@ export function LeavePageClient() {
   );
 
   const leaveWorkflowVariant = useMemo((): Parameters<typeof LeaveWorkflowNotice>[0]["variant"] => {
-    if (hasHrAccess && userRoles.includes("ROLE_HR") && !hasAdminAccess) {
-      return "hr-dual-required";
-    }
-    if (hasHrAccess) return "hr";
+    if (isTeamLeaveRoute && hasHrAccess) return "hr";
     if (hasDmAccess && !hasManagerAccess) return "dm";
     if (hasManagerAccess) return "manager";
     return "employee";
-  }, [hasAdminAccess, hasDmAccess, hasHrAccess, hasManagerAccess, userRoles]);
+  }, [hasDmAccess, hasHrAccess, hasManagerAccess, isTeamLeaveRoute]);
 
   useEffect(() => {
     if (leaveSubTab === "wfh") {
@@ -3380,6 +3370,36 @@ export function LeavePageClient() {
           <section className="space-y-4">
                           {showLeaveSubTabBar ? (
                             <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setLeaveSubTab("my");
+                                  if (isTeamLeaveRoute) router.push("/dashboard/leave");
+                                }}
+                                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  !isTeamLeaveRoute && (leaveSubTab === "my" || leaveSubTab === "wfh")
+                                    ? "bg-wt-surface-3 text-wt-text"
+                                    : "text-wt-text-muted hover:bg-wt-surface-2"
+                                }`}
+                              >
+                                Leave requests
+                              </button>
+                              {canViewTeamLeave ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setLeaveSubTab("team");
+                                    if (!isTeamLeaveRoute) router.push("/dashboard/leave/team");
+                                  }}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    isTeamLeaveRoute || leaveSubTab === "team"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Team requests
+                                </button>
+                              ) : null}
                               {showCompOffTab ? (
                                 <button
                                   type="button"
@@ -3589,6 +3609,13 @@ export function LeavePageClient() {
                                       if (needsClientApproval && !leaveRequestForm.client_approval) {
                                         throw new Error("Client approval is required for client users.");
                                       }
+                                      if (
+                                        leaveSubTab === "my" &&
+                                        normalizeUserRequestType(requestType) === "LEAVE" &&
+                                        !selectedLeaveManagerEmails.length
+                                      ) {
+                                        throw new Error("Select at least one manager to notify.");
+                                      }
                                       const isCompOffUsage =
                                         normalizeCompOffRequestType(requestType) === "COMP_OFF";
                                       if (isCompOffUsage) {
@@ -3753,10 +3780,7 @@ export function LeavePageClient() {
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager status</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager reason</th>
-                                        {leaveSubTab === "wfh" ? (
-                                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">HR status</th>
-                                        ) : null}
-                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Final status</th>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Status</th>
                                         <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Comments</th>
                                         <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Actions</th>
                                       </tr>
@@ -3773,7 +3797,6 @@ export function LeavePageClient() {
                                         ).trim();
                                         const rowRecord = row as Record<string, unknown>;
                                         const finalStatus = requestFinalStatus(rowRecord);
-                                        const hrStatus = requestHrStatus(rowRecord);
                                         const managerStatus = requestManagerStatus(rowRecord);
                                         const managerReason = formatStageRejectionReason(
                                           managerStatus,
@@ -3796,11 +3819,6 @@ export function LeavePageClient() {
                                             >
                                               {managerReason}
                                             </td>
-                                            {leaveSubTab === "wfh" ? (
-                                              <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(hrStatus)}`}>
-                                                {formatApprovalStageLabel(hrStatus)}
-                                              </td>
-                                            ) : null}
                                             <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(finalStatus)}`}>
                                               {formatApprovalStageLabel(finalStatus)}
                                             </td>

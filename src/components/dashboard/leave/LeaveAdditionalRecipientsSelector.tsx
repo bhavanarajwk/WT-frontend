@@ -123,9 +123,10 @@ export function LeaveAdditionalRecipientsSelector({
 
   return (
     <div className="space-y-2" ref={rootRef}>
-      <p className="text-sm font-medium">Additional Recipients</p>
+      <p className="text-sm font-medium">Leave Notification Recipients</p>
       <p className="text-xs text-wt-text-muted">
-        Optional. Selected employees receive the same leave notification email at their work address.
+        Optional. Select one or more employees; each receives the leave notification email at their
+        work address.
       </p>
 
       {selectedOptions.length ? (
