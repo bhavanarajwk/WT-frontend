@@ -12,6 +12,7 @@ import {
   useUpdateEmployeeProfile,
 } from "@/hooks/employee-directory/useEmployeeProfile";
 import { hrmsService } from "@/services/hrms.service";
+import { parseOnboardOptions } from "@/utils/onboardFormOptions";
 import { toPagedRows, toRows } from "@/utils/apiRows";
 import { useEmployeeResumes } from "@/hooks/resumes/useEmployeeResumes";
 import {
@@ -76,6 +77,9 @@ export function EmployeeProfilePageClient() {
   const [editForm, setEditForm] = useState<EmployeeProfileEditForm | null>(null);
   const [bandOptions, setBandOptions] = useState<BandOption[]>([]);
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
+  const [holidayCalendarOptions, setHolidayCalendarOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
 
   const profileRecord = profile ?? {};
   const displayName = cleanEmployeeName(profileRecord) || "Employee";
@@ -106,9 +110,10 @@ export function EmployeeProfilePageClient() {
     let cancelled = false;
     void (async () => {
       try {
-        const [bandsRes, departmentsRes] = await Promise.all([
+        const [bandsRes, departmentsRes, optionsRes] = await Promise.all([
           hrmsService.getBands(),
           hrmsService.getDepartments(),
+          hrmsService.getOnboardOptions(),
         ]);
         if (cancelled) return;
         const rows = toRows((bandsRes as { data?: unknown }).data ?? bandsRes);
@@ -121,6 +126,9 @@ export function EmployeeProfilePageClient() {
           })
           .filter((band): band is BandOption => band !== null);
         setBandOptions(bands);
+
+        const options = parseOnboardOptions((optionsRes as { data?: unknown }).data ?? optionsRes);
+        setHolidayCalendarOptions([{ value: "", label: "None" }, ...options.holiday_calendars]);
 
         let departments = Array.from(
           new Set(
@@ -156,6 +164,7 @@ export function EmployeeProfilePageClient() {
         if (!cancelled) {
           setBandOptions([]);
           setDepartmentOptions([...HARDCODED_DEPARTMENT_OPTIONS]);
+          setHolidayCalendarOptions([{ value: "", label: "None" }]);
         }
       }
     })();
@@ -426,6 +435,14 @@ export function EmployeeProfilePageClient() {
                             label: band.label,
                           }))}
                           onChange={(id) => setEditForm({ ...editForm, band_id: id })}
+                        />
+                        <AdaptiveSelectField
+                          label="Holiday Calendar"
+                          value={editForm.holiday_calendar_id}
+                          placeholder="Select Calendar"
+                          searchPlaceholder="Search Calendars…"
+                          options={holidayCalendarOptions}
+                          onChange={(v) => setEditForm({ ...editForm, holiday_calendar_id: v })}
                         />
                       </div>
 
