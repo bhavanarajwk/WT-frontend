@@ -6,5 +6,5 @@ export default async function ExitInterviewSubmissionDetailPage({
   params: Promise<{ empId: string }>;
 }) {
   const { empId } = await params;
-  return <ExitInterviewSubmissionDetailPageClient empId={empId} />;
+  return <ExitInterviewSubmissionDetailPageClient lookupId={empId} />;
 }

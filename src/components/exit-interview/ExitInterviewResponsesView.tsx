@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormField } from "@/types/exit-interview";
-import { formatResponseForDisplay } from "@/utils/exitInterview";
+import { exitInterviewFieldsWithResponses, formatResponseForDisplay } from "@/utils/exitInterview";
 
 export function ExitInterviewResponsesView({
   fields,
@@ -10,9 +10,11 @@ export function ExitInterviewResponsesView({
   fields: FormField[];
   responses: Record<string, unknown>;
 }) {
+  const visibleFields = exitInterviewFieldsWithResponses(fields, responses);
+
   return (
     <dl className="grid gap-4 sm:grid-cols-2">
-      {fields.map((field) => (
+      {visibleFields.map((field) => (
         <div
           key={field.key}
           className={`rounded-lg border border-wt-border bg-wt-surface-2/50 px-4 py-3 ${

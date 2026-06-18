@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTrainingTrainers } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { AssignedTrainersList } from "@/components/learning-development/AssignedTrainersList";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
@@ -118,7 +119,7 @@ export function TrainersPageClient() {
               </button>
             </div>
             {onboardQ.isLoading ? (
-              <p className="text-xs text-wt-text-muted">Loading employees from onboard list…</p>
+              <SectionLoading compact label="Loading employees from onboard list…" className="py-2" />
             ) : null}
             {trainingId && !onboardQ.isLoading && trainerOptions.length === 0 ? (
               <p className="text-xs text-wt-text-muted">

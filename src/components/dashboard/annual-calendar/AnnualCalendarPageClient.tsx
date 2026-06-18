@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { InputField } from "@/components/dashboard/ui/forms";
@@ -94,7 +95,7 @@ export function AnnualCalendarPageClient() {
         <div className="space-y-5">
           {hasHrAccess ? (
             <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-              <h4 className="font-semibold">Upload / replace calendar</h4>
+              <h4 className="font-semibold">Upload / Replace Calendar</h4>
               <div className="grid gap-3 sm:grid-cols-2">
                 <InputField
                   label="Year"
@@ -136,7 +137,7 @@ export function AnnualCalendarPageClient() {
 
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h4 className="font-semibold">Available calendars</h4>
+              <h4 className="font-semibold">Available Calendars</h4>
               <button
                 type="button"
                 className="btn-ghost px-3 py-2 text-sm"
@@ -150,13 +151,13 @@ export function AnnualCalendarPageClient() {
               </button>
             </div>
             {isLoading ? (
-              <p className="text-sm text-wt-text-muted">Loading calendars…</p>
+              <SectionLoading label="Loading calendars…" />
             ) : sortedRows.length === 0 ? (
               <p className="text-sm text-wt-text-muted">No annual calendars uploaded yet.</p>
             ) : (
-              <div className="wt-scroll-both overflow-auto rounded-xl border border-wt-border">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-wt-surface-2 text-wt-text-muted">
+              <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
+                <table className="wt-scrollable-table text-sm">
+                  <thead className="wt-table-sticky-head text-wt-text-muted">
                     <tr>
                       <th className="px-3 py-2 text-left font-medium">Year</th>
                       <th className="px-3 py-2 text-left font-medium">Title</th>

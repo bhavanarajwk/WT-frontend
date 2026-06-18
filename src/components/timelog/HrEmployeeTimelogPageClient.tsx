@@ -133,7 +133,7 @@ export function HrEmployeeTimelogPageClient() {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
-          <h3 className="text-lg font-semibold">Access restricted</h3>
+          <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="mt-2 text-sm text-wt-text-muted">
             Employee timelog lookup is available to HR and admin only.
           </p>
@@ -151,7 +151,7 @@ export function HrEmployeeTimelogPageClient() {
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="border-b border-wt-border bg-gradient-to-r from-sky-50/80 via-white to-blue-50/50 px-5 py-6 md:px-7">
-          <h3 className="text-lg font-semibold">All employee timelogs</h3>
+          <h3 className="text-lg font-semibold">All Employee Timelogs</h3>
           <p className="mt-1 max-w-2xl text-sm text-wt-text-muted">
             View timelog entries for any employee on a given date (
             <code className="text-xs">GET /api/v1/timelog/get/&#123;email&#125;/&#123;date&#125;</code>).
@@ -196,8 +196,8 @@ export function HrEmployeeTimelogPageClient() {
                 {emailFilter !== "ALL" ? ` — ${emailFilter}` : ""}.
               </p>
               <div className="wt-scroll-both max-h-[min(65vh,560px)] overflow-auto rounded-xl border border-wt-border">
-                <table className="min-w-full text-sm">
-                  <thead className="sticky top-0 z-[1] bg-wt-surface-2 text-wt-text-muted">
+                <table className="wt-scrollable-table text-sm">
+                  <thead className="wt-table-sticky-head text-wt-text-muted">
                     <tr>
                       {tableDisplay.columns.map((col) => {
                         const columnSortOpts = sortOptionsForColumn(col, TIMELOG_SORT_OPTIONS);

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMemo, useState } from "react";
 import { useTrainingAnalytics } from "@/hooks/learning/useLearningTrainings";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
@@ -44,7 +45,7 @@ export function AnalyticsPageClient({ fixedTrainingId }: { fixedTrainingId?: str
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {analyticsQ.isLoading ? (
-          <p className="text-sm text-wt-text-muted">Loading analytics…</p>
+          <SectionLoading label="Loading analytics…" />
         ) : entries.length ? (
           entries.map(([key, value]) => (
             <article key={key} className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
