@@ -56,9 +56,15 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "employee-attendance",
-        label: "Attendance",
+        label: "Attendance And Leave Summary",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarCheck",
+      },
+      {
+        id: "holiday-calendars",
+        label: "Holiday Calendar",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        icon: "calendarDays",
       },
       {
         id: "offboarding",
@@ -235,6 +241,25 @@ export function filterNavigationForOffboardedUser(
   const exitSurvey = personal.children.find((child) => child.id === "exit-interview");
   if (!exitSurvey) return [];
   return [{ ...personal, children: [exitSurvey] }];
+}
+
+export function getDashboardSectionLabel(sectionId: string): string | undefined {
+  for (const item of dashboardNavigation) {
+    if (item.kind === "group") {
+      const hit = item.children.find((child) => child.id === sectionId);
+      if (hit) return hit.label;
+      continue;
+    }
+    if (item.kind === "link" && item.id === sectionId) {
+      return item.label;
+    }
+    if (item.kind === "expandable") {
+      if (item.id === sectionId) return item.label;
+      const hit = item.children.find((child) => child.id === sectionId);
+      if (hit) return hit.label;
+    }
+  }
+  return undefined;
 }
 
 /** Map nav id to sidebar group id for accordion auto-expand. */

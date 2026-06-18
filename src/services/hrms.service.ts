@@ -115,6 +115,7 @@ export interface EmployeeAttendanceLeaveEmployeeRow {
   user_id: number;
   emp_id: string | null;
   name: string;
+  email: string;
   leave_days_taken: number;
   leave_dates: EmployeeAttendanceLeaveDateRow[];
   total_attendance_days: number;
@@ -170,6 +171,32 @@ export interface AnnualCalendarItem {
   created_by_name: string | null;
   created_at: string | null;
   updated_at: string | null;
+}
+
+export interface HolidayCalendarItem {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  holiday_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface HolidayCalendarDetail extends HolidayCalendarItem {
+  holidays: Array<{
+    id: number;
+    holiday_date: string;
+    name: string;
+    is_optional: boolean;
+  }>;
+}
+
+export interface CsvImportResult {
+  processed: number;
+  skipped: number;
+  errors?: string[];
 }
 
 export const hrmsService = {
@@ -1108,6 +1135,51 @@ export const hrmsService = {
 
   getAnnualCalendarByYear(year: number | string) {
     return apiClient.get<ApiEnvelope<AnnualCalendarItem>>(endpoints.annualCalendar.byYear(year));
+  },
+
+  getHolidayCalendars() {
+    return apiClient.get<ApiEnvelope<{ items: HolidayCalendarItem[] }>>(endpoints.holidayCalendar.root);
+  },
+
+  getCompanyHolidayCalendar() {
+    return apiClient.get<ApiEnvelope<HolidayCalendarDetail>>(endpoints.holidayCalendar.company);
+  },
+
+  getHolidayCalendar(id: number | string) {
+    return apiClient.get<ApiEnvelope<HolidayCalendarDetail>>(endpoints.holidayCalendar.byId(id));
+  },
+
+  createHolidayCalendar(payload: { code: string; name: string; description?: string | null }) {
+    return apiClient.post<ApiEnvelope<HolidayCalendarItem>>(endpoints.holidayCalendar.root, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateHolidayCalendar(
+    id: number | string,
+    payload: { name?: string; description?: string | null; is_active?: boolean }
+  ) {
+    return apiClient.put<ApiEnvelope<HolidayCalendarItem>>(endpoints.holidayCalendar.byId(id), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  importHolidayCalendarsCsv(file: File) {
+    return this.uploadFile(endpoints.holidayCalendar.importCsv, file);
+  },
+
+  importEmployeeHolidayAssignmentsCsv(file: File) {
+    return this.uploadFile(endpoints.holidayCalendar.importAssignmentsCsv, file);
+  },
+
+  async downloadHolidayCalendarsCsv(): Promise<Blob> {
+    return apiClient.get<Blob>(endpoints.holidayCalendar.exportCsv, { responseType: "blob" });
+  },
+
+  async downloadEmployeeHolidayAssignmentsCsv(): Promise<Blob> {
+    return apiClient.get<Blob>(endpoints.holidayCalendar.exportAssignmentsCsv, { responseType: "blob" });
   },
 
   // Learning & Development

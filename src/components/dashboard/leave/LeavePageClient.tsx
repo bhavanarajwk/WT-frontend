@@ -190,7 +190,7 @@ export function LeavePageClient() {
       .trim()
       .toLowerCase()
       .includes("manager");
-  const { user, signOut, refresh: refreshSession } = useAuth();
+  const { user, refresh: refreshSession } = useAuth();
   const userEmail = useMemo(() => String(user?.email ?? "").trim(), [user?.email]);
   const leaveRequestsLoadInFlight = useRef(false);
   const router = useRouter();
