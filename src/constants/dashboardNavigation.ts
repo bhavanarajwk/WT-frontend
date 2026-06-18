@@ -44,7 +44,7 @@ export const dashboardNavigation: NavItem[] = [
     children: [
       {
         id: "employee",
-        label: "Onboarding",
+        label: "Onboarded Employees",
         roles: ["ROLE_EMPLOYEE", "ROLE_HR", "ROLE_ADMIN"],
         icon: "userPlus",
       },
@@ -56,13 +56,19 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "employee-attendance",
-        label: "Attendance",
+        label: "Employee Attendance And Leave Summary",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarCheck",
       },
       {
+        id: "holiday-calendars",
+        label: "Holiday Calendar",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        icon: "calendarDays",
+      },
+      {
         id: "offboarding",
-        label: "Offboarding",
+        label: "Employee Offboarding",
         roles: ["ROLE_HR"],
         icon: "userMinus",
       },
@@ -74,8 +80,14 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "leave-team",
-        label: "Leave Requests",
-        roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
+        label: "Team Requests",
+        roles: ["ROLE_MANAGER", "ROLE_DM"],
+        icon: "calendarDays",
+      },
+      {
+        id: "leave-org",
+        label: "All Employee Requests",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
@@ -127,7 +139,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "leave",
         label: "Leave Request",
-        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM"],
         icon: "calendarDays",
       },
       {
@@ -194,6 +206,12 @@ function childVisible(
   options: { hasHrAccess: boolean }
 ): boolean {
   if (child.id === "employee" && !options.hasHrAccess) return false;
+  if (
+    child.id === "leave" &&
+    (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN"))
+  ) {
+    return false;
+  }
   return child.roles.length === 0 ? true : child.roles.some((r) => userRoles.includes(r));
 }
 
@@ -237,6 +255,25 @@ export function filterNavigationForOffboardedUser(
   return [{ ...personal, children: [exitSurvey] }];
 }
 
+export function getDashboardSectionLabel(sectionId: string): string | undefined {
+  for (const item of dashboardNavigation) {
+    if (item.kind === "group") {
+      const hit = item.children.find((child) => child.id === sectionId);
+      if (hit) return hit.label;
+      continue;
+    }
+    if (item.kind === "link" && item.id === sectionId) {
+      return item.label;
+    }
+    if (item.kind === "expandable") {
+      if (item.id === sectionId) return item.label;
+      const hit = item.children.find((child) => child.id === sectionId);
+      if (hit) return hit.label;
+    }
+  }
+  return undefined;
+}
+
 /** Map nav id to sidebar group id for accordion auto-expand. */
 export function navGroupForSection(sectionId: string): "employee" | "projects" | "personal" | null {
   for (const item of dashboardNavigation) {
@@ -261,6 +298,7 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   profile: "Profile",
   overview: "Overview",
   "employee-directory": "Employee Directory",
+  employee: "Onboarded Employees",
 };
 
 function groupChildPageTitle(groupLabel: string, childLabel: string): string {
