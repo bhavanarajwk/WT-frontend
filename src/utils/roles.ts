@@ -1,17 +1,38 @@
+/** Canonical ROLE_* names for auth/session (matches backend resolve_session_roles). */
+export function normalizeRoleName(role: string): string {
+  const token = role.trim().toUpperCase();
+  if (!token) return token;
+  return token.startsWith("ROLE_") ? token : `ROLE_${token}`;
+}
+
+export function normalizeRoles(roles: string[]): string[] {
+  const out = new Set<string>();
+  for (const role of roles) {
+    const normalized = normalizeRoleName(role);
+    if (normalized) out.add(normalized);
+  }
+  return Array.from(out).sort();
+}
+
 export function hasHrRole(roles: string[]): boolean {
-  return roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+  const normalized = normalizeRoles(roles);
+  return normalized.includes("ROLE_HR") || normalized.includes("ROLE_ADMIN");
 }
 
 export function hasAccountManagerRole(roles: string[]): boolean {
-  return roles.includes("ROLE_AM");
+  return normalizeRoles(roles).includes("ROLE_AM");
 }
 
 export function hasManagerRole(roles: string[]): boolean {
-  return roles.includes("ROLE_MANAGER");
+  for (const role of roles) {
+    const normalized = normalizeRoleName(role);
+    if (normalized === "ROLE_MANAGER") return true;
+  }
+  return false;
 }
 
 export function hasDmRole(roles: string[]): boolean {
-  return roles.includes("ROLE_DM");
+  return normalizeRoles(roles).includes("ROLE_DM");
 }
 
 /** Delivery manager — first-line approver for manager leave/WFH (not project PM). */

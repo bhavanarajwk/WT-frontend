@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useSelfProfile, selfProfileQueryKey } from "@/hooks/useSelfProfile";
-import { hasDmRole } from "@/utils/roles";
+import { hasDmRole, hasManagerRole } from "@/utils/roles";
 import {
   isActiveUserStatus,
   isInNoticeUserStatus,
@@ -19,7 +19,7 @@ export function useDashboardAccess() {
   const { user, refresh: refreshSession } = useAuth();
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
-  const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
+  const hasManagerAccess = hasManagerRole(userRoles);
   const hasDmAccess = hasDmRole(userRoles);
   const hasAccountManagerAccess = userRoles.includes("ROLE_AM");
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
