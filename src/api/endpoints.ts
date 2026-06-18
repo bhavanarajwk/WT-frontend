@@ -208,10 +208,13 @@ export const endpoints = {
     formDefinition: `${api}/exit-interview/form-definition`,
     submit: `${api}/exit-interview`,
     submissions: `${api}/exit-interview/submissions`,
-    submissionByEmpId: (empId: string) =>
-      `${api}/exit-interview/submissions/${encodeURIComponent(empId)}`,
-    minutesOfMeetingByEmpId: (empId: string) =>
-      `${api}/exit-interview/submissions/${encodeURIComponent(empId)}/minutes-of-meeting`,
+    submissionByLookupId: (lookupId: string) =>
+      `${api}/exit-interview/submissions/${encodeURIComponent(lookupId)}`,
+    minutesOfMeetingByLookupId: (lookupId: string) =>
+      `${api}/exit-interview/submissions/${encodeURIComponent(lookupId)}/minutes-of-meeting`,
+    resendBulk: `${api}/exit-interview/resend`,
+    resend: (empId: string) =>
+      `${api}/exit-interview/resend/${encodeURIComponent(empId)}`,
   },
 
   hrReports: {

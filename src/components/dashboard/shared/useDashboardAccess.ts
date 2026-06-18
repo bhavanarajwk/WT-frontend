@@ -3,14 +3,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { fetchSelfProfile } from "@/utils/selfProfile";
+import { useSelfProfile, selfProfileQueryKey } from "@/hooks/useSelfProfile";
 import { hasDmRole, hasManagerRole } from "@/utils/roles";
 import {
   isActiveUserStatus,
+  isInNoticeUserStatus,
   isOffboardedUserStatus,
   normalizeUserStatus,
   resolveProfileStatus,
 } from "@/utils/userStatus";
+import { isPortalLockedProfile } from "@/utils/portalLock";
 
 export function useDashboardAccess() {
   const queryClient = useQueryClient();
@@ -28,10 +30,13 @@ export function useDashboardAccess() {
   const initialStatus = normalizeUserStatus(user?.status);
   const [profileStatus, setProfileStatus] = useState(initialStatus);
   const [isSelfOnboarded, setIsSelfOnboarded] = useState(() => isActiveUserStatus(initialStatus));
+  const profileQ = useSelfProfile(Boolean(user));
   /** Employment ended — applies regardless of manager/AM roles on the account. */
   const isOffboarded = isOffboardedUserStatus(profileStatus);
+  const isInNotice = isInNoticeUserStatus(profileStatus);
+  const isPortalLocked = isPortalLockedProfile(profileQ.data ?? null);
   const requiresSelfOnboarding =
-    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded;
+    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded && !isInNotice;
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canAccessProfile = Boolean(user);
   const canAccessOverview = useMemo(
@@ -42,17 +47,34 @@ export function useDashboardAccess() {
     [userRoles]
   );
 
+  useEffect(() => {
+    if (!user) return;
+    if (profileQ.isLoading) return;
+
+    const profile = profileQ.data ?? null;
+    if (!profile) {
+      const status = normalizeUserStatus(user?.status);
+      setProfileStatus(status);
+      setIsSelfOnboarded(isActiveUserStatus(status));
+      return;
+    }
+
+    const status = resolveProfileStatus(profile, user);
+    setProfileStatus(status);
+    setIsSelfOnboarded(isActiveUserStatus(status));
+    if (normalizeUserStatus(user.status) !== status) {
+      void refreshSession();
+    }
+  }, [user, profileQ.data, profileQ.isLoading, refreshSession]);
+
   const loadMyProfile = useCallback(async () => {
-    const applySessionStatus = () => {
+    const result = await profileQ.refetch();
+    const profile = result.data ?? null;
+    if (!profile) {
       const status = normalizeUserStatus(user?.status);
       setProfileStatus(status);
       setIsSelfOnboarded(isActiveUserStatus(status));
       return null;
-    };
-
-    const profile = await fetchSelfProfile(userRoles);
-    if (!profile) {
-      return applySessionStatus();
     }
     const status = resolveProfileStatus(profile, user);
     setProfileStatus(status);
@@ -62,15 +84,11 @@ export function useDashboardAccess() {
     }
     void queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
     return profile;
-  }, [user, userRoles, refreshSession, queryClient]);
+  }, [profileQ, queryClient, refreshSession, user]);
 
-  useEffect(() => {
-    if (!user) return;
-    const id = window.setTimeout(() => {
-      void loadMyProfile();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [user, loadMyProfile]);
+  const invalidateSelfProfile = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: selfProfileQueryKey(user?.email) });
+  }, [queryClient, user?.email]);
 
   return {
     user,
@@ -89,7 +107,12 @@ export function useDashboardAccess() {
     isSelfOnboarded,
     setIsSelfOnboarded,
     loadMyProfile,
+    invalidateSelfProfile,
     profileStatus,
     isOffboarded,
+    isInNotice,
+    isPortalLocked,
+    profile: profileQ.data ?? null,
+    profileLoading: profileQ.isLoading,
   };
 }

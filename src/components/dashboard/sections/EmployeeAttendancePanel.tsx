@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
@@ -334,7 +335,7 @@ export function EmployeeAttendancePanel() {
                   <col className="w-36" />
                   <col className="w-44" />
                 </colgroup>
-                <thead>
+                <thead className="wt-table-sticky-head text-wt-text-muted">
                   <tr>
                     <th className={`${STICKY_HEADER_CLASS} ${NAME_HEADER_CLASS}`}>Name</th>
                     <th className={`${STICKY_HEADER_CLASS} ${EMAIL_HEADER_CLASS}`}>Email</th>

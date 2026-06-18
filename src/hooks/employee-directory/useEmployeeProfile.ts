@@ -32,7 +32,7 @@ export function useEmployeeProfile(empId: string, options?: Options) {
   });
 }
 
-/** PUT /api/v1/employee-profile/{empId} — HR only. */
+/** PUT /api/v1/employee-profile/{empId} — HR (full) or ADMIN (status only). */
 export function useUpdateEmployeeProfile(empId: string) {
   const queryClient = useQueryClient();
   return useMutation({

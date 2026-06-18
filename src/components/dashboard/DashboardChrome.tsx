@@ -106,8 +106,17 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     "/dashboard/employee/assign-account-manager"
   );
   const isEmployeeProfileRoute = Boolean(pathname.match(/^\/dashboard\/employee-directory\/[^/]+$/));
+  const isHrPortalUser =
+    (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN")) &&
+    !userRoles.includes("ROLE_EMPLOYEE");
   const { isOffboarded } = useDashboardAccess();
-  const exitProfileQ = useExitInterviewProfile({ enabled: Boolean(user) });
+  const shouldLoadExitInterviewProfile = useMemo(() => {
+    if (!user) return false;
+    if (pathname.startsWith(DASHBOARD_ROUTES["exit-interview"])) return true;
+    if (isHrPortalUser) return false;
+    return userRoles.includes("ROLE_EMPLOYEE");
+  }, [user, pathname, isHrPortalUser, userRoles]);
+  const exitProfileQ = useExitInterviewProfile({ enabled: shouldLoadExitInterviewProfile });
   const showExitSurveyNav = useMemo(() => {
     const flags = exitProfileQ.data?.flags;
     if (!flags) return false;
@@ -263,7 +272,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                   {isExpanded ? (
                     <div className="ml-3 space-y-0.5 border-l border-wt-border pl-2">
                       {item.children.map((child) => (
-                        <Link
+                        <Link prefetch={false}
                           key={child.id}
                           href={dashboardHref(child.id)}
                           className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition ${
@@ -307,7 +316,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                   {isExpanded ? (
                     <div className="ml-3 space-y-0.5 border-l border-wt-border pl-2">
                       {children.map((child) => (
-                        <Link
+                        <Link prefetch={false}
                           key={child.id}
                           href={dashboardHref(child.id)}
                           className={`block w-full rounded-lg px-3 py-1.5 text-left text-xs transition ${
@@ -354,7 +363,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                               pathname.startsWith(`${LEARNING_BASE}/trainings`)
                             : pathname.startsWith(`${link.href}/`) || pathname.startsWith(link.href));
                         return (
-                          <Link
+                          <Link prefetch={false}
                             key={link.href}
                             href={link.href}
                             className={`block w-full rounded-lg px-3 py-1.5 text-left text-xs transition ${
@@ -373,7 +382,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
             if (item.kind === "link") {
               return (
-                <Link
+                <Link prefetch={false}
                   key={item.id}
                   href={dashboardHref(item.id)}
                   className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
@@ -393,7 +402,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         </nav>
         {canAccessProfile && !isOffboarded ? (
           <div className="mt-4 shrink-0 border-t border-wt-border pt-4">
-            <Link
+            <Link prefetch={false}
               href={dashboardHref("profile")}
               className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition ${
                 activeSection === "profile"
@@ -418,13 +427,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
                 aria-label="Breadcrumb"
               >
-                <Link href="/dashboard" className="hover:text-wt-text transition">
+                <Link prefetch={false} href="/dashboard" className="hover:text-wt-text transition">
                   Dashboard
                 </Link>
                 <span aria-hidden>/</span>
                 {isEmployeeProfileRoute ? (
                   <>
                     <Link
+                      prefetch={false}
                       href={DASHBOARD_ROUTES["employee-directory"]}
                       className="hover:text-wt-text transition"
                     >
@@ -442,13 +452,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
                 aria-label="Breadcrumb"
               >
-                <Link href="/dashboard" className="hover:text-wt-text transition">
+                <Link prefetch={false} href="/dashboard" className="hover:text-wt-text transition">
                   Dashboard
                 </Link>
                 <span aria-hidden>/</span>
                 {isAssignAccountManagerRoute ? (
                   <>
-                    <Link href={DASHBOARD_ROUTES.employee} className="hover:text-wt-text transition">
+                    <Link prefetch={false} href={DASHBOARD_ROUTES.employee} className="hover:text-wt-text transition">
                       Employee Onboarding
                     </Link>
                     <span aria-hidden>/</span>
@@ -588,7 +598,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className="min-w-0 flex-1">{children}</div>
+        <div className="min-h-0 min-w-0 flex-1">{children}</div>
       </div>
       </div>
     </div>

@@ -70,8 +70,8 @@ export function TeamTimelogTable({ snapshot, dayDates, dayKeys }: TeamTimelogTab
   return (
     <div className="space-y-3">
       <div className="wt-scroll-both max-h-[min(65vh,560px)] overflow-auto rounded-xl border border-wt-border">
-        <table className="min-w-full text-sm">
-          <thead className="sticky top-0 z-[1] bg-wt-surface-2 text-wt-text-muted">
+        <table className="wt-scrollable-table text-sm">
+          <thead className="wt-table-sticky-head text-wt-text-muted">
             <tr>
               <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                 <button

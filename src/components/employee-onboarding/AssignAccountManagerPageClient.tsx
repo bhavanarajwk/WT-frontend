@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -47,7 +48,7 @@ export function AssignAccountManagerPageClient() {
 
   const assignAccountManager = () => {
     if (!selected?.email) return;
-    void runAction("Assign account manager role", async () => {
+    void runAction("Assign Account Manager role", async () => {
       await hrmsService.assignRole({
         target_email: selected.email,
         role: "ROLE_AM",
@@ -60,9 +61,7 @@ export function AssignAccountManagerPageClient() {
   if (authStatus === "loading") {
     return (
       <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-sm text-wt-text-muted shadow-sm">
-          Loading…
-        </div>
+        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm"><SectionLoading label="Loading" /></div>
       </DashboardPageShell>
     );
   }
@@ -71,7 +70,7 @@ export function AssignAccountManagerPageClient() {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
-          <h3 className="text-lg font-semibold">Access restricted</h3>
+          <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="mt-2 text-sm text-wt-text-muted">Only HR users can assign account managers.</p>
           <Link href={DASHBOARD_ROUTES.overview} className="mt-4 inline-block text-sm text-blue-600 hover:underline">
             Back to overview
@@ -87,9 +86,9 @@ export function AssignAccountManagerPageClient() {
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="p-5 md:p-7">
           <EmployeeOnboardingSubNav />
-          <h3 className="text-lg font-semibold">Assign account manager</h3>
+          <h3 className="text-lg font-semibold">Assign Account Manager</h3>
 
-          {isLoading ? <p className="mt-6 text-sm text-wt-text-muted">Loading employees…</p> : null}
+          {isLoading ? <SectionLoading className="mt-6 py-4" label="Loading employees…" /> : null}
 
           {isError ? (
             <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">

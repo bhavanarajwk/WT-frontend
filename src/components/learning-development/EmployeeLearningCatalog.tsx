@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
@@ -77,14 +78,14 @@ export function EmployeeLearningCatalog() {
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold">Open trainings</h2>
+        <h2 className="text-lg font-semibold">Open Trainings</h2>
         <p className="text-sm text-wt-text-muted mt-1">
           Optional and hybrid trainings with status Scheduled. Everyone can browse and self-enroll.
           Mandatory trainings are only visible after HR assigns you.
         </p>
       </div>
       {openQ.isLoading ? (
-        <p className="text-sm text-wt-text-muted">Loading open trainings…</p>
+        <SectionLoading label="Loading open trainings…" />
       ) : sortedOpen.length === 0 ? (
         <p className="text-sm text-wt-text-muted">
           No open trainings right now. HR must set type Optional or Hybrid and status Scheduled.
