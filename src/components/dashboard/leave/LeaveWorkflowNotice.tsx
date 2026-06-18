@@ -3,16 +3,16 @@
 export function LeaveWorkflowNotice({
   variant,
 }: {
-  variant: "employee" | "manager" | "dm" | "hr" | "hr-dual-required";
+  variant: "employee" | "manager" | "dm" | "hr";
 }) {
   const copy: Record<typeof variant, { title: string; body: string }> = {
     employee: {
       title: "Leave request",
-      body: "Select one or more managers to approve your leave. You can optionally add employees who should receive the notification email. Manager approval is final.",
+      body: "Select one or more managers to notify by email. You can optionally add other employees as notification recipients. Manager approval in Team Requests is final—there is no HR final approval step.",
     },
     manager: {
       title: "Leave request",
-      body: "Select managers when submitting leave. Optional additional recipients receive the same notification email at their work address.",
+      body: "Select managers to notify when you submit leave. Optional additional recipients receive the same notification email at their work address.",
     },
     dm: {
       title: "Team leave requests",
@@ -20,11 +20,7 @@ export function LeaveWorkflowNotice({
     },
     hr: {
       title: "All employee leave requests",
-      body: "Search and review leave requests across the organization. Managers approve employee leave in WebTrak; HR does not perform a separate final approval step.",
-    },
-    "hr-dual-required": {
-      title: "Leave request",
-      body: "Select managers to notify. HR-submitted requests follow the HR and Admin dual-approval path.",
+      body: "Search and filter leave requests across the organization. Managers approve employee leave in Team Requests; HR does not perform a separate final approval step.",
     },
   };
 
