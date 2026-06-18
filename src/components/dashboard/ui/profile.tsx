@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatUILabel } from "@/utils/titleCase";
 
 export function resolveProfilePhotoSrc(profile: Record<string, unknown> | null | undefined): string | null {
   if (!profile) return null;
@@ -121,10 +122,11 @@ export function ProfileField({
 }) {
   const formatted = formatProfileFieldValue(value);
   const href = link && formatted !== "—" ? formatted : null;
+  const spanClass = fullWidth ? "sm:col-span-2" : "";
 
   return (
-    <div className={`flex items-baseline gap-x-4 gap-y-1 text-sm ${fullWidth ? "w-full" : ""}`}>
-      <dt className="w-40 shrink-0 text-wt-text-muted">{label}</dt>
+    <div className={`flex items-baseline gap-x-4 gap-y-1 text-sm ${fullWidth ? "w-full" : ""} ${spanClass}`}>
+      <dt className="w-40 shrink-0 text-wt-text-muted">{formatUILabel(label)}</dt>
       <dd className="min-w-0 flex-1 font-medium text-wt-text break-words">
         {href ? (
           <a

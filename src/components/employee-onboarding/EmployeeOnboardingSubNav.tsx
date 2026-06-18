@@ -4,14 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 
-const TABS = [
-  { href: DASHBOARD_ROUTES.employee, label: "Employee Onboarding", exact: true },
-  {
-    href: DASHBOARD_ROUTES["employee-assign-am"],
-    label: "Assign",
-    exact: false,
-  },
-] as const;
+const TABS = [{ href: DASHBOARD_ROUTES.employee, label: "Onboarded Employees", exact: true }] as const;
 
 export function EmployeeOnboardingSubNav() {
   const pathname = usePathname();
@@ -19,7 +12,7 @@ export function EmployeeOnboardingSubNav() {
   return (
     <nav
       className="mb-5 flex gap-1 overflow-x-auto border-b border-wt-border"
-      aria-label="Employee onboarding sections"
+      aria-label="Onboarded employees"
     >
       {TABS.map((tab) => {
         const active = tab.exact

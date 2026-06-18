@@ -2,7 +2,7 @@
 
 import type { SearchableSelectOption } from "@/components/dashboard/ui/SearchableSelectCombobox";
 
-function ChevronDownIcon() {
+export function ChevronDownIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
