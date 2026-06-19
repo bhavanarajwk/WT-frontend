@@ -34,7 +34,7 @@ function ToastIcon({ type }: { type: "success" | "error" }) {
 
 export function DashboardToast({
   toast,
-  position = "bottom",
+  position = "top",
 }: {
   toast: { type: "success" | "error"; message: string } | null;
   position?: "top" | "bottom";
