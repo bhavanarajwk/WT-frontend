@@ -90,7 +90,6 @@ import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
-import { LoadingOverlay, LoadingPanel } from "@/components/dashboard/shared/BlackLoader";
 
 function applyInvitedUsersToTable(
   res: unknown,
@@ -259,8 +258,8 @@ export function EmployeePageClient() {
   const [onboardBands, setOnboardBands] = useState<Array<Record<string, unknown>>>([]);
   const [onboardOptions, setOnboardOptions] =
     useState<OnboardOptionsResponse>(FALLBACK_ONBOARD_OPTIONS);
-  const [onboardDataLoading, setOnboardDataLoading] = useState(false);
-  const [inviteListLoading, setInviteListLoading] = useState(false);
+  const [onboardDataLoading, setOnboardDataLoading] = useState(true);
+  const [inviteListLoading, setInviteListLoading] = useState(true);
   const [selfProfileForm, setSelfProfileForm] = useState({
     phone_number: "",
     primary_skills: "",
@@ -436,7 +435,11 @@ export function EmployeePageClient() {
     return () => window.clearTimeout(id);
   }, [employeeSelfServeProfile, canAccessProfile, requiresSelfOnboarding]);
   useEffect(() => {
-    if (!user || !hasHrAccess) return;
+    if (!user || !hasHrAccess) {
+      setOnboardDataLoading(false);
+      setInviteListLoading(false);
+      return;
+    }
     const id = window.setTimeout(() => {
       void (async () => {
         setOnboardDataLoading(true);
@@ -2533,22 +2536,26 @@ export function EmployeePageClient() {
   );
 
 
-  const onboardingBusy = onboardDataLoading || inviteListLoading || actionLoading;
-  const onboardingInitialLoad = onboardDataLoading && !onboardBands.length;
+  const onboardEmployeesLoading = onboardDataLoading || inviteListLoading;
 
   return (
     <>
-      <DashboardPageShell>
+      <DashboardPageShell className="flex min-h-0 flex-1 flex-col">
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <section className="space-y-4">
+          <section className="flex min-h-0 flex-1 flex-col">
             {hasHrAccess ? (
-              onboardingInitialLoad ? (
-                <LoadingPanel label="Loading Onboard Employees" />
+              onboardEmployeesLoading ? (
+                <div
+                  className="flex min-h-[calc(100dvh-6.5rem)] w-full flex-1 flex-col rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm"
+                  aria-busy="true"
+                  aria-live="polite"
+                >
+                  <div className="flex flex-1 items-center justify-center p-8">
+                    <SectionLoading label="Loading Onboard Employees…" />
+                  </div>
+                </div>
               ) : (
-              <div className="relative space-y-4">
-                {onboardingBusy ? (
-                  <LoadingOverlay label="Loading Onboard Employees" />
-                ) : null}
+              <div className="space-y-4">
                               <HrOnboardForm
                                 formKey={onboardFormKey}
                                 form={onboardForm}
