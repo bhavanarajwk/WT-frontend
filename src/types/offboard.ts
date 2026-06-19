@@ -3,6 +3,7 @@ export interface HrOffboardListItem {
   emp_id: string;
   status: string;
   employee_name: string;
+  email?: string;
   exit_type: string;
   reason: string | null;
   expected_behavior: string | null;
@@ -15,6 +16,9 @@ export interface HrOffboardListItem {
   band_name: string | null;
   band_role: string | null;
   project_manager: string | null;
+  exit_survey_submitted?: boolean;
+  can_resend_exit_survey?: boolean;
+  submission_status?: "SUBMITTED" | "PENDING";
 }
 
 /** GET /api/v1/user/offboard — exit survey follow-up list (`data.items[]`). */

@@ -150,7 +150,10 @@ export function filterExitSurveyFollowUpByStatus(
 }
 
 export function isResendableFollowUpRow(row: ExitSurveyFollowUpRow): boolean {
-  return row.can_resend_exit_survey === true && Boolean(String(row.emp_id ?? "").trim());
+  if (!Boolean(String(row.emp_id ?? "").trim())) return false;
+  if (isExitSurveyCompleted(row)) return false;
+  if (row.can_resend_exit_survey === false) return false;
+  return true;
 }
 
 export function resendableEmpIdFromRow(row: ExitSurveyFollowUpRow): string {
@@ -160,6 +163,32 @@ export function resendableEmpIdFromRow(row: ExitSurveyFollowUpRow): string {
 export function resendableEmpIdsFromRows(rows: ExitSurveyFollowUpRow[]): string[] {
   return Array.from(
     new Set(rows.filter(isResendableFollowUpRow).map(resendableEmpIdFromRow).filter(Boolean))
+  );
+}
+
+export function isResendableOffboardListRow(row: {
+  emp_id?: string | null;
+  exit_survey_submitted?: boolean;
+  submission_status?: string;
+  can_resend_exit_survey?: boolean;
+}): boolean {
+  if (!Boolean(String(row.emp_id ?? "").trim())) return false;
+  if (row.can_resend_exit_survey === false) return false;
+  if (row.exit_survey_submitted === true) return false;
+  if (row.submission_status === "SUBMITTED") return false;
+  return true;
+}
+
+export function resendableOffboardEmpIds(
+  rows: Array<{ emp_id?: string | null; exit_survey_submitted?: boolean; submission_status?: string; can_resend_exit_survey?: boolean }>
+): string[] {
+  return Array.from(
+    new Set(
+      rows
+        .filter(isResendableOffboardListRow)
+        .map((row) => String(row.emp_id ?? "").trim())
+        .filter(Boolean)
+    )
   );
 }
 

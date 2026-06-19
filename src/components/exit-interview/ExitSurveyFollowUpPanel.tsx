@@ -267,6 +267,7 @@ export function ExitSurveyFollowUpPanel() {
         message: summary,
       };
       setSelectedEmpIds([]);
+      setBulkResendResults(data?.results ?? []);
     } catch (error) {
       errorMessage =
         error instanceof ApiError
@@ -286,11 +287,7 @@ export function ExitSurveyFollowUpPanel() {
 
   return (
     <div className="space-y-4">
-<<<<<<< HEAD
-      <DashboardToast toast={toast} position="top" />
-=======
       <DashboardToast toast={toast} />
->>>>>>> 479ca967582e9bc1a1c0477bacbf3cc3e2078419
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="sr-only" htmlFor="exit-survey-follow-up-search">
@@ -368,10 +365,39 @@ export function ExitSurveyFollowUpPanel() {
             disabled={loadingList || bulkResending || Boolean(resendingEmpId)}
             onClick={() => void handleBulkResendExitSurvey()}
           >
-            {bulkResending ? "Sending…" : "Resend"}
+            {bulkResending ? "Sending…" : `Resend Exit Survey (${selectedResendableCount})`}
           </button>
         ) : null}
       </div>
+
+      {bulkResendResults.length ? (
+        <div className="space-y-2 rounded-xl border border-wt-border bg-wt-surface-1 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-sm font-semibold">Bulk Resend Results</h4>
+            <button
+              type="button"
+              className="btn-ghost px-2 py-1 text-xs"
+              onClick={() => setBulkResendResults([])}
+            >
+              Dismiss
+            </button>
+          </div>
+          <ul className="max-h-48 space-y-2 overflow-y-auto text-sm">
+            {bulkResendResults.map((result) => (
+              <li
+                key={`${result.emp_id}-${result.status}`}
+                className={`rounded-lg border px-3 py-2 ${bulkResendResultClassName(result.status)}`}
+              >
+                <p className="font-medium">
+                  {result.employee_name || result.emp_id}
+                  {result.email ? ` · ${result.email}` : ""}
+                </p>
+                <p className="text-xs mt-0.5">{result.message}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {!loadingList && !rows.length ? (
         <p className="text-sm text-wt-text-muted">
@@ -507,7 +533,7 @@ export function ExitSurveyFollowUpPanel() {
                                   void handleResendExitSurvey(empId, row.email);
                                 }}
                               >
-                                {isResending ? "Sending…" : "Resend"}
+                                {isResending ? "Sending…" : "Resend Exit Survey"}
                               </button>
                             ) : null}
                           </div>

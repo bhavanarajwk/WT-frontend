@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
+import { exitInterviewService } from "@/services/exitInterview.service";
+import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
 import type { HrOffboardListItem } from "@/types/offboard";
 import {
   DatePickerField,
@@ -27,6 +29,11 @@ import {
   type ExitType,
 } from "@/utils/offboardingFormState";
 import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
+import {
+  isResendableOffboardListRow,
+  mergeEmpIdSelection,
+  resendableOffboardEmpIds,
+} from "@/utils/exitSurveyFollowUp";
 
 type Toast = { type: "success" | "error"; message: string } | null;
 
@@ -76,6 +83,14 @@ function formatBool(value: boolean): string {
   return value ? "Yes" : "No";
 }
 
+function bulkResendResultClassName(
+  status: ExitSurveyBulkResendItemResult["status"]
+): string {
+  if (status === "SENT") return "border-emerald-200 bg-emerald-50 text-emerald-900";
+  if (status === "FAILED") return "border-red-200 bg-red-50 text-red-900";
+  return "border-amber-200 bg-amber-50 text-amber-900";
+}
+
 export function OffboardingPanel() {
   const [offboardingForm, setOffboardingForm] = useState(createEmptyOffboardingForm);
   const [offboardCandidates, setOffboardCandidates] = useState<OffboardCandidate[]>([]);
@@ -100,6 +115,12 @@ export function OffboardingPanel() {
   const [loadingList, setLoadingList] = useState(false);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resendingEmpId, setResendingEmpId] = useState<string | null>(null);
+  const [bulkResending, setBulkResending] = useState(false);
+  const [selectedEmpIds, setSelectedEmpIds] = useState<string[]>([]);
+  const [bulkResendResults, setBulkResendResults] = useState<ExitSurveyBulkResendItemResult[]>(
+    []
+  );
   const [toast, setToast] = useState<Toast>(null);
 
   const selectedCandidate = useMemo(
@@ -229,7 +250,115 @@ export function OffboardingPanel() {
 
   useEffect(() => {
     setListPage(0);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, filterType, filterFromDate, filterToDate]);
+
+  useEffect(() => {
+    setSelectedEmpIds([]);
+    setBulkResendResults([]);
+  }, [debouncedSearch, filterType, filterFromDate, filterToDate, listPage]);
+
+  const resendableEmpIdsOnPage = useMemo(
+    () => resendableOffboardEmpIds(offboardedRows),
+    [offboardedRows]
+  );
+
+  const selectedResendableCount = selectedEmpIds.length;
+  const allResendableOnPageSelected =
+    resendableEmpIdsOnPage.length > 0 &&
+    resendableEmpIdsOnPage.every((empId) => selectedEmpIds.includes(empId));
+  const someResendableOnPageSelected =
+    resendableEmpIdsOnPage.some((empId) => selectedEmpIds.includes(empId)) &&
+    !allResendableOnPageSelected;
+
+  function toggleRowSelection(empId: string, checked: boolean) {
+    const normalized = empId.trim();
+    if (!normalized) return;
+    setSelectedEmpIds((prev) => {
+      if (checked) {
+        return mergeEmpIdSelection(prev, [normalized]);
+      }
+      return prev.filter((id) => id !== normalized);
+    });
+  }
+
+  function toggleSelectAllOnPage(checked: boolean) {
+    if (!checked) {
+      setSelectedEmpIds((prev) =>
+        prev.filter((empId) => !resendableEmpIdsOnPage.includes(empId))
+      );
+      return;
+    }
+    setSelectedEmpIds((prev) => mergeEmpIdSelection(prev, resendableEmpIdsOnPage));
+  }
+
+  async function handleResendExitSurvey(empId: string, employeeEmail?: string) {
+    const normalized = empId.trim();
+    if (!normalized) return;
+    setResendingEmpId(normalized);
+    setToast(null);
+    let successMessage: string | null = null;
+    let errorMessage: string | null = null;
+    try {
+      const res = await exitInterviewService.resendSurvey(normalized);
+      const email = employeeEmail?.trim() || res.data?.email?.trim();
+      successMessage =
+        res.data?.message?.trim() ||
+        (email
+          ? `Exit survey reminder sent to ${email}.`
+          : "Exit survey reminder sent successfully.");
+    } catch (error) {
+      errorMessage =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Failed to resend exit survey.";
+    } finally {
+      setResendingEmpId(null);
+    }
+    if (successMessage) {
+      setToast({ type: "success", message: successMessage });
+    } else if (errorMessage) {
+      setToast({ type: "error", message: errorMessage });
+    }
+  }
+
+  async function handleBulkResendExitSurvey() {
+    if (!selectedEmpIds.length || bulkResending) return;
+    setBulkResending(true);
+    setToast(null);
+    let successToast: Toast = null;
+    let errorMessage: string | null = null;
+    try {
+      const res = await exitInterviewService.resendSurveyBulk(selectedEmpIds);
+      const data = res.data;
+      const summary =
+        res.message?.trim() ||
+        `Exit survey reminders processed: ${data?.sent_count ?? 0} sent, ${data?.skipped_count ?? 0} skipped${
+          data?.failed_count ? `, ${data.failed_count} failed` : ""
+        }.`;
+      successToast = {
+        type: (data?.failed_count ?? 0) > 0 ? "error" : "success",
+        message: summary,
+      };
+      setSelectedEmpIds([]);
+      setBulkResendResults(data?.results ?? []);
+    } catch (error) {
+      errorMessage =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Failed to resend exit surveys.";
+    } finally {
+      setBulkResending(false);
+    }
+    if (successToast) {
+      setToast(successToast);
+    } else if (errorMessage) {
+      setToast({ type: "error", message: errorMessage });
+    }
+  }
 
   useEffect(() => {
     if (!toast) return;
@@ -241,15 +370,6 @@ export function OffboardingPanel() {
   const rangeStart = listTotal === 0 ? 0 : listPage * listPageSize + 1;
   const rangeEnd = Math.min(listTotal, (listPage + 1) * listPageSize);
 
-  const selectedCandidate = useMemo(
-    () => offboardCandidates.find((emp) => emp.emp_id === offboardingForm.emp_id),
-    [offboardCandidates, offboardingForm.emp_id]
-  );
-
-  const isInternOffboarding = selectedCandidate?.user_type === "INTERN";
-  const isConsultantOffboarding = selectedCandidate?.user_type === "CONSULTANT";
-  const showExitTypeField = !isConsultantOffboarding;
-
   const candidateOptions = useMemo(
     () =>
       offboardCandidates.map((emp) => ({
@@ -258,19 +378,6 @@ export function OffboardingPanel() {
       })),
     [offboardCandidates]
   );
-
-  const canSubmitOffboarding = useMemo(() => {
-    if (!offboardingForm.emp_id.trim()) return false;
-    const exitType = isConsultantOffboarding
-      ? CONSULTANT_EXIT_TYPE
-      : offboardingForm.exit_type;
-    if (!exitType) return false;
-    if (isInternOffboarding) {
-      const lwd = offboardingForm.last_working_day.trim();
-      return Boolean(lwd && offboardingForm.resignation_date.trim() === lwd);
-    }
-    return Boolean(offboardingForm.resignation_date.trim());
-  }, [offboardingForm, isInternOffboarding, isConsultantOffboarding]);
 
   const offboardingNoticeLabel = useMemo(() => {
     const r = offboardingForm.resignation_date.trim();
@@ -670,7 +777,48 @@ export function OffboardingPanel() {
           >
             Refresh
           </button>
+          {selectedResendableCount > 0 ? (
+            <button
+              type="button"
+              className="btn-action ml-auto px-3 py-2 text-sm h-10"
+              disabled={loadingList || bulkResending || Boolean(resendingEmpId)}
+              onClick={() => void handleBulkResendExitSurvey()}
+            >
+              {bulkResending
+                ? "Sending…"
+                : `Resend Exit Survey (${selectedResendableCount})`}
+            </button>
+          ) : null}
         </div>
+
+        {bulkResendResults.length ? (
+          <div className="space-y-2 rounded-xl border border-wt-border bg-wt-surface-2/40 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-semibold">Bulk Resend Results</h4>
+              <button
+                type="button"
+                className="btn-ghost px-2 py-1 text-xs"
+                onClick={() => setBulkResendResults([])}
+              >
+                Dismiss
+              </button>
+            </div>
+            <ul className="max-h-48 space-y-2 overflow-y-auto text-sm">
+              {bulkResendResults.map((result) => (
+                <li
+                  key={`${result.emp_id}-${result.status}`}
+                  className={`rounded-lg border px-3 py-2 ${bulkResendResultClassName(result.status)}`}
+                >
+                  <p className="font-medium">
+                    {result.employee_name || result.emp_id}
+                    {result.email ? ` · ${result.email}` : ""}
+                  </p>
+                  <p className="text-xs mt-0.5">{result.message}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {loadingList && !offboardedRows.length ? (
           <LoadingPanel label="Loading Offboarded Employees" />
@@ -680,6 +828,25 @@ export function OffboardingPanel() {
               <table className="w-full min-w-full border-separate border-spacing-0 text-sm">
                 <thead>
                   <tr>
+                    <th className={`${STICKY_HEADER_CLASS} w-10 px-3 py-2 font-medium`}>
+                      <span className="sr-only">Select</span>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-wt-border"
+                        checked={allResendableOnPageSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someResendableOnPageSelected;
+                        }}
+                        disabled={
+                          !resendableEmpIdsOnPage.length ||
+                          loadingList ||
+                          bulkResending ||
+                          Boolean(resendingEmpId)
+                        }
+                        onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
+                        aria-label="Select all resendable employees on this page"
+                      />
+                    </th>
                     <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
                       Name
                     </th>
@@ -707,14 +874,39 @@ export function OffboardingPanel() {
                     <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
                       Regretted
                     </th>
+                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {offboardedRows.map((row) => (
+                  {offboardedRows.map((row) => {
+                    const empId = String(row.emp_id ?? "").trim();
+                    const canResend = isResendableOffboardListRow(row);
+                    const isResending = Boolean(empId && resendingEmpId === empId);
+                    const isSelected = Boolean(empId && selectedEmpIds.includes(empId));
+                    const surveySubmitted =
+                      row.exit_survey_submitted === true || row.submission_status === "SUBMITTED";
+
+                    return (
                     <tr
                       key={row.emp_id}
-                      className="border-t border-wt-border hover:bg-wt-surface-2/50"
+                      className={`border-t border-wt-border hover:bg-wt-surface-2/50 ${
+                        isSelected ? "bg-indigo-50/70" : ""
+                      }`}
                     >
+                      <td className="px-3 py-2">
+                        {canResend ? (
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-wt-border"
+                            checked={isSelected}
+                            disabled={loadingList || bulkResending || isResending}
+                            onChange={(e) => toggleRowSelection(empId, e.target.checked)}
+                            aria-label={`Select ${row.employee_name || empId}`}
+                          />
+                        ) : null}
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap">{row.employee_name || "—"}</td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         <EmployeeStatusBadge status={row.status} />
@@ -738,8 +930,25 @@ export function OffboardingPanel() {
                         {row.band_name ?? "—"}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">{formatBool(row.is_regretted)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {canResend ? (
+                          <button
+                            type="button"
+                            className="btn-action px-2.5 py-1 text-xs"
+                            disabled={loadingList || isResending || bulkResending}
+                            onClick={() => void handleResendExitSurvey(empId, row.email)}
+                          >
+                            {isResending ? "Sending…" : "Resend Exit Survey"}
+                          </button>
+                        ) : surveySubmitted ? (
+                          <span className="text-xs font-medium text-emerald-700">Submitted</span>
+                        ) : (
+                          <span className="text-xs text-wt-text-muted">—</span>
+                        )}
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
