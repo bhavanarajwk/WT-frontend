@@ -12,7 +12,6 @@ import {
   useUpdateEmployeeProfile,
 } from "@/hooks/employee-directory/useEmployeeProfile";
 import { hrmsService } from "@/services/hrms.service";
-import { parseOnboardOptions } from "@/utils/onboardFormOptions";
 import { toPagedRows, toRows } from "@/utils/apiRows";
 import { useEmployeeResumes } from "@/hooks/resumes/useEmployeeResumes";
 import {
@@ -77,10 +76,6 @@ export function EmployeeProfilePageClient() {
   const [editForm, setEditForm] = useState<EmployeeProfileEditForm | null>(null);
   const [bandOptions, setBandOptions] = useState<BandOption[]>([]);
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
-  const [holidayCalendarOptions, setHolidayCalendarOptions] = useState<
-    Array<{ value: string; label: string }>
-  >([]);
-
   const profileRecord = profile ?? {};
   const displayName = cleanEmployeeName(profileRecord) || "Employee";
   const department = String(pickProfileField(profileRecord, ["department"]) ?? "").trim();
@@ -110,10 +105,9 @@ export function EmployeeProfilePageClient() {
     let cancelled = false;
     void (async () => {
       try {
-        const [bandsRes, departmentsRes, optionsRes] = await Promise.all([
+        const [bandsRes, departmentsRes] = await Promise.all([
           hrmsService.getBands(),
           hrmsService.getDepartments(),
-          hrmsService.getOnboardOptions(),
         ]);
         if (cancelled) return;
         const rows = toRows((bandsRes as { data?: unknown }).data ?? bandsRes);
@@ -126,9 +120,6 @@ export function EmployeeProfilePageClient() {
           })
           .filter((band): band is BandOption => band !== null);
         setBandOptions(bands);
-
-        const options = parseOnboardOptions((optionsRes as { data?: unknown }).data ?? optionsRes);
-        setHolidayCalendarOptions([{ value: "", label: "None" }, ...options.holiday_calendars]);
 
         let departments = Array.from(
           new Set(
@@ -164,7 +155,6 @@ export function EmployeeProfilePageClient() {
         if (!cancelled) {
           setBandOptions([]);
           setDepartmentOptions([...HARDCODED_DEPARTMENT_OPTIONS]);
-          setHolidayCalendarOptions([{ value: "", label: "None" }]);
         }
       }
     })();
@@ -436,25 +426,15 @@ export function EmployeeProfilePageClient() {
                           }))}
                           onChange={(id) => setEditForm({ ...editForm, band_id: id })}
                         />
-                        <AdaptiveSelectField
-                          label="Holiday Calendar"
-                          value={editForm.holiday_calendar_id}
-                          placeholder="Select Calendar"
-                          searchPlaceholder="Search Calendars…"
-                          options={holidayCalendarOptions}
-                          onChange={(v) => setEditForm({ ...editForm, holiday_calendar_id: v })}
-                        />
                       </div>
 
                       <FormSubsection title="Skills">
-                        <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
-                          <div className="sm:col-span-2">
-                            <InputField
-                              label="Primary Skills"
-                              value={editForm.primary_skills}
-                              onChange={(v) => setEditForm({ ...editForm, primary_skills: v })}
-                            />
-                          </div>
+                        <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
+                          <InputField
+                            label="Primary Skills"
+                            value={editForm.primary_skills}
+                            onChange={(v) => setEditForm({ ...editForm, primary_skills: v })}
+                          />
                           <InputField
                             label="Secondary Skill"
                             value={editForm.secondary_skill}
@@ -469,20 +449,6 @@ export function EmployeeProfilePageClient() {
                           />
                         </div>
                       </FormSubsection>
-                    </FormSection>
-
-                    <FormSection
-                      title="Personal Information"
-                      description="Private contact details for HR records."
-                    >
-                      <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:max-w-md">
-                        <InputField
-                          label="Personal Email"
-                          type="email"
-                          value={editForm.personal_email}
-                          onChange={(v) => setEditForm({ ...editForm, personal_email: v })}
-                        />
-                      </div>
                     </FormSection>
                   </>
                 )}

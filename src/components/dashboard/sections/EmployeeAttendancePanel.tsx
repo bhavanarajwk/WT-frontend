@@ -242,7 +242,7 @@ export function EmployeeAttendancePanel() {
       ) : null}
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h3 className="font-semibold">Employee Attendance And Leave Summary</h3>
+        <h3 className="font-semibold">Attendance</h3>
 
         <div
           className="flex flex-wrap gap-2 border-b border-wt-border pb-3"
