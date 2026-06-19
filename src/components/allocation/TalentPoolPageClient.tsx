@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { type ReactNode } from "react";
@@ -104,40 +114,40 @@ export function TalentPoolPageClient() {
               onPageChange={(p) => void loadUnallocatedPage(p)}
             >
               {unallocated.items.length ? (
-                <table className="wt-scrollable-table text-sm">
-                  <thead className="wt-table-sticky-head text-wt-text-muted">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-medium">Name</th>
-                      <th className="text-left px-3 py-2 font-medium">Days without project</th>
-                      <th className="text-left px-3 py-2 font-medium">Previous project</th>
-                      <th className="text-right px-3 py-2 font-medium">Allocate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <WtTable>
+                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Name</TableHead>
+                      <TableHead>Days without project</TableHead>
+                      <TableHead>Previous project</TableHead>
+                      <TableHead className="text-right">Allocate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {unallocated.items.map((row) => (
-                      <tr
+                      <TableRow
                         key={`unalloc-${row.user_id}-${row.employee_email}`}
-                        className="border-t border-wt-border"
+                       
                       >
-                        <td className="px-3 py-2 whitespace-nowrap font-medium">
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
                           {row.employee_name || "—"}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
                           {row.days_without_project_allocation ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
                           {formatTalentPoolPreviousProject(
                             row.previous_project_code,
                             row.previous_project_name
                           )}
-                        </td>
-                        <td className="px-3 py-2 text-right">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-right">
                           <AllocateButton item={row} displayName={row.employee_name} />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </WtTable>
               ) : (
                 <EmptyRow label="No employees not allocated to a client project." />
               )}
@@ -176,9 +186,9 @@ function TalentPoolSection({
           onPageChange={onPageChange}
         />
       </div>
-      <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
+      <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
         {children}
-      </div>
+      </ScrollableTable>
     </section>
   );
 }

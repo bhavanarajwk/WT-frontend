@@ -1,11 +1,23 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { compOffService } from "@/services/compOff.service";
 import { InputField, SelectField, TextAreaField } from "@/components/dashboard/ui/forms";
+import { Badge } from "@/components/ui/badge";
+import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
@@ -977,35 +989,35 @@ export function CompOffPageClient({
                     </div>
                   </div>
                   {filteredMyRequests.length ? (
-                    <div className="wt-scroll-both max-h-[min(50vh,400px)] rounded-xl border border-wt-border">
-                      <table className="wt-scrollable-table text-sm">
-                        <thead className="wt-table-sticky-head text-wt-text-muted">
-                          <tr>
+                    <ScrollableTable maxHeightClass="max-h-[min(50vh,400px)]">
+                      <WtTable>
+                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                          <TableRow className="hover:bg-transparent">
                             {earnOnly ? (
                               <>
-                                <th className="text-left px-3 py-2 font-medium">Project</th>
-                                <th className="text-left px-3 py-2 font-medium">Worked date</th>
+                                <TableHead>Project</TableHead>
+                                <TableHead>Worked date</TableHead>
                               </>
                             ) : (
                               <>
-                                <th className="text-left px-3 py-2 font-medium">Type</th>
-                                <th className="text-left px-3 py-2 font-medium">From</th>
-                                <th className="text-left px-3 py-2 font-medium">To</th>
+                                <TableHead>Type</TableHead>
+                                <TableHead>From</TableHead>
+                                <TableHead>To</TableHead>
                               </>
                             )}
-                            <th className="text-left px-3 py-2 font-medium">Status</th>
-                            <th className="text-left px-3 py-2 font-medium">Manager status</th>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Manager status</TableHead>
                             {!earnOnly ? (
                               <>
-                                <th className="text-left px-3 py-2 font-medium">Manager reason</th>
-                                <th className="text-left px-3 py-2 font-medium">HR status</th>
+                                <TableHead>Manager reason</TableHead>
+                                <TableHead>HR status</TableHead>
                               </>
                             ) : null}
-                            <th className="text-left px-3 py-2 font-medium">Comments</th>
-                            <th className="text-right px-3 py-2 font-medium">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                            <TableHead>Comments</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
                           {filteredMyRequests.map((row, idx) => {
                             const id = requestRowId(row);
                             const status = requestRowStatus(row);
@@ -1027,11 +1039,11 @@ export function CompOffPageClient({
                             const hrSt =
                               !earnOnly && flow === "COMP_OFF" ? requestHrStatus(row) : "—";
                             return (
-                              <tr key={`${id || idx}`} className="border-t border-wt-border">
+                              <TableRow key={`${id || idx}`}>
                                 {earnOnly ? (
                                   <>
-                                    <td className="px-3 py-2 whitespace-nowrap">{earnProjectLabel(row)}</td>
-                                    <td className="px-3 py-2 whitespace-nowrap">
+                                    <TableCell className="px-3 py-2 whitespace-nowrap">{earnProjectLabel(row)}</TableCell>
+                                    <TableCell className="px-3 py-2 whitespace-nowrap">
                                       {String(
                                         pickRowField(
                                           row,
@@ -1041,39 +1053,39 @@ export function CompOffPageClient({
                                           "requestFromDate"
                                         ) ?? "—"
                                       )}
-                                    </td>
+                                    </TableCell>
                                   </>
                                 ) : (
                                   <>
-                                    <td className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</td>
-                                    <td className="px-3 py-2 whitespace-nowrap">
+                                    <TableCell className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</TableCell>
+                                    <TableCell className="px-3 py-2 whitespace-nowrap">
                                       {String(
                                         pickRowField(row, "request_from_date", "requestFromDate") ?? "—"
                                       )}
-                                    </td>
-                                    <td className="px-3 py-2 whitespace-nowrap">
+                                    </TableCell>
+                                    <TableCell className="px-3 py-2 whitespace-nowrap">
                                       {String(
                                         pickRowField(row, "request_to_date", "requestToDate") ?? "—"
                                       )}
-                                    </td>
+                                    </TableCell>
                                   </>
                                 )}
-                                <td className="px-3 py-2 whitespace-nowrap">{status}</td>
-                                <td className="px-3 py-2 whitespace-nowrap">{mgrStatus}</td>
+                                <TableCell className="px-3 py-2 whitespace-nowrap">{status}</TableCell>
+                                <TableCell className="px-3 py-2 whitespace-nowrap">{mgrStatus}</TableCell>
                                 {!earnOnly ? (
                                   <>
-                                    <td
+                                    <TableCell
                                       className="px-3 py-2 max-w-[140px] truncate"
                                       title={mgrReason !== "—" ? mgrReason : undefined}
                                     >
                                       {mgrReason}
-                                    </td>
-                                    <td className="px-3 py-2 whitespace-nowrap">
+                                    </TableCell>
+                                    <TableCell className="px-3 py-2 whitespace-nowrap">
                                       {flow === "COMP_OFF" ? hrSt : "—"}
-                                    </td>
+                                    </TableCell>
                                   </>
                                 ) : null}
-                                <td className="px-3 py-2 max-w-[200px] truncate">
+                                <TableCell className="px-3 py-2 max-w-[200px] truncate">
                                   {String(
                                     pickRowField(
                                       row,
@@ -1085,8 +1097,8 @@ export function CompOffPageClient({
                                       "workDescription"
                                     ) ?? "—"
                                   )}
-                                </td>
-                                <td className="px-3 py-2 text-right">
+                                </TableCell>
+                                <TableCell className="px-3 py-2 text-right">
                                   {isPending && id ? (
                                     <div className="inline-flex gap-1">
                                       {canEdit ? (
@@ -1141,13 +1153,13 @@ export function CompOffPageClient({
                                   ) : (
                                     <span className="text-wt-text-muted">—</span>
                                   )}
-                                </td>
-                              </tr>
+                                </TableCell>
+                              </TableRow>
                             );
                           })}
-                        </tbody>
-                      </table>
-                    </div>
+                        </TableBody>
+                      </WtTable>
+                    </ScrollableTable>
                   ) : (
                     <p className="text-sm text-wt-text-muted">No comp-off requests yet.</p>
                   )}
@@ -1204,36 +1216,36 @@ export function CompOffPageClient({
                 </div>
 
                 {teamRequests.length ? (
-                  <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
-                    <table className="wt-scrollable-table text-sm">
-                      <thead className="wt-table-sticky-head text-wt-text-muted">
-                        <tr>
-                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Employee</th>
-                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Type</th>
-                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">From</th>
-                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
-                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Description</th>
+                  <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+                    <WtTable>
+                      <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>From</TableHead>
+                          <TableHead>To</TableHead>
+                          <TableHead>Description</TableHead>
                           {isHrOnly ? (
                             <>
-                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Status</th>
-                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager status</th>
-                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager reason</th>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Manager status</TableHead>
+                              <TableHead>Manager reason</TableHead>
                             </>
                           ) : (
                             <>
-                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager status</th>
+                              <TableHead>Manager status</TableHead>
                               {!managerOnlyReview ? (
-                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager reason</th>
+                                <TableHead>Manager reason</TableHead>
                               ) : null}
                               {hasHrAccess ? (
-                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">HR status</th>
+                                <TableHead>HR status</TableHead>
                               ) : null}
-                              <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Actions</th>
+                              <TableHead className="text-right">Actions</TableHead>
                             </>
                           )}
-                        </tr>
-                      </thead>
-                      <tbody>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {teamRequests.map((row, idx) => {
                           const id = requestRowId(row);
                           const flow = normalizeCompOffRequestType(
@@ -1279,34 +1291,28 @@ export function CompOffPageClient({
                           const canReview =
                             !isRowUpdating &&
                             (canManagerActEarn || canManagerActUsage || canHrActUsage);
-                          const tone = (s: string) =>
-                            s === "APPROVED"
-                              ? "text-emerald-700"
-                              : s === "REJECTED"
-                                ? "text-rose-700"
-                                : "text-wt-text";
                           return (
-                            <tr key={`${id || idx}`} className="border-t border-wt-border">
-                              <td className="px-3 py-2 whitespace-nowrap">
+                            <TableRow key={`${id || idx}`}>
+                              <TableCell className="px-3 py-2 whitespace-nowrap">
                                 {compOffEmployeeDisplayName(row, teamEmployeeNames)}
                                 {isAm ? (
-                                  <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 border border-blue-200">
+                                  <Badge variant="secondary" className={`ml-2 text-[10px] ${filledBadgeClass("info")}`}>
                                     AM
-                                  </span>
+                                  </Badge>
                                 ) : null}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</td>
-                              <td className="px-3 py-2 whitespace-nowrap">
+                              </TableCell>
+                              <TableCell className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</TableCell>
+                              <TableCell className="px-3 py-2 whitespace-nowrap">
                                 {String(
                                   pickRowField(row, "request_from_date", "requestFromDate") ?? "—"
                                 )}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">
+                              </TableCell>
+                              <TableCell className="px-3 py-2 whitespace-nowrap">
                                 {String(
                                   pickRowField(row, "request_to_date", "requestToDate") ?? "—"
                                 )}
-                              </td>
-                              <td
+                              </TableCell>
+                              <TableCell
                                 className="px-3 py-2 max-w-[200px] truncate"
                                 title={String(
                                   pickRowField(row, "comments", "comment", "description", "remarks") ?? ""
@@ -1315,41 +1321,41 @@ export function CompOffPageClient({
                                 {String(
                                   pickRowField(row, "comments", "comment", "description", "remarks") ?? "—"
                                 )}
-                              </td>
+                              </TableCell>
                               {isHrOnly ? (
                                 <>
-                                  <td className={`px-3 py-2 whitespace-nowrap font-medium ${tone(finalStatus)}`}>
+                                  <TableCell className="px-3 py-2 whitespace-nowrap">
                                     {finalStatus}
-                                  </td>
-                                  <td className={`px-3 py-2 whitespace-nowrap font-medium ${tone(managerStatus)}`}>
+                                  </TableCell>
+                                  <TableCell className="px-3 py-2 whitespace-nowrap">
                                     {managerStatus}
-                                  </td>
-                                  <td
+                                  </TableCell>
+                                  <TableCell
                                     className="px-3 py-2 max-w-[180px] truncate"
                                     title={managerReason !== "—" ? managerReason : undefined}
                                   >
                                     {managerReason}
-                                  </td>
+                                  </TableCell>
                                 </>
                               ) : (
                                 <>
-                                  <td className={`px-3 py-2 whitespace-nowrap font-medium ${tone(managerStatus)}`}>
+                                  <TableCell className="px-3 py-2 whitespace-nowrap">
                                     {managerStatus}
-                                  </td>
+                                  </TableCell>
                                   {!managerOnlyReview ? (
-                                    <td
+                                    <TableCell
                                       className="px-3 py-2 max-w-[180px] truncate"
                                       title={managerReason !== "—" ? managerReason : undefined}
                                     >
                                       {managerReason}
-                                    </td>
+                                    </TableCell>
                                   ) : null}
                                   {hasHrAccess ? (
-                                    <td className={`px-3 py-2 whitespace-nowrap font-medium ${tone(hrStatus)}`}>
+                                    <TableCell className="px-3 py-2 whitespace-nowrap">
                                       {flow === "COMP_OFF" ? hrStatus : "—"}
-                                    </td>
+                                    </TableCell>
                                   ) : null}
-                                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                                  <TableCell className="px-3 py-2 text-right whitespace-nowrap">
                                     {canReview && flow ? (
                                       <div className="inline-flex items-center gap-1">
                                         <button
@@ -1380,15 +1386,15 @@ export function CompOffPageClient({
                                     ) : (
                                       <span className="text-wt-text-muted">—</span>
                                     )}
-                                  </td>
+                                  </TableCell>
                                 </>
                               )}
-                            </tr>
+                            </TableRow>
                           );
                         })}
-                      </tbody>
-                    </table>
-                  </div>
+                      </TableBody>
+                    </WtTable>
+                  </ScrollableTable>
                 ) : (
                   <p className="text-sm text-wt-text-muted">
                     No requests loaded. Click <strong>Fetch requests</strong>.

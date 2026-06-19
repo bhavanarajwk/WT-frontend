@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { useCallback, useEffect, useState } from "react";
 import { hrmsService, type LeaveBalancesListItem } from "@/services/hrms.service";
 import { InputField } from "@/components/dashboard/ui/forms";
@@ -82,32 +92,32 @@ export function HrLeaveBalancesPanel({
       {loadError ? <p className="text-sm text-rose-700">{loadError}</p> : null}
 
       {rows.length ? (
-        <div className="wt-scroll-both max-h-[min(60vh,480px)] rounded-xl border border-wt-border">
-          <table className="wt-scrollable-table text-sm">
-            <thead className="wt-table-sticky-head text-wt-text-muted">
-              <tr>
-                <th className="text-left px-3 py-2 font-medium">Emp ID</th>
-                <th className="text-left px-3 py-2 font-medium">Primary</th>
-                <th className="text-left px-3 py-2 font-medium">Secondary</th>
-                <th className="text-left px-3 py-2 font-medium">Carry forward</th>
-                <th className="text-left px-3 py-2 font-medium">Total</th>
-                <th className="text-left px-3 py-2 font-medium">Comp-off</th>
-              </tr>
-            </thead>
-            <tbody>
+        <ScrollableTable maxHeightClass="max-h-[min(60vh,480px)]">
+          <WtTable>
+            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Emp ID</TableHead>
+                <TableHead>Primary</TableHead>
+                <TableHead>Secondary</TableHead>
+                <TableHead>Carry forward</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Comp-off</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((row, idx) => (
-                <tr key={`${row.emp_id}-${idx}`} className="border-t border-wt-border">
-                  <td className="px-3 py-2 whitespace-nowrap font-medium">{row.emp_id}</td>
-                  <td className="px-3 py-2 tabular-nums">{row.leave?.primary ?? "—"}</td>
-                  <td className="px-3 py-2 tabular-nums">{row.leave?.secondary ?? "—"}</td>
-                  <td className="px-3 py-2 tabular-nums">{row.leave?.carry_forward ?? "—"}</td>
-                  <td className="px-3 py-2 tabular-nums font-medium">{row.leave?.total ?? "—"}</td>
-                  <td className="px-3 py-2 tabular-nums">{row.comp_off_balance ?? "—"}</td>
-                </tr>
+                <TableRow key={`${row.emp_id}-${idx}`}>
+                  <TableCell className="px-3 py-2 whitespace-nowrap">{row.emp_id}</TableCell>
+                  <TableCell className="px-3 py-2 tabular-nums">{row.leave?.primary ?? "—"}</TableCell>
+                  <TableCell className="px-3 py-2 tabular-nums">{row.leave?.secondary ?? "—"}</TableCell>
+                  <TableCell className="px-3 py-2 tabular-nums">{row.leave?.carry_forward ?? "—"}</TableCell>
+                  <TableCell className="px-3 py-2 tabular-nums">{row.leave?.total ?? "—"}</TableCell>
+                  <TableCell className="px-3 py-2 tabular-nums">{row.comp_off_balance ?? "—"}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </WtTable>
+        </ScrollableTable>
       ) : (
         <p className="text-sm text-wt-text-muted">No balance records for the selected filters.</p>
       )}

@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -240,17 +250,17 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
         ) : !assessmentId ? (
           <p className="text-sm text-wt-text-muted">Select an assessment before saving scores.</p>
         ) : (
-          <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
-            <table className="wt-scrollable-table text-sm">
-              <thead className="wt-table-sticky-head text-wt-text-muted">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium">Trainee</th>
-                  <th className="text-left px-3 py-2 font-medium w-28">Score (%)</th>
-                  <th className="text-left px-3 py-2 font-medium w-28">Overall (%)</th>
-                  <th className="text-left px-3 py-2 font-medium">Completed</th>
-                </tr>
-              </thead>
-              <tbody>
+          <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+            <WtTable>
+              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Trainee</TableHead>
+                  <TableHead className="w-28">Score (%)</TableHead>
+                  <TableHead className="w-28">Overall (%)</TableHead>
+                  <TableHead>Completed</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {traineeRows.map((row) => {
                   const draft = scoresByUser[row.userId] ?? { scorePct: "0", markCompleted: true };
                   const participant = findParticipantScoreForTrainee(
@@ -260,9 +270,9 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
                   );
                   const overall = resolveOverallScorePercent(participant, assessments);
                   return (
-                    <tr key={row.key} className="border-t border-wt-border">
-                      <td className="px-3 py-2 whitespace-nowrap">{row.name}</td>
-                      <td className="px-3 py-2">
+                    <TableRow key={row.key}>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">{row.name}</TableCell>
+                      <TableCell className="px-3 py-2">
                         <Input
                           type="number"
                           min={0}
@@ -276,11 +286,11 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
                             }))
                           }
                         />
-                      </td>
-                      <td className="px-3 py-2 text-wt-text-muted whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {overall != null ? `${overall}%` : "—"}
-                      </td>
-                      <td className="px-3 py-2">
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
                         <label className="inline-flex items-center gap-2">
                           <input
                             type="checkbox"
@@ -294,13 +304,13 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
                           />
                           <span className="text-xs text-wt-text-muted">Mark completed</span>
                         </label>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </WtTable>
+          </ScrollableTable>
         )}
       </section>
 

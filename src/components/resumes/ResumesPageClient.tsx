@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -139,10 +149,10 @@ export function ResumesPageClient() {
           ) : null}
 
           {!isLoading && !isError && filteredRows.length > 0 ? (
-            <div className="wt-scroll-both max-h-[min(65vh,560px)] overflow-auto rounded-xl border border-wt-border">
-              <table className="wt-scrollable-table text-sm">
-                <thead className="wt-table-sticky-head text-wt-text-muted">
-                  <tr>
+            <ScrollableTable maxHeightClass="max-h-[min(65vh,560px)]">
+              <WtTable>
+                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                  <TableRow className="hover:bg-transparent">
                     {columns.map((col) => {
                       const columnSortOpts = sortOptions.length
                         ? sortOptionsForColumn(col, sortOptions)
@@ -151,9 +161,8 @@ export function ResumesPageClient() {
                         ? activeSortDirectionForColumn(col, sortId, sortOptions)
                         : null;
                       return (
-                        <th
+                        <TableHead
                           key={col}
-                          className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold tracking-wide"
                         >
                           <TableSortHeader
                             label={formatTableColumnHeader(col)}
@@ -165,33 +174,31 @@ export function ResumesPageClient() {
                                 : undefined
                             }
                           />
-                        </th>
+                        </TableHead>
                       );
                     })}
-                    <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                      Resume
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-wt-border">
+                    <TableHead>Resume</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {pagination.pageItems.map((row, idx) => {
                     const empId = resumeRowEmpId(row);
                     return (
-                      <tr key={empId || `resume-row-${idx}`}>
+                      <TableRow key={empId || `resume-row-${idx}`}>
                         {columns.map((col) => (
-                          <td key={col} className="whitespace-nowrap px-4 py-3">
+                          <TableCell key={col} className="whitespace-nowrap px-4 py-3">
                             {formatResumeCellValue(row[col])}
-                          </td>
+                          </TableCell>
                         ))}
-                        <td className="whitespace-nowrap px-4 py-3">
+                        <TableCell className="whitespace-nowrap px-4 py-3">
                           <EmployeeResumeLinkFromRow row={row} />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </WtTable>
+            </ScrollableTable>
           ) : null}
 
           {!isLoading && !isError && filteredRows.length > 0 ? (

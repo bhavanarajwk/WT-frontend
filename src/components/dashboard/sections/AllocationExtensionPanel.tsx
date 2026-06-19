@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { ApiError } from "@/api/error";
@@ -553,35 +563,35 @@ export function AllocationExtensionPanel() {
         </div>
 
         {rows.length ? (
-          <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
-            <table className="wt-scrollable-table text-sm">
-              <thead className="wt-table-sticky-head text-wt-text-muted">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Employee</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Project</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Current end</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Requested end</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Status</th>
+          <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+            <WtTable>
+              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Current end</TableHead>
+                  <TableHead>Requested end</TableHead>
+                  <TableHead>Status</TableHead>
                   {visibleMode === "hr" ? (
-                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Requested by</th>
+                    <TableHead>Requested by</TableHead>
                   ) : null}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((r) => {
                   const status = String(r.status ?? "PENDING").toUpperCase();
                   const hrStatus = toHrToggleStatus(status);
                   return (
-                    <tr key={String(r.id)} className="border-t border-wt-border">
-                      <td className="px-3 py-2 whitespace-nowrap">{r.employee_name || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{r.project_name || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                    <TableRow key={String(r.id)}>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">{r.employee_name || "—"}</TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">{r.project_name || "—"}</TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">
                         {r.current_end_date ? asDateDisplayValue(r.current_end_date) : "—"}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">
                         {asDateDisplayValue(r.requested_end_date)}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">
                         {visibleMode === "hr" ? (
                           <HrLeaveStatusToggle
                             value={hrStatus}
@@ -604,16 +614,16 @@ export function AllocationExtensionPanel() {
                             {status}
                           </span>
                         )}
-                      </td>
+                      </TableCell>
                       {visibleMode === "hr" ? (
-                        <td className="px-3 py-2 whitespace-nowrap">{r.requested_by_name || "—"}</td>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">{r.requested_by_name || "—"}</TableCell>
                       ) : null}
-                    </tr>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </WtTable>
+          </ScrollableTable>
         ) : (
           <p className="text-sm text-wt-text-muted">{loading ? "Loading…" : "No extension requests found."}</p>
         )}

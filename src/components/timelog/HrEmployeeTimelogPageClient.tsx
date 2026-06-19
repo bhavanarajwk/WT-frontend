@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -193,20 +203,17 @@ export function HrEmployeeTimelogPageClient() {
                 <strong>{logDate}</strong>
                 {emailFilter !== "ALL" ? ` — ${emailFilter}` : ""}.
               </p>
-              <div className="wt-scroll-both max-h-[min(65vh,560px)] overflow-auto rounded-xl border border-wt-border">
-                <table className="wt-scrollable-table text-sm">
-                  <thead className="wt-table-sticky-head text-wt-text-muted">
-                    <tr>
+              <ScrollableTable maxHeightClass="max-h-[min(65vh,560px)]">
+                <WtTable>
+                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                    <TableRow className="hover:bg-transparent">
                       {tableDisplay.columns.map((col) => {
                         const columnSortOpts = sortOptionsForColumn(col, TIMELOG_SORT_OPTIONS);
                         const activeDir = columnSortOpts.length
                           ? activeSortDirectionForColumn(col, sortId, TIMELOG_SORT_OPTIONS)
                           : null;
                         return (
-                          <th
-                            key={col}
-                            className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold tracking-wide"
-                          >
+                          <TableHead key={col}>
                             <TableSortHeader
                               label={formatTableColumnHeader(col)}
                               activeDirection={activeDir}
@@ -220,24 +227,24 @@ export function HrEmployeeTimelogPageClient() {
                                   : undefined
                               }
                             />
-                          </th>
+                          </TableHead>
                         );
                       })}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-wt-border">
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {pagination.pageItems.map((row, idx) => (
-                      <tr key={idx}>
+                      <TableRow key={idx}>
                         {tableDisplay.columns.map((col) => (
-                          <td key={col} className="whitespace-nowrap px-4 py-3">
+                          <TableCell key={col} className="whitespace-nowrap px-4 py-3">
                             {formatResumeCellValue(row[col])}
-                          </td>
+                          </TableCell>
                         ))}
-                      </tr>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </TableBody>
+                </WtTable>
+              </ScrollableTable>
               <ListPagination
                 page={pagination.page}
                 totalPages={pagination.totalPages}

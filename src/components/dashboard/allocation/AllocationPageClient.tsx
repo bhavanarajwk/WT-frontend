@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
@@ -3576,11 +3586,11 @@ export function AllocationPageClient() {
                                   </div>
                                   {filteredProjects.length ? (
                                     <>
-                                    <div className="wt-scroll-both max-h-[min(50vh,420px)] overflow-auto rounded-lg border border-wt-border">
-                                      <table className="wt-scrollable-table text-sm">
-                                        <thead className="wt-table-sticky-head text-wt-text-muted">
-                                          <tr>
-                                            <th className="px-3 py-2 text-left font-medium">
+                                    <ScrollableTable maxHeightClass="max-h-[min(50vh,420px)]">
+                                      <WtTable>
+                                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                                          <TableRow className="hover:bg-transparent">
+                                            <TableHead>
                                               <TableSortHeader
                                                 label="Project name"
                                                 activeDirection={activeSortDirectionForColumn(
@@ -3599,14 +3609,14 @@ export function AllocationPageClient() {
                                                   )
                                                 }
                                               />
-                                            </th>
-                                            <th className="px-3 py-2 text-left font-medium">Type</th>
-                                            <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Start date</th>
-                                            <th className="px-3 py-2 text-left font-medium whitespace-nowrap">End date</th>
-                                            <th className="px-3 py-2 text-right font-medium w-20">Actions</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
+                                            </TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead>Start date</TableHead>
+                                            <TableHead>End date</TableHead>
+                                            <TableHead className="text-right w-20">Actions</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
                                           {projectPagination.pageItems.map((row, idx) => {
                                             const code = String(row.project_code ?? row.projectCode ?? "").trim();
                                             const name = String(row.project_name ?? row.projectName ?? "");
@@ -3621,12 +3631,12 @@ export function AllocationPageClient() {
                                               String(row.end_date ?? row.endDate ?? "")
                                             );
                                             return (
-                                              <tr key={code || String(idx)} className="border-t border-wt-border">
-                                                <td className="px-3 py-2 max-w-[240px] truncate font-medium">{name || "—"}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{typ}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</td>
-                                                <td className="px-3 py-2 text-right">
+                                              <TableRow key={code || String(idx)}>
+                                                <TableCell className="px-3 py-2 max-w-[240px] truncate">{name || "—"}</TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">{typ}</TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</TableCell>
+                                                <TableCell className="px-3 py-2 text-right">
                                                   <button
                                                     type="button"
                                                     className="rounded-lg p-2 text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600"
@@ -3643,13 +3653,13 @@ export function AllocationPageClient() {
                                                   >
                                                     <IconTrash />
                                                   </button>
-                                                </td>
-                                              </tr>
+                                                </TableCell>
+                                              </TableRow>
                                             );
                                           })}
-                                        </tbody>
-                                      </table>
-                                    </div>
+                                        </TableBody>
+                                      </WtTable>
+                                    </ScrollableTable>
                                     <ListPagination
                                       className="mt-3 px-1"
                                       page={projectPagination.page}
@@ -3867,43 +3877,43 @@ export function AllocationPageClient() {
                                     {!pickerEmployeeAllocationsLoading &&
                                     pickerEmployeeAllocations &&
                                     pickerEmployeeAllocations.allocations.length > 0 ? (
-                                      <div className="wt-scroll-both max-h-[min(40vh,280px)] overflow-auto rounded-xl border border-wt-border">
-                                        <table className="wt-scrollable-table text-sm">
-                                          <thead className="wt-table-sticky-head text-wt-text-muted">
-                                            <tr>
-                                              <th className="text-left px-3 py-2 font-medium">Project</th>
-                                              <th className="text-left px-3 py-2 font-medium">Allocation %</th>
-                                              <th className="text-left px-3 py-2 font-medium">Start date</th>
-                                              <th className="text-left px-3 py-2 font-medium">End date</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
+                                      <ScrollableTable maxHeightClass="max-h-[min(40vh,280px)]">
+                                        <WtTable>
+                                          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                                            <TableRow className="hover:bg-transparent">
+                                              <TableHead>Project</TableHead>
+                                              <TableHead>Allocation %</TableHead>
+                                              <TableHead>Start date</TableHead>
+                                              <TableHead>End date</TableHead>
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
                                             {pickerEmployeeAllocations.allocations.map((row, idx) => (
-                                              <tr
+                                              <TableRow
                                                 key={`${allocationRowId(row) || "picker-alloc"}-${idx}`}
-                                                className="border-t border-wt-border"
+                                               
                                               >
-                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">
                                                   {allocationProjectDisplayName(row)}
-                                                </td>
-                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                </TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">
                                                   {formatAllocatedPercentDisplay(row, allocationPercentLabels)}
-                                                </td>
-                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                </TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">
                                                   {formatApiDateDisplay(
                                                     (row.start_date ?? row.startDate) as string | null | undefined
                                                   ) || "—"}
-                                                </td>
-                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                </TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">
                                                   {formatApiDateDisplay(
                                                     (row.end_date ?? row.endDate) as string | null | undefined
                                                   ) || "—"}
-                                                </td>
-                                              </tr>
+                                                </TableCell>
+                                              </TableRow>
                                             ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
+                                          </TableBody>
+                                        </WtTable>
+                                      </ScrollableTable>
                                     ) : null}
                                   </div>
                                 ) : null}
@@ -4069,11 +4079,11 @@ export function AllocationPageClient() {
                                     <SectionLoading label="Loading allocations…" />
                                   ) : sortedAllocations.length ? (
                                     <>
-                                    <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
-                                      <table className="wt-scrollable-table text-sm">
-                                        <thead className="wt-table-sticky-head text-wt-text-muted">
-                                          <tr>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                    <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+                                      <WtTable>
+                                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                                          <TableRow className="hover:bg-transparent">
+                                            <TableHead>
                                               <TableSortHeader
                                                 label="ALLOCATED PROJECT"
                                                 activeDirection={activeSortDirectionForColumn(
@@ -4092,13 +4102,13 @@ export function AllocationPageClient() {
                                                   )
                                                 }
                                               />
-                                            </th>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">EMPLOYEE NAME</th>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">PROJECT ROLE</th>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                            </TableHead>
+                                            <TableHead>EMPLOYEE NAME</TableHead>
+                                            <TableHead>PROJECT ROLE</TableHead>
+                                            <TableHead>
                                               ALLOCATION %
-                                            </th>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                            </TableHead>
+                                            <TableHead>
                                               <TableSortHeader
                                                 label="ALLOCATION TYPE"
                                                 activeDirection={activeSortDirectionForColumn(
@@ -4117,8 +4127,8 @@ export function AllocationPageClient() {
                                                   )
                                                 }
                                               />
-                                            </th>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                            </TableHead>
+                                            <TableHead>
                                               <TableSortHeader
                                                 label="BILLING STATUS"
                                                 activeDirection={activeSortDirectionForColumn(
@@ -4137,13 +4147,13 @@ export function AllocationPageClient() {
                                                   )
                                                 }
                                               />
-                                            </th>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">START DATE</th>
-                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">END DATE</th>
-                                            <th className="text-right px-3 py-2 font-medium whitespace-nowrap">ACTIONS</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
+                                            </TableHead>
+                                            <TableHead>START DATE</TableHead>
+                                            <TableHead>END DATE</TableHead>
+                                            <TableHead className="text-right">ACTIONS</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
                                           {allocationPagination.pageItems.map((row, idx) => {
                                             const allocationId = String(
                                               row.id ?? row.allocation_id ?? row.allocationId ?? ""
@@ -4185,7 +4195,7 @@ export function AllocationPageClient() {
                                               selectedEmployeeAllocations?.highlightedAllocationId ===
                                                 allocationId;
                                             return (
-                                              <tr
+                                              <TableRow
                                                 key={`${allocationId || "alloc"}-${idx}`}
                                                 role="button"
                                                 tabIndex={0}
@@ -4208,22 +4218,22 @@ export function AllocationPageClient() {
                                                   }
                                                 }}
                                               >
-                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">
                                                   {allocationProjectDisplayName(row)}
-                                                </td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.employee_name ?? "—")}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.role ?? "—")}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                </TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.employee_name ?? "—")}</TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.role ?? "—")}</TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">
                                                   {formatAllocatedPercentDisplay(
                                                     row as Record<string, unknown>,
                                                     allocationPercentLabels
                                                   )}
-                                                </td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.allocation_type ?? "—")}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.billing_status ?? row.billingStatus ?? "—")}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.start_date ?? "—")}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.end_date ?? "—")}</td>
-                                                <td className="px-3 py-2 text-right">
+                                                </TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.allocation_type ?? "—")}</TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.billing_status ?? row.billingStatus ?? "—")}</TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.start_date ?? "—")}</TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.end_date ?? "—")}</TableCell>
+                                                <TableCell className="px-3 py-2 text-right">
                                                   <div className="inline-flex items-center justify-end gap-1">
                                                     <button
                                                       type="button"
@@ -4311,13 +4321,13 @@ export function AllocationPageClient() {
                                                       <IconTrash />
                                                     </button>
                                                   </div>
-                                                </td>
-                                              </tr>
+                                                </TableCell>
+                                              </TableRow>
                                             );
                                           })}
-                                        </tbody>
-                                      </table>
-                                    </div>
+                                        </TableBody>
+                                      </WtTable>
+                                    </ScrollableTable>
                                     <ListPagination
                                       className="mt-3 px-1"
                                       page={allocationPagination.page}
@@ -4364,34 +4374,34 @@ export function AllocationPageClient() {
                                             </button>
                                           </div>
                                         </div>
-                                        <div className="wt-scroll-both max-h-[min(50vh,360px)] rounded-xl border border-wt-border">
-                                          <table className="wt-scrollable-table text-sm">
-                                            <thead className="wt-table-sticky-head text-wt-text-muted">
-                                              <tr>
-                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                        <ScrollableTable maxHeightClass="max-h-[min(50vh,360px)]">
+                                          <WtTable>
+                                            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                                              <TableRow className="hover:bg-transparent">
+                                                <TableHead>
                                                   ALLOCATED PROJECT
-                                                </th>
-                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                </TableHead>
+                                                <TableHead>
                                                   PROJECT ROLE
-                                                </th>
-                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                </TableHead>
+                                                <TableHead>
                                                   ALLOCATION %
-                                                </th>
-                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                </TableHead>
+                                                <TableHead>
                                                   ALLOCATION TYPE
-                                                </th>
-                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                </TableHead>
+                                                <TableHead>
                                                   BILLING STATUS
-                                                </th>
-                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                </TableHead>
+                                                <TableHead>
                                                   START DATE
-                                                </th>
-                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                                                </TableHead>
+                                                <TableHead>
                                                   END DATE
-                                                </th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
+                                                </TableHead>
+                                              </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
                                               {selectedEmployeeAllocations.allocations.map(
                                                 (detailRow, detailIdx) => {
                                                   const detailId = allocationRowId(detailRow);
@@ -4400,47 +4410,47 @@ export function AllocationPageClient() {
                                                     detailId ===
                                                       selectedEmployeeAllocations.highlightedAllocationId;
                                                   return (
-                                                    <tr
+                                                    <TableRow
                                                       key={`${detailId || "emp-alloc"}-${detailIdx}`}
                                                       className={`border-t border-wt-border ${
                                                         highlighted ? "bg-indigo-500/10 font-medium" : ""
                                                       }`}
                                                     >
-                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
                                                         {allocationProjectDisplayName(detailRow)}
-                                                      </td>
-                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                      </TableCell>
+                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
                                                         {String(detailRow.role ?? "—")}
-                                                      </td>
-                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                      </TableCell>
+                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
                                                         {formatAllocatedPercentDisplay(
                                                           detailRow,
                                                           allocationPercentLabels
                                                         )}
-                                                      </td>
-                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                      </TableCell>
+                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
                                                         {String(detailRow.allocation_type ?? "—")}
-                                                      </td>
-                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                      </TableCell>
+                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
                                                         {String(
                                                           detailRow.billing_status ??
                                                             detailRow.billingStatus ??
                                                             "—"
                                                         )}
-                                                      </td>
-                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                      </TableCell>
+                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
                                                         {String(detailRow.start_date ?? "—")}
-                                                      </td>
-                                                      <td className="px-3 py-2 whitespace-nowrap">
+                                                      </TableCell>
+                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
                                                         {String(detailRow.end_date ?? "—")}
-                                                      </td>
-                                                    </tr>
+                                                      </TableCell>
+                                                    </TableRow>
                                                   );
                                                 }
                                               )}
-                                            </tbody>
-                                          </table>
-                                        </div>
+                                            </TableBody>
+                                          </WtTable>
+                                        </ScrollableTable>
                                       </div>
                                     ) : null}
                                     </>

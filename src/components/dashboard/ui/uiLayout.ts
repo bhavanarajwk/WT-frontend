@@ -16,6 +16,6 @@ export const FORM_CONTROL_CLASS = cn(
 export const FORM_CONTROL_WITH_CHEVRON_CLASS = cn(FORM_CONTROL_CLASS, "pr-10");
 
 export const DETAIL_LABEL_CELL_CLASS =
-  "w-[34%] min-w-[9.5rem] whitespace-nowrap align-top px-4 py-2.5 text-sm text-wt-text-muted";
+  "w-[34%] min-w-[9.5rem] whitespace-nowrap align-top px-3 py-2.5 text-sm text-wt-text-muted";
 export const DETAIL_VALUE_CELL_CLASS =
-  "align-top px-4 py-2.5 text-sm font-medium text-wt-text";
+  "align-top px-3 py-2.5 text-sm text-wt-text-muted";

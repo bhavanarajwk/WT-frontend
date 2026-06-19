@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { Input } from "@/components/ui/input";
@@ -396,11 +406,11 @@ export function ExitSurveyFollowUpPanel() {
         </p>
       ) : rows.length ? (
         <>
-          <div className="wt-scroll-both max-h-[min(60vh,480px)] rounded-xl border border-wt-border">
-            <table className="wt-scrollable-table text-sm">
-              <thead className="wt-table-sticky-head text-wt-text-muted">
-                <tr>
-                  <th className="w-10 px-3 py-2 font-medium">
+          <ScrollableTable maxHeightClass="max-h-[min(60vh,480px)]">
+            <WtTable>
+              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10">
                     <span className="sr-only">Select</span>
                     <input
                       type="checkbox"
@@ -418,10 +428,10 @@ export function ExitSurveyFollowUpPanel() {
                       onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
                       aria-label="Select all resendable employees on this page"
                     />
-                  </th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Name</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Email</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                  </TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>
                     <TableSortHeader
                       label="Last Working Day"
                       sortable
@@ -436,11 +446,11 @@ export function ExitSurveyFollowUpPanel() {
                         )
                       }
                     />
-                  </th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Survey</th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                  <TableHead>Survey</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((row) => {
                   const empId = resendableEmpIdFromRow(row);
                   const lookupId = followUpRowLookupId(row);
@@ -453,9 +463,9 @@ export function ExitSurveyFollowUpPanel() {
                     row.submission_status === "SUBMITTED" || row.exit_survey_submitted === true;
 
                   return (
-                    <tr
+                    <TableRow
                       key={lookupId || empId || row.email}
-                      className={`border-t border-wt-border hover:bg-wt-surface-2/50 ${
+                      className={`hover:bg-muted/50 ${
                         isSelected ? "bg-indigo-50/70" : ""
                       } ${canView && detailHref ? "cursor-pointer" : ""}`}
                       onClick={(event) => {
@@ -469,7 +479,7 @@ export function ExitSurveyFollowUpPanel() {
                         router.push(detailHref);
                       }}
                     >
-                      <td className="px-3 py-2" data-no-row-nav>
+                      <TableCell className="px-3 py-2" data-no-row-nav>
                         {canResend ? (
                           <input
                             type="checkbox"
@@ -480,8 +490,8 @@ export function ExitSurveyFollowUpPanel() {
                             aria-label={`Select ${row.employee_name || empId}`}
                           />
                         ) : null}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">
                         {canView && detailHref ? (
                           <Link
                             href={detailHref}
@@ -493,12 +503,12 @@ export function ExitSurveyFollowUpPanel() {
                         ) : (
                           row.employee_name || "—"
                         )}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{row.email || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap tabular-nums">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">{row.email || "—"}</TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
                         {formatApiDateDisplay(row.last_working_day) || "—"}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap" data-no-row-nav>
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap" data-no-row-nav>
                         {submitted ? (
                           canView && detailHref ? (
                             <Link
@@ -529,13 +539,13 @@ export function ExitSurveyFollowUpPanel() {
                             ) : null}
                           </div>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </WtTable>
+          </ScrollableTable>
           <ListPagination
             page={listPage}
             totalPages={totalPages}

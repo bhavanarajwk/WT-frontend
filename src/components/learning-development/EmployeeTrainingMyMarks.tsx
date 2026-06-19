@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMyTrainingMarks } from "@/hooks/learning/useLearningTrainings";
@@ -148,30 +158,30 @@ export function EmployeeTrainingMyMarks({
         </article>
       </div>
 
-      <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-lg border border-wt-border">
-        <table className="wt-scrollable-table text-sm">
-          <thead className="wt-table-sticky-head text-wt-text-muted">
-            <tr>
-              <th className="text-left px-3 py-2 font-medium">Assessment</th>
-              <th className="text-left px-3 py-2 font-medium">Weight</th>
-              <th className="text-left px-3 py-2 font-medium">Score (%)</th>
-              <th className="text-left px-3 py-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
+      <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+        <WtTable>
+          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>Assessment</TableHead>
+              <TableHead>Weight</TableHead>
+              <TableHead>Score (%)</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {marks.assessments.map((a) => (
-              <tr key={a.assessmentId} className="border-t border-wt-border">
-                <td className="px-3 py-2">{a.name}</td>
-                <td className="px-3 py-2 text-wt-text-muted">
+              <TableRow key={a.assessmentId}>
+                <TableCell className="px-3 py-2">{a.name}</TableCell>
+                <TableCell className="px-3 py-2">
                   {a.weightPercent > 0 ? `${a.weightPercent}%` : "—"}
-                </td>
-                <td className="px-3 py-2 font-medium text-sky-700">{a.score}%</td>
-                <td className="px-3 py-2 text-emerald-700">Published</td>
-              </tr>
+                </TableCell>
+                <TableCell className="px-3 py-2">{a.score}%</TableCell>
+                <TableCell className="px-3 py-2">Published</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </WtTable>
+      </ScrollableTable>
     </div>
   );
 }

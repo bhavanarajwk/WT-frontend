@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { ApiError } from "@/api/error";
@@ -118,37 +126,37 @@ export function ProfileEmployeeTrainingsSection({ enabled = true }: { enabled?: 
           <p className="text-sm text-wt-text-muted">No trainings found.</p>
         ) : (
           <div className={PROFILE_TABLE_SCROLL}>
-            <table className="min-w-full text-sm">
-              <thead className="bg-wt-surface-2 text-wt-text-muted">
-                <tr>
-                  <th className={PROFILE_TABLE_HEAD_CELL}>Training Name</th>
-                  <th className={PROFILE_TABLE_HEAD_CELL}>Assessment Score</th>
-                  <th className={PROFILE_TABLE_HEAD_CELL}>Completion Date</th>
-                  <th className={PROFILE_TABLE_HEAD_CELL}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
+            <WtTable className="min-w-full">
+              <TableHeader className="[&_tr]:border-b">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Training Name</TableHead>
+                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Assessment Score</TableHead>
+                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Completion Date</TableHead>
+                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((row, index) => {
                   const trainingId = String(row.id ?? "").trim();
                   return (
-                    <tr key={trainingRowKey(row, index)} className="border-t border-wt-border">
-                      <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                    <TableRow key={trainingRowKey(row, index)}>
+                      <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                         {readTrainingName(row)}
-                      </td>
-                      <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                      </TableCell>
+                      <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                         {readAssessmentScore(trainingId, marksByTrainingId)}
-                      </td>
-                      <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                      </TableCell>
+                      <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                         {readCompletionDate(row)}
-                      </td>
-                      <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                      </TableCell>
+                      <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                         {readTrainingStatus(row)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </WtTable>
           </div>
         )}
     </div>

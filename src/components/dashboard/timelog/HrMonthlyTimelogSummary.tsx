@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import {
   formatMonthYearLabel,
@@ -85,47 +95,44 @@ export function HrMonthlyTimelogSummary({
           No approved timelog hours for this month.
         </p>
       ) : (
-        <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
-          <table className="wt-scrollable-table text-sm">
-            <thead className="wt-table-sticky-head text-wt-text-muted">
-              <tr>
-                <th className="sticky left-0 z-[1] bg-wt-surface-2 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+        <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+          <WtTable>
+            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="sticky left-0 z-[1] bg-wt-surface-2">
                   Employee
-                </th>
+                </TableHead>
                 {weekStarts.map((weekStart, index) => (
-                  <th
-                    key={weekStart}
-                    className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide"
-                  >
+                  <TableHead key={weekStart} className="text-center">
                     {weekColumnLabel(index)}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((row) => {
                 const openWeek = defaultWeekForRow(row);
                 const rowClickable = Boolean(onRowClick && openWeek);
                 return (
-                  <tr
+                  <TableRow
                     key={row.email}
-                    className={`group border-t border-wt-border ${
+                    className={`group ${
                       rowClickable ? "cursor-pointer hover:bg-wt-surface-2/80" : ""
                     }`}
                     onClick={() => {
                       if (rowClickable && openWeek) onRowClick?.(row, openWeek);
                     }}
                   >
-                    <td className="sticky left-0 z-[1] bg-wt-surface-1 px-4 py-3 font-medium whitespace-nowrap group-hover:bg-wt-surface-2">
+                    <TableCell className="sticky left-0 z-[1] bg-wt-surface-1 whitespace-nowrap group-hover:bg-wt-surface-2">
                       {row.label}
-                    </td>
+                    </TableCell>
                     {weekStarts.map((weekStart) => {
                       const hasHours = Number(row.hoursByWeek[weekStart] ?? 0) > 0;
                       return (
-                        <td
+                        <TableCell
                           key={`${row.email}-${weekStart}`}
-                          className={`px-4 py-3 text-center tabular-nums text-wt-text ${
-                            hasHours && onRowClick ? "hover:text-indigo-700" : ""
+                          className={`text-center tabular-nums${
+                            hasHours && onRowClick ? "" : ""
                           }`}
                           onClick={(event) => {
                             if (!onRowClick || !hasHours) return;
@@ -134,15 +141,15 @@ export function HrMonthlyTimelogSummary({
                           }}
                         >
                           {formatSummaryHours(row.hoursByWeek[weekStart])}
-                        </td>
+                        </TableCell>
                       );
                     })}
-                  </tr>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </WtTable>
+        </ScrollableTable>
       )}
     </div>
   );

@@ -25,6 +25,8 @@ import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { SidebarIcon } from "@/constants/sidebarIcons";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
+import { Badge } from "@/components/ui/badge";
+import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 
 function IconUser({ className = "" }: { className?: string }) {
   return (
@@ -522,9 +524,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                           className="flex items-start justify-between gap-2 rounded-lg border border-wt-border bg-wt-surface-2 p-2.5"
                         >
                           <div className="min-w-0 space-y-1">
-                            <span className="inline-block rounded-full border border-wt-border bg-wt-surface-1 px-2 py-0.5 text-[10px] font-medium text-wt-text-muted">
+                            <Badge variant="secondary" className={`text-[10px] ${filledBadgeClass("neutral")}`}>
                               {roleLabel}
-                            </span>
+                            </Badge>
                             <p className={`text-sm break-words ${isRead ? "text-wt-text-muted" : "text-wt-text"}`}>
                               {message}
                             </p>

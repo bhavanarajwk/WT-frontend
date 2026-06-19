@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -28,11 +37,7 @@ import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeSta
 import { isActiveUserStatus } from "@/utils/userStatus";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import {
-  SCROLLABLE_TABLE_CLASS,
-  ScrollableTable,
-  STICKY_TABLE_HEAD_CLASS,
-} from "@/components/dashboard/ui/ScrollableTable";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import {
   activeSortDirectionForColumn,
@@ -300,9 +305,9 @@ export function EmployeeDirectoryPageClient() {
                   scrollChain
                   maxHeightClass="max-h-[min(58vh,560px)]"
                 >
-                <table className={SCROLLABLE_TABLE_CLASS}>
-                  <thead className={STICKY_TABLE_HEAD_CLASS}>
-                    <tr>
+                <WtTable>
+                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                    <TableRow className="hover:bg-transparent">
                       {LIST_COLUMNS.map((col) => {
                         const columnSortOpts = sortOptionsForColumn(
                           col.key,
@@ -316,10 +321,7 @@ export function EmployeeDirectoryPageClient() {
                             )
                           : null;
                         return (
-                          <th
-                            key={col.key}
-                            className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold tracking-wide"
-                          >
+                          <TableHead key={col.key}>
                             <TableSortHeader
                               label={col.label}
                               activeDirection={activeDir}
@@ -337,12 +339,12 @@ export function EmployeeDirectoryPageClient() {
                                   : undefined
                               }
                             />
-                          </th>
+                          </TableHead>
                         );
                       })}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-wt-border">
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {pagination.pageItems.map(({ empId, display, record }) => {
                       const workEmail = rowEmail(record);
                       const isResendDisabled =
@@ -353,7 +355,7 @@ export function EmployeeDirectoryPageClient() {
                         Boolean(workEmail) && resendingInviteEmail === workEmail.toLowerCase();
 
                       return (
-                      <tr
+                      <TableRow
                         key={empId}
                         className="cursor-pointer transition hover:bg-blue-50/50 dark:hover:bg-wt-surface-2"
                         onClick={() => router.push(employeeDirectoryProfilePath(empId))}
@@ -368,7 +370,7 @@ export function EmployeeDirectoryPageClient() {
                         aria-label={`View profile for ${display.name}`}
                       >
                         {LIST_COLUMNS.map((col) => (
-                          <td key={col.key} className="whitespace-nowrap px-4 py-3">
+                          <TableCell key={col.key} className="whitespace-nowrap px-4 py-3">
                             {col.key === "status" ? (
                               <div className="inline-flex items-center gap-2">
                                 <EmployeeStatusBadge status={display.status} />
@@ -407,13 +409,13 @@ export function EmployeeDirectoryPageClient() {
                             ) : (
                               display[col.key] ?? "—"
                             )}
-                          </td>
+                          </TableCell>
                         ))}
-                      </tr>
+                      </TableRow>
                     );
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </WtTable>
               </ScrollableTable>
               </div>
               <ListPagination

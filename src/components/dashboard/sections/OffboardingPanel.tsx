@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { Input } from "@/components/ui/input";
@@ -50,7 +58,7 @@ const DEFAULT_PAGE_SIZE = 10;
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
 const STICKY_HEADER_CLASS =
-  "sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted shadow-[inset_0_-1px_0_var(--wt-border)]";
+  "sticky top-0 z-10 bg-wt-surface-2 shadow-[inset_0_-1px_0_var(--wt-border)]";
 
 const INNER_SCROLL_CLASS =
   "max-h-[min(70vh,560px)] overflow-auto overscroll-behavior-auto rounded-xl border border-wt-border";
@@ -803,10 +811,10 @@ export function OffboardingPanel() {
         ) : offboardedRows.length ? (
           <>
             <div className={INNER_SCROLL_CLASS}>
-              <table className="w-full min-w-full border-separate border-spacing-0 text-sm">
-                <thead>
-                  <tr>
-                    <th className={`${STICKY_HEADER_CLASS} w-10 px-3 py-2 font-medium`}>
+              <WtTable className="min-w-full border-separate border-spacing-0">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className={`${STICKY_HEADER_CLASS} w-10`}>
                       <span className="sr-only">Select</span>
                       <input
                         type="checkbox"
@@ -824,40 +832,22 @@ export function OffboardingPanel() {
                         onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
                         aria-label="Select all resendable employees on this page"
                       />
-                    </th>
-                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                      Name
-                    </th>
-                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                      Status
-                    </th>
-                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                      Exit Type
-                    </th>
-                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                      Resignation
-                    </th>
-                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                      Last Working Day
-                    </th>
-                    <th className={`${STICKY_HEADER_CLASS} text-right px-3 py-2 font-medium whitespace-nowrap`}>
+                    </TableHead>
+                    <TableHead className={STICKY_HEADER_CLASS}>Name</TableHead>
+                    <TableHead className={STICKY_HEADER_CLASS}>Status</TableHead>
+                    <TableHead className={STICKY_HEADER_CLASS}>Exit Type</TableHead>
+                    <TableHead className={STICKY_HEADER_CLASS}>Resignation</TableHead>
+                    <TableHead className={STICKY_HEADER_CLASS}>Last Working Day</TableHead>
+                    <TableHead className={`${STICKY_HEADER_CLASS} text-right`}>
                       Notice (days)
-                    </th>
-                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                      Designation
-                    </th>
-                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                      Band
-                    </th>
-                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                      Regretted
-                    </th>
-                    <th className={`${STICKY_HEADER_CLASS} text-left px-3 py-2 font-medium whitespace-nowrap`}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableHead>
+                    <TableHead className={STICKY_HEADER_CLASS}>Designation</TableHead>
+                    <TableHead className={STICKY_HEADER_CLASS}>Band</TableHead>
+                    <TableHead className={STICKY_HEADER_CLASS}>Regretted</TableHead>
+                    <TableHead className={STICKY_HEADER_CLASS}>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {offboardedRows.map((row) => {
                     const empId = String(row.emp_id ?? "").trim();
                     const canResend = isResendableOffboardListRow(row);
@@ -867,13 +857,13 @@ export function OffboardingPanel() {
                       row.exit_survey_submitted === true || row.submission_status === "SUBMITTED";
 
                     return (
-                    <tr
+                    <TableRow
                       key={row.emp_id}
-                      className={`border-t border-wt-border hover:bg-wt-surface-2/50 ${
+                      className={`hover:bg-muted/50 ${
                         isSelected ? "bg-indigo-50/70" : ""
                       }`}
                     >
-                      <td className="px-3 py-2">
+                      <TableCell className="px-3 py-2">
                         {canResend ? (
                           <input
                             type="checkbox"
@@ -884,31 +874,31 @@ export function OffboardingPanel() {
                             aria-label={`Select ${row.employee_name || empId}`}
                           />
                         ) : null}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{row.employee_name || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">{row.employee_name || "—"}</TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">
                         <EmployeeStatusBadge status={row.status} />
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">
                         {formatExitTypeLabel(row.exit_type)}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap tabular-nums">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
                         {formatApiDateDisplay(row.resignation_date) || "—"}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap tabular-nums">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
                         {formatApiDateDisplay(row.last_working_day) || "—"}
-                      </td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
                         {row.notice_period_days ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap max-w-[200px] truncate">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap max-w-[200px] truncate">
                         {row.designation ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap max-w-[160px] truncate">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap max-w-[160px] truncate">
                         {row.band_name ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{formatBool(row.is_regretted)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">{formatBool(row.is_regretted)}</TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">
                         {canResend ? (
                           <button
                             type="button"
@@ -923,12 +913,12 @@ export function OffboardingPanel() {
                         ) : (
                           <span className="text-xs text-wt-text-muted">—</span>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </WtTable>
             </div>
             <ListPagination
               page={listPage}

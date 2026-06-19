@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { hrmsService, type LeaveRecipientOption } from "@/services/hrms.service";
+import { Badge } from "@/components/ui/badge";
+import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { unwrapLeaveOptionItems } from "@/utils/leaveApiOptions";
 
 function optionLabel(option: LeaveRecipientOption): string {
@@ -137,21 +139,22 @@ export function LeaveAdditionalRecipientsSelector({
             );
             const label = option ? optionLabel(option) : email;
             return (
-              <span
+              <Badge
                 key={email}
-                className="inline-flex items-center gap-1 rounded-full border border-wt-border bg-wt-surface-2 px-2.5 py-1 text-xs"
+                variant="secondary"
+                className={`gap-1 pr-1 ${filledBadgeClass("neutral")}`}
               >
                 <span className="max-w-[220px] truncate">{label}</span>
                 <button
                   type="button"
-                  className="text-wt-text-muted hover:text-wt-text"
+                  className="text-muted-foreground hover:text-foreground"
                   aria-label={`Remove ${label}`}
                   disabled={disabled}
                   onClick={() => removeEmail(email)}
                 >
                   ×
                 </button>
-              </span>
+              </Badge>
             );
           })}
         </div>

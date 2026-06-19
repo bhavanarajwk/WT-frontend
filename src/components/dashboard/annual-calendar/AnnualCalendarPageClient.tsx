@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
@@ -153,22 +163,22 @@ export function AnnualCalendarPageClient() {
             ) : sortedRows.length === 0 ? (
               <p className="text-sm text-wt-text-muted">No annual calendars uploaded yet.</p>
             ) : (
-              <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
-                <table className="wt-scrollable-table text-sm">
-                  <thead className="wt-table-sticky-head text-wt-text-muted">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium">Year</th>
-                      <th className="px-3 py-2 text-left font-medium">Title</th>
-                      <th className="px-3 py-2 text-left font-medium">Created by</th>
-                      <th className="px-3 py-2 text-left font-medium">Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+                <WtTable>
+                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Year</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Created by</TableHead>
+                      <TableHead>Updated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {sortedRows.map((row) => {
                       const resolvedUrl = resolveAnnualCalendarUrl(row.document_link);
                       return (
-                        <tr key={String(row.id)} className="border-t border-wt-border">
-                          <td className="px-3 py-2 whitespace-nowrap">
+                        <TableRow key={String(row.id)}>
+                          <TableCell className="px-3 py-2 whitespace-nowrap">
                             {resolvedUrl ? (
                               <a
                                 href={resolvedUrl}
@@ -181,20 +191,20 @@ export function AnnualCalendarPageClient() {
                             ) : (
                               String(row.year ?? "—")
                             )}
-                          </td>
-                          <td className="px-3 py-2">{String(row.title ?? "—")}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">
+                          </TableCell>
+                          <TableCell className="px-3 py-2">{String(row.title ?? "—")}</TableCell>
+                          <TableCell className="px-3 py-2 whitespace-nowrap">
                             {String(row.created_by_name ?? "—")}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap">
+                          </TableCell>
+                          <TableCell className="px-3 py-2 whitespace-nowrap">
                             {String(row.updated_at ?? row.created_at ?? "—")}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
+                  </TableBody>
+                </WtTable>
+              </ScrollableTable>
             )}
           </section>
         </div>

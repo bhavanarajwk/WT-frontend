@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
 import {
@@ -67,36 +75,36 @@ export function ProfileAssignedProjectsSection({
           <p className="text-sm text-wt-text-muted">No projects assigned.</p>
         ) : (
           <div className={PROFILE_TABLE_SCROLL}>
-            <table className="min-w-full text-sm">
-              <thead className="bg-wt-surface-2 text-wt-text-muted">
-                <tr>
-                  <th className={PROFILE_TABLE_HEAD_CELL}>Project Name</th>
-                  <th className={PROFILE_TABLE_HEAD_CELL}>Role In Project</th>
-                  <th className={PROFILE_TABLE_HEAD_CELL}>Start Date</th>
-                  <th className={PROFILE_TABLE_HEAD_CELL}>End Date</th>
-                  <th className={PROFILE_TABLE_HEAD_CELL}>Project Status</th>
-                </tr>
-              </thead>
-              <tbody>
+            <WtTable className="min-w-full">
+              <TableHeader className="[&_tr]:border-b">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Project Name</TableHead>
+                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Role In Project</TableHead>
+                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Start Date</TableHead>
+                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>End Date</TableHead>
+                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Project Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((row, index) => (
-                  <tr key={projectRowKey(row, index)} className="border-t border-wt-border">
-                    <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                  <TableRow key={projectRowKey(row, index)}>
+                    <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                       {readProjectName(row)}
-                    </td>
-                    <td className={PROFILE_TABLE_BODY_CELL}>{readProjectRole(row)}</td>
-                    <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                    </TableCell>
+                    <TableCell className={PROFILE_TABLE_BODY_CELL}>{readProjectRole(row)}</TableCell>
+                    <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                       {readProjectStartDate(row)}
-                    </td>
-                    <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                    </TableCell>
+                    <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                       {readProjectEndDate(row)}
-                    </td>
-                    <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                    </TableCell>
+                    <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                       {readProjectStatus(row)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </WtTable>
           </div>
         )}
     </div>

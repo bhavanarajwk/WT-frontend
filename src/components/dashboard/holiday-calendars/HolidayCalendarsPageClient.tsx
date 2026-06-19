@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
@@ -66,18 +75,17 @@ function DownloadIcon() {
   );
 }
 
+import { Badge } from "@/components/ui/badge";
+import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
+
 function HolidayTypeBadge({ optional }: { optional: boolean }) {
-  if (optional) {
-    return (
-      <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
-        Optional
-      </span>
-    );
-  }
   return (
-    <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-      Mandatory
-    </span>
+    <Badge
+      variant="secondary"
+      className={optional ? filledBadgeClass("warning") : filledBadgeClass("slate")}
+    >
+      {optional ? "Optional" : "Mandatory"}
+    </Badge>
   );
 }
 
@@ -298,28 +306,28 @@ export function HolidayCalendarsPageClient() {
                   ))}
                 </div>
                 <div className="hidden overflow-auto rounded-lg border border-wt-border md:block">
-                  <table className="min-w-full text-sm">
-                    <thead className="sticky top-0 bg-wt-surface-2 text-wt-text-muted">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-medium">Date</th>
-                        <th className="px-3 py-2 text-left font-medium">Holiday</th>
-                        <th className="px-3 py-2 text-left font-medium">Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <WtTable className="min-w-full">
+                    <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead>Date</TableHead>
+                        <TableHead>Holiday</TableHead>
+                        <TableHead>Type</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {detail.holidays.map((holiday) => (
-                        <tr key={holiday.id} className="border-t border-wt-border">
-                          <td className="whitespace-nowrap px-3 py-2 font-medium tabular-nums">
+                        <TableRow key={holiday.id}>
+                          <TableCell className="whitespace-nowrap tabular-nums">
                             {holiday.holiday_date}
-                          </td>
-                          <td className="px-3 py-2">{holiday.name}</td>
-                          <td className="px-3 py-2">
+                          </TableCell>
+                          <TableCell className="px-3 py-2">{holiday.name}</TableCell>
+                          <TableCell className="px-3 py-2">
                             <HolidayTypeBadge optional={holiday.is_optional} />
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </WtTable>
                 </div>
               </>
             ) : (

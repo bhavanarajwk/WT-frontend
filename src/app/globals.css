@@ -360,14 +360,16 @@ body::-webkit-scrollbar {
 }
 
 /* Sticky headers for all data tables */
-.wt-scrollable-table {
+.wt-scrollable-table,
+[data-slot="table"] {
   width: 100%;
   min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
 }
 
-.wt-scrollable-table thead th {
+.wt-scrollable-table thead th,
+[data-slot="table"] thead th {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -378,19 +380,40 @@ body::-webkit-scrollbar {
 
 /* Table scroll shells — headers stick to the shell top (overrides page offset) */
 .wt-page-scroll main .wt-scroll-both .wt-scrollable-table thead th,
+.wt-page-scroll main .wt-scroll-both [data-slot="table"] thead th,
 .wt-page-scroll main .wt-scroll-both-chain .wt-scrollable-table thead th,
+.wt-page-scroll main .wt-scroll-both-chain [data-slot="table"] thead th,
 .wt-page-scroll main .wt-scroll-chain .wt-scrollable-table thead th,
+.wt-page-scroll main .wt-scroll-chain [data-slot="table"] thead th,
 .wt-scroll-both .wt-scrollable-table thead th,
+.wt-scroll-both [data-slot="table"] thead th,
 .wt-scroll-both-chain .wt-scrollable-table thead th,
-.wt-scroll-chain .wt-scrollable-table thead th {
+.wt-scroll-both-chain [data-slot="table"] thead th,
+.wt-scroll-chain .wt-scrollable-table thead th,
+.wt-scroll-chain [data-slot="table"] thead th {
   top: 0;
   z-index: 3;
 }
 
 /* Page scroll — headers stay visible below the sticky dashboard title bar */
-.wt-page-scroll main .wt-scrollable-table thead th {
+.wt-page-scroll main .wt-scrollable-table thead th,
+.wt-page-scroll main [data-slot="table"] thead th {
   top: var(--wt-dashboard-header-offset);
   z-index: 5;
+}
+
+[data-slot="table"] [data-slot="table-cell"] {
+  border-color: var(--border);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--wt-text-muted);
+}
+
+[data-slot="table"] [data-slot="table-head"] {
+  border-color: var(--border);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--wt-text-muted);
 }
 
 .wt-table-sticky-head th {

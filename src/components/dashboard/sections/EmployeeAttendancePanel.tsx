@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -34,19 +44,16 @@ const ATTENDANCE_USER_TYPE_LABEL: Record<AttendanceUserTypeTab, string> = {
   INTERN: "Interns",
 };
 
-const NAME_HEADER_CLASS = "px-3 py-2 text-left font-medium";
-const EMAIL_HEADER_CLASS = "px-3 py-2 text-left font-medium hidden sm:table-cell";
-const NUMERIC_HEADER_CLASS =
-  "px-3 py-2 text-center font-medium whitespace-nowrap tabular-nums";
-const LEAVE_COLUMN_CLASS = `${NUMERIC_HEADER_CLASS} w-36`;
-const ATTENDANCE_COLUMN_CLASS = `${NUMERIC_HEADER_CLASS} w-44`;
+const EMAIL_HEADER_CLASS = "hidden sm:table-cell";
+const LEAVE_COLUMN_CLASS = "text-center tabular-nums w-36";
+const ATTENDANCE_COLUMN_CLASS = "text-center tabular-nums w-44";
 const STICKY_HEADER_CLASS =
-  "sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted shadow-[inset_0_-1px_0_var(--wt-border)]";
-const NAME_CELL_CLASS = "px-3 py-2 text-left truncate";
-const EMAIL_CELL_CLASS = "px-3 py-2 text-left truncate hidden sm:table-cell text-wt-text-muted";
-const NUMERIC_CELL_CLASS = "px-3 py-2 text-center tabular-nums whitespace-nowrap";
-const LEAVE_CELL_CLASS = `${NUMERIC_CELL_CLASS} w-36`;
-const ATTENDANCE_CELL_CLASS = `${NUMERIC_CELL_CLASS} w-44`;
+  "sticky top-0 z-10 bg-wt-surface-2 shadow-[inset_0_-1px_0_var(--wt-border)]";
+const NAME_CELL_CLASS = "truncate";
+const EMAIL_CELL_CLASS = "truncate hidden sm:table-cell";
+const NUMERIC_CELL_CLASS = "text-center tabular-nums w-36";
+const LEAVE_CELL_CLASS = NUMERIC_CELL_CLASS;
+const ATTENDANCE_CELL_CLASS = "text-center tabular-nums w-44";
 
 function defaultAttendanceDateRange(): { from: string; to: string } {
   const to = new Date();
@@ -321,46 +328,46 @@ export function EmployeeAttendancePanel() {
               ref={scrollRootRef}
               className="wt-scroll-both max-h-[min(70vh,560px)] overflow-auto rounded-xl border border-wt-border"
             >
-              <table className="w-full min-w-full border-separate border-spacing-0 text-sm">
+              <WtTable className="min-w-full border-separate border-spacing-0">
                 <colgroup>
                   <col className="min-w-0" />
                   <col className="min-w-[12rem]" />
                   <col className="w-36" />
                   <col className="w-44" />
                 </colgroup>
-                <thead className="wt-table-sticky-head text-wt-text-muted">
-                  <tr>
-                    <th className={`${STICKY_HEADER_CLASS} ${NAME_HEADER_CLASS}`}>Name</th>
-                    <th className={`${STICKY_HEADER_CLASS} ${EMAIL_HEADER_CLASS}`}>Email</th>
-                    <th className={`${STICKY_HEADER_CLASS} ${LEAVE_COLUMN_CLASS}`}>Leave Days</th>
-                    <th className={`${STICKY_HEADER_CLASS} ${ATTENDANCE_COLUMN_CLASS}`}>
+                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className={STICKY_HEADER_CLASS}>Name</TableHead>
+                    <TableHead className={`${STICKY_HEADER_CLASS} ${EMAIL_HEADER_CLASS}`}>Email</TableHead>
+                    <TableHead className={`${STICKY_HEADER_CLASS} ${LEAVE_COLUMN_CLASS}`}>Leave Days</TableHead>
+                    <TableHead className={`${STICKY_HEADER_CLASS} ${ATTENDANCE_COLUMN_CLASS}`}>
                       Attendance Days
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {employees.map((row) => (
-                    <tr
+                    <TableRow
                       key={String(row.user_id ?? row.emp_id ?? row.name)}
-                      className="border-t border-wt-border hover:bg-wt-surface-2/50"
+                      className="hover:bg-muted/50"
                     >
-                      <td className={NAME_CELL_CLASS} title={row.name?.trim() || undefined}>
+                      <TableCell className={NAME_CELL_CLASS} title={row.name?.trim() || undefined}>
                         {row.name?.trim() || "—"}
-                      </td>
-                      <td className={EMAIL_CELL_CLASS} title={row.email?.trim() || undefined}>
+                      </TableCell>
+                      <TableCell className={EMAIL_CELL_CLASS} title={row.email?.trim() || undefined}>
                         {row.email?.trim() || "—"}
-                      </td>
-                      <td
+                      </TableCell>
+                      <TableCell
                         className={`${LEAVE_CELL_CLASS} cursor-default`}
                         title={formatLeaveDatesHover(row)}
                       >
                         {row.leave_days_taken}
-                      </td>
-                      <td className={ATTENDANCE_CELL_CLASS}>{row.total_attendance_days}</td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className={ATTENDANCE_CELL_CLASS}>{row.total_attendance_days}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </WtTable>
               <div ref={loadMoreRef} className="px-3 py-3 text-center text-xs text-wt-text-muted">
                 {loadingMore ? (
                   <span className="inline-flex items-center justify-center gap-2">

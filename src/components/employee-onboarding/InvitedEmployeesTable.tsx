@@ -1,7 +1,17 @@
 "use client";
 
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { useMemo, useRef, useState } from "react";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { DEFAULT_PAGE_SIZE, useClientPagination } from "@/hooks/useClientPagination";
 import {
@@ -161,19 +171,16 @@ export function InvitedEmployeesTable({
             <SectionLoading label="Loading Employees…" />
           </div>
         ) : null}
-        <table className="wt-scrollable-table text-sm">
-          <thead className="wt-table-sticky-head text-wt-text-muted">
-            <tr>
+        <WtTable>
+          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+            <TableRow className="hover:bg-transparent">
               {displayColumns.map((col) => {
                 const columnSortOpts = sortOptionsForColumn(col, SORT_OPTIONS);
                 const activeDir = columnSortOpts.length
                   ? activeSortDirectionForColumn(col, sortId, SORT_OPTIONS)
                   : null;
                 return (
-                  <th
-                    key={col}
-                    className="sticky top-0 z-10 bg-wt-surface-2 text-left px-3 py-2 font-medium whitespace-nowrap"
-                  >
+                  <TableHead key={col}>
                     <TableSortHeader
                       label={formatTableColumnHeader(col)}
                       activeDirection={activeDir}
@@ -184,15 +191,13 @@ export function InvitedEmployeesTable({
                           : undefined
                       }
                     />
-                  </th>
+                  </TableHead>
                 );
               })}
-              <th className="sticky top-0 z-10 bg-wt-surface-2 text-left px-3 py-2 font-medium whitespace-nowrap">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {pagination.pageItems.map((row, idx) => {
               const email = invitedEmployeeWorkEmail(row);
               const canResend = canResendOnboardInvite(row.status) && Boolean(email);
@@ -200,13 +205,19 @@ export function InvitedEmployeesTable({
               const rowKey = String(row.emp_id ?? email ?? idx);
 
               return (
-                <tr key={rowKey} className="border-t border-wt-border">
+                <TableRow key={rowKey}>
                   {displayColumns.map((col) => (
-                    <td key={col} className="px-3 py-2 whitespace-nowrap">
-                      {row[col] === null || row[col] === undefined ? "—" : String(row[col])}
-                    </td>
+                    <TableCell key={col} className="px-3 py-2 whitespace-nowrap">
+                      {col === "status" ? (
+                        <EmployeeStatusBadge status={String(row[col] ?? "")} />
+                      ) : row[col] === null || row[col] === undefined ? (
+                        "—"
+                      ) : (
+                        String(row[col])
+                      )}
+                    </TableCell>
                   ))}
-                  <td className="px-3 py-2 whitespace-nowrap">
+                  <TableCell className="px-3 py-2 whitespace-nowrap">
                     {canResend ? (
                       <button
                         type="button"
@@ -226,12 +237,12 @@ export function InvitedEmployeesTable({
                     ) : (
                       <span className="text-xs text-wt-text-muted">—</span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </WtTable>
       </div>
       <ListPagination
         className="mt-2"
