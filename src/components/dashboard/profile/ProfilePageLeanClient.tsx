@@ -188,6 +188,9 @@ export function ProfilePageLeanClient() {
     readProfileField(employeeProfile, "category") ||
     readProfileField(employeeProfile, "delivery_status", "deliveryStatus");
 
+  const profileDisplayName =
+    String(employeeProfile?.name ?? user?.name ?? "").trim() || "Profile";
+
   const renderProfileDetails = () => (
     <div className="space-y-7">
       <div>
@@ -196,7 +199,6 @@ export function ProfilePageLeanClient() {
           <section>
             <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Basic Information</h5>
             <dl className="space-y-3 text-sm">
-              <ProfileField label="Name" value={employeeProfile?.name ?? user?.name} />
               <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
               <ProfileField label="User Type" value={readProfileField(employeeProfile, "user_type", "userType") ?? user?.user_type} />
               <ProfileField label="Department" value={readProfileField(employeeProfile, "department")} />
@@ -433,7 +435,7 @@ export function ProfilePageLeanClient() {
                   <div className="flex min-w-0 flex-1 items-start gap-5">
                     <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
                     <div className="min-w-0">
-                      <h3 className="mb-1 text-lg font-semibold">Profile</h3>
+                      <h3 className="mb-1 text-lg font-semibold">{profileDisplayName}</h3>
                       <p className="text-sm text-wt-text-muted">
                         Review your profile details before editing.
                       </p>
