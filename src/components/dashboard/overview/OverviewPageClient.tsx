@@ -1,6 +1,7 @@
 "use client";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -75,7 +76,6 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 
 
 export function OverviewPageClient() {
@@ -103,8 +103,7 @@ export function OverviewPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metrics, loading, refresh } = useOverviewData();
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
@@ -422,11 +421,6 @@ export function OverviewPageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfOnboardForm.yoe]);
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 2800);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
     const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
@@ -848,7 +842,7 @@ export function OverviewPageClient() {
     setActionLoading(true);
     try {
       await fn();
-      setToast({ type: "success", message: formatActionSuccessMessage(label) });
+      showSuccessToast(formatActionSuccessMessage(label));
       refresh();
     } catch (error) {
       const backendMessage =
@@ -857,10 +851,7 @@ export function OverviewPageClient() {
           : error instanceof Error
             ? error.message
             : "";
-      setToast({
-        type: "error",
-        message: formatActionErrorMessage(label, backendMessage),
-      });
+      showErrorToast(formatActionErrorMessage(label, backendMessage));
     } finally {
       setActionLoading(false);
     }
@@ -3176,7 +3167,6 @@ export function OverviewPageClient() {
                         </div>
         </OnboardingGate>
       </DashboardPageShell>
-            <DashboardToast toast={toast} />
     </>
   );
 }

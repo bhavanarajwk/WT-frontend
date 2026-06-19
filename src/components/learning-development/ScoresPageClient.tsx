@@ -12,7 +12,6 @@ import {
 } from "@/hooks/learning/useLearningTrainings";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { traineeTableRowsFromParticipants } from "@/utils/learning/participants";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
@@ -42,7 +41,7 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
     Boolean(trainingId.trim()) && hasHrAccess
   );
   const qc = useQueryClient();
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
 
   const traineeRows = useMemo(
     () => traineeTableRowsFromParticipants(traineesQ.data ?? []),
@@ -316,7 +315,6 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
         />
       </section>
     </div>
-    <DashboardToast toast={toast} />
     </>
   );
 }

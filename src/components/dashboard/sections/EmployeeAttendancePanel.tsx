@@ -1,6 +1,7 @@
 "use client";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
@@ -11,7 +12,6 @@ import {
 import { DatePickerField } from "@/components/dashboard/ui/forms";
 import { formatApiDate, formatApiDateDisplay } from "@/utils/apiDate";
 
-type Toast = { type: "success" | "error"; message: string } | null;
 
 type AttendanceSummary = {
   from_date: string;
@@ -76,8 +76,7 @@ export function EmployeeAttendancePanel() {
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [toast, setToast] = useState<Toast>(null);
-
+  
   const scrollRootRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const nextPageRef = useRef(0);
@@ -97,11 +96,11 @@ export function EmployeeAttendancePanel() {
     const from = filtersRef.current.from;
     const to = filtersRef.current.to;
     if (!from || !to) {
-      setToast({ type: "error", message: "From Date And To Date Are Required." });
+      showErrorToast("From Date And To Date Are Required.");
       return;
     }
     if (Date.parse(to) < Date.parse(from)) {
-      setToast({ type: "error", message: "To Date Cannot Be Earlier Than From Date." });
+      showErrorToast("To Date Cannot Be Earlier Than From Date.");
       return;
     }
 
@@ -111,7 +110,6 @@ export function EmployeeAttendancePanel() {
     loadingLockRef.current = true;
     if (isFirstPage) {
       setLoading(true);
-      setToast(null);
     } else {
       setLoadingMore(true);
     }
@@ -156,7 +154,7 @@ export function EmployeeAttendancePanel() {
         setEmployees([]);
         setSummary(null);
       }
-      setToast({ type: "error", message: msg });
+      showErrorToast(msg);
       hasMoreRef.current = false;
     } finally {
       loadingLockRef.current = false;
@@ -214,11 +212,6 @@ export function EmployeeAttendancePanel() {
     return () => observer.disconnect();
   }, [fetchNextPage, loading, loadingMore, employees.length]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 3200);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   const workingWeekdays = summary?.working_weekdays_in_range ?? 0;
   const totalItems = summary?.total_element ?? 0;
@@ -227,21 +220,7 @@ export function EmployeeAttendancePanel() {
 
   return (
     <section className="space-y-4">
-      {toast ? (
-        <div
-          className={`sticky top-0 z-30 rounded-xl border px-4 py-3 text-sm shadow-sm ${
-            toast.type === "success"
-              ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-800"
-              : "border-rose-600/30 bg-rose-500/10 text-rose-800"
-          }`}
-          role="status"
-          aria-live="polite"
-        >
-          {toast.message}
-        </div>
-      ) : null}
-
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+            <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <h3 className="font-semibold">Attendance</h3>
 
         <div

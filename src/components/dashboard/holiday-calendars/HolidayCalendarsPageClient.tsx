@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { hrmsService, type HolidayCalendarDetail } from "@/services/hrms.service";
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -84,7 +83,7 @@ function HolidayTypeBadge({ optional }: { optional: boolean }) {
 
 export function HolidayCalendarsPageClient() {
   const { hasHrAccess } = useDashboardAccess();
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
   const [detail, setDetail] = useState<HolidayCalendarDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const holidayFileRef = useRef<HTMLInputElement>(null);
@@ -342,7 +341,6 @@ export function HolidayCalendarsPageClient() {
           </section>
         </div>
       </DashboardPageShell>
-      <DashboardToast toast={toast} />
     </>
   );
 }

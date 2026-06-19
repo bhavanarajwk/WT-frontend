@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { ExitInterviewResponsesView } from "@/components/exit-interview/ExitInterviewResponsesView";
@@ -37,7 +36,7 @@ function formatDateTime(value: string | null): string {
 export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId: string }) {
   const { hasHrAccess, userRoles } = useDashboardAccess();
   const canView = hasHrAccess || userRoles.includes("ROLE_ADMIN");
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
 
   const detailQ = useExitInterviewSubmissionDetail(lookupId, { enabled: canView });
   const formDefQ = useExitInterviewFormDefinition({ enabled: canView && Boolean(detailQ.data) });
@@ -87,7 +86,6 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
 
   return (
     <DashboardPageShell>
-      <DashboardToast toast={toast} />
       <div className="mx-auto max-w-4xl space-y-4">
         <Link
           href={DASHBOARD_ROUTES["exit-interview-submissions"]}

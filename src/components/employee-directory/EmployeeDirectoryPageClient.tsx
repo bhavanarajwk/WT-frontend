@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useCallback } from "react";
 import { DASHBOARD_ROUTES, employeeDirectoryProfilePath } from "@/constants/routes";
@@ -9,7 +10,6 @@ import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployee
 import { hrmsService } from "@/services/hrms.service";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import {
   cleanEmployeeName,
   onboardRowToListRow,
@@ -127,7 +127,7 @@ export function EmployeeDirectoryPageClient() {
   const [userTypeFilter, setUserTypeFilter] = useState<UserTypeFilterValue>("");
   const [sortId, setSortId] = useState("doj_desc");
   const [resendingInviteEmail, setResendingInviteEmail] = useState<string | null>(null);
-  const { toast, actionLoading, runAction, setToast } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
   const { authStatus, canView: canViewDirectory, queriesEnabled } =
     useEmployeeDirectoryAccess();
   const { data: rows = [], isLoading, isError, error, refetch } = useEmployeeDirectoryList({
@@ -177,12 +177,12 @@ export function EmployeeDirectoryPageClient() {
       if (!hasCopyableValue(text)) return;
       try {
         await navigator.clipboard.writeText(text);
-        setToast({ type: "success", message: successMessage });
+        showSuccessToast(successMessage);
       } catch {
-        setToast({ type: "error", message: "Could not copy to clipboard." });
+        showErrorToast("Could not copy to clipboard.");
       }
     },
-    [setToast]
+    []
   );
 
   const handleResendInvite = useCallback(
@@ -223,7 +223,6 @@ export function EmployeeDirectoryPageClient() {
 
   return (
     <DashboardPageShell className="wt-detail-page">
-      <DashboardToast toast={toast} />
       <div className="wt-detail-scroll-root wt-detail-panel rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="wt-detail-panel__header border-b border-wt-border px-5 py-5 md:px-7 md:py-6">
           <h3 className="text-lg font-semibold">All Employees</h3>

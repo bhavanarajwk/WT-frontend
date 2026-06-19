@@ -13,7 +13,6 @@ import { TrainingScopePicker } from "@/components/learning-development/TrainingS
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 
 export function TrainersPageClient() {
   const { user } = useAuth();
@@ -24,7 +23,7 @@ export function TrainersPageClient() {
   const [trainerPick, setTrainerPick] = useState("");
   const [removingTrainerId, setRemovingTrainerId] = useState<string | null>(null);
   const qc = useQueryClient();
-  const { toast, runAction } = useDashboardAction();
+  const { runAction } = useDashboardAction();
   const trainersQ = useTrainingTrainers(trainingId, Boolean(trainingId.trim()));
   const onboardQ = useLearningTrainerDirectory();
 
@@ -139,7 +138,6 @@ export function TrainersPageClient() {
           <p className="text-sm text-wt-text-muted">Trainer assignment requires HR/Admin.</p>
         )}
       </div>
-      <DashboardToast toast={toast} />
     </>
   );
 }

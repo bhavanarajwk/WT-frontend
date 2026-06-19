@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
@@ -9,7 +10,6 @@ import { formatActionErrorMessage, formatActionSuccessMessage } from "@/utils/ac
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import { createEmptySelfProfileForm } from "@/utils/profileFormState";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboardingPanel";
 import { InputField, SelectField, FileField } from "@/components/dashboard/ui/forms";
 import {
@@ -43,8 +43,7 @@ export function ProfilePageLeanClient() {
   const restrictForPendingOnboarding = isEmployee && !hasHrAccess && !hasManagerAccess;
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
 
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(() =>
@@ -72,11 +71,6 @@ export function ProfilePageLeanClient() {
   const [selfProfilePic, setSelfProfilePic] = useState<File | null>(null);
   const [isEditingOwnProfile, setIsEditingOwnProfile] = useState(false);
 
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 2800);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
     setIsProfileLoading(true);
@@ -144,11 +138,11 @@ export function ProfilePageLeanClient() {
     setActionLoading(true);
     try {
       await fn();
-      setToast({ type: "success", message: formatActionSuccessMessage(label) });
+      showSuccessToast(formatActionSuccessMessage(label));
     } catch (error) {
       const backendMessage =
         error instanceof ApiError ? error.message : error instanceof Error ? error.message : "";
-      setToast({ type: "error", message: formatActionErrorMessage(label, backendMessage) });
+      showErrorToast(formatActionErrorMessage(label, backendMessage));
     } finally {
       setActionLoading(false);
     }
@@ -461,7 +455,6 @@ export function ProfilePageLeanClient() {
         </section>
       </DashboardPageShell>
 
-      <DashboardToast toast={toast} />
     </>
   );
 }

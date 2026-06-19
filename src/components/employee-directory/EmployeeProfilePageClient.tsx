@@ -31,7 +31,6 @@ import {
 } from "@/utils/employeeResume";
 import { canFetchEmployeeResumeApi } from "@/utils/roles";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
 import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
@@ -61,7 +60,7 @@ export function EmployeeProfilePageClient() {
     queriesEnabled,
     roles,
   } = useEmployeeDirectoryAccess();
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
   const { data: profile, isLoading, isError, error, refetch } = useEmployeeProfile(empId, {
     enabled: queriesEnabled,
   });
@@ -264,7 +263,6 @@ export function EmployeeProfilePageClient() {
 
   return (
     <DashboardPageShell className="employee-profile-page">
-      <DashboardToast toast={toast} />
 
       <div className="employee-profile-scroll-root employee-profile-panel rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="employee-profile-panel__header p-5 md:p-7 lg:p-8">

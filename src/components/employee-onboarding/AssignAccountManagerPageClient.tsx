@@ -9,7 +9,6 @@ import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployee
 import { hrmsService } from "@/services/hrms.service";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { SelectField } from "@/components/dashboard/ui/forms";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { EmployeeOnboardingSubNav } from "@/components/employee-onboarding/EmployeeOnboardingSubNav";
 import {
@@ -21,7 +20,7 @@ import { isAccountManagerOnboardRow } from "@/utils/learning/onboardOptions";
 
 export function AssignAccountManagerPageClient() {
   const { user, status: authStatus } = useAuth();
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const { data: rows = [], isLoading, isError, error, refetch } = useEmployeeDirectoryList({
@@ -82,7 +81,6 @@ export function AssignAccountManagerPageClient() {
 
   return (
     <DashboardPageShell>
-      <DashboardToast toast={toast} />
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="p-5 md:p-7">
           <EmployeeOnboardingSubNav />

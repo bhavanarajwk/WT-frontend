@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
@@ -35,7 +36,6 @@ import {
   resendableOffboardEmpIds,
 } from "@/utils/exitSurveyFollowUp";
 
-type Toast = { type: "success" | "error"; message: string } | null;
 
 type OffboardCandidate = {
   emp_id: string;
@@ -121,8 +121,7 @@ export function OffboardingPanel() {
   const [bulkResendResults, setBulkResendResults] = useState<ExitSurveyBulkResendItemResult[]>(
     []
   );
-  const [toast, setToast] = useState<Toast>(null);
-
+  
   const selectedCandidate = useMemo(
     () => offboardCandidates.find((row) => row.emp_id === offboardingForm.emp_id) ?? null,
     [offboardCandidates, offboardingForm.emp_id]
@@ -187,7 +186,7 @@ export function OffboardingPanel() {
           : error instanceof Error
             ? error.message
             : "Failed to load offboarded employees.";
-      setToast({ type: "error", message: msg });
+      showErrorToast(msg);
     } finally {
       setLoadingList(false);
     }
@@ -230,7 +229,7 @@ export function OffboardingPanel() {
       setOffboardCandidates(candidates);
     } catch {
       setOffboardCandidates([]);
-      setToast({ type: "error", message: "Failed to load active employees for offboarding." });
+      showErrorToast("Failed to load active employees for offboarding.");
     } finally {
       setLoadingCandidates(false);
     }
@@ -295,7 +294,6 @@ export function OffboardingPanel() {
     const normalized = empId.trim();
     if (!normalized) return;
     setResendingEmpId(normalized);
-    setToast(null);
     let successMessage: string | null = null;
     let errorMessage: string | null = null;
     try {
@@ -317,17 +315,17 @@ export function OffboardingPanel() {
       setResendingEmpId(null);
     }
     if (successMessage) {
-      setToast({ type: "success", message: successMessage });
+      showSuccessToast(successMessage);
     } else if (errorMessage) {
-      setToast({ type: "error", message: errorMessage });
+      showErrorToast(errorMessage);
     }
   }
 
   async function handleBulkResendExitSurvey() {
     if (!selectedEmpIds.length || bulkResending) return;
     setBulkResending(true);
-    setToast(null);
-    let successToast: Toast = null;
+    let resultSummary: string | null = null;
+    let resultIsError = false;
     let errorMessage: string | null = null;
     try {
       const res = await exitInterviewService.resendSurveyBulk(selectedEmpIds);
@@ -337,10 +335,8 @@ export function OffboardingPanel() {
         `Exit survey reminders processed: ${data?.sent_count ?? 0} sent, ${data?.skipped_count ?? 0} skipped${
           data?.failed_count ? `, ${data.failed_count} failed` : ""
         }.`;
-      successToast = {
-        type: (data?.failed_count ?? 0) > 0 ? "error" : "success",
-        message: summary,
-      };
+      resultSummary = summary;
+      resultIsError = (data?.failed_count ?? 0) > 0;
       setSelectedEmpIds([]);
       setBulkResendResults(data?.results ?? []);
     } catch (error) {
@@ -353,18 +349,14 @@ export function OffboardingPanel() {
     } finally {
       setBulkResending(false);
     }
-    if (successToast) {
-      setToast(successToast);
+    if (resultSummary) {
+      if (resultIsError) showErrorToast(resultSummary);
+      else showSuccessToast(resultSummary);
     } else if (errorMessage) {
-      setToast({ type: "error", message: errorMessage });
+      showErrorToast(errorMessage);
     }
   }
 
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 4200);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   const totalPages = Math.max(1, Math.ceil(listTotal / listPageSize) || 1);
   const rangeStart = listTotal === 0 ? 0 : listPage * listPageSize + 1;
@@ -451,7 +443,6 @@ export function OffboardingPanel() {
     const lastWorkingDay = offboardingForm.last_working_day.trim();
 
     setSubmitting(true);
-    setToast(null);
     try {
       await hrmsService.offboardEmployee(empIdValue, {
         resignation_date: resignationDate,
@@ -464,7 +455,7 @@ export function OffboardingPanel() {
       });
       setOffboardingForm(createEmptyOffboardingForm());
       setListPage(0);
-      setToast({ type: "success", message: "Employee offboarded successfully." });
+      showSuccessToast("Employee offboarded successfully.");
       await loadOffboardCandidates();
       await loadOffboardList();
       await loadAttritionSummary();
@@ -475,7 +466,7 @@ export function OffboardingPanel() {
           : error instanceof Error
             ? error.message
             : "Failed to submit offboarding.";
-      setToast({ type: "error", message: msg });
+      showErrorToast(msg);
     } finally {
       setSubmitting(false);
     }
@@ -483,21 +474,7 @@ export function OffboardingPanel() {
 
   return (
     <section className="relative flex min-h-0 flex-col gap-4">
-      {toast ? (
-        <div
-          className={`sticky top-0 z-30 rounded-xl border px-4 py-3 text-sm shadow-sm ${
-            toast.type === "success"
-              ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-800"
-              : "border-rose-600/30 bg-rose-500/10 text-rose-800"
-          }`}
-          role="status"
-          aria-live="polite"
-        >
-          {toast.message}
-        </div>
-      ) : null}
-
-      <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+            <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         {loadingAttrition ? <LoadingOverlay label="Loading Attrition Summary" /> : null}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>

@@ -10,7 +10,6 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { ProjectSelectField } from "@/components/comp-off/ProjectSelectField";
 import { WeekendMultiDateField } from "@/components/comp-off/WeekendMultiDateField";
 import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
@@ -116,7 +115,7 @@ export function CompOffPageClient({
   const earnOnly = flowScope === "earn";
   const pathname = usePathname();
   const { user } = useAuth();
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
   const {
     hasHrAccess,
     hasManagerAccess,
@@ -1439,7 +1438,6 @@ export function CompOffPageClient({
       <>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
         {rejectDialog}
-        <DashboardToast toast={toast} />
       </>
     );
   }
@@ -1450,7 +1448,6 @@ export function CompOffPageClient({
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
       </DashboardPageShell>
       {rejectDialog}
-      <DashboardToast toast={toast} />
     </>
   );
 }

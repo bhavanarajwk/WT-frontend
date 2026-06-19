@@ -39,7 +39,6 @@ import {
 } from "@/utils/learning/materialVisibility";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 
 const HR_TABS = [
@@ -86,7 +85,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   const safeTab = tabs.some((t) => t.id === tab) ? tab : "overview";
 
   const qc = useQueryClient();
-  const { toast, runAction } = useDashboardAction();
+  const { runAction } = useDashboardAction();
   const tid = trainingId.trim();
 
   const detailQ = useTrainingDetail(tid, Boolean(tid), { employeeView: !hasHrAccess });
@@ -610,7 +609,6 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         </section>
       ) : null}
     </div>
-    <DashboardToast toast={toast} />
     </>
   );
 }

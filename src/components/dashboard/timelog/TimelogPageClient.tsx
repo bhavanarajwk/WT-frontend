@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { showErrorToast } from "@/lib/toast";
 import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { HrEmployeeTimelogWeekModal } from "@/components/dashboard/timelog/HrEmployeeTimelogWeekModal";
@@ -97,7 +97,7 @@ export function TimelogPageClient() {
     [hrMonthlySummary.rows]
   );
 
-  const { toast, actionLoading, runAction, setToast } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
 
   const dayDates = useMemo(() => weekDaysMonSun(weekStart), [weekStart]);
   const dayKeys = useMemo(() => dayDates.map(formatApiDate), [dayDates]);
@@ -197,21 +197,15 @@ export function TimelogPageClient() {
       void loadWeek().catch((error) => {
         setWeekSnapshot(null);
         setRows([createEmptyGridRow(dayKeys)]);
-        setToast({
-          type: "error",
-          message: error instanceof Error ? error.message : "Unable to load timelog week",
-        });
+        showErrorToast(error instanceof Error ? error.message : "Unable to load timelog week");
       });
       return;
     }
     void loadWeek().catch((error) => {
       setWeekSnapshot(null);
-      setToast({
-        type: "error",
-        message: error instanceof Error ? error.message : "Unable to load timelog week",
-      });
+      showErrorToast(error instanceof Error ? error.message : "Unable to load timelog week");
     });
-  }, [isTeamView, isHrTeamView, subTab, teamEmployeeEmail, loadWeek, dayKeys, setToast]);
+  }, [isTeamView, isHrTeamView, subTab, teamEmployeeEmail, loadWeek, dayKeys]);
 
   const saveWeek = () =>
     void runAction("Save timelog draft", async () => {
@@ -439,7 +433,6 @@ export function TimelogPageClient() {
             )}
           </section>
         </div>
-        <DashboardToast toast={toast} />
         {isHrTeamView && hrWeekDetail ? (
           <HrEmployeeTimelogWeekModal
             open

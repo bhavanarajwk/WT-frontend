@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -11,7 +12,6 @@ import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
 import type { OffboardListItem } from "@/types/offboard";
 import { DatePickerField, SelectField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { toPagedRows } from "@/utils/apiRows";
 import { formatApiDateDisplay } from "@/utils/apiDate";
@@ -39,7 +39,6 @@ import {
   type ExitSurveyStatusFilter,
 } from "@/utils/exitSurveyFollowUp";
 
-type Toast = { type: "success" | "error"; message: string } | null;
 
 const DEFAULT_PAGE_SIZE = 10;
 const FOLLOW_UP_FETCH_SIZE = 100;
@@ -76,8 +75,7 @@ export function ExitSurveyFollowUpPanel() {
   const [bulkResendResults, setBulkResendResults] = useState<ExitSurveyBulkResendItemResult[]>(
     []
   );
-  const [toast, setToast] = useState<Toast>(null);
-
+  
   const loadFollowUpList = useCallback(async () => {
     setLoadingList(true);
     try {
@@ -126,7 +124,7 @@ export function ExitSurveyFollowUpPanel() {
             : reason instanceof Error
               ? reason.message
               : "Offboard list failed; showing in-notice employees only.";
-        setToast({ type: "error", message: msg });
+        showErrorToast(msg);
       }
     } catch (error) {
       setAllRows([]);
@@ -136,7 +134,7 @@ export function ExitSurveyFollowUpPanel() {
           : error instanceof Error
             ? error.message
             : "Failed to load exit survey follow-up list.";
-      setToast({ type: "error", message: msg });
+      showErrorToast(msg);
     } finally {
       setLoadingList(false);
     }
@@ -206,11 +204,6 @@ export function ExitSurveyFollowUpPanel() {
     setSelectedEmpIds((prev) => mergeEmpIdSelection(prev, resendableEmpIdsOnPage));
   }
 
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 3200);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   const totalPages = Math.max(1, Math.ceil(listTotal / listPageSize) || 1);
   const rangeStart = listTotal === 0 ? 0 : listPage * listPageSize + 1;
@@ -220,7 +213,6 @@ export function ExitSurveyFollowUpPanel() {
     const normalized = empId.trim();
     if (!normalized) return;
     setResendingEmpId(normalized);
-    setToast(null);
     let successMessage: string | null = null;
     let errorMessage: string | null = null;
     try {
@@ -242,17 +234,17 @@ export function ExitSurveyFollowUpPanel() {
       setResendingEmpId(null);
     }
     if (successMessage) {
-      setToast({ type: "success", message: successMessage });
+      showSuccessToast(successMessage);
     } else if (errorMessage) {
-      setToast({ type: "error", message: errorMessage });
+      showErrorToast(errorMessage);
     }
   }
 
   async function handleBulkResendExitSurvey() {
     if (!selectedEmpIds.length || bulkResending) return;
     setBulkResending(true);
-    setToast(null);
-    let successToast: Toast = null;
+    let resultSummary: string | null = null;
+    let resultIsError = false;
     let errorMessage: string | null = null;
     try {
       const res = await exitInterviewService.resendSurveyBulk(selectedEmpIds);
@@ -262,10 +254,8 @@ export function ExitSurveyFollowUpPanel() {
         `Exit survey reminders processed: ${data?.sent_count ?? 0} sent, ${data?.skipped_count ?? 0} skipped${
           data?.failed_count ? `, ${data.failed_count} failed` : ""
         }.`;
-      successToast = {
-        type: (data?.failed_count ?? 0) > 0 ? "error" : "success",
-        message: summary,
-      };
+      resultSummary = summary;
+      resultIsError = (data?.failed_count ?? 0) > 0;
       setSelectedEmpIds([]);
       setBulkResendResults(data?.results ?? []);
     } catch (error) {
@@ -278,16 +268,16 @@ export function ExitSurveyFollowUpPanel() {
     } finally {
       setBulkResending(false);
     }
-    if (successToast) {
-      setToast(successToast);
+    if (resultSummary) {
+      if (resultIsError) showErrorToast(resultSummary);
+      else showSuccessToast(resultSummary);
     } else if (errorMessage) {
-      setToast({ type: "error", message: errorMessage });
+      showErrorToast(errorMessage);
     }
   }
 
   return (
     <div className="space-y-4">
-      <DashboardToast toast={toast} />
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="sr-only" htmlFor="exit-survey-follow-up-search">

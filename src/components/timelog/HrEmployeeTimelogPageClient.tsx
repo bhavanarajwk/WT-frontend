@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
 import { hrmsService } from "@/services/hrms.service";
@@ -39,7 +38,7 @@ const LOG_COLUMNS = sanitizeTableColumns([
 
 export function HrEmployeeTimelogPageClient() {
   const { user, status: authStatus } = useAuth();
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
   const [logDate, setLogDate] = useState(() => todayApiDate());
   const [emailFilter, setEmailFilter] = useState("ALL");
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
@@ -147,7 +146,6 @@ export function HrEmployeeTimelogPageClient() {
 
   return (
     <DashboardPageShell>
-      <DashboardToast toast={toast} />
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="border-b border-wt-border bg-gradient-to-r from-sky-50/80 via-white to-blue-50/50 px-5 py-6 md:px-7">

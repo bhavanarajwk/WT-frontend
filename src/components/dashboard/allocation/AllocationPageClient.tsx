@@ -1,6 +1,7 @@
 "use client";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -118,7 +119,6 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import {
   createEmptyAllocationForm,
   createEmptyProjectForm,
@@ -178,8 +178,7 @@ export function AllocationPageClient() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const talentPoolPrefillHandled = useRef<string | null>(null);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
     () => defaultInvitedEmployeesDateRange().from
@@ -529,11 +528,6 @@ export function AllocationPageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfOnboardForm.yoe]);
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 2800);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   useEffect(() => {
         if (requiresSelfOnboarding) return;
@@ -828,7 +822,7 @@ export function AllocationPageClient() {
     setActionLoading(true);
     try {
       await fn();
-      setToast({ type: "success", message: formatActionSuccessMessage(label) });
+      showSuccessToast(formatActionSuccessMessage(label));
     } catch (error) {
       const backendMessage =
         error instanceof ApiError
@@ -836,10 +830,7 @@ export function AllocationPageClient() {
           : error instanceof Error
             ? error.message
             : "";
-      setToast({
-        type: "error",
-        message: formatActionErrorMessage(label, backendMessage),
-      });
+      showErrorToast(formatActionErrorMessage(label, backendMessage));
     } finally {
       setActionLoading(false);
     }
@@ -4526,7 +4517,6 @@ export function AllocationPageClient() {
                         </>
         </OnboardingGate>
       </DashboardPageShell>
-            <DashboardToast toast={toast} />
     </>
   );
 }

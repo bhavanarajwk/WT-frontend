@@ -7,7 +7,6 @@ import { InputField } from "@/components/dashboard/ui/forms";
 import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { hrmsService, type AnnualCalendarItem } from "@/services/hrms.service";
 
 function parseAnnualCalendarRows(res: unknown): AnnualCalendarItem[] {
@@ -37,7 +36,7 @@ function resolveAnnualCalendarUrl(rawValue: unknown): string | null {
 
 export function AnnualCalendarPageClient() {
   const { hasHrAccess } = useDashboardAccess();
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
   const [rows, setRows] = useState<AnnualCalendarItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [year, setYear] = useState(String(new Date().getFullYear()));
@@ -202,7 +201,6 @@ export function AnnualCalendarPageClient() {
           </section>
         </div>
       </DashboardPageShell>
-      <DashboardToast toast={toast} />
     </>
   );
 }

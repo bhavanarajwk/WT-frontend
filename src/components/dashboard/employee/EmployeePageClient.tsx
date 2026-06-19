@@ -1,6 +1,7 @@
 "use client";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -90,7 +91,6 @@ import { InvitedEmployeesTable } from "@/components/employee-onboarding/InvitedE
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { LoadingOverlay, LoadingPanel } from "@/components/dashboard/shared/BlackLoader";
 
 
@@ -105,8 +105,7 @@ export function EmployeePageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metrics, loading, refresh } = useOverviewData();
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListLoading, setInvitedListLoading] = useState(false);
@@ -374,11 +373,6 @@ export function EmployeePageClient() {
     return toRows(fallback.data ?? fallback);
   }, []);
 
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 2800);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
     const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
@@ -449,7 +443,7 @@ export function EmployeePageClient() {
           }
 
           if (bandsError) {
-            setToast({ type: "error", message: bandsError });
+            showErrorToast(bandsError);
           }
         } finally {
           setOnboardDataLoading(false);
@@ -601,7 +595,7 @@ export function EmployeePageClient() {
     setActionLoading(true);
     try {
       await fn();
-      setToast({ type: "success", message: formatActionSuccessMessage(label) });
+      showSuccessToast(formatActionSuccessMessage(label));
     } catch (error) {
       const backendMessage =
         error instanceof ApiError
@@ -609,10 +603,7 @@ export function EmployeePageClient() {
           : error instanceof Error
             ? error.message
             : "";
-      setToast({
-        type: "error",
-        message: formatActionErrorMessage(label, backendMessage),
-      });
+      showErrorToast(formatActionErrorMessage(label, backendMessage));
     } finally {
       setActionLoading(false);
     }
@@ -1674,10 +1665,7 @@ export function EmployeePageClient() {
         setResendingInviteEmail(normalized);
         try {
           await hrmsService.resendOnboardInvite({ email: normalized });
-          setToast({
-            type: "success",
-            message: `Onboarding invite resent to ${normalized}.`,
-          });
+          showSuccessToast(`Onboarding invite resent to ${normalized}.`);
         } finally {
           setResendingInviteEmail(null);
         }
@@ -2506,7 +2494,7 @@ export function EmployeePageClient() {
                                 hasHrAccess={hasHrAccess}
                                 actionLoading={actionLoading}
                                 runAction={runAction}
-                                onError={(message) => setToast({ type: "error", message })}
+                                onError={(message) => showErrorToast(message)}
                                 onSubmitSuccess={async () => {
                                   await loadInviteOnboardingPreviewWithState();
                                   resetOnboardForm();
@@ -2604,7 +2592,6 @@ export function EmployeePageClient() {
                             </section>
         </OnboardingGate>
       </DashboardPageShell>
-            <DashboardToast toast={toast} />
     </>
   );
 }

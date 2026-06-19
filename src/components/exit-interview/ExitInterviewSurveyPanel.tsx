@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { ExitInterviewFormFields } from "@/components/exit-interview/ExitInterviewFormFields";
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
@@ -30,7 +29,7 @@ function formatDateLabel(value: string | null): string {
 /** Exit survey (employee self-serve, including offboarded users in notice). */
 export function ExitInterviewSurveyPanel({ className = "" }: { className?: string }) {
   const queryClient = useQueryClient();
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
 
   const profileQ = useExitInterviewProfile();
   const flags = profileQ.data?.flags;
@@ -100,7 +99,6 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
 
   return (
     <div className={className}>
-      <DashboardToast toast={toast} />
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 px-5 py-6 md:px-7">
         <h3 className="text-lg font-semibold">Exit Survey</h3>
