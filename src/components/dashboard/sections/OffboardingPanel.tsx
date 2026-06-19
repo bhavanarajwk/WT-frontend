@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import {
   TableBody,
   TableCell,
@@ -668,11 +669,7 @@ export function OffboardingPanel() {
               <p className="text-sm text-wt-text-muted mt-2">{offboardingNoticeLabel}</p>
             ) : null}
             <div className="mt-4">
-              <button
-                type="button"
-                className="btn-primary px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!canSubmit || submitting || loadingCandidates}
-                onClick={() => void submitOffboarding()}
+              <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" disabled={!canSubmit || submitting || loadingCandidates} onClick={() => void submitOffboarding()}
               >
                 {submitting ? (
                   <span className="inline-flex items-center gap-2">
@@ -682,7 +679,7 @@ export function OffboardingPanel() {
                 ) : (
                   "Submit Offboarding"
                 )}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -755,25 +752,18 @@ export function OffboardingPanel() {
               })),
             ]}
           />
-          <button
-            type="button"
-            className="btn-ghost px-3 py-2 text-sm h-10 border border-wt-border rounded-lg"
-            onClick={() => void loadOffboardList()}
+          <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm h-10 border border-wt-border rounded-lg" onClick={() => void loadOffboardList()}
             disabled={loadingList}
           >
             Refresh
-          </button>
+          </Button>
           {selectedResendableCount > 0 ? (
-            <button
-              type="button"
-              className="btn-action ml-auto px-3 py-2 text-sm h-10"
-              disabled={loadingList || bulkResending || Boolean(resendingEmpId)}
-              onClick={() => void handleBulkResendExitSurvey()}
+            <Button variant="brand" size="sm" type="button" className="ml-auto px-3 py-2 text-sm h-10" disabled={loadingList || bulkResending || Boolean(resendingEmpId)} onClick={() => void handleBulkResendExitSurvey()}
             >
               {bulkResending
                 ? "Sending…"
                 : `Resend Exit Survey (${selectedResendableCount})`}
-            </button>
+            </Button>
           ) : null}
         </div>
 
@@ -781,13 +771,10 @@ export function OffboardingPanel() {
           <div className="space-y-2 rounded-xl border border-wt-border bg-wt-surface-2/40 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-sm font-semibold">Bulk Resend Results</h4>
-              <button
-                type="button"
-                className="btn-ghost px-2 py-1 text-xs"
-                onClick={() => setBulkResendResults([])}
+              <Button variant="ghost" size="xs" type="button" className="px-2 py-1 text-xs" onClick={() => setBulkResendResults([])}
               >
                 Dismiss
-              </button>
+              </Button>
             </div>
             <ul className="max-h-48 space-y-2 overflow-y-auto text-sm">
               {bulkResendResults.map((result) => (
@@ -900,14 +887,10 @@ export function OffboardingPanel() {
                       <TableCell className="px-3 py-2 whitespace-nowrap">{formatBool(row.is_regretted)}</TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap">
                         {canResend ? (
-                          <button
-                            type="button"
-                            className="btn-action px-2.5 py-1 text-xs"
-                            disabled={loadingList || isResending || bulkResending}
-                            onClick={() => void handleResendExitSurvey(empId, row.email)}
+                          <Button variant="brand" size="xs" type="button" className="px-2.5 py-1 text-xs" disabled={loadingList || isResending || bulkResending} onClick={() => void handleResendExitSurvey(empId, row.email)}
                           >
                             {isResending ? "Sending…" : "Resend Exit Survey"}
-                          </button>
+                          </Button>
                         ) : surveySubmitted ? (
                           <span className="text-xs font-medium text-emerald-700">Submitted</span>
                         ) : (

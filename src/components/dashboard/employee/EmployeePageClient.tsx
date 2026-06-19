@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
@@ -2297,14 +2298,9 @@ export function EmployeePageClient() {
             <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn-primary px-4 py-2.5"
-          onClick={openOwnProfileEditor}
-          disabled={actionLoading}
-        >
+        <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
           Edit Profile
-        </button>
+        </Button>
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
@@ -2352,10 +2348,7 @@ export function EmployeePageClient() {
         <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
@@ -2455,15 +2448,12 @@ export function EmployeePageClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </button>
-        <button
-          type="button"
-          className="btn-ghost ml-2 px-3 py-2"
-          onClick={() => setIsEditingOwnProfile(false)}
+        </Button>
+        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -2504,10 +2494,7 @@ export function EmployeePageClient() {
                               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                   <h3 className="font-semibold">Onboarded Employees</h3>
-                                  <button
-                                    type="button"
-                                    className="btn-ghost px-3 py-2"
-                                    onClick={() =>
+                                  <Button variant="ghost" type="button" className="px-3 py-2" onClick={() =>
                                       runAction("Refresh Employees", async () => {
                                         await loadInviteOnboardingPreviewWithState();
                                         resetOnboardForm();
@@ -2516,7 +2503,7 @@ export function EmployeePageClient() {
                                     disabled={actionLoading || invitedListLoading}
                                   >
                                     Refresh Employees
-                                  </button>
+                                  </Button>
                                 </div>
                                 <div className="flex flex-wrap items-end gap-3">
                                   <InputField
@@ -2531,10 +2518,7 @@ export function EmployeePageClient() {
                                     value={invitedListToDate}
                                     onChange={setInvitedListToDate}
                                   />
-                                  <button
-                                    type="button"
-                                    className="btn-primary px-3 py-2 text-sm"
-                                    onClick={() =>
+                                  <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() =>
                                       runAction("Load invited employees", async () => {
                                         await loadInviteOnboardingPreviewWithState({
                                           from: invitedListFromDateRef.current,
@@ -2546,11 +2530,8 @@ export function EmployeePageClient() {
                                     disabled={actionLoading}
                                   >
                                     Apply Dates
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg"
-                                    onClick={() =>
+                                  </Button>
+                                  <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() =>
                                       runAction("Reset invited date range", async () => {
                                         const { from, to } = defaultInvitedEmployeesDateRange();
                                         setInvitedListFromDate(from);
@@ -2562,7 +2543,7 @@ export function EmployeePageClient() {
                                     disabled={actionLoading}
                                   >
                                     Last 7 days
-                                  </button>
+                                  </Button>
                                 </div>
                                 {invitedApiServerRange ? (
                                   <p

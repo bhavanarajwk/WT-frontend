@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -156,19 +157,21 @@ export function WeekendMultiDateField({
             e.target.value = "";
           }}
         />
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           tabIndex={-1}
           disabled={disabled || atMax}
           aria-label={`Open calendar for ${label}`}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-wt-text-muted hover:text-wt-text hover:bg-wt-surface-2 disabled:opacity-50 disabled:pointer-events-none"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-wt-text-muted hover:text-wt-text hover:bg-wt-surface-2"
           onClick={(e) => {
             e.preventDefault();
             openPicker();
           }}
         >
           <CalendarIcon />
-        </button>
+        </Button>
       </div>
       {value.length ? (
         <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -179,14 +182,16 @@ export function WeekendMultiDateField({
             >
               {apiDateFieldValue(date)}
               {!disabled ? (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   className="rounded p-0.5 text-wt-text-muted hover:text-rose-600 hover:bg-wt-surface-3"
                   aria-label={`Remove ${date}`}
                   onClick={() => removeDate(date)}
                 >
                   ×
-                </button>
+                </Button>
               ) : null}
             </span>
           ))}

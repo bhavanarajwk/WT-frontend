@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -305,9 +306,9 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
             />
           </div>
         </div>
-        <button type="button" className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() => router.refresh()}>
+        <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() => router.refresh()}>
           Refresh view
-        </button>
+        </Button>
       </div>
 
       {detailQ.isError ? (
@@ -406,14 +407,10 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                 <InputField label="Venue" value={sessionForm.venue} onChange={(v) => setSessionForm((p) => ({ ...p, venue: v }))} />
                 <InputField label="Meeting link" value={sessionForm.meeting_link} onChange={(v) => setSessionForm((p) => ({ ...p, meeting_link: v }))} />
               </div>
-              <button
-                type="button"
-                className="btn-primary px-4 py-2 text-sm"
-                disabled={sessionMut.isPending}
-                onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(e instanceof Error ? e.message : "Failed") })}
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={sessionMut.isPending} onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(e instanceof Error ? e.message : "Failed") })}
               >
                 Create session
-              </button>
+              </Button>
             </section>
           ) : (
             <p className="text-sm text-wt-text-muted">Only HR/Admin can create sessions.</p>
@@ -444,14 +441,9 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                 placeholder="Select trainer"
                 options={trainerOptions.map((o) => ({ value: o.id, label: o.label }))}
               />
-              <button
-                type="button"
-                className="btn-primary px-4 py-2 text-sm shrink-0"
-                disabled={!trainerPick}
-                onClick={assignTrainer}
-              >
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={!trainerPick} onClick={assignTrainer} >
                 Assign
-              </button>
+              </Button>
             </div>
           ) : null}
           <AssignedTrainersList
@@ -478,18 +470,14 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                 placeholder="Select trainee"
                 options={addTraineeOptions.map((o) => ({ value: o.id, label: o.label }))}
               />
-              <button
-                type="button"
-                className="btn-primary px-4 py-2 text-sm shrink-0 disabled:opacity-40"
-                disabled={addParticipantMut.isPending || !participantPick}
-                onClick={() =>
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0 disabled:opacity-40" disabled={addParticipantMut.isPending || !participantPick} onClick={() =>
                   addParticipantMut.mutate(undefined, {
                     onError: (e) => alert(e instanceof Error ? e.message : "Failed"),
                   })
                 }
               >
                 {addParticipantMut.isPending ? "Adding…" : "Add trainee"}
-              </button>
+              </Button>
             </div>
           ) : null}
           <TrainingParticipantsList
@@ -536,14 +524,10 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               <div className="min-w-[160px] flex-1">
                 <FileField label="PDF" required accept=".pdf,application/pdf" onPick={setMaterialFile} />
               </div>
-              <button
-                type="button"
-                className="btn-primary px-4 py-2 text-sm shrink-0"
-                disabled={uploadMaterialMut.isPending || !materialFile}
-                onClick={() => uploadMaterialMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadMaterialMut.isPending || !materialFile} onClick={() => uploadMaterialMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
               >
                 Upload
-              </button>
+              </Button>
             </div>
           ) : null}
           <DataTable
@@ -571,14 +555,10 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                 <div className="min-w-[160px] flex-1">
                   <FileField label="Assessment PDF" required accept=".pdf,application/pdf" onPick={setAssessmentFile} />
                 </div>
-                <button
-                  type="button"
-                  className="btn-primary px-4 py-2 text-sm shrink-0"
-                  disabled={uploadAssessmentMut.isPending || !assessmentFile}
-                  onClick={() => uploadAssessmentMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+                <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadAssessmentMut.isPending || !assessmentFile} onClick={() => uploadAssessmentMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
                 >
                   Upload
-                </button>
+                </Button>
               </div>
               <div className="w-full">
                 <InputField label="Description" value={assessmentForm.description} onChange={(v) => setAssessmentForm((p) => ({ ...p, description: v }))} />

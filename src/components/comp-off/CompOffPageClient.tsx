@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -842,28 +843,32 @@ export function CompOffPageClient({
 
       {!embedded && canApplyCompOff && canReviewTeam ? (
               <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setMainTab("my")}
-                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  className={`rounded-lg px-3 py-2 ${
                     mainTab === "my"
-                      ? "bg-wt-surface-3 text-wt-text"
+                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                       : "text-wt-text-muted hover:bg-wt-surface-2"
                   }`}
                 >
                   My comp-off
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setMainTab("team")}
-                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  className={`rounded-lg px-3 py-2 ${
                     mainTab === "team"
-                      ? "bg-wt-surface-3 text-wt-text"
+                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                       : "text-wt-text-muted hover:bg-wt-surface-2"
                   }`}
                 >
                   Team review
-                </button>
+                </Button>
               </div>
             ) : null}
 
@@ -929,22 +934,12 @@ export function CompOffPageClient({
                       value={earnForm.comments}
                       onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
                     />
-                    <button
-                      type="button"
-                      className="btn-primary px-3 py-2"
-                      disabled={
-                        actionLoading ||
-                        !earnForm.project_code.trim() ||
-                        !earnForm.worked_dates.length ||
-                        !earnForm.comments.trim() ||
-                        managerEmailResolving
-                      }
-                      onClick={() =>
+                    <Button variant="brand" type="button" className="px-3 py-2" disabled={ actionLoading || !earnForm.project_code.trim() || !earnForm.worked_dates.length || !earnForm.comments.trim() || managerEmailResolving } onClick={() =>
                         runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
                       }
                     >
                       {editingRequestId ? "Save earn request" : "Submit earn request"}
-                    </button>
+                    </Button>
                   </div>
 
                   {!earnOnly ? (
@@ -978,14 +973,10 @@ export function CompOffPageClient({
                         }
                       />
                       ) : null}
-                      <button
-                        type="button"
-                        className="btn-primary px-3 py-2 text-sm"
-                        disabled={actionLoading}
-                        onClick={() => runAction("Refresh my comp-off requests", loadMyRequests)}
+                      <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" disabled={actionLoading} onClick={() => runAction("Refresh my comp-off requests", loadMyRequests)}
                       >
                         Refresh
-                      </button>
+                      </Button>
                     </div>
                   </div>
                   {filteredMyRequests.length ? (
@@ -1102,11 +1093,7 @@ export function CompOffPageClient({
                                   {isPending && id ? (
                                     <div className="inline-flex gap-1">
                                       {canEdit ? (
-                                        <button
-                                          type="button"
-                                          className="btn-action px-2 py-1 text-xs"
-                                          disabled={actionLoading}
-                                          onClick={() => {
+                                        <Button variant="brand" size="xs" type="button" className="px-2 py-1 text-xs" disabled={actionLoading} onClick={() => {
                                             setUsageForm({
                                               request_from_date: String(
                                                 pickRowField(row, "request_from_date", "requestFromDate") ?? ""
@@ -1128,11 +1115,12 @@ export function CompOffPageClient({
                                           }}
                                         >
                                           Edit
-                                        </button>
+                                        </Button>
                                       ) : null}
-                                      <button
+                                      <Button
                                         type="button"
-                                        className="rounded-lg px-2 py-1 text-xs border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        variant="destructive"
+                                        size="xs"
                                         disabled={actionLoading}
                                         onClick={() =>
                                           runAction(
@@ -1148,7 +1136,7 @@ export function CompOffPageClient({
                                         }
                                       >
                                         Revoke
-                                      </button>
+                                      </Button>
                                     </div>
                                   ) : (
                                     <span className="text-wt-text-muted">—</span>
@@ -1201,18 +1189,14 @@ export function CompOffPageClient({
                       }
                     />
                   ) : null}
-                  <button
-                    type="button"
-                    className="btn-primary px-3 py-2 h-10"
-                    disabled={actionLoading}
-                    onClick={() =>
+                  <Button variant="brand" type="button" className="px-3 py-2 h-10" disabled={actionLoading} onClick={() =>
                       runAction(compOffTeamReviewActionLabel("COMP_OFF", "fetch"), () =>
                         loadTeamRequests({ raiseOnError: true })
                       )
                     }
                   >
                     Fetch requests
-                  </button>
+                  </Button>
                 </div>
 
                 {teamRequests.length ? (
@@ -1358,9 +1342,11 @@ export function CompOffPageClient({
                                   <TableCell className="px-3 py-2 text-right whitespace-nowrap">
                                     {canReview && flow ? (
                                       <div className="inline-flex items-center gap-1">
-                                        <button
+                                        <Button
                                           type="button"
-                                          className="rounded-lg px-2.5 py-1.5 text-xs border border-emerald-600/25 text-emerald-800 bg-emerald-50/40 hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                          variant="outline"
+                                          size="xs"
+                                          className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
                                           disabled={!id || isRowUpdating}
                                           onClick={() =>
                                             runAction(
@@ -1373,15 +1359,16 @@ export function CompOffPageClient({
                                           }
                                         >
                                           {isRowUpdating ? "…" : "Approve"}
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                           type="button"
-                                          className="rounded-lg px-2.5 py-1.5 text-xs border border-rose-600/25 text-rose-800 bg-rose-50/40 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                          variant="destructive"
+                                          size="xs"
                                           disabled={!id || isRowUpdating}
                                           onClick={() => openRejectDialog(id, flow)}
                                         >
                                           Reject
-                                        </button>
+                                        </Button>
                                       </div>
                                     ) : (
                                       <span className="text-wt-text-muted">—</span>

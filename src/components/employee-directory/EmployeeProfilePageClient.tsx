@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -279,9 +280,9 @@ export function EmployeeProfilePageClient() {
           {isError ? (
             <div className="mt-8 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               <p>Could not load profile.{error instanceof Error ? ` ${error.message}` : ""}</p>
-              <button type="button" className="btn-ghost mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
+              <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
                 Retry
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -337,14 +338,10 @@ export function EmployeeProfilePageClient() {
               </div>
 
               {canOpenProfileEditor && !isEditing ? (
-                <button
-                  type="button"
-                  className="btn-action inline-flex shrink-0 items-center gap-2 px-4 py-2.5 text-sm"
-                  onClick={openEditor}
-                >
+                <Button variant="brand" size="sm" type="button" className="inline-flex shrink-0 items-center gap-2 px-4 py-2.5 text-sm" onClick={openEditor} >
                   <IconPencil />
                   {statusOnlyEdit ? "Edit Status" : "Edit Profile"}
-                </button>
+                </Button>
               ) : null}
             </div>
           ) : null}

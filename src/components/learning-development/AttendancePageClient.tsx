@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -37,20 +38,22 @@ function AttendanceToggle({
   return (
     <div className="inline-flex rounded-lg border border-wt-border p-0.5 text-xs font-medium">
       {(["PRESENT", "ABSENT"] as const).map((status) => (
-        <button
+        <Button
           key={status}
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => onChange(status)}
-          className={`rounded-md px-3 py-1.5 transition ${
+          className={`rounded-md px-3 py-1.5 ${
             value === status
               ? status === "PRESENT"
-                ? "bg-emerald-600 text-white"
-                : "bg-rose-600 text-white"
+                ? "bg-emerald-600 text-white hover:bg-emerald-600 hover:text-white"
+                : "bg-rose-600 text-white hover:bg-rose-600 hover:text-white"
               : "text-wt-text-muted hover:bg-wt-surface-2"
           }`}
         >
           {status === "PRESENT" ? "Present" : "Absent"}
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -161,20 +164,14 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wt-border pb-4">
           <h2 className="font-semibold">Trainee Attendance</h2>
-          <button
-            type="button"
-            className="btn-primary px-4 py-2 text-sm"
-            disabled={
-              saveMut.isPending || !trainingId || !sessionId || !traineeRows.length
-            }
-            onClick={() =>
+          <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={ saveMut.isPending || !trainingId || !sessionId || !traineeRows.length } onClick={() =>
               saveMut.mutate(undefined, {
                 onError: (e) => alert(e instanceof Error ? e.message : String(e)),
               })
             }
           >
             {saveMut.isPending ? "Saving…" : "Save attendance"}
-          </button>
+          </Button>
         </div>
 
         {!trainingId ? (

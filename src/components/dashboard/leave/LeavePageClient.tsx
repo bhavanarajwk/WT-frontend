@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -2941,10 +2942,7 @@ export function LeavePageClient() {
         </p>
       )}
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Submit onboarding", async () => {
               if (!user?.email) {
                 throw new Error("Unable to resolve logged-in email.");
@@ -3062,7 +3060,7 @@ export function LeavePageClient() {
           disabled={actionLoading}
         >
           Submit Onboarding Form
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -3155,14 +3153,9 @@ export function LeavePageClient() {
             <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn-primary px-4 py-2.5"
-          onClick={openOwnProfileEditor}
-          disabled={actionLoading}
-        >
+        <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
           Edit Profile
-        </button>
+        </Button>
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
@@ -3210,10 +3203,7 @@ export function LeavePageClient() {
         <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
@@ -3313,15 +3303,12 @@ export function LeavePageClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </button>
-        <button
-          type="button"
-          className="btn-ghost ml-2 px-3 py-2"
-          onClick={() => setIsEditingOwnProfile(false)}
+        </Button>
+        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -3397,107 +3384,123 @@ export function LeavePageClient() {
                               {isTeamLeaveRoute ? (
                                 <>
                                   {canViewTeamLeave ? (
-                                    <button
+                                    <Button
                                       type="button"
+                                      variant="ghost"
+                                      size="sm"
                                       onClick={() => setLeaveSubTab("team")}
-                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                      className={`rounded-lg px-3 py-2 ${
                                         leaveSubTab === "team"
-                                          ? "bg-wt-surface-3 text-wt-text"
+                                          ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                           : "text-wt-text-muted hover:bg-wt-surface-2"
                                       }`}
                                     >
                                       Team Requests
-                                    </button>
+                                    </Button>
                                   ) : null}
                                   {hasHrAccess ? (
-                                    <button
+                                    <Button
                                       type="button"
+                                      variant="ghost"
+                                      size="sm"
                                       onClick={() => setLeaveSubTab("org")}
-                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                      className={`rounded-lg px-3 py-2 ${
                                         leaveSubTab === "org"
-                                          ? "bg-wt-surface-3 text-wt-text"
+                                          ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                           : "text-wt-text-muted hover:bg-wt-surface-2"
                                       }`}
                                     >
                                       All Employee Requests
-                                    </button>
+                                    </Button>
                                   ) : null}
                                   {showCompOffTab ? (
-                                    <button
+                                    <Button
                                       type="button"
+                                      variant="ghost"
+                                      size="sm"
                                       onClick={() => setLeaveSubTab("comp-off")}
-                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                      className={`rounded-lg px-3 py-2 ${
                                         leaveSubTab === "comp-off"
-                                          ? "bg-wt-surface-3 text-wt-text"
+                                          ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                           : "text-wt-text-muted hover:bg-wt-surface-2"
                                       }`}
                                     >
                                       Comp Off Credit
-                                    </button>
+                                    </Button>
                                   ) : null}
                                   {hasHrAccess ? (
-                                    <button
+                                    <Button
                                       type="button"
+                                      variant="ghost"
+                                      size="sm"
                                       onClick={() => setLeaveSubTab("balances")}
-                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                      className={`rounded-lg px-3 py-2 ${
                                         leaveSubTab === "balances"
-                                          ? "bg-wt-surface-3 text-wt-text"
+                                          ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                           : "text-wt-text-muted hover:bg-wt-surface-2"
                                       }`}
                                     >
                                       Balances
-                                    </button>
+                                    </Button>
                                   ) : null}
                                 </>
                               ) : (
                                 <>
-                              <button
+                              <Button
                                 type="button"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => setLeaveSubTab("my")}
-                                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                className={`rounded-lg px-3 py-2 ${
                                   leaveSubTab === "my"
-                                    ? "bg-wt-surface-3 text-wt-text"
+                                    ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                     : "text-wt-text-muted hover:bg-wt-surface-2"
                                 }`}
                               >
                                 Leave Requests
-                              </button>
+                              </Button>
                               {showCompOffTab ? (
-                                <button
+                                <Button
                                   type="button"
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => setLeaveSubTab("comp-off")}
-                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  className={`rounded-lg px-3 py-2 ${
                                     leaveSubTab === "comp-off"
-                                      ? "bg-wt-surface-3 text-wt-text"
+                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                       : "text-wt-text-muted hover:bg-wt-surface-2"
                                   }`}
                                 >
                                   Comp Off Credit
-                                </button>
+                                </Button>
                               ) : null}
-                              <button
+                              <Button
                                 type="button"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => setLeaveSubTab("wfh")}
-                                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                className={`rounded-lg px-3 py-2 ${
                                   leaveSubTab === "wfh"
-                                    ? "bg-wt-surface-3 text-wt-text"
+                                    ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                     : "text-wt-text-muted hover:bg-wt-surface-2"
                                 }`}
                               >
                                 WFH
-                              </button>
+                              </Button>
                               {hasHrAccess ? (
-                                <button
+                                <Button
                                   type="button"
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => setLeaveSubTab("balances")}
-                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  className={`rounded-lg px-3 py-2 ${
                                     leaveSubTab === "balances"
-                                      ? "bg-wt-surface-3 text-wt-text"
+                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                       : "text-wt-text-muted hover:bg-wt-surface-2"
                                   }`}
                                 >
                                   Balances
-                                </button>
+                                </Button>
                               ) : null}
                                 </>
                               )}
@@ -3625,10 +3628,7 @@ export function LeavePageClient() {
                                 <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                               </div>
                               <div className="mt-4 flex gap-2">
-                                <button
-                                  type="button"
-                                  className="btn-primary px-3 py-2"
-                                  onClick={() =>
+                                <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
                                     runAction(
                                       userRequestActionLabel(
                                         leaveSubTab === "wfh" ? "WFH" : leaveRequestForm.request_type,
@@ -3770,19 +3770,16 @@ export function LeavePageClient() {
                                   disabled={actionLoading}
                                 >
                                   {editingLeaveRequestId ? "Save Changes" : "Submit Request"}
-                                </button>
+                                </Button>
                                 {editingLeaveRequestId ? (
-                                  <button
-                                    type="button"
-                                    className="btn-ghost px-3 py-2"
-                                    onClick={() => {
+                                  <Button variant="ghost" type="button" className="px-3 py-2" onClick={() => {
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
                                       setEditingLeaveRequestId("");
                                     }}
                                     disabled={actionLoading}
                                   >
                                     Cancel Edit
-                                  </button>
+                                  </Button>
                                 ) : null}
                               </div>
                             </div>
@@ -3803,14 +3800,11 @@ export function LeavePageClient() {
                                     onChange={(e) => setMyLeaveSearch(e.target.value)}
                                     aria-label="Search my leave requests"
                                   />
-                                  <button
-                                    type="button"
-                                    className="btn-primary px-3 py-2"
-                                    onClick={() => runAction("Refresh my requests", loadMyLeaveRequests)}
+                                  <Button variant="brand" type="button" className="px-3 py-2" onClick={() => runAction("Refresh my requests", loadMyLeaveRequests)}
                                     disabled={actionLoading}
                                   >
                                     Refresh
-                                  </button>
+                                  </Button>
                                 </div>
                               </div>
                               {activeSelfServeRequests.length ? (
@@ -3887,11 +3881,7 @@ export function LeavePageClient() {
                                             <TableCell className="px-3 py-2 max-w-[240px] truncate">{String(row.comments ?? "—")}</TableCell>
                                             <TableCell className="px-3 py-2 text-right">
                                               <div className="inline-flex items-center justify-end gap-1">
-                                                <button
-                                                  type="button"
-                                                  className="btn-action px-2.5 py-1.5 text-xs"
-                                                  disabled={actionLoading || !requestId || !isPending}
-                                                  onClick={() => {
+                                                <Button variant="brand" size="xs" type="button" className="px-2.5 py-1.5 text-xs" disabled={actionLoading || !requestId || !isPending} onClick={() => {
                                                     const rowType = String(
                                                       row.request_type ?? row.requestType ?? "LEAVE"
                                                     );
@@ -3912,10 +3902,11 @@ export function LeavePageClient() {
                                                   }}
                                                 >
                                                   Edit
-                                                </button>
-                                                <button
+                                                </Button>
+                                                <Button
                                                   type="button"
-                                                  className="rounded-lg px-2.5 py-1.5 text-xs border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50"
+                                                  variant="destructive"
+                                                  size="xs"
                                                   disabled={actionLoading || !requestId || !isPending}
                                                   onClick={() =>
                                                     runAction(
@@ -3939,7 +3930,7 @@ export function LeavePageClient() {
                                                   }
                                                 >
                                                   Revoke
-                                                </button>
+                                                </Button>
                                               </div>
                                             </TableCell>
                                           </TableRow>
@@ -4004,10 +3995,7 @@ export function LeavePageClient() {
                               options={[...USER_REQUEST_FILTER_TYPE_OPTIONS]}
                               onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, requestType: v }))}
                             />
-                            <button
-                              type="button"
-                              className="btn-primary px-3 py-2 h-10"
-                              onClick={() =>
+                            <Button variant="brand" type="button" className="px-3 py-2 h-10" onClick={() =>
                                 runAction(
                                   leaveSubTab === "org" ? "Refresh employee requests" : "Refresh team requests",
                                   () =>
@@ -4019,7 +4007,7 @@ export function LeavePageClient() {
                               disabled={actionLoading}
                             >
                               Fetch Requests
-                            </button>
+                            </Button>
                             <label className="sr-only" htmlFor="team-leave-search">
                               Search team requests
                             </label>
@@ -4180,9 +4168,11 @@ export function LeavePageClient() {
                                         <TableCell className="px-3 py-2 text-right">
                                           {hrCanActOnRow ? (
                                             <div className="inline-flex items-center justify-end gap-1">
-                                              <button
+                                              <Button
                                                 type="button"
-                                                className="rounded-lg px-2.5 py-1.5 text-xs border border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10 disabled:opacity-50"
+                                                variant="outline"
+                                                size="xs"
+                                                className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
                                                 disabled={actionLoading || !requestId || isRowUpdating}
                                                 onClick={() =>
                                                   runAction(
@@ -4207,10 +4197,11 @@ export function LeavePageClient() {
                                                 }
                                               >
                                                 {isRowUpdating ? "…" : "Approve"}
-                                              </button>
-                                              <button
+                                              </Button>
+                                              <Button
                                                 type="button"
-                                                className="rounded-lg px-2.5 py-1.5 text-xs border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50"
+                                                variant="destructive"
+                                                size="xs"
                                                 disabled={actionLoading || !requestId || isRowUpdating}
                                                 onClick={() =>
                                                   runAction(
@@ -4235,13 +4226,15 @@ export function LeavePageClient() {
                                                 }
                                               >
                                                 Reject
-                                              </button>
+                                              </Button>
                                             </div>
                                           ) : showManagerActions ? (
                                             <div className="inline-flex items-center justify-end gap-1">
-                                              <button
+                                              <Button
                                                 type="button"
-                                                className="rounded-lg px-2.5 py-1.5 text-xs border border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10 disabled:opacity-50"
+                                                variant="outline"
+                                                size="xs"
+                                                className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
                                                 disabled={actionLoading || !requestId}
                                                 onClick={() =>
                                                   runAction(
@@ -4259,11 +4252,12 @@ export function LeavePageClient() {
                                                 }
                                               >
                                                 Approve
-                                              </button>
+                                              </Button>
                                               {showManagerReject ? (
-                                                <button
+                                                <Button
                                                   type="button"
-                                                  className="rounded-lg px-2.5 py-1.5 text-xs border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50"
+                                                  variant="destructive"
+                                                  size="xs"
                                                   disabled={actionLoading || !requestId}
                                                   onClick={() =>
                                                     openRejectDialog(
@@ -4273,7 +4267,7 @@ export function LeavePageClient() {
                                                   }
                                                 >
                                                   Reject
-                                                </button>
+                                                </Button>
                                               ) : null}
                                             </div>
                                           ) : blockedHint ? (

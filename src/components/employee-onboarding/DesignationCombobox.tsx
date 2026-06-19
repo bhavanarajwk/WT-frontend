@@ -6,6 +6,7 @@ import { hrmsService } from "@/services/hrms.service";
 import type { Designation } from "@/types/masters";
 import { parseDesignation, parseDesignationList } from "@/utils/masters";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 
@@ -208,31 +209,33 @@ export function DesignationCombobox({
             ) : null}
             {options.map((item) => (
               <li key={item.id}>
-                <button
+                <Button
                   type="button"
                   role="option"
+                  variant="ghost"
                   aria-selected={value === item.name}
-                  className={`block w-full px-3 py-2 text-left hover:bg-wt-surface-2 ${
+                  className={`block h-auto w-full justify-start rounded-none px-3 py-2 font-normal hover:bg-wt-surface-2 ${
                     value === item.name ? "bg-wt-surface-2 font-medium" : ""
                   }`}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => selectDesignation(item.name)}
                 >
                   {item.name}
-                </button>
+                </Button>
               </li>
             ))}
             {showAddOption ? (
               <li className="border-t border-wt-border">
-                <button
+                <Button
                   type="button"
-                  className="block w-full px-3 py-2 text-left text-indigo-700 hover:bg-indigo-50 disabled:opacity-60"
+                  variant="ghost"
+                  className="block h-auto w-full justify-start rounded-none px-3 py-2 text-indigo-700 hover:bg-indigo-50"
                   disabled={isCreating}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => void handleCreate()}
                 >
                   {isCreating ? "Adding…" : `Add "${trimmedQuery}" as new designation`}
-                </button>
+                </Button>
               </li>
             ) : null}
           </ul>

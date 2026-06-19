@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -204,39 +205,13 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            <button
-              type="button"
-              className="btn-primary px-4 py-2 text-sm"
-              disabled={
-                actionLoading ||
-                !trainingId ||
-                !traineeRows.length ||
-                !assessmentId
-              }
-              onClick={saveScores}
-            >
+            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={ actionLoading || !trainingId || !traineeRows.length || !assessmentId } onClick={saveScores} >
               {actionLoading ? "Saving…" : "Save scores"}
-            </button>
+            </Button>
             {hasHrAccess ? (
-              <button
-                type="button"
-                className="btn-ghost px-4 py-2 text-sm border border-wt-border rounded-lg"
-                disabled={
-                  actionLoading ||
-                  !trainingId ||
-                  !traineeRows.length ||
-                  !assessmentId ||
-                  marksAlreadyPublished
-                }
-                title={
-                  marksAlreadyPublished
-                    ? "Marks for this assessment are already published."
-                    : "Email published scores to all trainees for the selected assessment."
-                }
-                onClick={publishScores}
-              >
+              <Button variant="outline" size="sm" type="button" className="px-4 py-2 text-sm border border-wt-border rounded-lg" disabled={ actionLoading || !trainingId || !traineeRows.length || !assessmentId || marksAlreadyPublished } title={ marksAlreadyPublished ? "Marks for this assessment are already published." : "Email published scores to all trainees for the selected assessment." } onClick={publishScores} >
                 {actionLoading ? "Publishing…" : "Publish"}
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>

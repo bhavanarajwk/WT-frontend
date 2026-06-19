@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
@@ -182,14 +183,9 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
                       HR notes from the exit survey discussion. Clear the field and save to remove.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className="btn-primary px-3 py-1.5 text-sm"
-                    disabled={momSaving}
-                    onClick={saveMinutesOfMeeting}
-                  >
+                  <Button variant="brand" size="sm" type="button" className="px-3 py-1.5 text-sm" disabled={momSaving} onClick={saveMinutesOfMeeting} >
                     {momSaving ? "Saving…" : "Save MOM"}
-                  </button>
+                  </Button>
                 </div>
                 <Textarea
                   className="min-h-[140px]"

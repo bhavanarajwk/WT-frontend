@@ -11,6 +11,7 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { Button } from "@/components/ui/button";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -238,20 +239,22 @@ export function EmployeeAttendancePanel() {
           {ATTENDANCE_USER_TYPE_TABS.map((tab) => {
             const isActive = userTypeTab === tab.id;
             return (
-              <button
+              <Button
                 key={tab.id}
                 type="button"
                 role="tab"
+                variant="ghost"
+                size="sm"
                 aria-selected={isActive}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                className={`rounded-full px-3 py-1.5 ${
                   isActive
-                    ? "bg-wt-surface-3 text-wt-text"
+                    ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                     : "text-wt-text-muted hover:bg-wt-surface-2"
                 }`}
                 onClick={() => setUserTypeTab(tab.id)}
               >
                 {tab.label}
-              </button>
+              </Button>
             );
           })}
         </div>

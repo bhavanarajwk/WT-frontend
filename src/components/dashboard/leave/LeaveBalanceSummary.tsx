@@ -1,6 +1,7 @@
 "use client";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { Button } from "@/components/ui/button";
 import { useMyLeaveBalance } from "@/hooks/leave/useMyLeaveBalance";
 
 function BalanceTile({ label, value }: { label: string; value: number | string }) {
@@ -23,9 +24,9 @@ export function LeaveBalanceSummary() {
     return (
       <p className="text-sm text-rose-700">
         Could not load leave balance.{" "}
-        <button type="button" className="underline" onClick={() => void refetch()}>
+        <Button type="button" variant="link" className="h-auto p-0 underline" onClick={() => void refetch()}>
           Retry
-        </button>
+        </Button>
       </p>
     );
   }

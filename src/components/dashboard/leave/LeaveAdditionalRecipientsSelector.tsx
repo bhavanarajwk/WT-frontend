@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { hrmsService, type LeaveRecipientOption } from "@/services/hrms.service";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { unwrapLeaveOptionItems } from "@/utils/leaveApiOptions";
 
@@ -145,15 +146,17 @@ export function LeaveAdditionalRecipientsSelector({
                 className={`gap-1 pr-1 ${filledBadgeClass("neutral")}`}
               >
                 <span className="max-w-[220px] truncate">{label}</span>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   className="text-muted-foreground hover:text-foreground"
                   aria-label={`Remove ${label}`}
                   disabled={disabled}
                   onClick={() => removeEmail(email)}
                 >
                   ×
-                </button>
+                </Button>
               </Badge>
             );
           })}
@@ -161,9 +164,10 @@ export function LeaveAdditionalRecipientsSelector({
       ) : null}
 
       <div className="relative">
-        <button
+        <Button
           type="button"
-          className="input-field flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm"
+          variant="outline"
+          className="input-field flex h-auto w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-normal"
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-controls={listId}
@@ -174,7 +178,7 @@ export function LeaveAdditionalRecipientsSelector({
             {selectedEmails.length ? `${selectedEmails.length} selected` : "Select employees…"}
           </span>
           <span aria-hidden>▾</span>
-        </button>
+        </Button>
 
         {open ? (
           <div

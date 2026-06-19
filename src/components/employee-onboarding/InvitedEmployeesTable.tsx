@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import {
   TableBody,
   TableCell,
@@ -219,11 +220,7 @@ export function InvitedEmployeesTable({
                   ))}
                   <TableCell className="px-3 py-2 whitespace-nowrap">
                     {canResend ? (
-                      <button
-                        type="button"
-                        className="btn-action px-2.5 py-1 text-xs"
-                        disabled={actionLoading || isResending}
-                        onClick={() => onResendInvite(email)}
+                      <Button variant="brand" size="xs" type="button" className="px-2.5 py-1 text-xs" disabled={actionLoading || isResending} onClick={() => onResendInvite(email)}
                       >
                         {isResending ? (
                           <span className="inline-flex items-center gap-2">
@@ -233,7 +230,7 @@ export function InvitedEmployeesTable({
                         ) : (
                           "Resend Invite"
                         )}
-                      </button>
+                      </Button>
                     ) : (
                       <span className="text-xs text-wt-text-muted">—</span>
                     )}

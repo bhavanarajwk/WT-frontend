@@ -12,6 +12,7 @@ import { formatApiDateDisplay } from "@/utils/apiDate";
 import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
 import {
   PROFILE_TABLE_BODY_CELL,
+  PROFILE_TABLE_CLASS,
   PROFILE_TABLE_HEAD_CELL,
   PROFILE_TABLE_SCROLL,
 } from "@/components/dashboard/profile/profileTableStyles";
@@ -75,8 +76,8 @@ export function ProfileAssignedProjectsSection({
           <p className="text-sm text-wt-text-muted">No projects assigned.</p>
         ) : (
           <div className={PROFILE_TABLE_SCROLL}>
-            <WtTable className="min-w-full">
-              <TableHeader className="[&_tr]:border-b">
+            <WtTable className={PROFILE_TABLE_CLASS}>
+              <TableHeader className="bg-wt-surface-2 [&_tr]:border-b">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className={PROFILE_TABLE_HEAD_CELL}>Project Name</TableHead>
                   <TableHead className={PROFILE_TABLE_HEAD_CELL}>Role In Project</TableHead>

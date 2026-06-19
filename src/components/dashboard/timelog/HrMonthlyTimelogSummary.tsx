@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -52,34 +53,21 @@ export function HrMonthlyTimelogSummary({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="btn-ghost rounded-lg border border-wt-border px-3 py-1.5 text-sm"
-            disabled={loading}
-            onClick={() => onMonthChange(shiftMonth(month, -1))}
+          <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-1.5 text-sm" disabled={loading} onClick={() => onMonthChange(shiftMonth(month, -1))}
           >
             Previous month
-          </button>
+          </Button>
           <span className="min-w-[10rem] text-center text-sm font-semibold tabular-nums">
             {formatMonthYearLabel(month)}
           </span>
-          <button
-            type="button"
-            className="btn-ghost rounded-lg border border-wt-border px-3 py-1.5 text-sm"
-            disabled={loading || isCurrentMonth}
-            onClick={() => onMonthChange(shiftMonth(month, 1))}
+          <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-1.5 text-sm" disabled={loading || isCurrentMonth} onClick={() => onMonthChange(shiftMonth(month, 1))}
           >
             Next month
-          </button>
+          </Button>
         </div>
-        <button
-          type="button"
-          className="btn-ghost rounded-lg border border-wt-border px-3 py-2 text-sm"
-          disabled={loading}
-          onClick={onRefresh}
-        >
+        <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-2 text-sm" disabled={loading} onClick={onRefresh} >
           Refresh
-        </button>
+        </Button>
       </div>
 
       {error ? (

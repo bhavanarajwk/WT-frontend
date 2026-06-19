@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
@@ -27,6 +28,16 @@ import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 import { Badge } from "@/components/ui/badge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
+import {
+  SIDEBAR_CHILD_BLOCK,
+  SIDEBAR_CHILD_ICON_WRAP,
+  SIDEBAR_CHILD_ROW,
+  SIDEBAR_CHILD_TEXT,
+  SIDEBAR_ICON_WRAP,
+  SIDEBAR_NAV_LABEL,
+  SIDEBAR_NAV_ROW,
+  SIDEBAR_PARENT_TEXT,
+} from "@/components/dashboard/ui/sidebarLayout";
 
 function IconUser({ className = "" }: { className?: string }) {
   return (
@@ -241,47 +252,48 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   return (
     <div className="wt-page-scroll h-dvh overflow-y-auto bg-wt-bg text-wt-text">
       <div className="flex min-h-full max-lg:flex-col lg:flex-row">
-      <aside className="sticky top-0 z-20 flex max-h-[min(36vh,260px)] shrink-0 flex-col border-b border-wt-border bg-wt-surface-1 p-4 max-lg:relative max-lg:min-h-0 lg:h-dvh lg:max-h-dvh lg:w-[250px] lg:border-b-0 lg:border-r lg:p-5">
-        <div className="mb-4 shrink-0">
-          <WebTrakBrand variant="sidebar" />
+      <aside className="sticky top-0 z-20 flex max-h-[min(36vh,260px)] shrink-0 flex-col overflow-x-hidden border-b border-wt-border bg-wt-surface-1 p-4 max-lg:relative max-lg:min-h-0 lg:h-dvh lg:max-h-dvh lg:w-[250px] lg:min-w-0 lg:border-b-0 lg:border-r lg:p-5">
+        <div className="mb-4 min-w-0 shrink-0">
+          <WebTrakBrand variant="sidebar" className="min-w-0" />
         </div>
-        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+        <nav className="min-h-0 min-w-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto">
           {visibleNavigation.map((item) => {
             if (item.kind === "group") {
               const isExpanded = expandedSection === item.id;
               const groupActive = item.children.some((child) => isNavChildActive(child.id));
               return (
                 <div key={item.id} className="space-y-0.5">
-                  <button
+                  <Button
                     type="button"
-                    onClick={() => toggleExpandedSection(item.id)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
+                    variant="ghost"
+                    className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} ${
                       !isLearningRoute && groupActive
-                        ? "bg-wt-surface-3 text-wt-text"
+                        ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                         : "text-wt-text-muted hover:bg-wt-surface-2"
                     }`}
+                    onClick={() => toggleExpandedSection(item.id)}
                   >
-                    <SidebarIcon name={item.icon} />
-                    <span className="flex-1 text-left">{item.label}</span>
+                    <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
+                    <span className={SIDEBAR_NAV_LABEL}>{item.label}</span>
                     <SidebarIcon
                       name={isExpanded ? "chevronDown" : "chevronRight"}
-                      className="opacity-60"
+                      className={`${SIDEBAR_ICON_WRAP} opacity-60`}
                     />
-                  </button>
+                  </Button>
                   {isExpanded ? (
-                    <div className="ml-3 space-y-0.5 border-l border-wt-border pl-2">
+                    <div className="ml-3 min-w-0 space-y-0.5 border-l border-wt-border pl-2">
                       {item.children.map((child) => (
                         <Link prefetch={false}
                           key={child.id}
                           href={dashboardHref(child.id)}
-                          className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition ${
+                          className={`${SIDEBAR_CHILD_ROW} ${SIDEBAR_CHILD_TEXT} ${
                             !isLearningRoute && isNavChildActive(child.id)
                               ? "bg-wt-surface-3 text-wt-text"
                               : "text-wt-text-muted hover:bg-wt-surface-2"
                           }`}
                         >
-                          <SidebarIcon name={child.icon} />
-                          <span>{child.label}</span>
+                          <SidebarIcon name={child.icon} className={SIDEBAR_CHILD_ICON_WRAP} />
+                          <span className={SIDEBAR_NAV_LABEL}>{child.label}</span>
                         </Link>
                       ))}
                     </div>
@@ -296,29 +308,30 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               const groupActive = activeSection.startsWith("reports-");
               return (
                 <div key={item.id} className="space-y-0.5">
-                  <button
+                  <Button
                     type="button"
-                    onClick={() => toggleExpandedSection("reports")}
-                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
+                    variant="ghost"
+                    className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} ${
                       !isLearningRoute && groupActive
-                        ? "bg-wt-surface-3 text-wt-text"
+                        ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                         : "text-wt-text-muted hover:bg-wt-surface-2"
                     }`}
+                    onClick={() => toggleExpandedSection("reports")}
                   >
-                    <SidebarIcon name={item.icon} />
-                    <span className="flex-1 text-left">{item.label}</span>
+                    <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
+                    <span className={SIDEBAR_NAV_LABEL}>{item.label}</span>
                     <SidebarIcon
                       name={isExpanded ? "chevronDown" : "chevronRight"}
-                      className="opacity-60"
+                      className={`${SIDEBAR_ICON_WRAP} opacity-60`}
                     />
-                  </button>
+                  </Button>
                   {isExpanded ? (
-                    <div className="ml-3 space-y-0.5 border-l border-wt-border pl-2">
+                    <div className="ml-3 min-w-0 space-y-0.5 border-l border-wt-border pl-2">
                       {children.map((child) => (
                         <Link prefetch={false}
                           key={child.id}
                           href={dashboardHref(child.id)}
-                          className={`block w-full rounded-lg px-3 py-1.5 text-left text-xs transition ${
+                          className={`${SIDEBAR_CHILD_BLOCK} ${SIDEBAR_CHILD_TEXT} ${
                             !isLearningRoute && activeSection === child.id
                               ? "bg-wt-surface-3 text-wt-text"
                               : "text-wt-text-muted hover:bg-wt-surface-2"
@@ -337,22 +350,23 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               const isExpanded = expandedSection === "learning";
               return (
                 <div key={item.id} className="space-y-0.5">
-                  <button
+                  <Button
                     type="button"
-                    onClick={() => toggleExpandedSection("learning")}
-                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
-                      isLearningRoute ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
+                    variant="ghost"
+                    className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} ${
+                      isLearningRoute ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
                     }`}
+                    onClick={() => toggleExpandedSection("learning")}
                   >
-                    <SidebarIcon name={item.icon} />
-                    <span className="flex-1 text-left">{item.label}</span>
+                    <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
+                    <span className={SIDEBAR_NAV_LABEL}>{item.label}</span>
                     <SidebarIcon
                       name={isExpanded ? "chevronDown" : "chevronRight"}
-                      className="opacity-60"
+                      className={`${SIDEBAR_ICON_WRAP} opacity-60`}
                     />
-                  </button>
+                  </Button>
                   {isExpanded ? (
-                    <div className="ml-3 space-y-0.5 border-l border-wt-border pl-2">
+                    <div className="ml-3 min-w-0 space-y-0.5 border-l border-wt-border pl-2">
                       {learningSubNav.map((link) => {
                         const active =
                           pathname === link.href ||
@@ -365,7 +379,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                           <Link prefetch={false}
                             key={link.href}
                             href={link.href}
-                            className={`block w-full rounded-lg px-3 py-1.5 text-left text-xs transition ${
+                            className={`${SIDEBAR_CHILD_BLOCK} ${SIDEBAR_CHILD_TEXT} ${
                               active ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
                             }`}
                           >
@@ -384,14 +398,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 <Link prefetch={false}
                   key={item.id}
                   href={dashboardHref(item.id)}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
+                  className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} ${
                     !isLearningRoute && activeSection === item.id
                       ? "bg-wt-surface-3 text-wt-text"
                       : "text-wt-text-muted hover:bg-wt-surface-2"
                   }`}
                 >
-                  <SidebarIcon name={item.icon} />
-                  <span>{item.label}</span>
+                  <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
+                  <span className={SIDEBAR_NAV_LABEL}>{item.label}</span>
                 </Link>
               );
             }
@@ -403,15 +417,15 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           <div className="mt-4 shrink-0 border-t border-wt-border pt-4">
             <Link prefetch={false}
               href={dashboardHref("profile")}
-              className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition ${
+              className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} rounded-xl border transition ${
                 activeSection === "profile"
                   ? "border-wt-border bg-wt-surface-3 text-wt-text"
                   : "border-transparent bg-wt-surface-2 text-wt-text-muted hover:bg-wt-surface-3 hover:text-wt-text"
               }`}
               aria-label="Profile"
             >
-              <IconUser className="shrink-0" />
-              Profile
+              <IconUser className={SIDEBAR_ICON_WRAP} />
+              <span className={SIDEBAR_NAV_LABEL}>Profile</span>
             </Link>
           </div>
         ) : null}
@@ -497,10 +511,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(100vw-2rem,360px)] rounded-xl border border-wt-border bg-wt-surface-1 p-4 shadow-lg">
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="text-sm font-semibold">Notifications</h3>
-                  <button
-                    type="button"
-                    className="btn-ghost px-2.5 py-1.5 text-xs"
-                    onClick={() =>
+                  <Button variant="ghost" size="xs" type="button" className="px-2.5 py-1.5 text-xs" onClick={() =>
                       runAction("Mark all notifications read", async () => {
                         await hrmsService.markAllNotificationsRead();
                         await loadNotifications();
@@ -509,7 +520,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                     disabled={actionLoading || !notifications.length}
                   >
                     Read All
-                  </button>
+                  </Button>
                 </div>
                 <div className="max-h-[320px] space-y-2 overflow-auto pr-1">
                   {notifications.length ? (
@@ -531,9 +542,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                               {message}
                             </p>
                           </div>
-                          <button
+                          <Button
                             type="button"
-                            className="rounded-md border border-wt-border p-1 text-wt-text-muted hover:bg-wt-surface-3 disabled:opacity-40"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="rounded-md border border-wt-border text-wt-text-muted hover:bg-wt-surface-3 disabled:opacity-40"
                             disabled={actionLoading || isRead || !id}
                             onClick={() =>
                               runAction("Mark notification read", async () => {
@@ -543,7 +556,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                             }
                           >
                             <IconCheck />
-                          </button>
+                          </Button>
                         </div>
                       );
                     })
@@ -585,13 +598,15 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                     aria-label="Theme"
                   />
                 </div>
-                <button
+                <Button
                   type="button"
-                  className="w-full rounded-lg border border-red-600/90 bg-red-600 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700"
+                  variant="destructive"
+                  className="w-full"
+                  size="lg"
                   onClick={() => void logout()}
                 >
                   Logout
-                </button>
+                </Button>
               </div>
             </details>
           </div>

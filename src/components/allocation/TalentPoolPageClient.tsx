@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -85,14 +86,10 @@ export function TalentPoolPageClient() {
               placeholder="Search"
               aria-label="Search"
             />
-            <button
-              type="button"
-              className="btn-primary px-4 py-2 text-sm"
-              disabled={loading}
-              onClick={() => void loadDashboard()}
+            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={loading} onClick={() => void loadDashboard()}
             >
               Refresh
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -210,22 +207,24 @@ function TablePager({
       <span>
         Page {page + 1} of {totalPages}
       </span>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="xs"
         disabled={page <= 0 || loading}
         onClick={() => onPageChange(page - 1)}
-        className="rounded-lg border border-wt-border bg-wt-surface-2 px-2 py-1 disabled:opacity-50"
       >
         Prev
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="outline"
+        size="xs"
         disabled={page + 1 >= totalPages || loading}
         onClick={() => onPageChange(page + 1)}
-        className="rounded-lg border border-wt-border bg-wt-surface-2 px-2 py-1 disabled:opacity-50"
       >
         Next
-      </button>
+      </Button>
     </div>
   );
 }
@@ -239,14 +238,16 @@ function AllocateButton({
 }) {
   const label = displayName || item.employee_email;
   return (
-    <Link
-      href={buildAllocateHref(item)}
-      className="btn-action-icon inline-flex items-center justify-center p-2"
+    <Button
+      variant="brand"
+      size="icon-sm"
+      className="inline-flex items-center justify-center p-2"
+      render={<Link href={buildAllocateHref(item)} />}
       title={`Allocate ${label}`}
       aria-label={`Allocate ${label}`}
     >
       <AllocateIcon />
-    </Link>
+    </Button>
   );
 }
 

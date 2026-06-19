@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -120,21 +121,14 @@ export function ResumesPageClient() {
 
         <div className="space-y-4 p-5 md:p-7">
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="btn-primary px-3 py-2 text-sm"
-              disabled={isLoading}
-              onClick={() => void refetch()}
+            <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" disabled={isLoading} onClick={() => void refetch()}
             >
               Refresh
-            </button>
-            <button
-              type="button"
-              className="btn-ghost px-3 py-2 text-sm"
-              onClick={() => setShowRawJson((v) => !v)}
+            </Button>
+            <Button variant="ghost" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() => setShowRawJson((v) => !v)}
             >
               {showRawJson ? "Hide" : "Show"} API response
-            </button>
+            </Button>
           </div>
 
           {isLoading ? <SectionLoading label="Loading resumes…" /> : null}
@@ -142,9 +136,9 @@ export function ResumesPageClient() {
           {isError ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               <p>Could not load resumes.{error instanceof Error ? ` ${error.message}` : ""}</p>
-              <button type="button" className="btn-ghost mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
+              <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
                 Retry
-              </button>
+              </Button>
             </div>
           ) : null}
 

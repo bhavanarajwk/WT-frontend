@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -327,33 +328,19 @@ export function TimelogPageClient() {
                   <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={loading} />
                 ) : null}
                 {!isHrTeamView ? (
-                  <button
-                    type="button"
-                    className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg"
-                    disabled={loading}
-                    onClick={() => void loadWeek()}
+                  <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm border border-wt-border rounded-lg" disabled={loading} onClick={() => void loadWeek()}
                   >
                     Refresh
-                  </button>
+                  </Button>
                 ) : null}
                 {!isTeamView ? (
                   <>
-                    <button
-                      type="button"
-                      className="btn-ghost px-4 py-2 text-sm border border-wt-border rounded-lg"
-                      disabled={actionLoading || loading}
-                      onClick={saveWeek}
-                    >
+                    <Button variant="outline" size="sm" type="button" className="px-4 py-2 text-sm border border-wt-border rounded-lg" disabled={actionLoading || loading} onClick={saveWeek} >
                       {actionLoading ? "Saving…" : "Save"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-primary px-4 py-2 text-sm"
-                      disabled={actionLoading || loading}
-                      onClick={submitWeek}
-                    >
+                    </Button>
+                    <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={actionLoading || loading} onClick={submitWeek} >
                       {actionLoading ? "Submitting…" : "Submit"}
-                    </button>
+                    </Button>
                   </>
                 ) : null}
               </div>

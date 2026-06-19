@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -91,9 +92,9 @@ export function AssignAccountManagerPageClient() {
           {isError ? (
             <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               Could not load employees.{error instanceof Error ? ` ${error.message}` : ""}
-              <button type="button" className="btn-ghost mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
+              <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
                 Retry
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -127,14 +128,9 @@ export function AssignAccountManagerPageClient() {
                 </div>
               ) : null}
 
-              <button
-                type="button"
-                className="btn-primary px-4 py-2.5 text-sm"
-                disabled={!selected?.email || actionLoading}
-                onClick={assignAccountManager}
-              >
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2.5 text-sm" disabled={!selected?.email || actionLoading} onClick={assignAccountManager} >
                 Assign
-              </button>
+              </Button>
             </div>
           ) : null}
         </div>

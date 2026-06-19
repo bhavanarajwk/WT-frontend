@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Children, isValidElement, useId, useRef, type ReactElement, type ReactNode } from "react";
 import { CalendarIcon } from "lucide-react";
 import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
@@ -562,9 +563,9 @@ export function UploadTile({
         onChange={(e) => onPick(e.target.files?.[0] ?? null)}
       />
       <p className="truncate text-xs text-muted-foreground">{file ? file.name : "No file selected"}</p>
-      <button type="button" className="btn-primary px-2.5 py-1.5 text-sm" onClick={onUpload} disabled={loading || !file}>
+      <Button variant="brand" size="sm" type="button" className="px-2.5 py-1.5 text-sm" onClick={onUpload} disabled={loading || !file}>
         Upload
-      </button>
+      </Button>
     </div>
   );
 }

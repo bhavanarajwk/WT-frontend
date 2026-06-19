@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -108,14 +109,9 @@ export function TrainersPageClient() {
                 placeholder="Select trainer"
                 options={trainerOptions.map((o) => ({ value: o.id, label: o.label }))}
               />
-              <button
-                type="button"
-                className="btn-primary px-4 py-2 text-sm shrink-0"
-                disabled={!trainerPick || !trainingId}
-                onClick={assignTrainer}
-              >
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={!trainerPick || !trainingId} onClick={assignTrainer} >
                 Assign
-              </button>
+              </Button>
             </div>
             {onboardQ.isLoading ? (
               <SectionLoading compact label="Loading employees from onboard list…" className="py-2" />

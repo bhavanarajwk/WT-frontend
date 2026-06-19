@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -128,35 +129,28 @@ export function AnnualCalendarPageClient() {
                   />
                 </div>
               </div>
-              <button
-                type="button"
-                className="btn-primary px-4 py-2 text-sm"
-                disabled={actionLoading}
-                onClick={() =>
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={actionLoading} onClick={() =>
                   runAction("Upload annual calendar", async () => {
                     await submitUpload();
                   })
                 }
               >
                 Upload calendar
-              </button>
+              </Button>
             </section>
           ) : null}
 
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h4 className="font-semibold">Available Calendars</h4>
-              <button
-                type="button"
-                className="btn-ghost px-3 py-2 text-sm"
-                onClick={() =>
+              <Button variant="ghost" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() =>
                   runAction("Refresh annual calendar list", async () => {
                     await loadCalendars();
                   })
                 }
               >
                 Refresh
-              </button>
+              </Button>
             </div>
             {isLoading ? (
               <SectionLoading label="Loading calendars…" />

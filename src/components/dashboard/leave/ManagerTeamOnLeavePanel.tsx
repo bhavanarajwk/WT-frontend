@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -53,9 +54,9 @@ export function ManagerTeamOnLeavePanel() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <InputField label="As of date" type="date" value={asOfDate} onChange={setAsOfDate} />
-          <button type="button" className="btn-ghost px-3 py-2 h-10 border border-wt-border" onClick={() => void load()}>
+          <Button variant="outline" type="button" className="px-3 py-2 h-10 border border-wt-border" onClick={() => void load()}>
             Refresh
-          </button>
+          </Button>
         </div>
       </div>
 

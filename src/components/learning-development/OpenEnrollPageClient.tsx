@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
@@ -33,9 +34,9 @@ export function OpenEnrollPageClient() {
           onChange={setTrainingId}
           placeholder="e.g. 12"
         />
-        <button type="button" className="btn-primary px-4 py-2 text-sm" disabled={enrollMut.isPending || !trainingId.trim()} onClick={() => enrollMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
+        <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={enrollMut.isPending || !trainingId.trim()} onClick={() => enrollMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
           Enroll
-        </button>
+        </Button>
       </div>
     </section>
   );

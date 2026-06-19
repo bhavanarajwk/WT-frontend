@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -351,23 +352,16 @@ export function ExitSurveyFollowUpPanel() {
             { value: "COMPLETED", label: "Completed" },
           ]}
         />
-        <button
-          type="button"
-          className="btn-ghost px-3 py-2 text-sm h-10 border border-wt-border rounded-lg"
-          onClick={() => void loadFollowUpList()}
+        <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm h-10 border border-wt-border rounded-lg" onClick={() => void loadFollowUpList()}
           disabled={loadingList}
         >
           Refresh
-        </button>
+        </Button>
         {selectedResendableCount > 0 ? (
-          <button
-            type="button"
-            className="btn-action ml-auto px-3 py-2 text-sm h-10"
-            disabled={loadingList || bulkResending || Boolean(resendingEmpId)}
-            onClick={() => void handleBulkResendExitSurvey()}
+          <Button variant="brand" size="sm" type="button" className="ml-auto px-3 py-2 text-sm h-10" disabled={loadingList || bulkResending || Boolean(resendingEmpId)} onClick={() => void handleBulkResendExitSurvey()}
           >
             {bulkResending ? "Sending…" : `Resend Exit Survey (${selectedResendableCount})`}
-          </button>
+          </Button>
         ) : null}
       </div>
 
@@ -375,13 +369,10 @@ export function ExitSurveyFollowUpPanel() {
         <div className="space-y-2 rounded-xl border border-wt-border bg-wt-surface-1 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-sm font-semibold">Bulk Resend Results</h4>
-            <button
-              type="button"
-              className="btn-ghost px-2 py-1 text-xs"
-              onClick={() => setBulkResendResults([])}
+            <Button variant="ghost" size="xs" type="button" className="px-2 py-1 text-xs" onClick={() => setBulkResendResults([])}
             >
               Dismiss
-            </button>
+            </Button>
           </div>
           <ul className="max-h-48 space-y-2 overflow-y-auto text-sm">
             {bulkResendResults.map((result) => (
@@ -525,17 +516,13 @@ export function ExitSurveyFollowUpPanel() {
                           <div className="inline-flex items-center gap-2">
                             <span className="text-xs text-wt-text-muted">Pending</span>
                             {canResend ? (
-                              <button
-                                type="button"
-                                className="btn-action px-2.5 py-1 text-xs"
-                                disabled={loadingList || isResending || bulkResending}
-                                onClick={(e) => {
+                              <Button variant="brand" size="xs" type="button" className="px-2.5 py-1 text-xs" disabled={loadingList || isResending || bulkResending} onClick={(e) => {
                                   e.stopPropagation();
                                   void handleResendExitSurvey(empId, row.email);
                                 }}
                               >
                                 {isResending ? "Sending…" : "Resend Exit Survey"}
-                              </button>
+                              </Button>
                             ) : null}
                           </div>
                         )}

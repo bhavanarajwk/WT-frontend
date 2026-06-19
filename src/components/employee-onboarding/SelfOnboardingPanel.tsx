@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
@@ -345,9 +346,9 @@ export function SelfOnboardingPanel({
         </p>
       )}
       <div className="mt-4">
-        <button type="button" className="btn-primary px-3 py-2" onClick={submit} disabled={actionLoading}>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={submit} disabled={actionLoading}>
           Submit Onboarding Form
-        </button>
+        </Button>
       </div>
     </div>
   );

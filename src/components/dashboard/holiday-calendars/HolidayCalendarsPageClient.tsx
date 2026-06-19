@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import {
   TableBody,
   TableCell,
@@ -174,20 +175,12 @@ export function HolidayCalendarsPageClient() {
               />
 
               <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-                <button
-                  type="button"
-                  className="btn-secondary w-full"
-                  disabled={actionLoading}
-                  onClick={() => holidayFileRef.current?.click()}
+                <Button variant="outline" type="button" className="w-full" disabled={actionLoading} onClick={() => holidayFileRef.current?.click()}
                 >
                   <UploadIcon />
                   Import CSV
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary w-full"
-                  disabled={actionLoading}
-                  onClick={() =>
+                </Button>
+                <Button variant="outline" type="button" className="w-full" disabled={actionLoading} onClick={() =>
                     runAction("Export Holidays", async () => {
                       const blob = await hrmsService.downloadHolidayCalendarsCsv();
                       downloadBlob(blob, "company-holidays.csv");
@@ -196,7 +189,7 @@ export function HolidayCalendarsPageClient() {
                 >
                   <DownloadIcon />
                   Export CSV
-                </button>
+                </Button>
               </div>
             </section>
           ) : null}
@@ -232,20 +225,12 @@ export function HolidayCalendarsPageClient() {
               />
 
               <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-                <button
-                  type="button"
-                  className="btn-secondary w-full"
-                  disabled={actionLoading}
-                  onClick={() => assignmentFileRef.current?.click()}
+                <Button variant="outline" type="button" className="w-full" disabled={actionLoading} onClick={() => assignmentFileRef.current?.click()}
                 >
                   <UploadIcon />
                   Import Assignments CSV
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary w-full"
-                  disabled={actionLoading}
-                  onClick={() =>
+                </Button>
+                <Button variant="outline" type="button" className="w-full" disabled={actionLoading} onClick={() =>
                     runAction("Export Assignments", async () => {
                       const blob = await hrmsService.downloadEmployeeHolidayAssignmentsCsv();
                       downloadBlob(blob, "employee-holiday-assignments.csv");
@@ -254,7 +239,7 @@ export function HolidayCalendarsPageClient() {
                 >
                   <DownloadIcon />
                   Export Assignments CSV
-                </button>
+                </Button>
               </div>
             </section>
           ) : null}
@@ -272,14 +257,10 @@ export function HolidayCalendarsPageClient() {
                   {isLoading ? "Loading…" : `${holidayCount} holidays`}
                 </p>
               </div>
-              <button
-                type="button"
-                className="btn-ghost w-full shrink-0 px-3 py-2 text-sm sm:w-auto"
-                disabled={actionLoading || isLoading}
-                onClick={() => runAction("Refresh Calendar", loadCalendar)}
+              <Button variant="ghost" size="sm" type="button" className="w-full shrink-0 px-3 py-2 text-sm sm:w-auto" disabled={actionLoading || isLoading} onClick={() => runAction("Refresh Calendar", loadCalendar)}
               >
                 Refresh
-              </button>
+              </Button>
             </div>
 
             {isLoading ? (

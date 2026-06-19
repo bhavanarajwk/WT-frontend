@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { DatePickerField, DropdownSelectField, InputField } from "@/components/dashboard/ui/forms";
@@ -381,14 +382,9 @@ export function HrOnboardForm({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          disabled={actionLoading}
-          onClick={submit}
-        >
+        <Button variant="brand" type="button" className="px-3 py-2" disabled={actionLoading} onClick={submit} >
           Create And Invite Employee
-        </button>
+        </Button>
       </div>
     </div>
   );

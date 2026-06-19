@@ -16,6 +16,7 @@ import { ApiError } from "@/api/error";
 import { hrmsService, type AllocationExtensionRequestRow, type AllocationExtensionRequestStatus } from "@/services/hrms.service";
 import { useAuth } from "@/context/AuthContext";
 import { ApiDateField, SelectField } from "@/components/dashboard/ui/forms";
+import { Button } from "@/components/ui/button";
 import {
   HrLeaveStatusToggle,
   type HrToggleStatus,
@@ -487,28 +488,31 @@ export function AllocationExtensionPanel() {
           </div>
 
           <div className="mt-4 flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="brand"
+              size="sm"
               disabled={
                 creating ||
                 loadingContext ||
                 (allocationContext != null && !allocationContext.extension_allowed)
               }
               onClick={() => void submitCreate()}
-              className="btn-primary px-4 py-2 text-sm"
+              className="px-4 py-2 text-sm"
             >
               {creating ? "Submitting…" : "Submit request"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => {
                 setCreateForm(createEmptyAllocationExtensionForm());
                 setAllocationContext(null);
               }}
-              className="rounded-xl border border-wt-border bg-wt-surface-2 px-4 py-2 text-sm text-wt-text hover:bg-wt-surface-3"
             >
               Clear
-            </button>
+            </Button>
           </div>
         </section>
       ) : null}
@@ -553,13 +557,9 @@ export function AllocationExtensionPanel() {
             />
           ) : null}
 
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="rounded-xl border border-wt-border bg-wt-surface-2 px-4 py-2 text-sm text-wt-text hover:bg-wt-surface-3"
-          >
+          <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
             Refresh
-          </button>
+          </Button>
         </div>
 
         {rows.length ? (
@@ -633,22 +633,24 @@ export function AllocationExtensionPanel() {
             Page {page + 1} of {Math.max(1, totalPages)}
           </p>
           <div className="inline-flex gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               disabled={!canPrev}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
-              className="rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-1.5 text-sm text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
             >
               Prev
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               disabled={!canNext}
               onClick={() => setPage((p) => p + 1)}
-              className="rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-1.5 text-sm text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       </section>

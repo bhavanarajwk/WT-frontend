@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -87,18 +88,14 @@ export function EmployeeTrainingMyMarks({
       <div className="space-y-3">
         <p className="text-sm text-wt-text-muted">{message}</p>
         {showEnroll ? (
-          <button
-            type="button"
-            className="btn-primary px-4 py-2 text-sm"
-            disabled={enrollMut.isPending}
-            onClick={() =>
+          <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={enrollMut.isPending} onClick={() =>
               enrollMut.mutate(undefined, {
                 onError: (e) => alert(e instanceof Error ? e.message : String(e)),
               })
             }
           >
             {enrollMut.isPending ? "Enrolling…" : "Enroll in this training"}
-          </button>
+          </Button>
         ) : null}
       </div>
     );

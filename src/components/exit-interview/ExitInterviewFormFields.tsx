@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/components/ui/button";
 import { isReadonlyField, textareaPlaceholder } from "@/utils/exitInterview";
 
 function FieldError({ message }: { message?: string }) {
@@ -114,19 +115,21 @@ function ScaleControl({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
         {buttons.map((n) => (
-          <button
+          <Button
             key={n}
             type="button"
+            variant="ghost"
+            size="sm"
             disabled={disabled}
             onClick={() => onChange(n)}
-            className={`min-w-[2.25rem] rounded-lg border px-2 py-1.5 text-sm tabular-nums transition ${
+            className={`min-w-[2.25rem] rounded-lg border px-2 py-1.5 tabular-nums ${
               value === n
-                ? "border-indigo-500 bg-indigo-50 text-indigo-800"
+                ? "border-indigo-500 bg-indigo-50 text-indigo-800 hover:bg-indigo-50 hover:text-indigo-800"
                 : "border-wt-border bg-wt-surface-1 text-wt-text hover:bg-wt-surface-2"
             }`}
           >
             {n}
-          </button>
+          </Button>
         ))}
       </div>
       {(field.min_label || field.max_label) && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -186,14 +187,10 @@ export function HrEmployeeTimelogPageClient() {
                 ...employeeOptions.map((opt) => ({ value: opt.email, label: opt.label })),
               ]}
             />
-            <button
-              type="button"
-              className="btn-primary px-4 py-2 text-sm"
-              disabled={actionLoading}
-              onClick={() => void runAction("Load employee timelogs", loadTimelogs)}
+            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={actionLoading} onClick={() => void runAction("Load employee timelogs", loadTimelogs)}
             >
               Load timelogs
-            </button>
+            </Button>
           </div>
 
           {sortedRows.length > 0 ? (

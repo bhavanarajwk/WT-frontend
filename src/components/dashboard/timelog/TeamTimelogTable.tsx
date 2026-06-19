@@ -1,6 +1,7 @@
 "use client";
 
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import { Button } from "@/components/ui/button";
 import {
   TableBody,
   TableCell,
@@ -84,16 +85,18 @@ export function TeamTimelogTable({ snapshot, dayDates, dayKeys }: TeamTimelogTab
           <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
             <TableRow className="hover:bg-transparent">
               <TableHead>
-                <button
+                <Button
                   type="button"
-                  className="inline-flex items-center gap-1 hover:text-wt-text"
+                  variant="ghost"
+                  size="sm"
+                  className="inline-flex h-auto items-center gap-1 p-0 hover:text-wt-text"
                   onClick={() => setDateSort((prev) => (prev === "asc" ? "desc" : "asc"))}
                 >
                   Date
                   <span className="text-[10px] not-italic" aria-hidden>
                     {dateSort === "asc" ? "↑" : "↓"}
                   </span>
-                </button>
+                </Button>
               </TableHead>
               {DETAIL_COLUMNS.map((col) => (
                 <TableHead key={col.key}>

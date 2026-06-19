@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import {
   TableBody,
   TableCell,
@@ -120,9 +121,11 @@ function CopyValueButton({
   if (!hasCopyableValue(value)) return null;
 
   return (
-    <button
+    <Button
       type="button"
-      className="inline-flex shrink-0 items-center justify-center rounded p-1 text-wt-text-muted transition hover:bg-wt-surface-2 hover:text-wt-text"
+      variant="ghost"
+      size="icon-sm"
+      className="inline-flex shrink-0 rounded p-1 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
       aria-label={`Copy ${label}`}
       onClick={(e) => {
         e.stopPropagation();
@@ -130,7 +133,7 @@ function CopyValueButton({
       }}
     >
       <CopyIcon />
-    </button>
+    </Button>
   );
 }
 
@@ -281,9 +284,9 @@ export function EmployeeDirectoryPageClient() {
           {isError ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               <p>Could not load employees.{error instanceof Error ? ` ${error.message}` : ""}</p>
-              <button type="button" className="btn-ghost mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
+              <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
                 Retry
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -374,17 +377,13 @@ export function EmployeeDirectoryPageClient() {
                             {col.key === "status" ? (
                               <div className="inline-flex items-center gap-2">
                                 <EmployeeStatusBadge status={display.status} />
-                                <button
-                                  type="button"
-                                  className="btn-action px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-                                  disabled={isResendDisabled || isResending}
-                                  onClick={(e) => {
+                                <Button variant="brand" size="xs" type="button" className="px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50" disabled={isResendDisabled || isResending} onClick={(e) => {
                                     e.stopPropagation();
                                     handleResendInvite(workEmail);
                                   }}
                                 >
                                   {isResending ? "Sending…" : "Resend"}
-                                </button>
+                                </Button>
                               </div>
                             ) : col.key === "name" ? (
                               <span className="font-medium text-blue-600">{display[col.key]}</span>

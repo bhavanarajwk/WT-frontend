@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -3001,10 +3002,7 @@ export function AllocationPageClient() {
         </p>
       )}
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Submit onboarding", async () => {
               if (!user?.email) {
                 throw new Error("Unable to resolve logged-in email.");
@@ -3122,7 +3120,7 @@ export function AllocationPageClient() {
           disabled={actionLoading}
         >
           Submit Onboarding Form
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -3215,14 +3213,9 @@ export function AllocationPageClient() {
             <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn-primary px-4 py-2.5"
-          onClick={openOwnProfileEditor}
-          disabled={actionLoading}
-        >
+        <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
           Edit Profile
-        </button>
+        </Button>
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
@@ -3270,10 +3263,7 @@ export function AllocationPageClient() {
         <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
@@ -3373,15 +3363,12 @@ export function AllocationPageClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </button>
-        <button
-          type="button"
-          className="btn-ghost ml-2 px-3 py-2"
-          onClick={() => setIsEditingOwnProfile(false)}
+        </Button>
+        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -3395,54 +3382,62 @@ export function AllocationPageClient() {
                           {hasHrAccess ? (
                             <section className="space-y-4">
                               <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
-                                <button
+                                <Button
                                   type="button"
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => setAllocationHrSubTab("project")}
-                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  className={`rounded-lg px-3 py-2 ${
                                     allocationHrSubTab === "project"
-                                      ? "bg-wt-surface-3 text-wt-text"
+                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                       : "text-wt-text-muted hover:bg-wt-surface-2"
                                   }`}
                                 >
                                   Create Project
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                   type="button"
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => setAllocationHrSubTab("allocate")}
-                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  className={`rounded-lg px-3 py-2 ${
                                     allocationHrSubTab === "allocate"
-                                      ? "bg-wt-surface-3 text-wt-text"
+                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                       : "text-wt-text-muted hover:bg-wt-surface-2"
                                   }`}
                                 >
                                   Project allocation
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                   type="button"
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => setAllocationHrSubTab("assign-pm")}
-                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  className={`rounded-lg px-3 py-2 ${
                                     allocationHrSubTab === "assign-pm"
-                                      ? "bg-wt-surface-3 text-wt-text"
+                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                       : "text-wt-text-muted hover:bg-wt-surface-2"
                                   }`}
                                 >
                                   Assign Project Manager
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                   type="button"
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => {
                                     setAllocationHrSubTab("list");
                                     void loadAllocationsForHr();
                                     void loadAllocationForecasting();
                                   }}
-                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  className={`rounded-lg px-3 py-2 ${
                                     allocationHrSubTab === "list"
-                                      ? "bg-wt-surface-3 text-wt-text"
+                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
                                       : "text-wt-text-muted hover:bg-wt-surface-2"
                                   }`}
                                 >
                                   Allocation list
-                                </button>
+                                </Button>
                               </div>
           
                               {allocationHrSubTab === "project" ? (
@@ -3490,10 +3485,7 @@ export function AllocationPageClient() {
                                   />
                                 </div>
                                 <div className="flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    className="btn-primary px-3 py-2"
-                                    onClick={() =>
+                                  <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
                                       runAction(
                                         editingProjectCode ? "Update Project" : "Create Project",
                                         async () => {
@@ -3543,10 +3535,12 @@ export function AllocationPageClient() {
                                     disabled={actionLoading}
                                   >
                                     {editingProjectCode ? "Save Project" : "Create Project"}
-                                  </button>
-                                  <button
+                                  </Button>
+                                  <Button
                                     type="button"
-                                    className="rounded-lg p-2 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
                                     onClick={() =>
                                       runAction("Load projects", async () => {
                                         refreshHrProjects();
@@ -3558,7 +3552,7 @@ export function AllocationPageClient() {
                                     title="Refresh projects"
                                   >
                                     <IconRefresh />
-                                  </button>
+                                  </Button>
                                 </div>
                                 <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-3">
                                   <p className="text-sm font-medium">All Projects</p>
@@ -3637,9 +3631,11 @@ export function AllocationPageClient() {
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 text-right">
-                                                  <button
+                                                  <Button
                                                     type="button"
-                                                    className="rounded-lg p-2 text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600"
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600"
                                                     aria-label={`Delete project ${name || code}`}
                                                     title="Delete project"
                                                     disabled={actionLoading || !code}
@@ -3652,7 +3648,7 @@ export function AllocationPageClient() {
                                                     }
                                                   >
                                                     <IconTrash />
-                                                  </button>
+                                                  </Button>
                                                 </TableCell>
                                               </TableRow>
                                             );
@@ -3692,9 +3688,10 @@ export function AllocationPageClient() {
                                     <span className="block">
                                       <FieldLabel label="Employee" required />
                                     </span>
-                                    <button
+                                    <Button
                                       type="button"
-                                      className="input-field flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-wt-text"
+                                      variant="outline"
+                                      className="input-field flex h-auto w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-normal text-wt-text"
                                       aria-expanded={allocationEmployeePickerOpen}
                                       aria-haspopup="listbox"
                                       onClick={() => {
@@ -3709,7 +3706,7 @@ export function AllocationPageClient() {
                                       <span className="shrink-0 text-wt-text-muted" aria-hidden>
                                         ▾
                                       </span>
-                                    </button>
+                                    </Button>
                                     {allocationEmployeePickerOpen ? (
                                       <div
                                         className="absolute left-0 right-0 top-full z-50 mt-1 space-y-2 rounded-xl border border-wt-border bg-wt-surface-1 p-2 shadow-lg"
@@ -3726,9 +3723,10 @@ export function AllocationPageClient() {
                                           autoFocus
                                         />
                                         <div className="max-h-52 overflow-auto rounded-lg border border-wt-border">
-                                          <button
+                                          <Button
                                             type="button"
-                                            className="block w-full px-3 py-2 text-left text-sm text-wt-text-muted hover:bg-wt-surface-2"
+                                            variant="ghost"
+                                            className="block h-auto w-full justify-start rounded-none px-3 py-2 font-normal text-wt-text-muted hover:bg-wt-surface-2"
                                             onClick={() => {
                                               setAllocationForm((p) => ({ ...p, employee_email: "" }));
                                               setPickerEmployeeAllocations(null);
@@ -3738,14 +3736,15 @@ export function AllocationPageClient() {
                                             }}
                                           >
                                             Clear selection
-                                          </button>
+                                          </Button>
                                           {allocationEmployeesPickerFiltered.length ? (
                                             allocationEmployeesPickerFiltered.map((u) => (
-                                              <button
+                                              <Button
                                                 key={u.email}
                                                 type="button"
                                                 role="option"
-                                                className={`block w-full border-t border-wt-border px-3 py-2 text-left text-sm hover:bg-wt-surface-2 ${
+                                                variant="ghost"
+                                                className={`block h-auto w-full justify-start rounded-none border-t border-wt-border px-3 py-2 font-normal hover:bg-wt-surface-2 ${
                                                   allocationForm.employee_email === u.email
                                                     ? "bg-indigo-500/10 font-medium"
                                                     : ""
@@ -3757,7 +3756,7 @@ export function AllocationPageClient() {
                                                 }}
                                               >
                                                 {u.name}
-                                              </button>
+                                              </Button>
                                             ))
                                           ) : (
                                             <p className="px-3 py-4 text-center text-sm text-wt-text-muted">
@@ -3918,10 +3917,7 @@ export function AllocationPageClient() {
                                   </div>
                                 ) : null}
                                 <div className="flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    className="btn-primary px-3 py-2"
-                                    onClick={() =>
+                                  <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
                                       runAction(editingAllocationId ? "Update allocation" : "Create allocation", async () => {
                                         const employeeEmail = allocationForm.employee_email.trim();
                                         const projectCode = allocationForm.project_code.trim();
@@ -4005,10 +4001,12 @@ export function AllocationPageClient() {
                                     disabled={actionLoading}
                                   >
                                     {editingAllocationId ? "Save Allocation" : "Allocate Employee"}
-                                  </button>
-                                  <button
+                                  </Button>
+                                  <Button
                                     type="button"
-                                    className="rounded-lg p-2 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
                                     onClick={() =>
                                       runAction("Load allocations", async () => {
                                         await loadAllocationsForHr();
@@ -4026,7 +4024,7 @@ export function AllocationPageClient() {
                                     title="Refresh allocations"
                                   >
                                     <IconRefresh />
-                                  </button>
+                                  </Button>
                                 </div>
                               </div>
                               </>
@@ -4062,14 +4060,15 @@ export function AllocationPageClient() {
                                         onChange={(e) => setAllocationListSearch(e.target.value)}
                                         aria-label="Search allocations"
                                       />
-                                      <button
+                                      <Button
                                         type="button"
-                                        className="rounded-lg border border-wt-border bg-wt-surface-1 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
+                                        variant="outline"
+                                        size="xs"
                                         disabled={allocationsLoading || actionLoading}
                                         onClick={() => void loadAllocationsForHr()}
                                       >
                                         Refresh
-                                      </button>
+                                      </Button>
                                     </div>
                                   </div>
                                   {allocationsLoadError ? (
@@ -4235,17 +4234,7 @@ export function AllocationPageClient() {
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.end_date ?? "—")}</TableCell>
                                                 <TableCell className="px-3 py-2 text-right">
                                                   <div className="inline-flex items-center justify-end gap-1">
-                                                    <button
-                                                      type="button"
-                                                      className="btn-action-icon disabled:opacity-40 disabled:pointer-events-none"
-                                                      aria-label={`Edit allocation ${allocationId || idx}`}
-                                                      title={
-                                                        editable
-                                                          ? "Edit allocation"
-                                                          : "Superseded — edit the active row"
-                                                      }
-                                                      disabled={actionLoading || !editable}
-                                                      onClick={(e) => {
+                                                    <Button variant="brand" size="icon-sm" type="button" className="disabled:opacity-40 disabled:pointer-events-none" aria-label={`Edit allocation ${allocationId || idx}`} title={ editable ? "Edit allocation" : "Superseded — edit the active row" } disabled={actionLoading || !editable} onClick={(e) => {
                                                         e.stopPropagation();
                                                         setAllocationForm((prev) => ({
                                                           ...prev,
@@ -4292,10 +4281,12 @@ export function AllocationPageClient() {
                                                       }}
                                                     >
                                                       <IconPencil />
-                                                    </button>
-                                                    <button
+                                                    </Button>
+                                                    <Button
                                                       type="button"
-                                                      className="rounded-lg p-2 text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 disabled:pointer-events-none"
+                                                      variant="ghost"
+                                                      size="icon-sm"
+                                                      className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 disabled:pointer-events-none"
                                                       aria-label={`Deallocate ${allocationId || idx}`}
                                                       title={
                                                         editable
@@ -4319,7 +4310,7 @@ export function AllocationPageClient() {
                                                       }}
                                                     >
                                                       <IconTrash />
-                                                    </button>
+                                                    </Button>
                                                   </div>
                                                 </TableCell>
                                               </TableRow>
@@ -4362,16 +4353,17 @@ export function AllocationPageClient() {
                                               Total allocated:{" "}
                                               {selectedEmployeeAllocations.totalAllocatedPercent}%
                                             </p>
-                                            <button
+                                            <Button
                                               type="button"
-                                              className="rounded-lg border border-wt-border bg-wt-surface-2 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3"
+                                              variant="outline"
+                                              size="xs"
                                               onClick={() => {
                                                 setSelectedEmployeeAllocations(null);
                                                 setEmployeeAllocationsError(null);
                                               }}
                                             >
                                               Close
-                                            </button>
+                                            </Button>
                                           </div>
                                         </div>
                                         <ScrollableTable maxHeightClass="max-h-[min(50vh,360px)]">

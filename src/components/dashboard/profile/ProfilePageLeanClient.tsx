@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -308,10 +309,7 @@ export function ProfilePageLeanClient() {
         <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
@@ -376,15 +374,12 @@ export function ProfilePageLeanClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </button>
-        <button
-          type="button"
-          className="btn-ghost ml-2 px-3 py-2"
-          onClick={() => setIsEditingOwnProfile(false)}
+        </Button>
+        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -436,14 +431,9 @@ export function ProfilePageLeanClient() {
                     </div>
                   </div>
                   {employeeSelfServeProfile ? (
-                    <button
-                      type="button"
-                      className="btn-primary px-4 py-2.5"
-                      onClick={openOwnProfileEditor}
-                      disabled={actionLoading}
-                    >
+                    <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
                       Edit Profile
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
                 {renderProfileDetails()}

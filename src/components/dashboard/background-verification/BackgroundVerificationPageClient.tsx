@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
@@ -2750,10 +2751,7 @@ export function BackgroundVerificationPageClient() {
         </p>
       )}
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Submit onboarding", async () => {
               if (!user?.email) {
                 throw new Error("Unable to resolve logged-in email.");
@@ -2871,7 +2869,7 @@ export function BackgroundVerificationPageClient() {
           disabled={actionLoading}
         >
           Submit Onboarding Form
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -2964,14 +2962,9 @@ export function BackgroundVerificationPageClient() {
             <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn-primary px-4 py-2.5"
-          onClick={openOwnProfileEditor}
-          disabled={actionLoading}
-        >
+        <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
           Edit Profile
-        </button>
+        </Button>
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
@@ -3019,10 +3012,7 @@ export function BackgroundVerificationPageClient() {
         <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
@@ -3122,15 +3112,12 @@ export function BackgroundVerificationPageClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </button>
-        <button
-          type="button"
-          className="btn-ghost ml-2 px-3 py-2"
-          onClick={() => setIsEditingOwnProfile(false)}
+        </Button>
+        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -3234,11 +3221,7 @@ export function BackgroundVerificationPageClient() {
                             />
                           </div>
                           <div className="mt-4">
-                            <button
-                              type="button"
-                              className="btn-primary px-3 py-2"
-                              disabled={actionLoading}
-                              onClick={() =>
+                            <Button variant="brand" type="button" className="px-3 py-2" disabled={actionLoading} onClick={() =>
                                 runAction("Save BGV record", async () => {
                                   const empId = bgvForm.emp_id.trim();
                                   if (!empId) throw new Error("Please select an employee.");
@@ -3290,7 +3273,7 @@ export function BackgroundVerificationPageClient() {
                               }
                             >
                               Save Verification
-                            </button>
+                            </Button>
                           </div>
                           <div className="mt-4">
                             <DataTable

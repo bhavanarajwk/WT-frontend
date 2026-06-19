@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -102,14 +103,10 @@ export function EmployeeLearningCatalog() {
                   {enrolled ? (
                     <span className="text-xs font-medium text-emerald-700">Enrolled</span>
                   ) : (
-                    <button
-                      type="button"
-                      className="btn-primary px-3 py-1.5 text-xs"
-                      disabled={enrollMut.isPending && enrollingId === id}
-                      onClick={() => enroll(id)}
+                    <Button variant="brand" size="xs" type="button" className="px-3 py-1.5 text-xs" disabled={enrollMut.isPending && enrollingId === id} onClick={() => enroll(id)}
                     >
                       {enrollMut.isPending && enrollingId === id ? "Enrolling…" : "Enroll"}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

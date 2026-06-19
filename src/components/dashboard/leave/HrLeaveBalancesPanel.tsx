@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -74,11 +75,7 @@ export function HrLeaveBalancesPanel({
         <InputField label="Year" value={year} onChange={setYear} type="number" />
         <InputField label="Month" value={month} onChange={setMonth} type="number" />
         <InputField label="Search" value={search} onChange={setSearch} placeholder="Name, email, emp id" />
-        <button
-          type="button"
-          className="btn-primary px-3 py-2 h-10"
-          disabled={actionLoading}
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2 h-10" disabled={actionLoading} onClick={() =>
             runAction("Load leave balances", async () => {
               setPage(0);
               await load();
@@ -86,7 +83,7 @@ export function HrLeaveBalancesPanel({
           }
         >
           Search
-        </button>
+        </Button>
       </div>
 
       {loadError ? <p className="text-sm text-rose-700">{loadError}</p> : null}

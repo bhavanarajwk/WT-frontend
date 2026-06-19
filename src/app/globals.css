@@ -402,6 +402,15 @@ body::-webkit-scrollbar {
   z-index: 5;
 }
 
+/* Profile inline tables — static headers so body rows are not covered while scrolling */
+.wt-profile-table thead th,
+.wt-page-scroll main .wt-profile-table thead th {
+  position: static;
+  top: auto;
+  z-index: auto;
+  box-shadow: none;
+}
+
 [data-slot="table"] [data-slot="table-cell"] {
   border-color: var(--border);
   font-size: 0.875rem;
@@ -414,6 +423,10 @@ body::-webkit-scrollbar {
   font-size: 0.875rem;
   line-height: 1.25rem;
   color: var(--wt-text-muted);
+}
+
+.wt-profile-table [data-slot="table-cell"] {
+  color: var(--wt-text);
 }
 
 .wt-table-sticky-head th {

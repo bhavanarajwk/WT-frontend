@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
@@ -2838,10 +2839,7 @@ export function ReportsPageClient() {
         </p>
       )}
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Submit onboarding", async () => {
               if (!user?.email) {
                 throw new Error("Unable to resolve logged-in email.");
@@ -2959,7 +2957,7 @@ export function ReportsPageClient() {
           disabled={actionLoading}
         >
           Submit Onboarding Form
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -3052,14 +3050,9 @@ export function ReportsPageClient() {
             <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn-primary px-4 py-2.5"
-          onClick={openOwnProfileEditor}
-          disabled={actionLoading}
-        >
+        <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
           Edit Profile
-        </button>
+        </Button>
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
@@ -3107,10 +3100,7 @@ export function ReportsPageClient() {
         <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
@@ -3210,15 +3200,12 @@ export function ReportsPageClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </button>
-        <button
-          type="button"
-          className="btn-ghost ml-2 px-3 py-2"
-          onClick={() => setIsEditingOwnProfile(false)}
+        </Button>
+        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -3232,10 +3219,7 @@ export function ReportsPageClient() {
                           <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
                             <div className="flex items-center justify-between gap-3">
                               <h3 className="font-semibold">HR Reports</h3>
-                              <button
-                                type="button"
-                                className="btn-primary px-3 py-2"
-                                onClick={() =>
+                              <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
                                   runAction("Refresh reports", async () => {
                                     if (activeSection === "reports-section-2") {
                                       await Promise.all([
@@ -3273,7 +3257,7 @@ export function ReportsPageClient() {
                                 disabled={actionLoading || !(activeSection === "reports-workforce" || activeSection === "reports-section-2" || activeSection === "reports-bench" || activeSection === "reports-section-3" || activeSection === "reports-section-4" || activeSection === "reports-section-6" || activeSection === "reports-section-7")}
                               >
                                 Refresh
-                              </button>
+                              </Button>
                             </div>
                             {activeSection === "reports-workforce" ? (
                               <div className="space-y-4">

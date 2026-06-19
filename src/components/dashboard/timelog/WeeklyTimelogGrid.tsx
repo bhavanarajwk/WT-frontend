@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -303,20 +304,24 @@ export function WeeklyTimelogGrid({
                     <TableCell key={key} className="px-1 py-2 text-center align-top">
                       {showActions ? (
                         <div className="flex flex-col gap-1">
-                          <button
+                          <Button
                             type="button"
-                            className="rounded border border-emerald-300 px-1 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-50"
+                            variant="outline"
+                            size="xs"
+                            className="border-emerald-300 px-1 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
                             onClick={() => onApproveDay?.(key)}
                           >
                             Approve
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
-                            className="rounded border border-rose-300 px-1 py-0.5 text-[10px] font-medium text-rose-700 hover:bg-rose-50"
+                            variant="destructive"
+                            size="xs"
+                            className="px-1 py-0.5 text-[10px]"
                             onClick={() => onRejectDay?.(key)}
                           >
                             Reject
-                          </button>
+                          </Button>
                         </div>
                       ) : (
                         <span className="text-xs text-wt-text-muted">—</span>
@@ -331,9 +336,9 @@ export function WeeklyTimelogGrid({
         </WtTable>
       </ScrollableTable>
       {!readOnly ? (
-        <button type="button" className="btn-ghost px-3 py-1.5 text-sm border border-wt-border rounded-lg" onClick={addRow}>
+        <Button variant="outline" size="sm" type="button" className="px-3 py-1.5 text-sm border border-wt-border rounded-lg" onClick={addRow}>
           Add row
-        </button>
+        </Button>
       ) : null}
     </div>
   );

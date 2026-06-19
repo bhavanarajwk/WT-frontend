@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -158,16 +159,13 @@ function HrTrainingsView() {
             <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Trainings</h1>
           </div>
           <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
-            <button
-              type="button"
-              className="btn-primary px-3 py-2 text-sm"
-              onClick={() => refetch()}
+            <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() => refetch()}
             >
               Refresh
-            </button>
-            <button type="button" className="btn-primary px-4 py-2 text-sm" onClick={openCreate}>
+            </Button>
+            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" onClick={openCreate}>
               New training
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -247,23 +245,16 @@ function HrTrainingsView() {
         onClose={() => setSheetOpen(false)}
         footer={
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              className="btn-ghost px-4 py-2 rounded-lg border border-wt-border"
-              onClick={() => setSheetOpen(false)}
+            <Button variant="outline" type="button" className="px-4 py-2 rounded-lg border border-wt-border" onClick={() => setSheetOpen(false)}
             >
               Cancel
-            </button>
-            <button
-              type="button"
-              className="btn-primary px-4 py-2"
-              disabled={createMut.isPending || updateMut.isPending}
-              onClick={() =>
+            </Button>
+            <Button variant="brand" type="button" className="px-4 py-2" disabled={createMut.isPending || updateMut.isPending} onClick={() =>
                 submitForm().catch((e) => alert(e instanceof Error ? e.message : "Unable to save"))
               }
             >
               Save
-            </button>
+            </Button>
           </div>
         }
       >

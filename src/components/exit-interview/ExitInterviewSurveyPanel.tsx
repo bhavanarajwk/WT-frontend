@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -152,14 +153,9 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
                   disabled={actionLoading}
                 />
                 <div className="mt-6 flex justify-end">
-                  <button
-                    type="button"
-                    className="btn-primary px-4 py-2 text-sm"
-                    disabled={actionLoading}
-                    onClick={handleSubmit}
-                  >
+                  <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={actionLoading} onClick={handleSubmit} >
                     {actionLoading ? "Submitting…" : "Submit Exit Survey"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : null}
