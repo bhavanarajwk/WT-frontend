@@ -92,7 +92,6 @@ import { InvitedEmployeesTable } from "@/components/employee-onboarding/InvitedE
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { LoadingOverlay, LoadingPanel } from "@/components/dashboard/shared/BlackLoader";
 
 
 
@@ -245,7 +244,7 @@ export function EmployeePageClient() {
   const [onboardBands, setOnboardBands] = useState<Array<Record<string, unknown>>>([]);
   const [onboardOptions, setOnboardOptions] =
     useState<OnboardOptionsResponse>(FALLBACK_ONBOARD_OPTIONS);
-  const [onboardDataLoading, setOnboardDataLoading] = useState(false);
+  const [onboardDataLoading, setOnboardDataLoading] = useState(true);
   const [inviteListLoading, setInviteListLoading] = useState(false);
   const [selfProfileForm, setSelfProfileForm] = useState({
     phone_number: "",
@@ -2459,8 +2458,7 @@ export function EmployeePageClient() {
   );
 
 
-  const onboardingBusy = onboardDataLoading || inviteListLoading || actionLoading;
-  const onboardingInitialLoad = onboardDataLoading && !onboardBands.length;
+  const onboardingBusy = inviteListLoading || actionLoading;
 
   return (
     <>
@@ -2468,109 +2466,103 @@ export function EmployeePageClient() {
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className="space-y-4">
             {hasHrAccess ? (
-              onboardingInitialLoad ? (
-                <LoadingPanel label="Loading Onboarded Employees" />
-              ) : (
-              <div className="relative space-y-4">
-                {onboardingBusy ? (
-                  <LoadingOverlay label="Loading Onboarded Employees" />
-                ) : null}
-                              <HrOnboardForm
-                                formKey={onboardFormKey}
-                                form={onboardForm}
-                                setForm={setOnboardForm}
-                                options={onboardOptions}
-                                bands={onboardBands}
-                                hasHrAccess={hasHrAccess}
-                                actionLoading={actionLoading}
-                                runAction={runAction}
-                                onError={(message) => showErrorToast(message)}
-                                onSubmitSuccess={async () => {
-                                  await loadInviteOnboardingPreviewWithState();
-                                  resetOnboardForm();
-                                }}
-                              />
+              <div className="space-y-4">
+                <HrOnboardForm
+                  formKey={onboardFormKey}
+                  form={onboardForm}
+                  setForm={setOnboardForm}
+                  options={onboardOptions}
+                  bands={onboardBands}
+                  hasHrAccess={hasHrAccess}
+                  actionLoading={actionLoading}
+                  optionsLoading={onboardDataLoading}
+                  runAction={runAction}
+                  onError={(message) => showErrorToast(message)}
+                  onSubmitSuccess={async () => {
+                    await loadInviteOnboardingPreviewWithState();
+                    resetOnboardForm();
+                  }}
+                />
 
-                              <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <h3 className="font-semibold">Onboarded Employees</h3>
-                                  <Button variant="ghost" type="button" className="px-3 py-2" onClick={() =>
-                                      runAction("Refresh Employees", async () => {
-                                        await loadInviteOnboardingPreviewWithState();
-                                        resetOnboardForm();
-                                      })
-                                    }
-                                    disabled={actionLoading || invitedListLoading}
-                                  >
-                                    Refresh Employees
-                                  </Button>
-                                </div>
-                                <div className="flex flex-wrap items-end gap-3">
-                                  <InputField
-                                    label="From Date"
-                                    type="date"
-                                    value={invitedListFromDate}
-                                    onChange={setInvitedListFromDate}
-                                  />
-                                  <InputField
-                                    label="To Date"
-                                    type="date"
-                                    value={invitedListToDate}
-                                    onChange={setInvitedListToDate}
-                                  />
-                                  <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() =>
-                                      runAction("Load invited employees", async () => {
-                                        await loadInviteOnboardingPreviewWithState({
-                                          from: invitedListFromDateRef.current,
-                                          to: invitedListToDateRef.current,
-                                        });
-                                        resetOnboardForm();
-                                      })
-                                    }
-                                    disabled={actionLoading}
-                                  >
-                                    Apply Dates
-                                  </Button>
-                                  <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() =>
-                                      runAction("Reset invited date range", async () => {
-                                        const { from, to } = defaultInvitedEmployeesDateRange();
-                                        setInvitedListFromDate(from);
-                                        setInvitedListToDate(to);
-                                        await loadInviteOnboardingPreviewWithState({ from, to });
-                                        resetOnboardForm();
-                                      })
-                                    }
-                                    disabled={actionLoading}
-                                  >
-                                    Last 7 days
-                                  </Button>
-                                </div>
-                                {invitedApiServerRange ? (
-                                  <p
-                                    className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
-                                    role="status"
-                                  >
-                                    The server returned data for {invitedApiServerRange.from} —{" "}
-                                    {invitedApiServerRange.to} (fixed window). Rows shown are filtered to
-                                    your selected range ({invitedListFromDate} — {invitedListToDate}). Older
-                                    invites may be missing until the API honors{" "}
-                                    <code className="text-[11px]">fromDate</code> /{" "}
-                                    <code className="text-[11px]">toDate</code>.
-                                  </p>
-                                ) : null}
-                                <InvitedEmployeesTable
-                                  rows={inviteOnboardingRows}
-                                  emptyLabel="No invited employees in this date range."
-                                  loading={invitedListLoading}
-                                  actionLoading={actionLoading}
-                                  resendingEmail={resendingInviteEmail}
-                                  onResendInvite={resendOnboardInvite}
-                                />
-                              </div>
+                <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-semibold">Onboarded Employees</h3>
+                    <Button variant="ghost" type="button" className="px-3 py-2" onClick={() =>
+                        runAction("Refresh Employees", async () => {
+                          await loadInviteOnboardingPreviewWithState();
+                          resetOnboardForm();
+                        })
+                      }
+                      disabled={actionLoading || invitedListLoading}
+                    >
+                      Refresh Employees
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <InputField
+                      label="From Date"
+                      type="date"
+                      value={invitedListFromDate}
+                      onChange={setInvitedListFromDate}
+                    />
+                    <InputField
+                      label="To Date"
+                      type="date"
+                      value={invitedListToDate}
+                      onChange={setInvitedListToDate}
+                    />
+                    <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() =>
+                        runAction("Load invited employees", async () => {
+                          await loadInviteOnboardingPreviewWithState({
+                            from: invitedListFromDateRef.current,
+                            to: invitedListToDateRef.current,
+                          });
+                          resetOnboardForm();
+                        })
+                      }
+                      disabled={actionLoading}
+                    >
+                      Apply Dates
+                    </Button>
+                    <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() =>
+                        runAction("Reset invited date range", async () => {
+                          const { from, to } = defaultInvitedEmployeesDateRange();
+                          setInvitedListFromDate(from);
+                          setInvitedListToDate(to);
+                          await loadInviteOnboardingPreviewWithState({ from, to });
+                          resetOnboardForm();
+                        })
+                      }
+                      disabled={actionLoading}
+                    >
+                      Last 7 Days
+                    </Button>
+                  </div>
+                  {invitedApiServerRange ? (
+                    <p
+                      className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
+                      role="status"
+                    >
+                      The server returned data for {invitedApiServerRange.from} —{" "}
+                      {invitedApiServerRange.to} (fixed window). Rows shown are filtered to
+                      your selected range ({invitedListFromDate} — {invitedListToDate}). Older
+                      invites may be missing until the API honors{" "}
+                      <code className="text-[11px]">fromDate</code> /{" "}
+                      <code className="text-[11px]">toDate</code>.
+                    </p>
+                  ) : null}
+                  <InvitedEmployeesTable
+                    rows={inviteOnboardingRows}
+                    emptyLabel="No invited employees in this date range."
+                    loading={invitedListLoading}
+                    actionLoading={actionLoading || onboardingBusy}
+                    resendingEmail={resendingInviteEmail}
+                    onResendInvite={resendOnboardInvite}
+                  />
+                </div>
               </div>
-              )
             ) : null}
-                            </section>
+          </section>
         </OnboardingGate>
       </DashboardPageShell>
     </>

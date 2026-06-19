@@ -11,7 +11,7 @@ import {
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -71,15 +71,7 @@ export function ResumesPageClient() {
     resetKeys: [search, sortId],
   });
 
-  if (authStatus === "loading") {
-    return (
-      <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm"><SectionLoading label="Loading" /></div>
-      </DashboardPageShell>
-    );
-  }
-
-  if (!canView) {
+  if (authStatus !== "loading" && !canView) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
@@ -131,7 +123,7 @@ export function ResumesPageClient() {
             </Button>
           </div>
 
-          {isLoading ? <SectionLoading label="Loading resumes…" /> : null}
+          {isLoading ? <TableRowsSkeleton rows={6} columns={5} /> : null}
 
           {isError ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">

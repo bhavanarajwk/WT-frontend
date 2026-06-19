@@ -9,7 +9,7 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { formatApiDateDisplay } from "@/utils/apiDate";
-import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import {
   PROFILE_TABLE_BODY_CELL,
   PROFILE_TABLE_CLASS,
@@ -71,7 +71,7 @@ export function ProfileAssignedProjectsSection({
     <div className="mt-8 border-t border-wt-border pt-6">
       <h4 className="mb-3 text-sm font-semibold text-wt-text">Project Details</h4>
         {loading ? (
-          <ProfileSectionLoader message="Loading project details..." />
+          <TableRowsSkeleton rows={3} columns={5} />
         ) : rows.length === 0 ? (
           <p className="text-sm text-wt-text-muted">No projects assigned.</p>
         ) : (

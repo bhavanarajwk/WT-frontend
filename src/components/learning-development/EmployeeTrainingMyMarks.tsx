@@ -11,7 +11,8 @@ import {
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMyTrainingMarks } from "@/hooks/learning/useLearningTrainings";
 import { ApiError } from "@/api/error";
@@ -79,7 +80,20 @@ export function EmployeeTrainingMyMarks({
   });
 
   if (marksQ.isLoading) {
-    return <SectionLoading label="Loading your scores…" />;
+    return (
+      <div className="space-y-4" aria-hidden>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="rounded-xl border border-wt-border bg-wt-surface-2 p-4 space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+          ))}
+        </div>
+        <TableRowsSkeleton rows={4} columns={4} />
+      </div>
+    );
   }
 
   if (marksQ.isError) {

@@ -11,7 +11,7 @@ import {
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { InputField } from "@/components/dashboard/ui/forms";
@@ -153,7 +153,7 @@ export function AnnualCalendarPageClient() {
               </Button>
             </div>
             {isLoading ? (
-              <SectionLoading label="Loading calendars…" />
+              <TableRowsSkeleton rows={4} columns={4} />
             ) : sortedRows.length === 0 ? (
               <p className="text-sm text-wt-text-muted">No annual calendars uploaded yet.</p>
             ) : (

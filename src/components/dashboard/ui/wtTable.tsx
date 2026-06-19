@@ -30,6 +30,8 @@ export {
   WT_TABLE_TEXT_CLASS,
 };
 
+export { TableCheckbox } from "@/components/dashboard/ui/TableCheckbox";
+
 /** Bare table for scroll regions — avoids shadcn Table's inner overflow wrapper (breaks sticky headers). */
 export function WtTable({ className, ...props }: ComponentProps<"table">) {
   return (

@@ -1,16 +1,17 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  TableCheckbox,
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { Input } from "@/components/ui/input";
@@ -403,20 +404,18 @@ export function ExitSurveyFollowUpPanel() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-10">
                     <span className="sr-only">Select</span>
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-wt-border"
+                    <TableCheckbox
                       checked={allResendableOnPageSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = someResendableOnPageSelected;
-                      }}
+                      indeterminate={
+                        someResendableOnPageSelected && !allResendableOnPageSelected
+                      }
                       disabled={
                         !resendableEmpIdsOnPage.length ||
                         loadingList ||
                         bulkResending ||
                         Boolean(resendingEmpId)
                       }
-                      onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
+                      onCheckedChange={(checked) => toggleSelectAllOnPage(Boolean(checked))}
                       aria-label="Select all resendable employees on this page"
                     />
                   </TableHead>
@@ -472,12 +471,12 @@ export function ExitSurveyFollowUpPanel() {
                     >
                       <TableCell className="px-3 py-2" data-no-row-nav>
                         {canResend ? (
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-wt-border"
+                          <TableCheckbox
                             checked={isSelected}
                             disabled={loadingList || bulkResending || isResending}
-                            onChange={(e) => toggleRowSelection(empId, e.target.checked)}
+                            onCheckedChange={(checked) =>
+                              toggleRowSelection(empId, Boolean(checked))
+                            }
                             aria-label={`Select ${row.employee_name || empId}`}
                           />
                         ) : null}

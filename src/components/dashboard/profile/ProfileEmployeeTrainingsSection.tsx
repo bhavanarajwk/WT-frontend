@@ -15,7 +15,7 @@ import { useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
 import { hrmsService } from "@/services/hrms.service";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { normalizeMyTrainingMarks } from "@/utils/learning/trainingScores";
-import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import {
   PROFILE_TABLE_BODY_CELL,
   PROFILE_TABLE_CLASS,
@@ -122,7 +122,7 @@ export function ProfileEmployeeTrainingsSection({ enabled = true }: { enabled?: 
     <div className="mt-8 border-t border-wt-border pt-6">
       <h4 className="mb-3 text-sm font-semibold text-wt-text">Training Details</h4>
         {loading ? (
-          <ProfileSectionLoader message="Loading training details..." />
+          <TableRowsSkeleton rows={3} columns={4} />
         ) : rows.length === 0 ? (
           <p className="text-sm text-wt-text-muted">No trainings found.</p>
         ) : (

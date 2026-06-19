@@ -10,6 +10,7 @@ import {
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -217,11 +218,7 @@ export function EmployeeDirectoryPageClient() {
     [runAction]
   );
 
-  if (authStatus === "loading") {
-    return <DashboardPageShell>{null}</DashboardPageShell>;
-  }
-
-  if (!canViewDirectory) {
+  if (authStatus !== "loading" && !canViewDirectory) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
@@ -289,6 +286,8 @@ export function EmployeeDirectoryPageClient() {
               </Button>
             </div>
           ) : null}
+
+          {isLoading ? <TableRowsSkeleton rows={8} columns={LIST_COLUMNS.length} /> : null}
 
           {!isLoading && !isError && !tableRows.length ? (
             <div className="rounded-xl border border-dashed border-wt-border bg-wt-surface-2/40 px-6 py-12 text-center">

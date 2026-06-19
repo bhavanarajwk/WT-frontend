@@ -1,13 +1,17 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
+  TableCheckbox,
 } from "@/components/dashboard/ui/wtTable";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
@@ -58,11 +62,8 @@ const DEFAULT_PAGE_SIZE = 10;
 
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
-const STICKY_HEADER_CLASS =
-  "sticky top-0 z-10 bg-wt-surface-2 shadow-[inset_0_-1px_0_var(--wt-border)]";
-
 const INNER_SCROLL_CLASS =
-  "max-h-[min(70vh,560px)] overflow-auto overscroll-behavior-auto rounded-xl border border-wt-border";
+  "wt-scroll-both max-h-[min(70vh,560px)] overflow-auto overscroll-behavior-auto rounded-xl border border-wt-border";
 
 function defaultFinancialYearStart(): string {
   const now = new Date();
@@ -653,17 +654,16 @@ export function OffboardingPanel() {
                 onChange={(v) => setOffboardingForm((p) => ({ ...p, expected_behavior: v }))}
                 placeholder="Describe expected behavior during notice period"
               />
-              <label className="text-xs text-wt-text-muted flex items-center gap-2 md:col-span-2">
-                <input
-                  type="checkbox"
+              <Label className="flex items-center gap-2 text-xs font-normal text-wt-text-muted md:col-span-2">
+                <Checkbox
                   checked={offboardingForm.is_regretted}
                   disabled={submitting}
-                  onChange={(e) =>
-                    setOffboardingForm((p) => ({ ...p, is_regretted: e.target.checked }))
+                  onCheckedChange={(checked) =>
+                    setOffboardingForm((p) => ({ ...p, is_regretted: Boolean(checked) }))
                   }
                 />
                 Is Regretted
-              </label>
+              </Label>
             </div>
             {offboardingNoticeLabel ? (
               <p className="text-sm text-wt-text-muted mt-2">{offboardingNoticeLabel}</p>
@@ -799,39 +799,37 @@ export function OffboardingPanel() {
           <>
             <div className={INNER_SCROLL_CLASS}>
               <WtTable className="min-w-full border-separate border-spacing-0">
-                <TableHeader>
+                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className={`${STICKY_HEADER_CLASS} w-10`}>
+                    <TableHead className="w-10">
                       <span className="sr-only">Select</span>
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-wt-border"
+                      <TableCheckbox
                         checked={allResendableOnPageSelected}
-                        ref={(el) => {
-                          if (el) el.indeterminate = someResendableOnPageSelected;
-                        }}
+                        indeterminate={
+                          someResendableOnPageSelected && !allResendableOnPageSelected
+                        }
                         disabled={
                           !resendableEmpIdsOnPage.length ||
                           loadingList ||
                           bulkResending ||
                           Boolean(resendingEmpId)
                         }
-                        onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
+                        onCheckedChange={(checked) => toggleSelectAllOnPage(checked)}
                         aria-label="Select all resendable employees on this page"
                       />
                     </TableHead>
-                    <TableHead className={STICKY_HEADER_CLASS}>Name</TableHead>
-                    <TableHead className={STICKY_HEADER_CLASS}>Status</TableHead>
-                    <TableHead className={STICKY_HEADER_CLASS}>Exit Type</TableHead>
-                    <TableHead className={STICKY_HEADER_CLASS}>Resignation</TableHead>
-                    <TableHead className={STICKY_HEADER_CLASS}>Last Working Day</TableHead>
-                    <TableHead className={`${STICKY_HEADER_CLASS} text-right`}>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Exit Type</TableHead>
+                    <TableHead>Resignation</TableHead>
+                    <TableHead>Last Working Day</TableHead>
+                    <TableHead className="text-right">
                       Notice (days)
                     </TableHead>
-                    <TableHead className={STICKY_HEADER_CLASS}>Designation</TableHead>
-                    <TableHead className={STICKY_HEADER_CLASS}>Band</TableHead>
-                    <TableHead className={STICKY_HEADER_CLASS}>Regretted</TableHead>
-                    <TableHead className={STICKY_HEADER_CLASS}>Actions</TableHead>
+                    <TableHead>Designation</TableHead>
+                    <TableHead>Band</TableHead>
+                    <TableHead>Regretted</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -852,12 +850,12 @@ export function OffboardingPanel() {
                     >
                       <TableCell className="px-3 py-2">
                         {canResend ? (
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-wt-border"
+                          <TableCheckbox
                             checked={isSelected}
                             disabled={loadingList || bulkResending || isResending}
-                            onChange={(e) => toggleRowSelection(empId, e.target.checked)}
+                            onCheckedChange={(checked) =>
+                              toggleRowSelection(empId, checked)
+                            }
                             aria-label={`Select ${row.employee_name || empId}`}
                           />
                         ) : null}

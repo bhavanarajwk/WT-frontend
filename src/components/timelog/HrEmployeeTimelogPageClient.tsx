@@ -59,7 +59,7 @@ export function HrEmployeeTimelogPageClient() {
   const canView = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
   const queriesEnabled = authStatus === "authenticated" && canView;
 
-  const { data: onboardRows = [] } = useEmployeeDirectoryList({ enabled: queriesEnabled });
+  const { data: onboardRows = [], isLoading: employeesLoading } = useEmployeeDirectoryList({ enabled: queriesEnabled });
 
   const employeeOptions = useMemo(() => {
     const options: Array<{ email: string; label: string }> = [];
@@ -129,17 +129,7 @@ export function HrEmployeeTimelogPageClient() {
     setRows(collected);
   };
 
-  if (authStatus === "loading") {
-    return (
-      <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-sm text-wt-text-muted">
-          Loading…
-        </div>
-      </DashboardPageShell>
-    );
-  }
-
-  if (!canView) {
+  if (authStatus !== "loading" && !canView) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
@@ -182,6 +172,9 @@ export function HrEmployeeTimelogPageClient() {
               value={emailFilter}
               onChange={setEmailFilter}
               placeholder="Search employees…"
+              loading={employeesLoading}
+              loadingLabel="Loading employees…"
+              disabled={employeesLoading}
               options={[
                 { value: "ALL", label: `All employees (${employeeOptions.length})` },
                 ...employeeOptions.map((opt) => ({ value: opt.email, label: opt.label })),

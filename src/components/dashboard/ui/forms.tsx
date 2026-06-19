@@ -300,6 +300,8 @@ export function DropdownSelectField({
   required = false,
   placeholder = "Select",
   disabled = false,
+  loading = false,
+  loadingLabel = "Loading…",
   className,
 }: {
   label: string;
@@ -309,6 +311,8 @@ export function DropdownSelectField({
   required?: boolean;
   placeholder?: string;
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   className?: string;
 }) {
   const fieldId = useId();
@@ -321,20 +325,24 @@ export function DropdownSelectField({
       <Select
         value={selected}
         onValueChange={(item) => onChange(item?.value ?? "")}
-        disabled={disabled}
+        disabled={disabled || loading}
         required={required}
         items={items}
         isItemEqualToValue={selectItemsEqual}
       >
-        <SelectTrigger id={fieldId}>
-          <SelectValue placeholder={placeholder} />
+        <SelectTrigger id={fieldId} aria-busy={loading || undefined}>
+          <SelectValue placeholder={loading ? loadingLabel : placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {items.map((option) => (
-            <SelectItem key={`${option.value}-${option.label}`} value={option}>
-              {option.label}
-            </SelectItem>
-          ))}
+          {loading ? (
+            <div className="px-2 py-2 text-sm text-wt-text-muted">{loadingLabel}</div>
+          ) : (
+            items.map((option) => (
+              <SelectItem key={`${option.value}-${option.label}`} value={option}>
+                {option.label}
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
     </Field>
@@ -349,6 +357,8 @@ export function AdaptiveSelectField({
   required = false,
   placeholder,
   disabled = false,
+  loading = false,
+  loadingLabel = "Loading…",
   className,
   searchPlaceholder = "Search…",
 }: {
@@ -359,6 +369,8 @@ export function AdaptiveSelectField({
   required?: boolean;
   placeholder?: string;
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   className?: string;
   searchPlaceholder?: string;
 }) {
@@ -376,9 +388,11 @@ export function AdaptiveSelectField({
           value={value}
           onChange={onChange}
           options={items}
-          placeholder={searchPlaceholder}
+          placeholder={loading ? loadingLabel : searchPlaceholder}
           required={required}
-          disabled={disabled}
+          disabled={disabled || loading}
+          loading={loading}
+          loadingLabel={loadingLabel}
           aria-label={label}
           showChevron
         />
@@ -390,6 +404,8 @@ export function AdaptiveSelectField({
           options={items}
           required={required}
           disabled={disabled}
+          loading={loading}
+          loadingLabel={loadingLabel}
           aria-label={label}
         />
       )}
@@ -405,6 +421,8 @@ export function SelectField({
   required = false,
   placeholder,
   disabled = false,
+  loading = false,
+  loadingLabel = "Loading…",
   className,
 }: {
   label: string;
@@ -414,6 +432,8 @@ export function SelectField({
   required?: boolean;
   placeholder?: string;
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   className?: string;
 }) {
   return (
@@ -425,6 +445,8 @@ export function SelectField({
       required={required}
       placeholder={placeholder}
       disabled={disabled}
+      loading={loading}
+      loadingLabel={loadingLabel}
       className={className}
       searchPlaceholder={placeholder ?? "Search…"}
     />

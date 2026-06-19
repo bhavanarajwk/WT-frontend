@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { hrmsService, type LeaveRecipientOption } from "@/services/hrms.service";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { unwrapLeaveOptionItems } from "@/utils/leaveApiOptions";
 
@@ -210,12 +211,11 @@ export function LeaveAdditionalRecipientsSelector({
                       key={email}
                       className="flex cursor-pointer items-start gap-2 px-3 py-2 text-sm hover:bg-wt-surface-2"
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         className="mt-0.5"
                         checked={checked}
                         disabled={disabled}
-                        onChange={(event) => toggleEmail(email, event.target.checked)}
+                        onCheckedChange={(next) => toggleEmail(email, Boolean(next))}
                       />
                       <span>
                         <span className="font-medium">{optionLabel(option)}</span>

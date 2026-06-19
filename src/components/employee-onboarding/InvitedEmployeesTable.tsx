@@ -28,8 +28,8 @@ import {
   invitedEmployeeWorkEmail,
 } from "@/utils/dashboard/invitedEmployees";
 import { formatTableColumnHeader, prepareTableForDisplay } from "@/utils/tableDisplay";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { BlackLoader } from "@/components/dashboard/shared/BlackLoader";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 
 const DATA_COLUMNS = [
   "emp_id",
@@ -125,15 +125,7 @@ export function InvitedEmployeesTable({
   });
 
   if (loading && !displaySourceRows.length) {
-    return (
-      <div
-        className="flex min-h-[min(70vh,520px)] items-center justify-center rounded-xl border border-wt-border bg-wt-surface-1"
-        aria-busy="true"
-        aria-live="polite"
-      >
-        <SectionLoading label="Loading Employees…" />
-      </div>
-    );
+    return <TableRowsSkeleton rows={8} columns={displayColumns.length || 8} />;
   }
 
   if (!loading && !displaySourceRows.length) {
@@ -165,11 +157,11 @@ export function InvitedEmployeesTable({
       >
         {loading ? (
           <div
-            className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-wt-surface-1/85"
+            className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-wt-surface-1/70"
             aria-busy="true"
             aria-live="polite"
           >
-            <SectionLoading label="Loading Employees…" />
+            <BlackLoader label="Refreshing employees…" />
           </div>
         ) : null}
         <WtTable>

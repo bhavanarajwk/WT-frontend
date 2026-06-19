@@ -26,7 +26,23 @@ import { normalizeToApiDate } from "@/utils/apiDate";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { createEmptyTrainingForm } from "@/utils/learningFormState";
 import { hrmsService } from "@/services/hrms.service";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmployeeLearningCatalog } from "@/components/learning-development/EmployeeLearningCatalog";
+
+function TrainingCardsSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={index} className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function EmployeeTrainingsView() {
   return (
@@ -204,7 +220,7 @@ function HrTrainingsView() {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-wt-text-muted py-8 text-center">Loading trainings…</p>
+          <TrainingCardsSkeleton />
         ) : filtered.length === 0 ? (
           <p className="text-sm text-wt-text-muted py-8 text-center">No trainings match your filters.</p>
         ) : (

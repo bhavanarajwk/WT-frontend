@@ -1,7 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import {
+  ProfileDetailsSkeleton,
+  ProfileHeaderSkeleton,
+} from "@/components/dashboard/ui/SectionSkeleton";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -225,15 +228,7 @@ export function EmployeeProfilePageClient() {
     );
   };
 
-  if (authStatus === "loading") {
-    return (
-      <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm"><SectionLoading label="Loading" /></div>
-      </DashboardPageShell>
-    );
-  }
-
-  if (!canViewProfile) {
+  if (authStatus !== "loading" && !canViewProfile) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
@@ -274,7 +269,9 @@ export function EmployeeProfilePageClient() {
             ← Back to directory
           </Link>
           {isLoading ? (
-            <SectionLoading className="mt-8 py-4" label="Loading employee profile…" />
+            <div className="mt-8 space-y-6">
+              <ProfileHeaderSkeleton />
+            </div>
           ) : null}
 
           {isError ? (
@@ -346,6 +343,12 @@ export function EmployeeProfilePageClient() {
             </div>
           ) : null}
         </div>
+
+        {isLoading && !isError ? (
+          <div className="employee-profile-panel__body px-5 pb-5 md:px-7 md:pb-7 lg:px-8 lg:pb-8">
+            <ProfileDetailsSkeleton rows={10} />
+          </div>
+        ) : null}
 
         {!isLoading && !isError ? (
           <div className="employee-profile-panel__body px-5 pb-5 md:px-7 md:pb-7 lg:px-8 lg:pb-8">

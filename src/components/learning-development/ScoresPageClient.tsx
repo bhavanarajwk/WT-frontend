@@ -8,6 +8,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableCheckbox,
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
@@ -267,13 +268,13 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
                       </TableCell>
                       <TableCell className="px-3 py-2">
                         <label className="inline-flex items-center gap-2">
-                          <input
-                            type="checkbox"
+                          <TableCheckbox
                             checked={draft.markCompleted}
-                            onChange={(e) =>
+                            stopRowClick={false}
+                            onCheckedChange={(checked) =>
                               setScoresByUser((prev) => ({
                                 ...prev,
-                                [row.userId]: { ...draft, markCompleted: e.target.checked },
+                                [row.userId]: { ...draft, markCompleted: checked },
                               }))
                             }
                           />

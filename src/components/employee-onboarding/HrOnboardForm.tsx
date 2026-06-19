@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { DatePickerField, DropdownSelectField, InputField } from "@/components/dashboard/ui/forms";
-import { LoadingOverlay } from "@/components/dashboard/shared/BlackLoader";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
   bandSelectOptions,
@@ -23,6 +22,7 @@ type HrOnboardFormProps = {
   bands: Array<Record<string, unknown>>;
   hasHrAccess: boolean;
   actionLoading: boolean;
+  optionsLoading?: boolean;
   onSubmitSuccess: () => Promise<void>;
   onError: (message: string) => void;
   runAction: (label: string, fn: () => Promise<void>) => void;
@@ -84,6 +84,7 @@ export function HrOnboardForm({
   options,
   bands,
   actionLoading,
+  optionsLoading = false,
   onSubmitSuccess,
   onError,
   runAction,
@@ -215,8 +216,7 @@ export function HrOnboardForm({
   }
 
   return (
-    <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-      {designationLoading ? <LoadingOverlay label="Loading Designations" /> : null}
+    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
       <div className="mb-4 space-y-1">
         <h3 className="font-semibold">Work Information</h3>
         <p className="text-sm text-wt-text-muted">
@@ -250,6 +250,8 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.user_type}
+          loading={optionsLoading}
+          loadingLabel="Loading options…"
           options={options.user_types}
           onChange={(v) =>
             setForm((p) => {
@@ -266,6 +268,8 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.department}
+          loading={optionsLoading}
+          loadingLabel="Loading options…"
           options={options.departments}
           onChange={(v) =>
             setForm((p) => ({
@@ -281,14 +285,18 @@ export function HrOnboardForm({
             label="Band"
             required
             placeholder={
-              !form.department.trim()
-                ? "Select Department First"
-                : bandOptions.length
-                  ? "Select"
-                  : "No Bands Available"
+              optionsLoading
+                ? "Loading bands…"
+                : !form.department.trim()
+                  ? "Select Department First"
+                  : bandOptions.length
+                    ? "Select"
+                    : "No Bands Available"
             }
             value={form.band_id ? String(form.band_id) : ""}
-            disabled={form.user_type === "INTERN" || !form.department.trim() || !bandOptions.length}
+            loading={optionsLoading}
+            loadingLabel="Loading bands…"
+            disabled={form.user_type === "INTERN" || !form.department.trim() || (!optionsLoading && !bandOptions.length)}
             options={bandOptions}
             onChange={(v) =>
               setForm((p) => ({
@@ -303,6 +311,8 @@ export function HrOnboardForm({
           label="Designation"
           required
           value={form.role}
+          loading={designationLoading}
+          loadingLabel="Loading designations…"
           placeholder={
             !form.department.trim() || designationBandId <= 0
               ? "Select Department And Band First"
@@ -326,6 +336,8 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.work_mode}
+          loading={optionsLoading}
+          loadingLabel="Loading options…"
           options={options.work_modes}
           onChange={(v) => setForm((p) => ({ ...p, work_mode: v }))}
         />
@@ -334,6 +346,8 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.work_location_type}
+          loading={optionsLoading}
+          loadingLabel="Loading options…"
           options={options.work_location_types}
           onChange={(v) => setForm((p) => ({ ...p, work_location_type: v }))}
         />
@@ -342,6 +356,8 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.category}
+          loading={optionsLoading}
+          loadingLabel="Loading options…"
           options={options.categories}
           onChange={(v) => setForm((p) => ({ ...p, category: v }))}
         />
@@ -349,10 +365,16 @@ export function HrOnboardForm({
           label="Reporting Manager"
           required
           placeholder={
-            options.reporting_managers.length ? "Select" : "No Employees Available"
+            optionsLoading
+              ? "Loading managers…"
+              : options.reporting_managers.length
+                ? "Select"
+                : "No Employees Available"
           }
           value={form.reporting_manager_id}
-          disabled={!options.reporting_managers.length}
+          loading={optionsLoading}
+          loadingLabel="Loading managers…"
+          disabled={!optionsLoading && !options.reporting_managers.length}
           options={options.reporting_managers}
           onChange={(v) => setForm((p) => ({ ...p, reporting_manager_id: v }))}
         />

@@ -19,6 +19,8 @@ export function DropdownSelect({
   onChange,
   options,
   disabled = false,
+  loading = false,
+  loadingLabel = "Loading…",
   required = false,
   className = "",
   selectClassName,
@@ -29,6 +31,8 @@ export function DropdownSelect({
   onChange: (value: string) => void;
   options: SearchableSelectOption[];
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   required?: boolean;
   className?: string;
   selectClassName?: string;
@@ -36,12 +40,13 @@ export function DropdownSelect({
   "aria-label"?: string;
 }) {
   const selected = options.find((opt) => opt.value === value) ?? null;
+  const isDisabled = disabled || loading;
 
   return (
     <Select
       value={selected}
       onValueChange={(item) => onChange(item?.value ?? "")}
-      disabled={disabled}
+      disabled={isDisabled}
       items={options}
       isItemEqualToValue={(a, b) => a.value === b.value}
     >
@@ -49,16 +54,21 @@ export function DropdownSelect({
         id={id}
         aria-label={ariaLabel}
         aria-required={required || undefined}
-        className={cn(selectClassName, className)}
+        aria-busy={loading || undefined}
+        className={cn(selectClassName, className, loading ? "text-wt-text-muted" : undefined)}
       >
-        <SelectValue placeholder="Select" />
+        <SelectValue placeholder={loading ? loadingLabel : "Select"} />
       </SelectTrigger>
       <SelectContent>
-        {options.map((opt) => (
-          <SelectItem key={opt.value || `opt-${opt.label}`} value={opt}>
-            {opt.label}
-          </SelectItem>
-        ))}
+        {loading ? (
+          <div className="px-2 py-2 text-sm text-wt-text-muted">{loadingLabel}</div>
+        ) : (
+          options.map((opt) => (
+            <SelectItem key={opt.value || `opt-${opt.label}`} value={opt}>
+              {opt.label}
+            </SelectItem>
+          ))
+        )}
       </SelectContent>
     </Select>
   );

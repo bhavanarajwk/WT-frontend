@@ -18,6 +18,8 @@ export function SearchableSelectCombobox({
   options,
   placeholder = "Search…",
   disabled = false,
+  loading = false,
+  loadingLabel = "Loading…",
   required = false,
   className = "",
   inputClassName,
@@ -31,6 +33,8 @@ export function SearchableSelectCombobox({
   options: SearchableSelectOption[];
   placeholder?: string;
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   required?: boolean;
   className?: string;
   inputClassName?: string;
@@ -40,6 +44,7 @@ export function SearchableSelectCombobox({
   showChevron?: boolean;
 }) {
   const selected = options.find((opt) => opt.value === value) ?? null;
+  const isDisabled = disabled || loading;
 
   return (
     <div className={cn("w-full", className)}>
@@ -48,21 +53,22 @@ export function SearchableSelectCombobox({
         value={selected}
         onValueChange={(item) => onChange(item?.value ?? "")}
         itemToStringValue={(item) => item.label}
-        disabled={disabled}
+        disabled={isDisabled}
       >
       <ComboboxInput
         id={idProp}
-        placeholder={placeholder}
-        disabled={disabled}
+        placeholder={loading ? loadingLabel : placeholder}
+        disabled={isDisabled}
         required={required && !value}
         aria-required={required || undefined}
+        aria-busy={loading || undefined}
         aria-label={ariaLabel}
         showTrigger={showChevron}
         showClear={false}
         className={cn("w-full", inputClassName)}
       />
       <ComboboxContent side="bottom" sideOffset={4}>
-        <ComboboxEmpty>No matches</ComboboxEmpty>
+        <ComboboxEmpty>{loading ? loadingLabel : "No matches"}</ComboboxEmpty>
         <ComboboxList>
           {(item) => (
             <ComboboxItem key={item.value || `opt-${item.label}`} value={item}>

@@ -23,7 +23,11 @@ import { formatApiDateDisplay } from "@/utils/apiDate";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
-import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
+import {
+  ProfileDetailsSkeleton,
+  ProfileHeaderSkeleton,
+  TableRowsSkeleton,
+} from "@/components/dashboard/ui/SectionSkeleton";
 import { fetchSelfProfile, shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import {
   isActiveUserStatus,
@@ -388,11 +392,6 @@ export function ProfilePageLeanClient() {
     <>
       <DashboardPageShell>
         <section className="w-full">
-          {isProfileLoading ? (
-            <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
-              <ProfileSectionLoader message="Loading profile..." />
-            </div>
-          ) : null}
           {isOffboarded ? <OffboardedBanner /> : null}
           {!isProfileLoading && !isOffboarded && requiresSelfOnboarding ? <OnboardingPendingBanner /> : null}
           {!isProfileLoading && !isOffboarded && employeeSelfServeProfile && requiresSelfOnboarding ? (
@@ -415,11 +414,24 @@ export function ProfilePageLeanClient() {
             />
           ) : null}
 
-          {!isProfileLoading && !isOffboarded && (!employeeSelfServeProfile || !requiresSelfOnboarding) ? (
-            isEditingOwnProfile ? (
+          {!isOffboarded && (!employeeSelfServeProfile || !requiresSelfOnboarding || isProfileLoading) ? (
+            isEditingOwnProfile && !isProfileLoading ? (
               renderEditPanel()
             ) : (
               <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
+                {isProfileLoading ? (
+                  <>
+                    <ProfileHeaderSkeleton />
+                    <div className="mt-6">
+                      <ProfileDetailsSkeleton />
+                    </div>
+                    <div className="mt-8 border-t border-wt-border pt-6">
+                      <h4 className="mb-3 text-sm font-semibold text-wt-text">Project Details</h4>
+                      <TableRowsSkeleton rows={3} columns={5} />
+                    </div>
+                  </>
+                ) : (
+                  <>
                 <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-5">
                     <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
@@ -439,6 +451,8 @@ export function ProfilePageLeanClient() {
                 {renderProfileDetails()}
                 {!requiresSelfOnboarding ? renderAssignedProjects() : null}
                 {!requiresSelfOnboarding ? <ProfileEmployeeTrainingsSection enabled /> : null}
+                  </>
+                )}
               </div>
             )
           ) : null}

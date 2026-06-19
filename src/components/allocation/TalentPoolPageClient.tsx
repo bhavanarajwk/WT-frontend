@@ -11,7 +11,7 @@ import {
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import Link from "next/link";
 import { type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -41,17 +41,7 @@ export function TalentPoolPageClient() {
     loadUnallocatedPage,
   } = useTalentPoolTables(queriesEnabled);
 
-  if (authStatus === "loading") {
-    return (
-      <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-sm text-wt-text-muted">
-          Loading…
-        </div>
-      </DashboardPageShell>
-    );
-  }
-
-  if (!canView) {
+  if (authStatus !== "loading" && !canView) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
@@ -101,7 +91,7 @@ export function TalentPoolPageClient() {
           ) : null}
 
           {loading && !data ? (
-            <SectionLoading label="Loading talent pool…" />
+            <TableRowsSkeleton rows={6} columns={4} />
           ) : unallocated ? (
             <TalentPoolSection
               title={unallocated.label}

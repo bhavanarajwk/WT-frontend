@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -3572,12 +3574,10 @@ export function LeavePageClient() {
                                 </div>
                                 {leaveSubTab === "my" &&
                                 normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
-                                  <label className="text-sm flex items-center gap-2">
-                                    <input
-                                      type="checkbox"
+                                  <Label className="text-sm flex items-center gap-2 font-normal">
+                                    <Checkbox
                                       checked={leaveRequestForm.is_half_day}
-                                      onChange={(e) => {
-                                        const checked = e.target.checked;
+                                      onCheckedChange={(checked) => {
                                         setLeaveRequestForm((p) => ({
                                           ...p,
                                           is_half_day: checked,
@@ -3586,20 +3586,19 @@ export function LeavePageClient() {
                                       }}
                                     />
                                     Half-day leave (single day only)
-                                  </label>
+                                  </Label>
                                 ) : null}
                                 {requiresClientApproval &&
                                 (leaveSubTab === "wfh" ||
                                   normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE") ? (
-                                  <label className="text-sm flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
-                                    <input
-                                      type="checkbox"
+                                  <Label className="text-sm flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-normal text-amber-900">
+                                    <Checkbox
                                       className="mt-0.5"
                                       checked={leaveRequestForm.client_approval}
-                                      onChange={(e) =>
+                                      onCheckedChange={(checked) =>
                                         setLeaveRequestForm((p) => ({
                                           ...p,
-                                          client_approval: e.target.checked,
+                                          client_approval: checked,
                                         }))
                                       }
                                     />
@@ -3607,7 +3606,7 @@ export function LeavePageClient() {
                                       I confirm client approval for this request (required on active client/staffing
                                       projects).
                                     </span>
-                                  </label>
+                                  </Label>
                                 ) : null}
                                 {leaveSubTab === "my" &&
                                 normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (

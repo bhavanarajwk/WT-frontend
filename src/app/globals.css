@@ -368,38 +368,20 @@ body::-webkit-scrollbar {
   border-spacing: 0;
 }
 
-.wt-scrollable-table thead th,
-[data-slot="table"] thead th {
+/* Sticky headers — only inside bounded scroll shells (never on page scroll) */
+.wt-scroll-both .wt-scrollable-table thead th,
+.wt-scroll-both [data-slot="table"] thead th,
+.wt-scroll-both-chain .wt-scrollable-table thead th,
+.wt-scroll-both-chain [data-slot="table"] thead th,
+.wt-scroll-chain .wt-scrollable-table thead th,
+.wt-scroll-chain [data-slot="table"] thead th,
+.wt-table-sticky-head th {
   position: sticky;
   top: 0;
   z-index: 2;
   background-color: var(--wt-surface-2);
   background-clip: padding-box;
   box-shadow: 0 1px 0 var(--wt-border);
-}
-
-/* Table scroll shells — headers stick to the shell top (overrides page offset) */
-.wt-page-scroll main .wt-scroll-both .wt-scrollable-table thead th,
-.wt-page-scroll main .wt-scroll-both [data-slot="table"] thead th,
-.wt-page-scroll main .wt-scroll-both-chain .wt-scrollable-table thead th,
-.wt-page-scroll main .wt-scroll-both-chain [data-slot="table"] thead th,
-.wt-page-scroll main .wt-scroll-chain .wt-scrollable-table thead th,
-.wt-page-scroll main .wt-scroll-chain [data-slot="table"] thead th,
-.wt-scroll-both .wt-scrollable-table thead th,
-.wt-scroll-both [data-slot="table"] thead th,
-.wt-scroll-both-chain .wt-scrollable-table thead th,
-.wt-scroll-both-chain [data-slot="table"] thead th,
-.wt-scroll-chain .wt-scrollable-table thead th,
-.wt-scroll-chain [data-slot="table"] thead th {
-  top: 0;
-  z-index: 3;
-}
-
-/* Page scroll — headers stay visible below the sticky dashboard title bar */
-.wt-page-scroll main .wt-scrollable-table thead th,
-.wt-page-scroll main [data-slot="table"] thead th {
-  top: var(--wt-dashboard-header-offset);
-  z-index: 5;
 }
 
 /* Profile inline tables — static headers so body rows are not covered while scrolling */
@@ -427,15 +409,6 @@ body::-webkit-scrollbar {
 
 .wt-profile-table [data-slot="table-cell"] {
   color: var(--wt-text);
-}
-
-.wt-table-sticky-head th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background-color: var(--wt-surface-2);
-  background-clip: padding-box;
-  box-shadow: 0 1px 0 var(--wt-border);
 }
 
 /* Dashboard main pane: always scrollable; thin scrollbar for discoverability */
