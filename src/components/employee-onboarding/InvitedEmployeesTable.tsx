@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState } from "react";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
-import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
 import { DEFAULT_PAGE_SIZE, useClientPagination } from "@/hooks/useClientPagination";
 import {
   activeSortDirectionForColumn,
@@ -19,6 +18,7 @@ import {
 } from "@/utils/dashboard/invitedEmployees";
 import { formatTableColumnHeader, prepareTableForDisplay } from "@/utils/tableDisplay";
 import { BlackLoader } from "@/components/dashboard/shared/BlackLoader";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 
 const DATA_COLUMNS = [
   "emp_id",
@@ -113,22 +113,26 @@ export function InvitedEmployeesTable({
     resetKeys: [sortId],
   });
 
-  if (loading) {
+  if (loading && !displaySourceRows.length) {
     return (
-      <div className="rounded-xl border border-wt-border bg-wt-surface-1 px-4 py-6">
-        <ProfileSectionLoader message="Loading employee onboarding list..." />
+      <div
+        className="flex min-h-[min(70vh,520px)] items-center justify-center rounded-xl border border-wt-border bg-wt-surface-1"
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <SectionLoading label="Loading Employees…" />
       </div>
     );
   }
 
-  if (!displaySourceRows.length) {
+  if (!loading && !displaySourceRows.length) {
     return <p className="text-sm text-wt-text-muted">{emptyLabel}</p>;
   }
 
   return (
     <div className="space-y-2">
       <div
-        className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border"
+        className="relative wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border"
         style={{ overscrollBehaviorY: "auto" }}
         ref={tableScrollRef}
         onWheel={(event) => {
@@ -148,6 +152,15 @@ export function InvitedEmployeesTable({
           pageScroller.scrollBy({ top: deltaY, behavior: "auto" });
         }}
       >
+        {loading ? (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-wt-surface-1/85"
+            aria-busy="true"
+            aria-live="polite"
+          >
+            <SectionLoading label="Loading Employees…" />
+          </div>
+        ) : null}
         <table className="wt-scrollable-table text-sm">
           <thead className="wt-table-sticky-head text-wt-text-muted">
             <tr>

@@ -259,7 +259,6 @@ export function EmployeePageClient() {
   const [onboardOptions, setOnboardOptions] =
     useState<OnboardOptionsResponse>(FALLBACK_ONBOARD_OPTIONS);
   const [onboardDataLoading, setOnboardDataLoading] = useState(true);
-  const [inviteListLoading, setInviteListLoading] = useState(true);
   const [selfProfileForm, setSelfProfileForm] = useState({
     phone_number: "",
     primary_skills: "",
@@ -437,13 +436,13 @@ export function EmployeePageClient() {
   useEffect(() => {
     if (!user || !hasHrAccess) {
       setOnboardDataLoading(false);
-      setInviteListLoading(false);
+      setInvitedListLoading(false);
       return;
     }
     const id = window.setTimeout(() => {
       void (async () => {
         setOnboardDataLoading(true);
-        setInviteListLoading(true);
+        setInvitedListLoading(true);
         let bandsError: string | null = null;
         try {
           const from = invitedListFromDateRef.current.trim();
@@ -500,7 +499,7 @@ export function EmployeePageClient() {
           setInviteOnboardingRows([]);
         } finally {
           setOnboardDataLoading(false);
-          setInviteListLoading(false);
+          setInvitedListLoading(false);
         }
       })();
     }, 0);
@@ -1673,7 +1672,7 @@ export function EmployeePageClient() {
         throw new Error("From date must be on or before To date.");
       }
 
-      setInviteListLoading(true);
+      setInvitedListLoading(true);
       try {
         const res = await hrmsService.getInvitedUsers({
           fromDate: from,
@@ -1689,19 +1688,14 @@ export function EmployeePageClient() {
           setInvitedApiServerRange
         );
       } finally {
-        setInviteListLoading(false);
+        setInvitedListLoading(false);
       }
     },
     []
   );
   const loadInviteOnboardingPreviewWithState = useCallback(
     async (range?: { from?: string; to?: string }) => {
-      setInvitedListLoading(true);
-      try {
-        await loadInviteOnboardingPreview(range);
-      } finally {
-        setInvitedListLoading(false);
-      }
+      await loadInviteOnboardingPreview(range);
     },
     [loadInviteOnboardingPreview]
   );
@@ -2536,7 +2530,7 @@ export function EmployeePageClient() {
   );
 
 
-  const onboardEmployeesLoading = onboardDataLoading || inviteListLoading;
+  const onboardEmployeesLoading = onboardDataLoading;
 
   return (
     <>
