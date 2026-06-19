@@ -1,6 +1,7 @@
 "use client";
 
 import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { FORM_CONTROL_WITH_CHEVRON_CLASS } from "@/components/dashboard/ui/uiLayout";
 import type { CompOffProjectOption } from "@/utils/compOffProjects";
 
 export function ProjectSelectField({
@@ -22,7 +23,7 @@ export function ProjectSelectField({
     <label className="text-xs text-wt-text-muted flex flex-col gap-1">
       <FieldLabel label={label} required={required} />
       <select
-        className="input-field px-3 py-2 text-sm"
+        className={FORM_CONTROL_WITH_CHEVRON_CLASS}
         value={value}
         disabled={disabled}
         required={required}

@@ -9,6 +9,7 @@ import { formatActionErrorMessage, formatActionSuccessMessage } from "@/utils/ac
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import { createEmptySelfProfileForm } from "@/utils/profileFormState";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboardingPanel";
 import { InputField, SelectField, FileField } from "@/components/dashboard/ui/forms";
 import {
@@ -458,21 +459,7 @@ export function ProfilePageLeanClient() {
         </section>
       </DashboardPageShell>
 
-      {toast ? (
-        <div className="fixed bottom-5 right-5 z-50">
-          <div
-            className={`rounded-xl border px-4 py-3 text-sm shadow-lg ${
-              toast.type === "success"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : "border-rose-200 bg-rose-50 text-rose-800"
-            }`}
-            role="status"
-            aria-live="polite"
-          >
-            {toast.message}
-          </div>
-        </div>
-      ) : null}
+      <DashboardToast toast={toast} />
     </>
   );
 }

@@ -4,6 +4,7 @@ import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { InputField } from "@/components/dashboard/ui/forms";
+import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
@@ -113,7 +114,7 @@ export function AnnualCalendarPageClient() {
                 <label className="flex flex-col gap-1 text-xs text-wt-text-muted sm:col-span-2">
                   Document link (Google Docs / Sheets)
                   <input
-                    className="input-field px-3 py-2 text-sm"
+                    className={FORM_CONTROL_CLASS}
                     value={documentLink}
                     onChange={(e) => setDocumentLink(e.target.value)}
                     placeholder="https://docs.google.com/spreadsheets/d/..."

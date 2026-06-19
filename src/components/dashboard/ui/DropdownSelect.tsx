@@ -1,6 +1,7 @@
 "use client";
 
 import type { SearchableSelectOption } from "@/components/dashboard/ui/SearchableSelectCombobox";
+import { FORM_CONTROL_WITH_CHEVRON_CLASS } from "@/components/dashboard/ui/uiLayout";
 
 export function ChevronDownIcon() {
   return (
@@ -27,7 +28,7 @@ export function DropdownSelect({
   disabled = false,
   required = false,
   className = "",
-  selectClassName = "input-field appearance-none px-3 py-2 pr-10 text-sm w-full",
+  selectClassName = FORM_CONTROL_WITH_CHEVRON_CLASS,
   id,
   "aria-label": ariaLabel,
 }: {

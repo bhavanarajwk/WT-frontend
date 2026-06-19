@@ -226,7 +226,7 @@ export function EmployeeDirectoryPageClient() {
 
   return (
     <DashboardPageShell className="wt-detail-page">
-      <DashboardToast toast={toast} position="top" />
+      <DashboardToast toast={toast} />
       <div className="wt-detail-scroll-root wt-detail-panel rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="wt-detail-panel__header border-b border-wt-border px-5 py-5 md:px-7 md:py-6">
           <h3 className="text-lg font-semibold">All Employees</h3>

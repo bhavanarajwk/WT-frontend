@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDownIcon } from "@/components/dashboard/ui/DropdownSelect";
+import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 export type SearchableSelectOption = { value: string; label: string };
@@ -21,7 +22,7 @@ export function SearchableSelectCombobox({
   disabled = false,
   required = false,
   className = "",
-  inputClassName = "input-field px-3 py-2 text-sm w-full",
+  inputClassName = FORM_CONTROL_CLASS,
   id: idProp,
   "aria-label": ariaLabel,
   dropdownAttached = false,

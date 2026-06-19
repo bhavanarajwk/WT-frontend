@@ -541,6 +541,11 @@ body::-webkit-scrollbar {
   font-size: 0.9375rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   outline: none;
+  box-sizing: border-box;
+}
+
+select.input-field {
+  min-height: 2.5rem;
 }
 
 .input-field::placeholder {
