@@ -5,6 +5,7 @@ export interface HrOffboardListItem {
   employee_name: string;
   exit_type: string;
   reason: string | null;
+  expected_behavior: string | null;
   critical_skill: string | null;
   is_regretted: boolean;
   resignation_date: string;

@@ -15,7 +15,6 @@ import {
   formatActionSuccessMessage,
 } from "@/utils/actionToast";
 import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
-import { EmployeeAttendancePanel } from "@/components/dashboard/sections/EmployeeAttendancePanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
@@ -110,6 +109,7 @@ export function EmployeePageClient() {
   const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
+  const [invitedListLoading, setInvitedListLoading] = useState(false);
   const [resendingInviteEmail, setResendingInviteEmail] = useState<string | null>(null);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
     () => defaultInvitedEmployeesDateRange().from
@@ -1649,6 +1649,17 @@ export function EmployeePageClient() {
     },
     []
   );
+  const loadInviteOnboardingPreviewWithState = useCallback(
+    async (range?: { from?: string; to?: string }) => {
+      setInvitedListLoading(true);
+      try {
+        await loadInviteOnboardingPreview(range);
+      } finally {
+        setInvitedListLoading(false);
+      }
+    },
+    [loadInviteOnboardingPreview]
+  );
 
   const resetOnboardForm = useCallback(() => {
     setOnboardForm(createEmptyOnboardForm());
@@ -1774,12 +1785,12 @@ export function EmployeePageClient() {
     if (!hasHrAccess) return;
     if (inviteOnboardingRows.length) return;
     const id = window.setTimeout(() => {
-      void loadInviteOnboardingPreview().catch(() => {
+      void loadInviteOnboardingPreviewWithState().catch(() => {
         setInviteOnboardingRows([]);
       });
     }, 0);
     return () => window.clearTimeout(id);
-  }, [hasHrAccess, inviteOnboardingRows.length, loadInviteOnboardingPreview]);
+  }, [hasHrAccess, inviteOnboardingRows.length, loadInviteOnboardingPreviewWithState]);
 
   const filteredProjects = useMemo(() => {
     const search = projectFilters.search.trim().toLowerCase();
@@ -2497,28 +2508,28 @@ export function EmployeePageClient() {
                                 runAction={runAction}
                                 onError={(message) => setToast({ type: "error", message })}
                                 onSubmitSuccess={async () => {
-                                  await loadInviteOnboardingPreview();
+                                  await loadInviteOnboardingPreviewWithState();
                                   resetOnboardForm();
                                 }}
                               />
-                              <div className="flex justify-end">
-                                <button
-                                  type="button"
-                                  className="btn-ghost px-3 py-2"
-                                  onClick={() =>
-                                    runAction("Refresh Employees", async () => {
-                                      await loadInviteOnboardingPreview();
-                                      resetOnboardForm();
-                                    })
-                                  }
-                                  disabled={actionLoading}
-                                >
-                                  Refresh Employees
-                                </button>
-                              </div>
-          
+
                               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                                <h3 className="font-semibold">Onboarded Employees</h3>
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <h3 className="font-semibold">Onboarded Employees</h3>
+                                  <button
+                                    type="button"
+                                    className="btn-ghost px-3 py-2"
+                                    onClick={() =>
+                                      runAction("Refresh Employees", async () => {
+                                        await loadInviteOnboardingPreviewWithState();
+                                        resetOnboardForm();
+                                      })
+                                    }
+                                    disabled={actionLoading || invitedListLoading}
+                                  >
+                                    Refresh Employees
+                                  </button>
+                                </div>
                                 <div className="flex flex-wrap items-end gap-3">
                                   <InputField
                                     label="From Date"
@@ -2537,7 +2548,7 @@ export function EmployeePageClient() {
                                     className="btn-primary px-3 py-2 text-sm"
                                     onClick={() =>
                                       runAction("Load invited employees", async () => {
-                                        await loadInviteOnboardingPreview({
+                                        await loadInviteOnboardingPreviewWithState({
                                           from: invitedListFromDateRef.current,
                                           to: invitedListToDateRef.current,
                                         });
@@ -2556,7 +2567,7 @@ export function EmployeePageClient() {
                                         const { from, to } = defaultInvitedEmployeesDateRange();
                                         setInvitedListFromDate(from);
                                         setInvitedListToDate(to);
-                                        await loadInviteOnboardingPreview({ from, to });
+                                        await loadInviteOnboardingPreviewWithState({ from, to });
                                         resetOnboardForm();
                                       })
                                     }
@@ -2581,6 +2592,7 @@ export function EmployeePageClient() {
                                 <InvitedEmployeesTable
                                   rows={inviteOnboardingRows}
                                   emptyLabel="No invited employees in this date range."
+                                  loading={invitedListLoading}
                                   actionLoading={actionLoading}
                                   resendingEmail={resendingInviteEmail}
                                   onResendInvite={resendOnboardInvite}
@@ -2592,21 +2604,7 @@ export function EmployeePageClient() {
                             </section>
         </OnboardingGate>
       </DashboardPageShell>
-            {toast ? (
-              <div className="fixed right-5 bottom-5 z-50">
-                <div
-                  className={`rounded-xl px-4 py-3 text-sm shadow-lg border ${
-                    toast.type === "success"
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : "bg-rose-50 text-rose-800 border-rose-200"
-                  }`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {toast.message}
-                </div>
-              </div>
-            ) : null}
+            <DashboardToast toast={toast} />
     </>
   );
 }

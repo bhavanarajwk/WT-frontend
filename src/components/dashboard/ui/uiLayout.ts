@@ -7,6 +7,9 @@ export const SECTION_DESCRIPTION_CLASS = "mt-1.5 text-sm leading-relaxed text-wt
 
 export const FORM_FIELD_CLASS = "flex flex-col gap-1.5";
 export const FIELD_LABEL_CLASS = "text-sm font-medium text-wt-text";
+/** Shared height/padding for text inputs and selects in forms. */
+export const FORM_CONTROL_CLASS = "input-field h-10 w-full px-3 text-sm";
+export const FORM_CONTROL_WITH_CHEVRON_CLASS = `${FORM_CONTROL_CLASS} appearance-none pr-10`;
 
 export const DETAIL_LABEL_CELL_CLASS =
   "w-[34%] min-w-[9.5rem] whitespace-nowrap align-top px-4 py-2.5 text-sm text-wt-text-muted";

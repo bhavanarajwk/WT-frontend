@@ -79,7 +79,7 @@ export function ProfilePhotoAvatar({
 
   return (
     <div
-      className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-2 flex items-center justify-center"
+      className="h-28 w-28 shrink-0 overflow-hidden rounded-lg border border-wt-border bg-wt-surface-2 flex items-center justify-center"
       aria-hidden={!src || imageFailed}
     >
       {src && !imageFailed ? (
@@ -96,20 +96,51 @@ export function ProfilePhotoAvatar({
   );
 }
 
+function formatProfileFieldValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || "—";
+  }
+  if (Array.isArray(value)) {
+    const parts = value.map((item) => String(item ?? "").trim()).filter(Boolean);
+    return parts.length ? parts.join(", ") : "—";
+  }
+  return String(value);
+}
+
 export function ProfileField({
   label,
   value,
   fullWidth = false,
+  link = false,
 }: {
   label: string;
   value: unknown;
   fullWidth?: boolean;
+  link?: boolean;
 }) {
+  const formatted = formatProfileFieldValue(value);
+  const href = link && formatted !== "—" ? formatted : null;
   const spanClass = fullWidth ? "sm:col-span-2" : "";
+
   return (
-    <>
-      <dt className={`text-sm text-wt-text-muted ${spanClass}`}>{formatUILabel(label)}</dt>
-      <dd className={`text-sm font-medium text-wt-text ${spanClass}`}>{value ? String(value) : "—"}</dd>
-    </>
+    <div className={`flex items-baseline gap-x-4 gap-y-1 text-sm ${fullWidth ? "w-full" : ""} ${spanClass}`}>
+      <dt className="w-40 shrink-0 text-wt-text-muted">{formatUILabel(label)}</dt>
+      <dd className="min-w-0 flex-1 font-medium text-wt-text break-words">
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline"
+          >
+            {formatted}
+          </a>
+        ) : (
+          formatted
+        )}
+      </dd>
+    </div>
   );
 }

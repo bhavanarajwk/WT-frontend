@@ -36,8 +36,9 @@ export function TraineeAttendanceAnalytics({
     queries: sessions.map((session) => {
       const sessionId = String(session.id ?? "").trim();
       return {
-        queryKey: ["learning", "attendance", trainingId, sessionId, "analytics", employeeUserId],
+        queryKey: ["learning", "attendance", trainingId, sessionId],
         enabled: Boolean(trainingId && sessionId && employeeUserId),
+        staleTime: 60_000,
         queryFn: async () => {
           const res = await hrmsService.getAttendance(trainingId, sessionId);
           const rows = toPagedRows(res.data ?? res);

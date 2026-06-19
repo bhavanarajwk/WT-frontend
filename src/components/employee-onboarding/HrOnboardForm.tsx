@@ -186,6 +186,12 @@ export function HrOnboardForm({
           ? { holiday_calendar_id: Number(form.holiday_calendar_id) }
           : {}),
       };
+      if (form.holiday_calendar_id.trim()) {
+        const calendarId = Number(form.holiday_calendar_id.trim());
+        if (Number.isFinite(calendarId) && calendarId > 0) {
+          basePayload.holiday_calendar_id = calendarId;
+        }
+      }
 
       if (form.user_type === "INTERN") {
         await hrmsService.createOnboard({
@@ -337,6 +343,15 @@ export function HrOnboardForm({
           value={form.category}
           options={options.categories}
           onChange={(v) => setForm((p) => ({ ...p, category: v }))}
+        />
+        <DropdownSelectField
+          label="Holiday Calendar"
+          placeholder={
+            options.holiday_calendars.length ? "Select (Optional)" : "No Calendars Configured"
+          }
+          value={form.holiday_calendar_id}
+          options={[{ value: "", label: "None" }, ...options.holiday_calendars]}
+          onChange={(v) => setForm((p) => ({ ...p, holiday_calendar_id: v }))}
         />
         <DropdownSelectField
           label="Reporting Manager"

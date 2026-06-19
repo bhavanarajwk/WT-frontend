@@ -44,7 +44,7 @@ export async function refreshSession(): Promise<AuthUser | null> {
     return body.data;
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) return null;
-    return null;
+    throw error;
   }
 }
 

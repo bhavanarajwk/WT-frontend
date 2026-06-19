@@ -2,6 +2,7 @@
 
 import type { FormField } from "@/types/exit-interview";
 import { ReadonlyDateField } from "@/components/dashboard/ui/forms";
+import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { isReadonlyField, textareaPlaceholder } from "@/utils/exitInterview";
 
 function FieldError({ message }: { message?: string }) {
@@ -13,7 +14,7 @@ function ReadonlyControl({ field, value }: { field: FormField; value: string }) 
   if (field.widget === "readonly_date") {
     return <ReadonlyDateField value={value} />;
   }
-  return <input className="input-field px-3 py-2 text-sm opacity-80" value={value} disabled readOnly />;
+  return <input className={`${FORM_CONTROL_CLASS} opacity-80`} value={value} disabled readOnly />;
 }
 
 function MultiSelectControl({
@@ -182,7 +183,7 @@ export function ExitInterviewFormFields({
                     <label className="mt-3 flex flex-col gap-1 text-xs text-wt-text-muted">
                       Please specify
                       <input
-                        className="input-field px-3 py-2 text-sm"
+                        className={FORM_CONTROL_CLASS}
                         value={String(answers[field.other_field] ?? "")}
                         disabled={disabled}
                         onChange={(e) => onChange(field.other_field!, e.target.value)}

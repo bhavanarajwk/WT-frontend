@@ -2,7 +2,7 @@
 
 import { isValidElement, type ReactNode, useMemo, useState } from "react";
 import { ApiDateField, FieldLabel } from "@/components/dashboard/ui/forms";
-import { FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { FORM_CONTROL_CLASS, FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import {
@@ -39,7 +39,7 @@ export function InputField({
     <label className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} />
       <input
-        className="input-field px-3 py-2 text-sm"
+        className={FORM_CONTROL_CLASS}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         type={type}
@@ -72,7 +72,7 @@ export function FileField({
       <input
         type="file"
         accept={accept}
-        className="input-field px-3 py-2 text-sm"
+        className={FORM_CONTROL_CLASS}
         onChange={(e) => onPick?.(e.target.files?.[0] ?? null)}
       />
     </label>

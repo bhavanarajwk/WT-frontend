@@ -285,6 +285,7 @@ export const hrmsService = {
       exit_type: "VOLUNTARY" | "INVOLUNTARY" | "CONTRACTUAL";
       last_working_day?: string;
       reason?: string | null;
+      expected_behavior?: string | null;
       critical_skill?: string | null;
       is_regretted?: boolean;
     }

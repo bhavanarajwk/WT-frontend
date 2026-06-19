@@ -17,7 +17,6 @@ import {
   userRequestActionLabel,
 } from "@/utils/actionToast";
 import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
-import { EmployeeAttendancePanel } from "@/components/dashboard/sections/EmployeeAttendancePanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
@@ -3199,21 +3198,7 @@ export function UploadsPageClient() {
                         </section>
         </OnboardingGate>
       </DashboardPageShell>
-            {toast ? (
-              <div className="fixed right-5 bottom-5 z-50">
-                <div
-                  className={`rounded-xl px-4 py-3 text-sm shadow-lg border ${
-                    toast.type === "success"
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : "bg-rose-50 text-rose-800 border-rose-200"
-                  }`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {toast.message}
-                </div>
-              </div>
-            ) : null}
+            <DashboardToast toast={toast} />
     </>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import { InputField, SelectField, FileField, TextAreaField } from "@/components/dashboard/ui/forms";
+import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { isValidIndiaMobile, isValidPersonName } from "@/utils/dashboard/validation";
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import { validateResumeShareLink } from "@/utils/employeeResume";
@@ -195,7 +196,7 @@ export function SelfOnboardingPanel({
         <label className="text-xs text-wt-text-muted flex flex-col gap-1">
           Work email
           <input
-            className="input-field px-3 py-2 text-sm bg-wt-surface-2 text-wt-text-muted"
+            className={`${FORM_CONTROL_CLASS} bg-wt-surface-2 text-wt-text-muted`}
             type="email"
             value={email}
             readOnly

@@ -58,6 +58,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const didInitialRefresh = useRef(false);
   const timeoutHandled = useRef(false);
+  const userRef = useRef<AuthUser | null>(null);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const refresh = useCallback(async (): Promise<AuthUser | null> => {
     setStatus("loading");
@@ -74,6 +79,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setStatus("unauthenticated");
       return null;
     } catch {
+      const keptUser = userRef.current;
+      if (keptUser) {
+        setStatus("authenticated");
+        return keptUser;
+      }
       clearSessionTiming();
       setUser(null);
       setStatus("unauthenticated");

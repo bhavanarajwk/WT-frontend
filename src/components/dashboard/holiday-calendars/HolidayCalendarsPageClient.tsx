@@ -88,6 +88,7 @@ export function HolidayCalendarsPageClient() {
   const [detail, setDetail] = useState<HolidayCalendarDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const holidayFileRef = useRef<HTMLInputElement>(null);
+  const assignmentFileRef = useRef<HTMLInputElement>(null);
 
   const loadCalendar = useCallback(async () => {
     setIsLoading(true);
@@ -130,21 +131,22 @@ export function HolidayCalendarsPageClient() {
                   Holiday Calendar
                 </h1>
                 <p className="mt-1 max-w-2xl text-sm leading-relaxed text-wt-text-muted">
-                  One company-wide holiday calendar applies to every employee. Import or export
-                  holiday dates with CSV.
+                  Configure company holidays and associate calendars with employees during onboarding,
+                  from the employee profile, or via CSV import.
                 </p>
               </div>
             </div>
           </header>
 
           <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-900">
-            <strong>Note:</strong> Import holidays for the company calendar below. Assign calendars to
-            employees during onboarding or from the employee profile in the directory.
+            <strong>Note:</strong> Import holiday dates for the company calendar below. Assign calendars
+            to employees individually during onboarding, from the employee profile, or using the
+            employee assignment CSV.
           </div>
 
           {hasHrAccess ? (
             <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4 shadow-sm sm:p-5">
-              <h2 className="text-base font-semibold sm:text-lg">Import &amp; Export</h2>
+              <h2 className="text-base font-semibold sm:text-lg">Holiday Import &amp; Export</h2>
               <p className="mt-1 text-sm text-wt-text-muted">
                 CSV columns: <code className="text-indigo-700">holiday_date</code>,{" "}
                 <code className="text-indigo-700">name</code>, optional{" "}
@@ -187,6 +189,64 @@ export function HolidayCalendarsPageClient() {
                 >
                   <DownloadIcon />
                   Export CSV
+                </button>
+              </div>
+            </section>
+          ) : null}
+
+          {hasHrAccess ? (
+            <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4 shadow-sm sm:p-5">
+              <h2 className="text-base font-semibold sm:text-lg">Employee Calendar Assignments</h2>
+              <p className="mt-1 text-sm text-wt-text-muted">
+                CSV columns: <code className="text-indigo-700">email</code>,{" "}
+                <code className="text-indigo-700">calendar_code</code>.
+              </p>
+
+              <input
+                ref={assignmentFileRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  runAction("Import Assignments", async () => {
+                    const res = await hrmsService.importEmployeeHolidayAssignmentsCsv(file);
+                    const data = (res as { data?: { processed?: number; skipped?: number; errors?: string[] } })
+                      .data;
+                    if (data?.errors?.length) {
+                      throw new Error(
+                        `Imported ${data.processed ?? 0}, skipped ${data.skipped ?? 0}. ${data.errors[0]}`
+                      );
+                    }
+                  });
+                }}
+              />
+
+              <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                <button
+                  type="button"
+                  className="btn-secondary w-full"
+                  disabled={actionLoading}
+                  onClick={() => assignmentFileRef.current?.click()}
+                >
+                  <UploadIcon />
+                  Import Assignments CSV
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary w-full"
+                  disabled={actionLoading}
+                  onClick={() =>
+                    runAction("Export Assignments", async () => {
+                      const blob = await hrmsService.downloadEmployeeHolidayAssignmentsCsv();
+                      downloadBlob(blob, "employee-holiday-assignments.csv");
+                    })
+                  }
+                >
+                  <DownloadIcon />
+                  Export Assignments CSV
                 </button>
               </div>
             </section>

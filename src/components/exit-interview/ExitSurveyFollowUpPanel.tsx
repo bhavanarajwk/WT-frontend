@@ -286,7 +286,11 @@ export function ExitSurveyFollowUpPanel() {
 
   return (
     <div className="space-y-4">
+<<<<<<< HEAD
       <DashboardToast toast={toast} position="top" />
+=======
+      <DashboardToast toast={toast} />
+>>>>>>> 479ca967582e9bc1a1c0477bacbf3cc3e2078419
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="sr-only" htmlFor="exit-survey-follow-up-search">

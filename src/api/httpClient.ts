@@ -138,7 +138,7 @@ export class HttpClient {
       }
 
       if (!response.ok) {
-        if (response.status === 401) {
+        if (response.status === 401 && !skipAuth) {
           this.onUnauthorized?.();
         }
 
