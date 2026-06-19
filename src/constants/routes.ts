@@ -19,7 +19,6 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   "timelog-team": "/dashboard/timelog/team",
   leave: "/dashboard/leave",
   "leave-team": "/dashboard/leave/team",
-  "leave-org": "/dashboard/leave/team",
   "annual-calendar": "/dashboard/annual-calendar",
   "holiday-calendars": "/dashboard/holiday-calendars",
   learning: "/dashboard/learning-development",
@@ -94,13 +93,7 @@ export function isDashboardNavChildActive(
   const onTeamLeave =
     pathname === "/dashboard/leave/team" || pathname.startsWith("/dashboard/leave/team/");
   if (!onTeamLeave) return false;
-  if (childId === "leave-org" && options?.hasHrAccess) return true;
-  if (
-    childId === "leave-team" &&
-    (options?.hasManagerAccess || options?.hasDmAccess || options?.hasHrAccess)
-  ) {
-    return true;
-  }
+  if (childId === "leave-team" && onTeamLeave) return true;
   return false;
 }
 

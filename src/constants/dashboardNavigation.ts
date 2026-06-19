@@ -80,14 +80,8 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "leave-team",
-        label: "Team Requests",
+        label: "Leave Requests",
         roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
-        icon: "calendarDays",
-      },
-      {
-        id: "leave-org",
-        label: "All Employee Requests",
-        roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
       {
@@ -295,8 +289,7 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   employee: "Onboarded Employees",
   offboarding: "Offboarding",
   leave: "Employee Leave Requests",
-  "leave-team": "Team Requests",
-  "leave-org": "All Employee Requests",
+  "leave-team": "Leave Requests",
 };
 
 function groupChildPageTitle(groupLabel: string, childLabel: string): string {

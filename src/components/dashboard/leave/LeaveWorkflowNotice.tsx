@@ -2,25 +2,30 @@
 
 export function LeaveWorkflowNotice({
   variant,
+  scope = "team",
 }: {
   variant: "employee" | "manager" | "dm" | "hr";
+  scope?: "team" | "org";
 }) {
   const copy: Record<typeof variant, { title: string; body: string }> = {
     employee: {
-      title: "Leave request",
-      body: "Select one or more managers to notify by email. You can optionally add other employees as notification recipients. Manager approval in Team Requests is final—there is no HR final approval step.",
+      title: "Leave Request",
+      body: "Select one or more managers to notify by email. You can optionally add other employees as notification recipients. Manager approval in Leave Requests is final—there is no HR final approval step.",
     },
     manager: {
-      title: "Leave request",
+      title: "Leave Request",
       body: "Select managers to notify when you submit leave. Optional additional recipients receive the same notification email at their work address.",
     },
     dm: {
-      title: "Team leave requests",
+      title: "Team Leave Requests",
       body: "Review and approve or reject leave requests from managers on your team. Manager approval is final for employee leave.",
     },
     hr: {
-      title: "All employee leave requests",
-      body: "Search and filter leave requests across the organization. Managers approve employee leave in Team Requests; HR does not perform a separate final approval step.",
+      title: scope === "org" ? "All Employee Leave Requests" : "Team Leave Requests",
+      body:
+        scope === "org"
+          ? "Search and filter leave requests across the organization. Managers approve employee leave in Leave Requests; HR does not perform a separate final approval step."
+          : "Review and approve or reject leave requests from employees on your team. Manager approval is final for employee leave.",
     },
   };
 

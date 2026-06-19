@@ -216,10 +216,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       return "Learning & Development";
     }
     if (pathname.includes("/dashboard/leave/team")) {
-      if (hasHrAccess && (!hasManagerAccess && !hasDmAccess || isNavChildActive("leave-org"))) {
-        return getDashboardSectionLabel("leave-org") ?? "All Employee Requests";
-      }
-      return getDashboardSectionLabel("leave-team") ?? "Team Requests";
+      return getDashboardSectionLabel("leave-team") ?? "Leave Requests";
     }
     return dashboardPageTitle(activeSection);
   }, [

@@ -84,7 +84,7 @@ export function LeaveManagerSelector({
       </p>
       <p className="text-xs text-wt-text-muted">
         Selected managers receive a leave notification email at their work address and can approve or
-        reject the request in Team Requests.
+        reject the request in Leave Requests.
       </p>
       <div className="max-h-48 space-y-2 overflow-auto rounded-xl border border-wt-border bg-wt-surface-2/30 p-3">
         {options.map((option) => {

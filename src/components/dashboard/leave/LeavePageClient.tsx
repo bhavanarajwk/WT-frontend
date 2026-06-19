@@ -458,15 +458,23 @@ export function LeavePageClient() {
   const [timelogSubTab, setTimelogSubTab] = useState<"my" | "team">("my");
   const pathname = usePathname();
   const isTeamLeaveRoute = pathname.includes("/dashboard/leave/team");
-  const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team" | "comp-off" | "wfh" | "balances">(
-    isTeamLeaveRoute ? "team" : "my"
-  );
+  const [leaveSubTab, setLeaveSubTab] = useState<
+    "my" | "team" | "org" | "comp-off" | "wfh" | "balances"
+  >(isTeamLeaveRoute ? "team" : "my");
   useEffect(() => {
-    if (isTeamLeaveRoute) setLeaveSubTab("team");
-    else if (pathname.includes("/dashboard/leave")) {
-      setLeaveSubTab((prev) =>
-        prev === "team" ? "my" : prev === "balances" || prev === "comp-off" ? prev : "my"
-      );
+    if (isTeamLeaveRoute) {
+      setLeaveSubTab((prev) => {
+        if (prev === "comp-off" || prev === "balances" || prev === "team" || prev === "org") {
+          return prev;
+        }
+        return "team";
+      });
+    } else if (pathname.includes("/dashboard/leave")) {
+      setLeaveSubTab((prev) => {
+        if (prev === "team" || prev === "org") return "my";
+        if (prev === "balances" || prev === "comp-off" || prev === "wfh") return prev;
+        return "my";
+      });
     }
   }, [isTeamLeaveRoute, pathname]);
   const userRoles = user?.roles ?? [];
@@ -540,7 +548,13 @@ export function LeavePageClient() {
     }
   }, [hasManagerAccess, hasHrAccess, timelogSubTab]);
   useEffect(() => {
-    if (!canViewTeamLeave && leaveSubTab === "team") {
+    if (leaveSubTab === "org" && !hasHrAccess) {
+      setLeaveSubTab("team");
+    }
+  }, [leaveSubTab, hasHrAccess]);
+
+  useEffect(() => {
+    if (!canViewTeamLeave && (leaveSubTab === "team" || leaveSubTab === "org")) {
       setLeaveSubTab("my");
     }
   }, [canViewTeamLeave, leaveSubTab]);
@@ -2062,7 +2076,8 @@ export function LeavePageClient() {
     setTimelogs(normalizedRows);
     return normalizedRows;
   }, [hasHrAccess, hasManagerAccess, loadManagerData]);
-  const loadEmployeeRequestsForApprover = useCallback(async () => {
+  const loadEmployeeRequestsForApprover = useCallback(
+    async (scope: "team" | "org" = "team") => {
     const today = new Date();
     const future = new Date(today);
     future.setFullYear(future.getFullYear() + 2);
@@ -2071,10 +2086,10 @@ export function LeavePageClient() {
     const requestType = employeeRequestFilters.requestType || "ALL";
     let onboardRows: Array<Record<string, unknown>> = [];
     let scopedManagerRows: Array<Record<string, unknown>> = [];
-    if (hasHrAccess) {
+    if (scope === "team" && hasHrAccess) {
       const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "200" });
       onboardRows = toPagedRows(onboardRes.data ?? onboardRes);
-    } else if (hasManagerAccess) {
+    } else if (scope === "team" && hasManagerAccess) {
       if (managerPortfolioRows.length) {
         scopedManagerRows = managerPortfolioRows;
       } else {
@@ -2082,7 +2097,7 @@ export function LeavePageClient() {
         scopedManagerRows = loaded.detailRows;
       }
     }
-    const scopeRows = hasHrAccess ? onboardRows : scopedManagerRows;
+    const scopeRows = scope === "team" && hasHrAccess ? onboardRows : scopedManagerRows;
     const expandedScopeRows = scopeRows.flatMap((row) => {
       const nestedEmployees = Array.isArray(row.employees)
         ? (row.employees as Array<Record<string, unknown>>)
@@ -2119,25 +2134,27 @@ export function LeavePageClient() {
       .filter(Boolean)
       .join(",");
     const collectedRows: Array<Record<string, unknown>> = [];
-    if (emailCsv) {
-      collectedRows.push(
-        ...(await listScopedUserRequests({
-          fromDate: from,
-          toDate: to,
-          requestType,
-          empEmails: emailCsv,
-        }))
-      );
-    }
-    if (hasHrAccess) {
-      collectedRows.push(
-        ...(await listScopedUserRequests({
-          fromDate: from,
-          toDate: to,
-          requestType,
-        }))
-      );
-    } else if (hasDmAccess) {
+    if (scope === "team") {
+      if (emailCsv) {
+        collectedRows.push(
+          ...(await listScopedUserRequests({
+            fromDate: from,
+            toDate: to,
+            requestType,
+            empEmails: emailCsv,
+          }))
+        );
+      }
+      if (hasDmAccess && !hasHrAccess) {
+        collectedRows.push(
+          ...(await listScopedUserRequests({
+            fromDate: from,
+            toDate: to,
+            requestType,
+          }))
+        );
+      }
+    } else if (hasHrAccess) {
       collectedRows.push(
         ...(await listScopedUserRequests({
           fromDate: from,
@@ -2235,20 +2252,26 @@ export function LeavePageClient() {
       return { ...row, employee_display };
     });
     setEmployeeRequests(enriched);
-  }, [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, managerPortfolioRows, loadManagerData]);  useEffect(() => {
-    if (leaveSubTab !== "team") return;
+  },
+    [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, managerPortfolioRows, loadManagerData]
+  );
+
+  useEffect(() => {
+    if (leaveSubTab !== "team" && leaveSubTab !== "org") return;
     if (!canViewTeamLeave) return;
+    if (leaveSubTab === "org" && !hasHrAccess) return;
+    const scope = leaveSubTab === "org" ? "org" : "team";
     const id = window.setTimeout(() => {
       void (async () => {
         try {
-          await loadEmployeeRequestsForApprover();
+          await loadEmployeeRequestsForApprover(scope);
         } catch {
           setEmployeeRequests([]);
         }
       })();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [leaveSubTab, canViewTeamLeave, loadEmployeeRequestsForApprover]);
+  }, [leaveSubTab, canViewTeamLeave, hasHrAccess, loadEmployeeRequestsForApprover]);
 
   async function updateEmployeeRequestStatus(
     requestId: string,
@@ -2295,7 +2318,7 @@ export function LeavePageClient() {
       requireReasonOnReject: true,
     });
     closeRejectDialog();
-    await loadEmployeeRequestsForApprover();
+    await loadEmployeeRequestsForApprover(leaveSubTab === "org" ? "org" : "team");
   }
   const loadInviteOnboardingPreview = useCallback(
     async (range?: { from?: string; to?: string }) => {
@@ -3369,36 +3392,74 @@ export function LeavePageClient() {
           <section className="space-y-4">
                           {showLeaveSubTabBar ? (
                             <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
+                              {isTeamLeaveRoute ? (
+                                <>
+                                  {canViewTeamLeave ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setLeaveSubTab("team")}
+                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                        leaveSubTab === "team"
+                                          ? "bg-wt-surface-3 text-wt-text"
+                                          : "text-wt-text-muted hover:bg-wt-surface-2"
+                                      }`}
+                                    >
+                                      Team Requests
+                                    </button>
+                                  ) : null}
+                                  {hasHrAccess ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setLeaveSubTab("org")}
+                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                        leaveSubTab === "org"
+                                          ? "bg-wt-surface-3 text-wt-text"
+                                          : "text-wt-text-muted hover:bg-wt-surface-2"
+                                      }`}
+                                    >
+                                      All Employee Requests
+                                    </button>
+                                  ) : null}
+                                  {showCompOffTab ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setLeaveSubTab("comp-off")}
+                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                        leaveSubTab === "comp-off"
+                                          ? "bg-wt-surface-3 text-wt-text"
+                                          : "text-wt-text-muted hover:bg-wt-surface-2"
+                                      }`}
+                                    >
+                                      Comp Off Credit
+                                    </button>
+                                  ) : null}
+                                  {hasHrAccess ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setLeaveSubTab("balances")}
+                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                        leaveSubTab === "balances"
+                                          ? "bg-wt-surface-3 text-wt-text"
+                                          : "text-wt-text-muted hover:bg-wt-surface-2"
+                                      }`}
+                                    >
+                                      Balances
+                                    </button>
+                                  ) : null}
+                                </>
+                              ) : (
+                                <>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setLeaveSubTab("my");
-                                  if (isTeamLeaveRoute) router.push("/dashboard/leave");
-                                }}
+                                onClick={() => setLeaveSubTab("my")}
                                 className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                                  !isTeamLeaveRoute && (leaveSubTab === "my" || leaveSubTab === "wfh")
+                                  leaveSubTab === "my"
                                     ? "bg-wt-surface-3 text-wt-text"
                                     : "text-wt-text-muted hover:bg-wt-surface-2"
                                 }`}
                               >
-                                Leave requests
+                                Leave Requests
                               </button>
-                              {canViewTeamLeave ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setLeaveSubTab("team");
-                                    if (!isTeamLeaveRoute) router.push("/dashboard/leave/team");
-                                  }}
-                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                                    isTeamLeaveRoute || leaveSubTab === "team"
-                                      ? "bg-wt-surface-3 text-wt-text"
-                                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                                  }`}
-                                >
-                                  Team requests
-                                </button>
-                              ) : null}
                               {showCompOffTab ? (
                                 <button
                                   type="button"
@@ -3409,22 +3470,20 @@ export function LeavePageClient() {
                                       : "text-wt-text-muted hover:bg-wt-surface-2"
                                   }`}
                                 >
-                                  Comp off credit
+                                  Comp Off Credit
                                 </button>
                               ) : null}
-                              {!isTeamLeaveRoute ? (
-                                <button
-                                  type="button"
-                                  onClick={() => setLeaveSubTab("wfh")}
-                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                                    leaveSubTab === "wfh"
-                                      ? "bg-wt-surface-3 text-wt-text"
-                                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                                  }`}
-                                >
-                                  WFH
-                                </button>
-                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => setLeaveSubTab("wfh")}
+                                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  leaveSubTab === "wfh"
+                                    ? "bg-wt-surface-3 text-wt-text"
+                                    : "text-wt-text-muted hover:bg-wt-surface-2"
+                                }`}
+                              >
+                                WFH
+                              </button>
                               {hasHrAccess ? (
                                 <button
                                   type="button"
@@ -3438,6 +3497,8 @@ export function LeavePageClient() {
                                   Balances
                                 </button>
                               ) : null}
+                                </>
+                              )}
                             </div>
                           ) : null}
                           {leaveSubTab === "balances" && hasHrAccess ? (
@@ -3909,11 +3970,16 @@ export function LeavePageClient() {
                             </div>
                           </div>
                         </section>
-                          ) : isTeamLeaveRoute && canViewTeamLeave ? (
+                          ) : (leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave ? (
                         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                          {hasManagerAccess && !hasHrAccess ? <ManagerTeamOnLeavePanel /> : null}
+                          {leaveSubTab === "team" && hasManagerAccess && !hasHrAccess ? (
+                            <ManagerTeamOnLeavePanel />
+                          ) : null}
                           {hasHrAccess ? (
-                            <LeaveWorkflowNotice variant="hr" />
+                            <LeaveWorkflowNotice
+                              variant="hr"
+                              scope={leaveSubTab === "org" ? "org" : "team"}
+                            />
                           ) : hasDmAccess ? (
                             <LeaveWorkflowNotice variant="dm" />
                           ) : null}
@@ -3940,7 +4006,13 @@ export function LeavePageClient() {
                               type="button"
                               className="btn-primary px-3 py-2 h-10"
                               onClick={() =>
-                                runAction("Refresh team requests", loadEmployeeRequestsForApprover)
+                                runAction(
+                                  leaveSubTab === "org" ? "Refresh employee requests" : "Refresh team requests",
+                                  () =>
+                                    loadEmployeeRequestsForApprover(
+                                      leaveSubTab === "org" ? "org" : "team"
+                                    )
+                                )
                               }
                               disabled={actionLoading}
                             >
@@ -4126,7 +4198,7 @@ export function LeavePageClient() {
                                                           "APPROVED",
                                                           { requireReasonOnReject: false }
                                                         );
-                                                        await loadEmployeeRequestsForApprover();
+                                                        await loadEmployeeRequestsForApprover(leaveSubTab === "org" ? "org" : "team");
                                                       } finally {
                                                         setTeamStatusUpdatingId(null);
                                                       }
@@ -4154,7 +4226,7 @@ export function LeavePageClient() {
                                                           "REJECTED",
                                                           { requireReasonOnReject: false }
                                                         );
-                                                        await loadEmployeeRequestsForApprover();
+                                                        await loadEmployeeRequestsForApprover(leaveSubTab === "org" ? "org" : "team");
                                                       } finally {
                                                         setTeamStatusUpdatingId(null);
                                                       }
@@ -4181,7 +4253,7 @@ export function LeavePageClient() {
                                                       await updateEmployeeRequestStatus(requestId, "APPROVED", {
                                                         requireReasonOnReject: false,
                                                       });
-                                                      await loadEmployeeRequestsForApprover();
+                                                      await loadEmployeeRequestsForApprover(leaveSubTab === "org" ? "org" : "team");
                                                     }
                                                   )
                                                 }
