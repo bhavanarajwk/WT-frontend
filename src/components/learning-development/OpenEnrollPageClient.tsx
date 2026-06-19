@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { DataTable } from "@/components/learning-development/ui/forms";
 import { hrmsService } from "@/services/hrms.service";
 
@@ -29,7 +30,7 @@ export function OpenEnrollPageClient() {
         <label className="text-xs text-wt-text-muted flex flex-col gap-1">
           <FieldLabel label="Training id to enroll" required />
           <input
-            className="input-field px-3 py-2 text-sm"
+            className={FORM_CONTROL_CLASS}
             required
             aria-required
             value={trainingId}

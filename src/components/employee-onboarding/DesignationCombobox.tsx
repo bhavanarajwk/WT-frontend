@@ -6,6 +6,7 @@ import { hrmsService } from "@/services/hrms.service";
 import type { Designation } from "@/types/masters";
 import { parseDesignation, parseDesignationList } from "@/utils/masters";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -171,7 +172,7 @@ export function DesignationCombobox({
       <div ref={rootRef} className="relative">
         <input
           type="text"
-          className="input-field px-3 py-2 text-sm w-full"
+          className={FORM_CONTROL_CLASS}
           value={query}
           disabled={isDisabled}
           required={required}

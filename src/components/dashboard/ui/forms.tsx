@@ -13,6 +13,8 @@ const ADAPTIVE_SELECT_SEARCH_THRESHOLD = 6;
 
 import {
   FIELD_LABEL_CLASS,
+  FORM_CONTROL_CLASS,
+  FORM_CONTROL_WITH_CHEVRON_CLASS,
   FORM_FIELD_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { formatUILabel } from "@/utils/titleCase";
@@ -95,7 +97,7 @@ export function ApiDateField({
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          className="input-field api-date-field px-3 py-2 pr-10 text-sm w-full"
+          className={`${FORM_CONTROL_CLASS} api-date-field pr-10`}
           value={apiDateFieldValue(value)}
           placeholder={API_DATE_PLACEHOLDER}
           disabled={disabled}
@@ -141,7 +143,7 @@ export function ReadonlyDateField({ value, className }: { value: string; classNa
     <div className={`relative ${className ?? ""}`.trim()}>
       <input
         type="text"
-        className="input-field api-date-field w-full px-3 py-2 pr-10 text-sm opacity-80"
+        className={`${FORM_CONTROL_CLASS} api-date-field pr-10 opacity-80`}
         value={apiDateFieldValue(value)}
         placeholder={API_DATE_PLACEHOLDER}
         disabled
@@ -188,7 +190,7 @@ export function InputField({
     <label className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} />
       <input
-        className="input-field px-3 py-2 text-sm"
+        className={FORM_CONTROL_CLASS}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         type={type}
@@ -317,7 +319,7 @@ export function DropdownSelectField({
       <FieldLabel label={label} required={required} />
       <div className="relative">
         <select
-          className="input-field w-full appearance-none pr-9"
+          className={FORM_CONTROL_WITH_CHEVRON_CLASS}
           value={value}
           required={required}
           disabled={disabled}
@@ -363,8 +365,7 @@ export function AdaptiveSelectField({
   const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
   const selectableCount = items.filter((opt) => opt.value !== "").length;
   const useSearch = selectableCount > ADAPTIVE_SELECT_SEARCH_THRESHOLD;
-  const dropdownInputClassName =
-    "input-field appearance-none px-3 py-2 pr-10 text-sm w-full";
+  const dropdownInputClassName = FORM_CONTROL_WITH_CHEVRON_CLASS;
 
   return (
     <label className={`${FORM_FIELD_CLASS} ${className ?? ""}`.trim()}>
@@ -522,7 +523,7 @@ export function FileField({
         type="file"
         accept={accept}
         multiple={isMulti}
-        className="input-field px-3 py-2 text-sm"
+        className={FORM_CONTROL_CLASS}
         onChange={(e) => {
           if (isMulti) {
             onPickFiles?.(e.target.files?.length ? Array.from(e.target.files) : []);
