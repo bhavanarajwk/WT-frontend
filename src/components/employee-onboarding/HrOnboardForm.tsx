@@ -364,13 +364,6 @@ export function HrOnboardForm({
           options={options.reporting_managers}
           onChange={(v) => setForm((p) => ({ ...p, reporting_manager_id: v }))}
         />
-        <DropdownSelectField
-          label="Holiday Calendar"
-          placeholder="Optional"
-          value={form.holiday_calendar_id}
-          options={[{ value: "", label: "None" }, ...options.holiday_calendars]}
-          onChange={(v) => setForm((p) => ({ ...p, holiday_calendar_id: v }))}
-        />
         {form.user_type === "INTERN" ? (
           <>
             <DatePickerField

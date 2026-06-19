@@ -7,7 +7,6 @@ import { useAuth } from "@/context/AuthContext";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
 import { hrmsService, type PagedData } from "@/services/hrms.service";
-import { useOverviewData } from "@/hooks/useOverviewData";
 import { ApiError } from "@/api/error";
 import { toRows, toPagedRows } from "@/utils/apiRows";
 import {
@@ -93,7 +92,23 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { LoadingOverlay, LoadingPanel } from "@/components/dashboard/shared/BlackLoader";
 
-
+function applyInvitedUsersToTable(
+  res: unknown,
+  from: string,
+  to: string,
+  setInviteOnboardingRows: (rows: Array<Record<string, unknown>>) => void,
+  setInvitedApiServerRange: (range: { from: string; to: string } | null) => void
+) {
+  const payload = ((res as { data?: unknown }).data ?? res) as Record<string, unknown>;
+  const respFrom = formatApiDateDisplay(String(payload.from_date ?? payload.fromDate ?? "").trim());
+  const respTo = formatApiDateDisplay(String(payload.to_date ?? payload.toDate ?? "").trim());
+  const rawRows = toPagedRows(payload.items ?? payload);
+  const filteredRows = filterInvitedRowsByCreatedAtRange(rawRows, from, to);
+  const serverRangeMismatch =
+    Boolean(respFrom && respTo) && (respFrom !== from || respTo !== to);
+  setInvitedApiServerRange(serverRangeMismatch ? { from: respFrom, to: respTo } : null);
+  setInviteOnboardingRows(formatInvitedEmployeeTableRows(filteredRows));
+}
 
 export function EmployeePageClient() {
   const isManagerRoleLabel = (value: unknown): boolean =>
@@ -104,7 +119,6 @@ export function EmployeePageClient() {
   const { user, refresh: refreshSession } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { metrics, loading, refresh } = useOverviewData();
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
@@ -387,11 +401,12 @@ export function EmployeePageClient() {
   }, [user, userRoles]);
   useEffect(() => {
     if (!user) return;
+    if (hasHrAccess) return;
     const id = window.setTimeout(() => {
       void loadMyProfile();
     }, 0);
     return () => window.clearTimeout(id);
-  }, [user, loadMyProfile]);
+  }, [user, hasHrAccess, loadMyProfile]);
   useEffect(() => {
     // Avoid background calls for HR onboarding; this section is only used for employee self-service.
     if (!employeeSelfServeProfile) return;
@@ -425,10 +440,29 @@ export function EmployeePageClient() {
     const id = window.setTimeout(() => {
       void (async () => {
         setOnboardDataLoading(true);
+        setInviteListLoading(true);
         let bandsError: string | null = null;
         try {
+          const from = invitedListFromDateRef.current.trim();
+          const to = invitedListToDateRef.current.trim();
+          const [bandsRes, onboardOptionsRes, invitedUsersRes, _onboardListRes] =
+            await Promise.all([
+            hrmsService.getBands(),
+            hrmsService.getOnboardOptions(),
+            hrmsService.getInvitedUsers({
+              fromDate: from,
+              toDate: to,
+              page: "0",
+              size: "200",
+            }),
+            hrmsService.getOnboardList({
+              page: "0",
+              size: "200",
+            }),
+          ]);
+          void _onboardListRes;
+
           try {
-            const bandsRes = await hrmsService.getBands();
             const rows = parseBandsList(bandsRes);
             setOnboardBands(rows);
             if (!rows.length) {
@@ -442,17 +476,28 @@ export function EmployeePageClient() {
           }
 
           try {
-            const onboardOptionsRes = await hrmsService.getOnboardOptions();
             setOnboardOptions(parseOnboardOptions(onboardOptionsRes));
           } catch {
             setOnboardOptions(FALLBACK_ONBOARD_OPTIONS);
           }
 
+          applyInvitedUsersToTable(
+            invitedUsersRes,
+            from,
+            to,
+            setInviteOnboardingRows,
+            setInvitedApiServerRange
+          );
           if (bandsError) {
             setToast({ type: "error", message: bandsError });
           }
+        } catch {
+          setOnboardOptions(FALLBACK_ONBOARD_OPTIONS);
+          setOnboardBands([]);
+          setInviteOnboardingRows([]);
         } finally {
           setOnboardDataLoading(false);
+          setInviteListLoading(false);
         }
       })();
     }, 0);
@@ -460,7 +505,8 @@ export function EmployeePageClient() {
   }, [user, hasHrAccess]);
   // Allocation/projects/forecasting bootstrap removed — not rendered on this onboarding-only route.
   useEffect(() => {
-        if (!(userRoles.includes("ROLE_ADMIN") || userRoles.includes("ROLE_HR"))) return;
+    return;
+    if (!(userRoles.includes("ROLE_ADMIN") || userRoles.includes("ROLE_HR"))) return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -1632,17 +1678,13 @@ export function EmployeePageClient() {
           page: "0",
           size: "200",
         });
-        const payload = ((res as { data?: unknown }).data ?? res) as Record<string, unknown>;
-        const respFrom = formatApiDateDisplay(String(payload.from_date ?? "").trim());
-        const respTo = formatApiDateDisplay(String(payload.to_date ?? "").trim());
-        const rawRows = toPagedRows(payload.items ?? payload);
-        const filteredRows = filterInvitedRowsByCreatedAtRange(rawRows, from, to);
-        const serverRangeMismatch =
-          Boolean(respFrom && respTo) && (respFrom !== from || respTo !== to);
-        setInvitedApiServerRange(
-          serverRangeMismatch ? { from: respFrom, to: respTo } : null
+        applyInvitedUsersToTable(
+          res,
+          from,
+          to,
+          setInviteOnboardingRows,
+          setInvitedApiServerRange
         );
-        setInviteOnboardingRows(formatInvitedEmployeeTableRows(filteredRows));
       } finally {
         setInviteListLoading(false);
       }
@@ -1773,6 +1815,7 @@ export function EmployeePageClient() {
     );
   }, [loadAllProjectsForHr]);
   useEffect(() => {
+    return;
     if (!hasHrAccess) return;
     const id = window.setTimeout(() => {
       void loadAllocationsForHr().catch(() => {
@@ -1782,6 +1825,7 @@ export function EmployeePageClient() {
     return () => window.clearTimeout(id);
   }, [hasHrAccess, requiresSelfOnboarding, loadAllocationsForHr]);
   useEffect(() => {
+    return;
     if (!hasHrAccess) return;
     if (inviteOnboardingRows.length) return;
     const id = window.setTimeout(() => {
@@ -2045,6 +2089,7 @@ export function EmployeePageClient() {
     }));
     setBgvDashboardRows(rows);
   }, [bgvReportEmploymentFilter, bgvReportReferenceFilter, bgvReportSearch, bgvReportStatusFilter]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadWorkforceOverviewReports().catch(() => {
         setHeadcountBreakdown([]);
@@ -2054,6 +2099,7 @@ export function EmployeePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadWorkforceOverviewReports]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadUtilizationReports().catch(() => {
         setUtilizationByDepartmentRows([]);
@@ -2062,6 +2108,7 @@ export function EmployeePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadUtilizationReports]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadAttritionReports().catch(() => {
         setAttritionOverallRows([]);
@@ -2076,6 +2123,7 @@ export function EmployeePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadAttritionReports]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadSkillInventoryReport().catch(() => {
         setSkillInventoryRows([]);
@@ -2083,6 +2131,7 @@ export function EmployeePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadSkillInventoryReport]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadContractDistributionReport().catch(() => {
         setContractDistributionRows([]);
@@ -2090,6 +2139,7 @@ export function EmployeePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadContractDistributionReport]);  useEffect(() => {
+    return;
         const id = window.setTimeout(() => {
       void loadBgvDashboardReport().catch(() => {
         setBgvDashboardRows([]);
@@ -2097,6 +2147,7 @@ export function EmployeePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess, loadBgvDashboardReport]);  useEffect(() => {
+    return;
     const id = window.setTimeout(() => {
       void (async () => {
         try {
@@ -2153,6 +2204,7 @@ export function EmployeePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ hasHrAccess]);  useEffect(() => {
+    return;
         const empId = bgvForm.emp_id.trim();
     if (!empId) return;
     const id = window.setTimeout(() => {
@@ -2491,11 +2543,11 @@ export function EmployeePageClient() {
           <section className="space-y-4">
             {hasHrAccess ? (
               onboardingInitialLoad ? (
-                <LoadingPanel label="Loading Onboarded Employees" />
+                <LoadingPanel label="Loading Onboard Employees" />
               ) : (
               <div className="relative space-y-4">
                 {onboardingBusy ? (
-                  <LoadingOverlay label="Loading Onboarded Employees" />
+                  <LoadingOverlay label="Loading Onboard Employees" />
                 ) : null}
                               <HrOnboardForm
                                 formKey={onboardFormKey}
@@ -2515,7 +2567,7 @@ export function EmployeePageClient() {
 
                               <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <h3 className="font-semibold">Onboarded Employees</h3>
+                                  <h3 className="font-semibold">Onboard Employees</h3>
                                   <button
                                     type="button"
                                     className="btn-ghost px-3 py-2"
