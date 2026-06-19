@@ -2,6 +2,9 @@
 
 import { useRef, useState } from "react";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
+import { cn } from "@/lib/utils";
 import {
   API_DATE_PLACEHOLDER,
   apiDateFieldValue,
@@ -101,14 +104,14 @@ export function WeekendMultiDateField({
   const atMax = value.length >= maxDates;
 
   return (
-    <div className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
+    <Field className={cn("flex flex-col gap-1.5", className)}>
       <FieldLabel label={label} required={required} />
       <div className="relative">
-        <input
+        <Input
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          className="input-field api-date-field px-3 py-2 pr-10 text-sm w-full"
+          className="api-date-field h-10 pr-10"
           value={draft}
           placeholder={atMax ? "Maximum dates selected" : API_DATE_PLACEHOLDER}
           disabled={disabled || atMax}
@@ -194,6 +197,6 @@ export function WeekendMultiDateField({
           {error}
         </p>
       ) : null}
-    </div>
+    </Field>
   );
 }

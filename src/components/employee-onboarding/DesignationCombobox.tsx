@@ -6,7 +6,8 @@ import { hrmsService } from "@/services/hrms.service";
 import type { Designation } from "@/types/masters";
 import { parseDesignation, parseDesignationList } from "@/utils/masters";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
-import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -29,6 +30,7 @@ export function DesignationCombobox({
   canCreate?: boolean;
   onError?: (message: string) => void;
 }) {
+  const inputId = useId();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -167,12 +169,12 @@ export function DesignationCombobox({
     : "Search or select designation";
 
   return (
-    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-      <FieldLabel label="Designation" required={required} />
+    <Field className="flex flex-col gap-1.5">
+      <FieldLabel label="Designation" required={required} htmlFor={inputId} />
       <div ref={rootRef} className="relative">
-        <input
+        <Input
+          id={inputId}
           type="text"
-          className={FORM_CONTROL_CLASS}
           value={query}
           disabled={isDisabled}
           required={required}
@@ -236,6 +238,6 @@ export function DesignationCombobox({
           </ul>
         ) : null}
       </div>
-    </label>
+    </Field>
   );
 }

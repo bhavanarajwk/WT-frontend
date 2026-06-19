@@ -1,24 +1,17 @@
 "use client";
 
 import type { SearchableSelectOption } from "@/components/dashboard/ui/SearchableSelectCombobox";
-import { FORM_CONTROL_WITH_CHEVRON_CLASS } from "@/components/dashboard/ui/uiLayout";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export function ChevronDownIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-      aria-hidden
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
+  return null;
 }
 
 export function DropdownSelect({
@@ -28,7 +21,7 @@ export function DropdownSelect({
   disabled = false,
   required = false,
   className = "",
-  selectClassName = FORM_CONTROL_WITH_CHEVRON_CLASS,
+  selectClassName,
   id,
   "aria-label": ariaLabel,
 }: {
@@ -42,30 +35,31 @@ export function DropdownSelect({
   id?: string;
   "aria-label"?: string;
 }) {
+  const selected = options.find((opt) => opt.value === value) ?? null;
+
   return (
-    <div className={`relative ${className}`.trim()}>
-      <select
+    <Select
+      value={selected}
+      onValueChange={(item) => onChange(item?.value ?? "")}
+      disabled={disabled}
+      items={options}
+      isItemEqualToValue={(a, b) => a.value === b.value}
+    >
+      <SelectTrigger
         id={id}
-        className={selectClassName}
-        value={value}
-        disabled={disabled}
-        required={required}
-        aria-required={required || undefined}
         aria-label={ariaLabel}
-        onChange={(e) => onChange(e.target.value)}
+        aria-required={required || undefined}
+        className={cn(selectClassName, className)}
       >
+        <SelectValue placeholder="Select" />
+      </SelectTrigger>
+      <SelectContent>
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <SelectItem key={opt.value || `opt-${opt.label}`} value={opt}>
             {opt.label}
-          </option>
+          </SelectItem>
         ))}
-      </select>
-      <span
-        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-wt-text-muted"
-        aria-hidden
-      >
-        <ChevronDownIcon />
-      </span>
-    </div>
+      </SelectContent>
+    </Select>
   );
 }

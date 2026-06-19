@@ -75,7 +75,7 @@
   --destructive:  oklch(0.577 0.245 27.325);
   --border:  oklch(0.922 0 0);
   --input:  oklch(0.922 0 0);
-  --ring:  oklch(0.708 0 0);
+  --ring: #2469ff;
   --chart-1:  oklch(0.87 0 0);
   --chart-2:  oklch(0.556 0 0);
   --chart-3:  oklch(0.439 0 0);
@@ -112,6 +112,8 @@
   --wt-brand-hover:  #3d5f96;
   --wt-brand-active: #355095;
   --wt-brand-text:   #ffffff;
+
+  --ring: #4d8bff;
 }
 
 /* ------------------------------------------------------------------ */
@@ -628,8 +630,8 @@ select.input-field {
 }
 
 .input-field:focus {
-  border-color: var(--wt-indigo-400);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+  border-color: #2469ff;
+  box-shadow: none;
 }
 
 /* Native date input — hide default icon; DatePickerField provides its own */
@@ -896,7 +898,7 @@ select.input-field {
   --destructive:  oklch(0.704 0.191 22.216);
   --border:  oklch(1 0 0 / 10%);
   --input:  oklch(1 0 0 / 15%);
-  --ring:  oklch(0.556 0 0);
+  --ring: #4d8bff;
   --chart-1:  oklch(0.87 0 0);
   --chart-2:  oklch(0.556 0 0);
   --chart-3:  oklch(0.439 0 0);

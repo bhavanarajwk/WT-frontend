@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { Input } from "@/components/ui/input";
 import { useEmployeeResumes } from "@/hooks/resumes/useEmployeeResumes";
 import { canViewEmployeeResumes } from "@/utils/roles";
 import {
@@ -95,10 +96,10 @@ export function ResumesPageClient() {
             <label className="sr-only" htmlFor="resumes-search">
               Search
             </label>
-            <input
+            <Input
               id="resumes-search"
               type="search"
-              className="input-field min-w-[min(100%,280px)] flex-1 px-3 py-2.5 text-sm"
+              className="h-10 min-w-[min(100%,280px)] flex-1"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search"

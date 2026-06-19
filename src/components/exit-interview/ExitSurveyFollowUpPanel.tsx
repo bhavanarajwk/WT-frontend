@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -283,10 +284,10 @@ export function ExitSurveyFollowUpPanel() {
         <label className="sr-only" htmlFor="exit-survey-follow-up-search">
           Search
         </label>
-        <input
+        <Input
           id="exit-survey-follow-up-search"
           type="search"
-          className="input-field min-w-[200px] flex-1 px-3 py-2 text-sm"
+          className="h-10 min-w-[200px] flex-1"
           placeholder="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}

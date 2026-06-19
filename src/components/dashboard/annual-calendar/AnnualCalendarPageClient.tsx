@@ -4,7 +4,6 @@ import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { InputField } from "@/components/dashboard/ui/forms";
-import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { hrmsService, type AnnualCalendarItem } from "@/services/hrms.service";
@@ -110,15 +109,14 @@ export function AnnualCalendarPageClient() {
                   value={title}
                   onChange={setTitle}
                 />
-                <label className="flex flex-col gap-1 text-xs text-wt-text-muted sm:col-span-2">
-                  Document link (Google Docs / Sheets)
-                  <input
-                    className={FORM_CONTROL_CLASS}
+                <div className="sm:col-span-2">
+                  <InputField
+                    label="Document Link (Google Docs / Sheets)"
                     value={documentLink}
-                    onChange={(e) => setDocumentLink(e.target.value)}
+                    onChange={setDocumentLink}
                     placeholder="https://docs.google.com/spreadsheets/d/..."
                   />
-                </label>
+                </div>
               </div>
               <button
                 type="button"

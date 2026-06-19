@@ -10,6 +10,14 @@ import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployee
 import { hrmsService } from "@/services/hrms.service";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   cleanEmployeeName,
   onboardRowToListRow,
@@ -231,10 +239,9 @@ export function EmployeeDirectoryPageClient() {
               <label className="sr-only" htmlFor="employee-directory-search">
                 Search
               </label>
-              <input
+              <Input
                 id="employee-directory-search"
                 type="search"
-                className="input-field h-full w-full px-3 py-2.5 text-sm"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search"
@@ -245,19 +252,22 @@ export function EmployeeDirectoryPageClient() {
               <label className="sr-only" htmlFor="employee-directory-user-type">
                 User Type
               </label>
-              <select
-                id="employee-directory-user-type"
-                className="input-field h-full w-full px-3 py-2.5 text-sm"
+              <Select
                 value={userTypeFilter}
-                onChange={(e) => setUserTypeFilter(e.target.value as UserTypeFilterValue)}
-                aria-label="User Type"
+                onValueChange={(next) => setUserTypeFilter((next ?? "ALL") as UserTypeFilterValue)}
+                items={USER_TYPE_SELECT_OPTIONS}
               >
-                {USER_TYPE_SELECT_OPTIONS.map((opt) => (
-                  <option key={opt.value || "all"} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="employee-directory-user-type" aria-label="User Type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {USER_TYPE_SELECT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value || "all"} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { Input } from "@/components/ui/input";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
@@ -701,10 +702,10 @@ export function OffboardingPanel() {
           <label className="sr-only" htmlFor="offboard-list-search">
             Search
           </label>
-          <input
+          <Input
             id="offboard-list-search"
             type="search"
-            className="input-field min-w-[200px] flex-1 px-3 py-2 text-sm"
+            className="h-10 min-w-[200px] flex-1"
             placeholder="Search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

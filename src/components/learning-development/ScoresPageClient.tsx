@@ -11,6 +11,7 @@ import {
   useTrainingScores,
 } from "@/hooks/learning/useLearningTrainings";
 import { SelectField } from "@/components/dashboard/ui/forms";
+import { Input } from "@/components/ui/input";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { traineeTableRowsFromParticipants } from "@/utils/learning/participants";
@@ -262,11 +263,11 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
                     <tr key={row.key} className="border-t border-wt-border">
                       <td className="px-3 py-2 whitespace-nowrap">{row.name}</td>
                       <td className="px-3 py-2">
-                        <input
+                        <Input
                           type="number"
                           min={0}
                           max={100}
-                          className="input-field px-2 py-1.5 text-sm w-full max-w-[6rem]"
+                          className="h-8 w-full max-w-[6rem] px-2"
                           value={draft.scorePct}
                           onChange={(e) =>
                             setScoresByUser((prev) => ({

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { Textarea } from "@/components/ui/textarea";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { ExitInterviewResponsesView } from "@/components/exit-interview/ExitInterviewResponsesView";
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
@@ -190,8 +191,8 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
                     {momSaving ? "Saving…" : "Save MOM"}
                   </button>
                 </div>
-                <textarea
-                  className="input-field min-h-[140px] w-full px-3 py-2 text-sm"
+                <Textarea
+                  className="min-h-[140px]"
                   value={minutesOfMeeting}
                   onChange={(e) => setMinutesOfMeeting(e.target.value)}
                   disabled={momSaving}
