@@ -1,4 +1,5 @@
 import type { OnboardOptionItem, OnboardOptionsResponse } from "@/types/onboard-options";
+import { parseBandsList } from "@/utils/masters";
 
 function parseOptionItems(raw: unknown): OnboardOptionItem[] {
   if (!Array.isArray(raw)) return [];
@@ -56,6 +57,12 @@ export function parseOnboardOptions(raw: unknown): OnboardOptionsResponse {
   }
 
   return parsed;
+}
+
+/** Bands bundled in GET /masters/onboard-options (`data.bands`). */
+export function parseOnboardOptionsBands(raw: unknown): Array<Record<string, unknown>> {
+  const row = unwrapOnboardOptionsPayload(raw);
+  return parseBandsList(row.bands);
 }
 
 /** Used when GET /masters/onboard-options fails or returns invalid data. */

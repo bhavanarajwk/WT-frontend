@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { GlobalLoadingOverlay } from "@/components/dashboard/ui/GlobalLoadingOverlay";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 
 /**
@@ -51,9 +50,6 @@ export default function ProtectedLayout({
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <GlobalLoadingOverlay />
-      {children}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }

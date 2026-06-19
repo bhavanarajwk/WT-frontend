@@ -17,6 +17,7 @@ import {
   rowEmpId,
 } from "@/utils/employeeDirectory";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
+import { isActiveUserStatus } from "@/utils/userStatus";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import {
@@ -59,10 +60,6 @@ const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "date_of_joining", label: "Date of Joining" },
   { key: "status", label: "Status" },
 ];
-
-function isInvitedEmployeeStatus(status: unknown): boolean {
-  return String(status ?? "").trim().toUpperCase() === "INVITED";
-}
 
 function normalizeUserType(value: unknown): UserTypeFilterValue | string {
   const normalized = String(value ?? "")
@@ -339,8 +336,10 @@ export function EmployeeDirectoryPageClient() {
                   <tbody className="divide-y divide-wt-border">
                     {pagination.pageItems.map(({ empId, display, record }) => {
                       const workEmail = rowEmail(record);
-                      const showResendInvite =
-                        isInvitedEmployeeStatus(display.status) && Boolean(workEmail);
+                      const isResendDisabled =
+                        isActiveUserStatus(display.status) ||
+                        !workEmail ||
+                        actionLoading;
                       const isResending =
                         Boolean(workEmail) && resendingInviteEmail === workEmail.toLowerCase();
 
@@ -364,19 +363,17 @@ export function EmployeeDirectoryPageClient() {
                             {col.key === "status" ? (
                               <div className="inline-flex items-center gap-2">
                                 <EmployeeStatusBadge status={display.status} />
-                                {showResendInvite ? (
-                                  <button
-                                    type="button"
-                                    className="btn-action px-2.5 py-1 text-xs"
-                                    disabled={actionLoading || isResending}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleResendInvite(workEmail);
-                                    }}
-                                  >
-                                    {isResending ? "Sending…" : "Resend"}
-                                  </button>
-                                ) : null}
+                                <button
+                                  type="button"
+                                  className="btn-action px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                                  disabled={isResendDisabled || isResending}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleResendInvite(workEmail);
+                                  }}
+                                >
+                                  {isResending ? "Sending…" : "Resend"}
+                                </button>
                               </div>
                             ) : col.key === "name" ? (
                               <span className="font-medium text-blue-600">{display[col.key]}</span>

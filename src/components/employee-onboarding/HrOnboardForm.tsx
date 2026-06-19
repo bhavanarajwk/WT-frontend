@@ -345,15 +345,6 @@ export function HrOnboardForm({
           onChange={(v) => setForm((p) => ({ ...p, category: v }))}
         />
         <DropdownSelectField
-          label="Holiday Calendar"
-          placeholder={
-            options.holiday_calendars.length ? "Select (Optional)" : "No Calendars Configured"
-          }
-          value={form.holiday_calendar_id}
-          options={[{ value: "", label: "None" }, ...options.holiday_calendars]}
-          onChange={(v) => setForm((p) => ({ ...p, holiday_calendar_id: v }))}
-        />
-        <DropdownSelectField
           label="Reporting Manager"
           required
           placeholder={
@@ -363,13 +354,6 @@ export function HrOnboardForm({
           disabled={!options.reporting_managers.length}
           options={options.reporting_managers}
           onChange={(v) => setForm((p) => ({ ...p, reporting_manager_id: v }))}
-        />
-        <DropdownSelectField
-          label="Holiday Calendar"
-          placeholder="Optional"
-          value={form.holiday_calendar_id}
-          options={[{ value: "", label: "None" }, ...options.holiday_calendars]}
-          onChange={(v) => setForm((p) => ({ ...p, holiday_calendar_id: v }))}
         />
         {form.user_type === "INTERN" ? (
           <>
