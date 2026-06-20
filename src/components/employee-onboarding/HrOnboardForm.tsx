@@ -1,7 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { DatePickerField, DropdownSelectField, InputField } from "@/components/dashboard/ui/forms";
 import { isValidPersonName } from "@/utils/dashboard/validation";
@@ -89,10 +90,6 @@ export function HrOnboardForm({
   onError,
   runAction,
 }: HrOnboardFormProps) {
-  const [designationOptions, setDesignationOptions] = useState<Array<{ value: string; label: string }>>(
-    []
-  );
-  const [designationLoading, setDesignationLoading] = useState(false);
   const internBandId = useMemo(() => resolveInternBandId(bands), [bands]);
   const defaultConsultantBandId = useMemo(() => {
     const first = bands[0];
@@ -112,6 +109,40 @@ export function HrOnboardForm({
     return Number(form.band_id);
   }, [defaultConsultantBandId, form.band_id, form.user_type, internBandId]);
 
+  const department = form.department.trim();
+  const designationsQ = useQuery({
+    queryKey: ["masters", "designations", department, designationBandId],
+    enabled: designationBandId > 0 && Boolean(department),
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async () => {
+      const res = await hrmsService.searchDesignations({
+        band_id: designationBandId,
+        department,
+      });
+      return parseDesignationList(res).map((item) => ({
+        value: item.name,
+        label: item.name,
+      }));
+    },
+  });
+
+  const designationOptions = designationsQ.data ?? [];
+  const designationLoading = designationsQ.isLoading || designationsQ.isFetching;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+
+  useEffect(() => {
+    if (!designationsQ.isError) return;
+    onErrorRef.current(
+      designationsQ.error instanceof Error
+        ? designationsQ.error.message
+        : "Could not load designations for this band."
+    );
+  }, [designationsQ.isError, designationsQ.error]);
+
   useEffect(() => {
     if (form.user_type !== "INTERN") return;
     setForm((prev) => (prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }));
@@ -126,36 +157,6 @@ export function HrOnboardForm({
       setForm((prev) => ({ ...prev, band_id: 0, role: "" }));
     }
   }, [departmentBands, form.band_id, form.department, setForm]);
-
-  useEffect(() => {
-    const bandId = designationBandId;
-    const department = form.department.trim();
-    if (bandId <= 0 || !department) {
-      setDesignationOptions([]);
-      return;
-    }
-    const handle = window.setTimeout(() => {
-      void (async () => {
-        setDesignationLoading(true);
-        try {
-          const res = await hrmsService.searchDesignations({ band_id: bandId, department });
-          const next = parseDesignationList(res).map((item) => ({
-            value: item.name,
-            label: item.name,
-          }));
-          setDesignationOptions(next);
-        } catch (error) {
-          setDesignationOptions([]);
-          onError(
-            error instanceof Error ? error.message : "Could not load designations for this band."
-          );
-        } finally {
-          setDesignationLoading(false);
-        }
-      })();
-    }, 200);
-    return () => window.clearTimeout(handle);
-  }, [form.department, designationBandId, onError]);
 
   useEffect(() => {
     if (designationOptions.length !== 1) return;
