@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -3380,68 +3381,30 @@ export function AllocationPageClient() {
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <>
                           {hasHrAccess ? (
-                            <section className="space-y-4">
-                              <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setAllocationHrSubTab("project")}
-                                  className={`rounded-lg px-3 py-2 ${
-                                    allocationHrSubTab === "project"
-                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                                  }`}
-                                >
-                                  Create Project
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setAllocationHrSubTab("allocate")}
-                                  className={`rounded-lg px-3 py-2 ${
-                                    allocationHrSubTab === "allocate"
-                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                                  }`}
-                                >
-                                  Project allocation
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setAllocationHrSubTab("assign-pm")}
-                                  className={`rounded-lg px-3 py-2 ${
-                                    allocationHrSubTab === "assign-pm"
-                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                                  }`}
-                                >
-                                  Assign Project Manager
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setAllocationHrSubTab("list");
+                            <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
+                              <PageTabs
+                                embedded
+                                aria-label="Allocation views"
+                                value={allocationHrSubTab}
+                                onValueChange={(value) => {
+                                  setAllocationHrSubTab(
+                                    value as "project" | "allocate" | "assign-pm" | "list"
+                                  );
+                                  if (value === "list") {
                                     void loadAllocationsForHr();
                                     void loadAllocationForecasting();
-                                  }}
-                                  className={`rounded-lg px-3 py-2 ${
-                                    allocationHrSubTab === "list"
-                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                                  }`}
-                                >
-                                  Allocation list
-                                </Button>
-                              </div>
-          
+                                  }
+                                }}
+                                items={[
+                                  { value: "project", label: "Create Project" },
+                                  { value: "allocate", label: "Project Allocation" },
+                                  { value: "assign-pm", label: "Assign Project Manager" },
+                                  { value: "list", label: "Allocation List" },
+                                ]}
+                              />
+                              <div className={PAGE_TAB_BODY_CLASS}>
                               {allocationHrSubTab === "project" ? (
-                              <div ref={projectCrudFormRef} className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+                              <div ref={projectCrudFormRef} className="space-y-4">
                                 <h3 className="font-semibold">Create Project</h3>
                                 <div className="grid sm:grid-cols-2 gap-3">
                                   <InputField
@@ -3554,7 +3517,7 @@ export function AllocationPageClient() {
                                     <IconRefresh />
                                   </Button>
                                 </div>
-                                <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-3">
+                                <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-3">
                                   <p className="text-sm font-medium">All Projects</p>
                                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     <InputField
@@ -3678,7 +3641,7 @@ export function AllocationPageClient() {
           
                               {allocationHrSubTab === "allocate" ? (
                               <>
-                              <div ref={allocationFormRef} className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+                              <div ref={allocationFormRef} className="space-y-4">
                                 <h3 className="font-semibold">Employee Allocation Form</h3>
                                 <div className="grid sm:grid-cols-2 gap-3">
                                   <div
@@ -3848,7 +3811,7 @@ export function AllocationPageClient() {
                                   <InputField label="End Date" value={allocationForm.end_date} onChange={(v) => setAllocationForm((p) => ({ ...p, end_date: v }))} type="date" />
                                 </div>
                                 {allocationForm.employee_email.trim() ? (
-                                  <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2">
+                                  <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-2">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                       <p className="text-sm font-medium">
                                         {allocationEmployeeSelectLabel} — current &amp; future allocations
@@ -4043,7 +4006,7 @@ export function AllocationPageClient() {
                                 <>
                                 <div
                                   ref={allocationRecordsRef}
-                                  className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2"
+                                  className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-2"
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
                                     <p className="text-sm font-medium">Allocation records</p>
@@ -4459,7 +4422,7 @@ export function AllocationPageClient() {
                                   )}
                                 </div>
 
-                                <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-3">
+                                <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-3">
                                   {allocationForecastLoadError ? (
                                     <p className="text-sm text-rose-700">{allocationForecastLoadError}</p>
                                   ) : null}
@@ -4508,6 +4471,7 @@ export function AllocationPageClient() {
                                 </div>
                                 </>
                               ) : null}
+                              </div>
                             </section>
                           ) : (
                             <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">

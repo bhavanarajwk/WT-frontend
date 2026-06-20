@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -3376,138 +3377,49 @@ export function LeavePageClient() {
     resetKeys: [teamLeaveSortId, employeeRequestFilters, teamLeaveSearch],
   });
 
+  const leaveTabItems = useMemo(() => {
+    if (isTeamLeaveRoute) {
+      return [
+        canViewTeamLeave ? { value: "team", label: "Team Requests" } : null,
+        hasHrAccess ? { value: "org", label: "All Employee Requests" } : null,
+        showCompOffTab ? { value: "comp-off", label: "Comp Off Credit" } : null,
+        hasHrAccess ? { value: "balances", label: "Balances" } : null,
+      ].filter((item): item is { value: string; label: string } => Boolean(item));
+    }
+
+    return [
+      { value: "my", label: "Leave Requests" },
+      showCompOffTab ? { value: "comp-off", label: "Comp Off Credit" } : null,
+      { value: "wfh", label: "WFH" },
+      hasHrAccess ? { value: "balances", label: "Balances" } : null,
+    ].filter((item): item is { value: string; label: string } => Boolean(item));
+  }, [canViewTeamLeave, hasHrAccess, isTeamLeaveRoute, showCompOffTab]);
+
   return (
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <section className="space-y-4">
+          <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
                           {showLeaveSubTabBar ? (
-                            <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
-                              {isTeamLeaveRoute ? (
-                                <>
-                                  {canViewTeamLeave ? (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => setLeaveSubTab("team")}
-                                      className={`rounded-lg px-3 py-2 ${
-                                        leaveSubTab === "team"
-                                          ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                          : "text-wt-text-muted hover:bg-wt-surface-2"
-                                      }`}
-                                    >
-                                      Team Requests
-                                    </Button>
-                                  ) : null}
-                                  {hasHrAccess ? (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => setLeaveSubTab("org")}
-                                      className={`rounded-lg px-3 py-2 ${
-                                        leaveSubTab === "org"
-                                          ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                          : "text-wt-text-muted hover:bg-wt-surface-2"
-                                      }`}
-                                    >
-                                      All Employee Requests
-                                    </Button>
-                                  ) : null}
-                                  {showCompOffTab ? (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => setLeaveSubTab("comp-off")}
-                                      className={`rounded-lg px-3 py-2 ${
-                                        leaveSubTab === "comp-off"
-                                          ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                          : "text-wt-text-muted hover:bg-wt-surface-2"
-                                      }`}
-                                    >
-                                      Comp Off Credit
-                                    </Button>
-                                  ) : null}
-                                  {hasHrAccess ? (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => setLeaveSubTab("balances")}
-                                      className={`rounded-lg px-3 py-2 ${
-                                        leaveSubTab === "balances"
-                                          ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                          : "text-wt-text-muted hover:bg-wt-surface-2"
-                                      }`}
-                                    >
-                                      Balances
-                                    </Button>
-                                  ) : null}
-                                </>
-                              ) : (
-                                <>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setLeaveSubTab("my")}
-                                className={`rounded-lg px-3 py-2 ${
-                                  leaveSubTab === "my"
-                                    ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                    : "text-wt-text-muted hover:bg-wt-surface-2"
-                                }`}
-                              >
-                                Leave Requests
-                              </Button>
-                              {showCompOffTab ? (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setLeaveSubTab("comp-off")}
-                                  className={`rounded-lg px-3 py-2 ${
-                                    leaveSubTab === "comp-off"
-                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                                  }`}
-                                >
-                                  Comp Off Credit
-                                </Button>
-                              ) : null}
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setLeaveSubTab("wfh")}
-                                className={`rounded-lg px-3 py-2 ${
-                                  leaveSubTab === "wfh"
-                                    ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                    : "text-wt-text-muted hover:bg-wt-surface-2"
-                                }`}
-                              >
-                                WFH
-                              </Button>
-                              {hasHrAccess ? (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setLeaveSubTab("balances")}
-                                  className={`rounded-lg px-3 py-2 ${
-                                    leaveSubTab === "balances"
-                                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                                  }`}
-                                >
-                                  Balances
-                                </Button>
-                              ) : null}
-                                </>
-                              )}
-                            </div>
+                            <PageTabs
+                              embedded
+                              aria-label="Leave views"
+                              value={leaveSubTab}
+                              onValueChange={(value) =>
+                                setLeaveSubTab(
+                                  value as
+                                    | "my"
+                                    | "team"
+                                    | "org"
+                                    | "wfh"
+                                    | "comp-off"
+                                    | "balances"
+                                )
+                              }
+                              items={leaveTabItems}
+                            />
                           ) : null}
+                          <div className={PAGE_TAB_BODY_CLASS}>
                           {leaveSubTab === "balances" && hasHrAccess ? (
                             <HrLeaveBalancesPanel actionLoading={actionLoading} runAction={runAction} />
                           ) : leaveSubTab === "comp-off" ? (
@@ -3517,7 +3429,7 @@ export function LeavePageClient() {
                               forcedTab={compOffForcedTab}
                             />
                           ) : leaveSubTab === "my" || leaveSubTab === "wfh" ? (
-                        <section className="grid gap-4 xl:grid-cols-1">
+                        <div className="space-y-4">
                           <div className="space-y-4">
                             {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                             {leaveSubTab === "my" &&
@@ -3525,7 +3437,7 @@ export function LeavePageClient() {
                               <LeaveBalanceSummary />
                             ) : null}
                             <LeaveWorkflowNotice variant={leaveWorkflowVariant} />
-                            <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
+                            <div className="space-y-3">
                               <h3 className="font-semibold mb-3">
                                 {leaveSubTab === "wfh" ? "Work from home" : "Time off/comp off"}
                               </h3>
@@ -3783,7 +3695,7 @@ export function LeavePageClient() {
                               </div>
                             </div>
           
-                            <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
+                            <div className="space-y-3">
                               <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                                 <h3 className="font-semibold">My Previous Requests</h3>
                                 <div className="flex flex-wrap items-end gap-2 flex-1 min-w-[200px] justify-end">
@@ -3961,9 +3873,9 @@ export function LeavePageClient() {
                               ) : null}
                             </div>
                           </div>
-                        </section>
+                        </div>
                           ) : (leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave ? (
-                        <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+                        <div className="space-y-4">
                           {leaveSubTab === "team" && hasManagerAccess && !hasHrAccess ? (
                             <ManagerTeamOnLeavePanel />
                           ) : null}
@@ -4304,8 +4216,9 @@ export function LeavePageClient() {
                               onPageSizeChange={teamLeavePagination.setPageSize}
                             />
                           ) : null}
-                        </section>
+                        </div>
                           ) : null}
+                          </div>
                         </section>
         </OnboardingGate>
       </DashboardPageShell>

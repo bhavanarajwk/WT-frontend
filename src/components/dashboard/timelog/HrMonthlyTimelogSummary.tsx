@@ -87,7 +87,7 @@ export function HrMonthlyTimelogSummary({
           <WtTable>
             <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="sticky left-0 z-[1] bg-wt-surface-2">
+                <TableHead className="sticky left-0 z-[1] bg-wt-surface-1">
                   Employee
                 </TableHead>
                 {weekStarts.map((weekStart, index) => (
@@ -105,13 +105,13 @@ export function HrMonthlyTimelogSummary({
                   <TableRow
                     key={row.email}
                     className={`group ${
-                      rowClickable ? "cursor-pointer hover:bg-wt-surface-2/80" : ""
+                      rowClickable ? "cursor-pointer hover:bg-wt-page-bg/50" : ""
                     }`}
                     onClick={() => {
                       if (rowClickable && openWeek) onRowClick?.(row, openWeek);
                     }}
                   >
-                    <TableCell className="sticky left-0 z-[1] bg-wt-surface-1 whitespace-nowrap group-hover:bg-wt-surface-2">
+                    <TableCell className="sticky left-0 z-[1] bg-wt-surface-1 whitespace-nowrap group-hover:bg-wt-page-bg/50">
                       {row.label}
                     </TableCell>
                     {weekStarts.map((weekStart) => {

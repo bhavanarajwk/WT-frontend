@@ -250,7 +250,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   return (
-    <div className="wt-page-scroll h-dvh overflow-y-auto bg-wt-bg text-wt-text">
+    <div className="wt-page-scroll h-dvh overflow-y-auto text-wt-text">
       <div className="flex min-h-full max-lg:flex-col lg:flex-row">
       <aside className="sticky top-0 z-20 flex max-h-[min(36vh,260px)] shrink-0 flex-col overflow-x-hidden border-b border-wt-border bg-wt-surface-1 p-4 max-lg:relative max-lg:min-h-0 lg:h-dvh lg:max-h-dvh lg:w-[250px] lg:min-w-0 lg:border-b-0 lg:border-r lg:p-5">
         <div className="mb-4 min-w-0 shrink-0">
@@ -431,8 +431,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         ) : null}
       </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 shrink-0 border-b border-wt-border bg-wt-bg px-6 py-4 flex items-center justify-between gap-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-wt-page-bg">
+        <header className="sticky top-0 z-10 shrink-0 bg-wt-surface-1 px-6 py-4 flex items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold">{pageTitle}</h2>
             {isEmployeeDirectoryRoute && !isLearningRoute ? (
@@ -612,7 +612,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className="min-h-0 min-w-0 flex-1">{children}</div>
+        <div className="min-h-0 min-w-0 flex-1 bg-wt-page-bg">{children}</div>
       </div>
       </div>
     </div>

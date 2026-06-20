@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -319,20 +320,21 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 border-b border-wt-border pb-2">
-        {tabs.map((t) => (
-          <Link
-            key={t.id}
-            href={`/dashboard/learning-development/trainings/${encodeURIComponent(tid)}?tab=${t.id}`}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-              safeTab === t.id ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
-
+      <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
+      <PageTabs
+        embedded
+        value={safeTab}
+        onValueChange={(value) => {
+          router.push(
+            `/dashboard/learning-development/trainings/${encodeURIComponent(tid)}?tab=${value}`
+          );
+        }}
+        items={tabs.map((t) => ({
+          value: t.id,
+          label: t.label,
+        }))}
+      />
+      <div className={PAGE_TAB_BODY_CLASS}>
       {safeTab === "overview" && !detailQ.isError ? (
         hasHrAccess ? (
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
@@ -588,6 +590,8 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           <EmployeeTrainingMyMarks trainingId={tid} enabled={safeTab === "scores"} />
         </section>
       ) : null}
+      </div>
+      </section>
     </div>
     </>
   );

@@ -11,6 +11,7 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { EmployeeOnboardingSubNav } from "@/components/employee-onboarding/EmployeeOnboardingSubNav";
+import { PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import {
   cleanEmployeeName,
   rowEmail,
@@ -74,8 +75,8 @@ export function AssignAccountManagerPageClient() {
   return (
     <DashboardPageShell>
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
-        <div className="p-5 md:p-7">
-          <EmployeeOnboardingSubNav />
+        <EmployeeOnboardingSubNav />
+        <div className={PAGE_TAB_BODY_CLASS}>
           <h3 className="text-lg font-semibold">Assign Account Manager</h3>
 
           {isError ? (

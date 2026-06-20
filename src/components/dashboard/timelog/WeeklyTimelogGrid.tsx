@@ -274,7 +274,7 @@ export function WeeklyTimelogGrid({
             })}
           </TableBody>
           <tfoot>
-            <TableRow className="border-t-2 bg-muted/30 font-medium">
+            <TableRow className="border-t-2 bg-wt-surface-1 font-medium">
               <TableCell colSpan={4} className="px-2 py-2 text-right">
                 Daily totals
               </TableCell>
@@ -294,7 +294,7 @@ export function WeeklyTimelogGrid({
               <TableCell className="px-2 py-2 text-center tabular-nums">{formatHoursDisplay(weekSum)}</TableCell>
             </TableRow>
             {canApprove ? (
-              <TableRow className="bg-muted/20">
+              <TableRow className="bg-wt-surface-1">
                 <TableCell colSpan={4} className="px-2 py-2 text-right">
                   Day actions
                 </TableCell>

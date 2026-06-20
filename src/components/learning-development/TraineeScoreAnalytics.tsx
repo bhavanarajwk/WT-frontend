@@ -108,7 +108,7 @@ export function TraineeScoreAnalytics({
         <WtTable>
           <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="sticky left-0 bg-wt-surface-2 z-10">
+              <TableHead className="sticky left-0 bg-wt-surface-1 z-10">
                 Employee
               </TableHead>
               {assessmentColumns.map((a) => (

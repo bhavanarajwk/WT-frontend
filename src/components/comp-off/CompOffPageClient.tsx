@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -838,39 +839,21 @@ export function CompOffPageClient({
     (!earnOnly && !forcedTab && canReviewTeam && (!canApplyCompOff || mainTab === "team"));
 
   const pageBody = (
-    <section className="space-y-4">
-      {!embedded ? <h2 className="text-xl font-semibold text-wt-text">Comp-off</h2> : null}
-
+    <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
       {!embedded && canApplyCompOff && canReviewTeam ? (
-              <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setMainTab("my")}
-                  className={`rounded-lg px-3 py-2 ${
-                    mainTab === "my"
-                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                  }`}
-                >
-                  My comp-off
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setMainTab("team")}
-                  className={`rounded-lg px-3 py-2 ${
-                    mainTab === "team"
-                      ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                  }`}
-                >
-                  Team review
-                </Button>
-              </div>
-            ) : null}
+        <PageTabs
+          embedded
+          aria-label="Comp-off views"
+          value={mainTab}
+          onValueChange={(value) => setMainTab(value as "my" | "team")}
+          items={[
+            { value: "my", label: "My Comp-off" },
+            { value: "team", label: "Team Review" },
+          ]}
+        />
+      ) : null}
+      <div className={PAGE_TAB_BODY_CLASS}>
+      {!embedded ? <h2 className="text-xl font-semibold text-wt-text">Comp-off</h2> : null}
 
             {showMyCompOff ? (
               <div className="space-y-4">
@@ -1389,6 +1372,7 @@ export function CompOffPageClient({
                 )}
               </div>
             ) : null}
+      </div>
     </section>
   );
 

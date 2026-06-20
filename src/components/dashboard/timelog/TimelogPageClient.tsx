@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { showErrorToast } from "@/lib/toast";
 import { useAuth } from "@/context/AuthContext";
@@ -54,6 +54,7 @@ function unwrapPayload<T>(response: unknown): T {
 
 export function TimelogPageClient() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
   const roles = user?.roles ?? [];
   const hasManagerAccess = roles.includes("ROLE_MANAGER");
@@ -297,28 +298,22 @@ export function TimelogPageClient() {
         <div className="space-y-6">
           {hasAmRole ? <HrReviewNoticeBanner /> : null}
 
-          {canSeeTeamTab ? (
-            <div className="flex flex-wrap gap-2 border-b border-wt-border pb-2">
-              <Link
-                href="/dashboard/timelog"
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  subTab === "my" ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
-                }`}
-              >
-                My timelogs
-              </Link>
-              <Link
-                href="/dashboard/timelog/team"
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  subTab === "team" ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
-                }`}
-              >
-                Team timelogs
-              </Link>
-            </div>
-          ) : null}
-
-          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+          <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
+            {canSeeTeamTab ? (
+              <PageTabs
+                embedded
+                aria-label="Timelog views"
+                value={subTab}
+                onValueChange={(value) => {
+                  router.push(value === "team" ? "/dashboard/timelog/team" : "/dashboard/timelog");
+                }}
+                items={[
+                  { value: "my", label: "My Timelogs" },
+                  { value: "team", label: "Team Timelogs" },
+                ]}
+              />
+            ) : null}
+            <div className={PAGE_TAB_BODY_CLASS}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-semibold">
                 {isHrTeamView ? "Approved timelog hours" : isTeamView ? "Team timelogs" : "My weekly timesheet"}
@@ -418,6 +413,7 @@ export function TimelogPageClient() {
                 onRowsChange={isTeamView ? () => {} : setRows}
               />
             )}
+            </div>
           </section>
         </div>
         {isHrTeamView && hrWeekDetail ? (

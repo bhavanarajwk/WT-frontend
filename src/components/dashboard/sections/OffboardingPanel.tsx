@@ -844,7 +844,7 @@ export function OffboardingPanel() {
                     return (
                     <TableRow
                       key={row.emp_id}
-                      className={`hover:bg-muted/50 ${
+                      className={`hover:bg-wt-page-bg/50 ${
                         isSelected ? "bg-indigo-50/70" : ""
                       }`}
                     >

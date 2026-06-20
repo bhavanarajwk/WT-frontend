@@ -455,7 +455,7 @@ export function ExitSurveyFollowUpPanel() {
                   return (
                     <TableRow
                       key={lookupId || empId || row.email}
-                      className={`hover:bg-muted/50 ${
+                      className={`hover:bg-wt-page-bg/50 ${
                         isSelected ? "bg-indigo-50/70" : ""
                       } ${canView && detailHref ? "cursor-pointer" : ""}`}
                       onClick={(event) => {

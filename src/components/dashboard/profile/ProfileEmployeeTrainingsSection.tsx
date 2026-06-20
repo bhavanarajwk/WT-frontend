@@ -128,7 +128,7 @@ export function ProfileEmployeeTrainingsSection({ enabled = true }: { enabled?: 
         ) : (
           <div className={PROFILE_TABLE_SCROLL}>
             <WtTable className={PROFILE_TABLE_CLASS}>
-              <TableHeader className="bg-wt-surface-2 [&_tr]:border-b">
+              <TableHeader className="bg-wt-surface-1 [&_tr]:border-b">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className={PROFILE_TABLE_HEAD_CELL}>Training Name</TableHead>
                   <TableHead className={PROFILE_TABLE_HEAD_CELL}>Assessment Score</TableHead>

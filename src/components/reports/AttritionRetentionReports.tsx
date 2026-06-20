@@ -120,7 +120,7 @@ function ReportTableCard({
 
   return (
     <section className="rounded-2xl border border-wt-border bg-wt-surface-1 overflow-hidden shadow-sm">
-      <div className="border-b border-wt-border bg-wt-surface-2/80 px-4 py-3 sm:px-5">
+      <div className="border-b border-wt-border bg-wt-surface-1 px-4 py-3 sm:px-5">
         <h4 className="font-semibold text-sm">{title}</h4>
         {description ? <p className="text-xs text-wt-text-muted mt-0.5">{description}</p> : null}
       </div>
@@ -142,7 +142,7 @@ function ReportTableCard({
               {displayRows.map((row, idx) => (
                 <TableRow
                   key={idx}
-                  className="hover:bg-muted/50 transition-colors"
+                  className="hover:bg-wt-page-bg/50 transition-colors"
                 >
                   {displayColumns.map((col) => (
                     <TableCell key={col} className="px-4 py-2.5 whitespace-nowrap">

@@ -29,6 +29,7 @@
 
   /* Surface */
   --wt-bg:         #f4f7fb;
+  --wt-page-bg:    #eef3fb;
   --wt-surface-1:  #ffffff;
   --wt-surface-2:  #f8fafc;
   --wt-surface-3:  #eef2f7;
@@ -94,6 +95,7 @@
 
 [data-theme="dark"] {
   --wt-bg:         #0f0e17;
+  --wt-page-bg:    #12111c;
   --wt-surface-1:  #16151f;
   --wt-surface-2:  #1d1c2a;
   --wt-surface-3:  #252436;
@@ -121,6 +123,7 @@
 /* ------------------------------------------------------------------ */
 @theme inline {
   --color-wt-bg:        var(--wt-bg);
+  --color-wt-page-bg:   var(--wt-page-bg);
   --color-wt-surface-1: var(--wt-surface-1);
   --color-wt-surface-2: var(--wt-surface-2);
   --color-wt-surface-3: var(--wt-surface-3);
@@ -379,7 +382,7 @@ body::-webkit-scrollbar {
   position: sticky;
   top: 0;
   z-index: 2;
-  background-color: var(--wt-surface-2);
+  background-color: var(--wt-surface-1);
   background-clip: padding-box;
   box-shadow: 0 1px 0 var(--wt-border);
 }

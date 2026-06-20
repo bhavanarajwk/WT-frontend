@@ -12,6 +12,7 @@ import {
 } from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { Button } from "@/components/ui/button";
+import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -49,7 +50,7 @@ const EMAIL_HEADER_CLASS = "hidden sm:table-cell";
 const LEAVE_COLUMN_CLASS = "text-center tabular-nums w-36";
 const ATTENDANCE_COLUMN_CLASS = "text-center tabular-nums w-44";
 const STICKY_HEADER_CLASS =
-  "sticky top-0 z-10 bg-wt-surface-2 shadow-[inset_0_-1px_0_var(--wt-border)]";
+  "sticky top-0 z-10 bg-wt-surface-1 shadow-[inset_0_-1px_0_var(--wt-border)]";
 const NAME_CELL_CLASS = "truncate";
 const EMAIL_CELL_CLASS = "truncate hidden sm:table-cell";
 const NUMERIC_CELL_CLASS = "text-center tabular-nums w-36";
@@ -228,36 +229,19 @@ export function EmployeeAttendancePanel() {
 
   return (
     <section className="space-y-4">
-            <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h3 className="font-semibold">Attendance</h3>
-
-        <div
-          className="flex flex-wrap gap-2 border-b border-wt-border pb-3"
-          role="tablist"
+            <div className="rounded-2xl border border-wt-border bg-wt-surface-1">
+        <PageTabs
+          embedded
           aria-label="Employee User Type"
-        >
-          {ATTENDANCE_USER_TYPE_TABS.map((tab) => {
-            const isActive = userTypeTab === tab.id;
-            return (
-              <Button
-                key={tab.id}
-                type="button"
-                role="tab"
-                variant="ghost"
-                size="sm"
-                aria-selected={isActive}
-                className={`rounded-full px-3 py-1.5 ${
-                  isActive
-                    ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                    : "text-wt-text-muted hover:bg-wt-surface-2"
-                }`}
-                onClick={() => setUserTypeTab(tab.id)}
-              >
-                {tab.label}
-              </Button>
-            );
-          })}
-        </div>
+          value={userTypeTab}
+          onValueChange={(value) => setUserTypeTab(value as AttendanceUserTypeTab)}
+          items={ATTENDANCE_USER_TYPE_TABS.map((tab) => ({
+            value: tab.id,
+            label: tab.label,
+          }))}
+        />
+        <div className={PAGE_TAB_BODY_CLASS}>
+        <h3 className="font-semibold">Attendance</h3>
 
         <div className="flex flex-wrap items-end gap-3">
           <DatePickerField
@@ -352,7 +336,7 @@ export function EmployeeAttendancePanel() {
                   {employees.map((row) => (
                     <TableRow
                       key={String(row.user_id ?? row.emp_id ?? row.name)}
-                      className="hover:bg-muted/50"
+                      className="hover:bg-wt-page-bg/50"
                     >
                       <TableCell className={NAME_CELL_CLASS} title={row.name?.trim() || undefined}>
                         {row.name?.trim() || "—"}
@@ -388,6 +372,7 @@ export function EmployeeAttendancePanel() {
             No {audienceLabel} Found For This Range.
           </p>
         ) : null}
+        </div>
       </div>
     </section>
   );
