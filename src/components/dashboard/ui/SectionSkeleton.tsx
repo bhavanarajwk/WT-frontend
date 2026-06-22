@@ -13,6 +13,36 @@ export function FormFieldsSkeleton({ rows = 3 }: { rows?: number }) {
   );
 }
 
+export function FormGridSkeleton({ fields = 12 }: { fields?: number }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2" aria-hidden>
+      {Array.from({ length: fields }).map((_, index) => (
+        <div key={index} className="space-y-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function MetricCardsSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-3" aria-hidden>
+      {Array.from({ length: count }).map((_, index) => (
+        <div
+          key={index}
+          className="space-y-3 rounded-xl border border-wt-border bg-wt-surface-2/60 p-4"
+        >
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-3 w-28" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TableRowsSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
   return (
     <div className="space-y-2 rounded-lg border border-wt-border p-3" aria-hidden>

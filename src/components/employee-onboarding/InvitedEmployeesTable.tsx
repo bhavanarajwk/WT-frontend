@@ -28,8 +28,6 @@ import {
   invitedEmployeeWorkEmail,
 } from "@/utils/dashboard/invitedEmployees";
 import { formatTableColumnHeader, prepareTableForDisplay } from "@/utils/tableDisplay";
-import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
-import { BlackLoader } from "@/components/dashboard/shared/BlackLoader";
 
 const DATA_COLUMNS = [
   "emp_id",
@@ -91,8 +89,6 @@ const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
 
 type Props = {
   rows: Array<Record<string, unknown>>;
-  emptyLabel: string;
-  loading?: boolean;
   actionLoading?: boolean;
   resendingEmail?: string | null;
   onResendInvite: (email: string) => void;
@@ -100,8 +96,6 @@ type Props = {
 
 export function InvitedEmployeesTable({
   rows,
-  emptyLabel,
-  loading = false,
   actionLoading = false,
   resendingEmail = null,
   onResendInvite,
@@ -123,14 +117,6 @@ export function InvitedEmployeesTable({
     pageSize: DEFAULT_PAGE_SIZE,
     resetKeys: [sortId],
   });
-
-  if (loading && !displaySourceRows.length) {
-    return <TableRowsSkeleton rows={8} columns={displayColumns.length || 8} />;
-  }
-
-  if (!loading && !displaySourceRows.length) {
-    return <p className="text-sm text-wt-text-muted">{emptyLabel}</p>;
-  }
 
   return (
     <div className="space-y-2">
@@ -155,15 +141,6 @@ export function InvitedEmployeesTable({
           pageScroller.scrollBy({ top: deltaY, behavior: "auto" });
         }}
       >
-        {loading ? (
-          <div
-            className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-wt-surface-1/70"
-            aria-busy="true"
-            aria-live="polite"
-          >
-            <BlackLoader label="Refreshing employees…" />
-          </div>
-        ) : null}
         <WtTable>
           <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
             <TableRow className="hover:bg-transparent">
@@ -214,14 +191,7 @@ export function InvitedEmployeesTable({
                     {canResend ? (
                       <Button variant="brand" size="xs" type="button" className="px-2.5 py-1 text-xs" disabled={actionLoading || isResending} onClick={() => onResendInvite(email)}
                       >
-                        {isResending ? (
-                          <span className="inline-flex items-center gap-2">
-                            <BlackLoader label="Resending Invite" size="sm" />
-                            <span>Resending Invite…</span>
-                          </span>
-                        ) : (
-                          "Resend Invite"
-                        )}
+                        {isResending ? "Resending Invite…" : "Resend Invite"}
                       </Button>
                     ) : (
                       <span className="text-xs text-wt-text-muted">—</span>

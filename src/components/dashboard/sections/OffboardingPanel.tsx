@@ -13,15 +13,12 @@ import {
   WtTable,
   TableCheckbox,
 } from "@/components/dashboard/ui/wtTable";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
-import { Input } from "@/components/ui/input";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
 import { exitInterviewService } from "@/services/exitInterview.service";
 import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
-import type { HrOffboardListItem } from "@/types/offboard";
 import {
   DatePickerField,
   DropdownSelectField,
@@ -29,9 +26,17 @@ import {
 } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
-import { BlackLoader, LoadingOverlay, LoadingPanel } from "@/components/dashboard/shared/BlackLoader";
-import { toPagedRows } from "@/utils/apiRows";
+import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
+import { SearchInput } from "@/components/dashboard/ui/SearchInput";
+import { FormGridSkeleton, MetricCardsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { formatApiDateDisplay } from "@/utils/apiDate";
+import {
+  financialYearSelectOptions,
+  OFFBOARDING_LIST_PAGE_SIZE,
+  useOffboardingPanelQueries,
+} from "@/hooks/offboarding/useOffboardingPanelQueries";
 import {
   CONSULTANT_EXIT_TYPE,
   DEFAULT_NOTICE_PERIOD_DAYS,
@@ -43,51 +48,21 @@ import {
   isOffboardingFormValid,
   type ExitType,
 } from "@/utils/offboardingFormState";
-import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
 import {
   isResendableOffboardListRow,
   mergeEmpIdSelection,
   resendableOffboardEmpIds,
 } from "@/utils/exitSurveyFollowUp";
 
-
-type OffboardCandidate = {
-  emp_id: string;
-  name: string;
-  email: string;
-  user_type: string;
-};
-
-const DEFAULT_PAGE_SIZE = 10;
-
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
 const INNER_SCROLL_CLASS =
   "wt-scroll-both max-h-[min(70vh,560px)] overflow-auto overscroll-behavior-auto rounded-xl border border-wt-border";
 
-function defaultFinancialYearStart(): string {
-  const now = new Date();
-  const year = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
-  return String(year);
-}
-
-function financialYearOptions(): string[] {
-  return Array.from({ length: Math.max(new Date().getFullYear() - 2019 + 1, 1) }, (_, idx) =>
-    String(2019 + idx)
-  );
-}
-
 function formatPercent(value: unknown): string {
   const n = Number(value);
   if (!Number.isFinite(n)) return "—";
   return `${n}%`;
-}
-
-function exitSplitPercent(part: unknown, total: unknown): number {
-  const p = Number(part);
-  const t = Number(total);
-  if (!Number.isFinite(p) || !Number.isFinite(t) || t <= 0) return 0;
-  return Math.round((p / t) * 1000) / 10;
 }
 
 function formatBool(value: boolean): string {
@@ -104,27 +79,33 @@ function bulkResendResultClassName(
 
 export function OffboardingPanel() {
   const [offboardingForm, setOffboardingForm] = useState(createEmptyOffboardingForm);
-  const [offboardCandidates, setOffboardCandidates] = useState<OffboardCandidate[]>([]);
-  const [offboardedRows, setOffboardedRows] = useState<HrOffboardListItem[]>([]);
-  const [listTotal, setListTotal] = useState(0);
-  const [listPage, setListPage] = useState(0);
-  const [listPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const {
+    listPage,
+    setListPage,
+    search,
+    setSearch,
+    filterFromDate,
+    setFilterFromDate,
+    filterToDate,
+    setFilterToDate,
+    filterType,
+    setFilterType,
+    fyStartYear,
+    setFyStartYear,
+    offboardCandidates,
+    offboardedRows,
+    listTotal,
+    loadingAttrition,
+    loadingCandidates,
+    loadingList,
+    attritionPercent,
+    voluntaryPercent,
+    involuntaryPercent,
+    attritionExitCount,
+    refreshOffboardingData,
+    refetchList,
+  } = useOffboardingPanelQueries();
 
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search, 300);
-  const [filterFromDate, setFilterFromDate] = useState("");
-  const [filterToDate, setFilterToDate] = useState("");
-  const [filterType, setFilterType] = useState("");
-
-  const [fyStartYear, setFyStartYear] = useState(defaultFinancialYearStart);
-  const [attritionPercent, setAttritionPercent] = useState<number | null>(null);
-  const [voluntaryPercent, setVoluntaryPercent] = useState<number | null>(null);
-  const [involuntaryPercent, setInvoluntaryPercent] = useState<number | null>(null);
-  const [attritionExitCount, setAttritionExitCount] = useState<number | null>(null);
-  const [loadingAttrition, setLoadingAttrition] = useState(false);
-
-  const [loadingList, setLoadingList] = useState(false);
-  const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [resendingEmpId, setResendingEmpId] = useState<string | null>(null);
   const [bulkResending, setBulkResending] = useState(false);
@@ -143,129 +124,10 @@ export function OffboardingPanel() {
 
   const canSubmit = isOffboardingFormValid(offboardingForm, selectedUserType);
 
-  const loadAttritionSummary = useCallback(async () => {
-    const parsedFy = Number.parseInt(fyStartYear, 10);
-    const fy_start_year =
-      Number.isFinite(parsedFy) && parsedFy >= 2000 && parsedFy <= 2100
-        ? parsedFy
-        : Number(defaultFinancialYearStart());
-    setLoadingAttrition(true);
-    try {
-      const [overallRes, viRes] = await Promise.all([
-        hrmsService.getAttritionOverallPercent({ fy_start_year }),
-        hrmsService.getAttritionVoluntaryInvoluntary({ fy_start_year }),
-      ]);
-      const overall = ((overallRes as { data?: unknown }).data ?? {}) as Record<string, unknown>;
-      const vi = ((viRes as { data?: unknown }).data ?? {}) as Record<string, unknown>;
-      const voluntaryCount = Number(vi.voluntary_count ?? 0);
-      const involuntaryCount = Number(vi.involuntary_count ?? 0);
-      const totalCount = Number(vi.total_count ?? voluntaryCount + involuntaryCount);
-      setAttritionPercent(Number(overall.attrition_percent ?? 0));
-      setAttritionExitCount(Number(overall.number_of_exits ?? totalCount));
-      setVoluntaryPercent(exitSplitPercent(voluntaryCount, totalCount));
-      setInvoluntaryPercent(exitSplitPercent(involuntaryCount, totalCount));
-    } catch {
-      setAttritionPercent(null);
-      setVoluntaryPercent(null);
-      setInvoluntaryPercent(null);
-      setAttritionExitCount(null);
-    } finally {
-      setLoadingAttrition(false);
-    }
-  }, [fyStartYear]);
-
-  const loadOffboardList = useCallback(async () => {
-    setLoadingList(true);
-    try {
-      const res = await hrmsService.getOffboardList({
-        page: listPage,
-        size: listPageSize,
-        search: debouncedSearch.trim() || undefined,
-        type: filterType.trim() || undefined,
-        fromDate: filterFromDate.trim() || undefined,
-        toDate: filterToDate.trim() || undefined,
-      });
-      const data = res.data;
-      setOffboardedRows((data?.items ?? []) as unknown as HrOffboardListItem[]);
-      setListTotal(data?.total ?? 0);
-    } catch (error) {
-      setOffboardedRows([]);
-      setListTotal(0);
-      const msg =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Failed to load offboarded employees.";
-      showErrorToast(msg);
-    } finally {
-      setLoadingList(false);
-    }
-  }, [listPage, listPageSize, debouncedSearch, filterType, filterFromDate, filterToDate]);
-
-  const loadOffboardCandidates = useCallback(async () => {
-    setLoadingCandidates(true);
-    try {
-      const [onboardRes, offboardRes] = await Promise.all([
-        hrmsService.getOnboardList({ page: "0", size: "500", onboardingStatus: "ACTIVE" }),
-        hrmsService.getOffboardList({ page: 0, size: 200 }).catch(() => ({
-          data: { items: [] as HrOffboardListItem[], total: 0, page: 0, size: 0 },
-        })),
-      ]);
-      const onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
-      const offboardedIds = new Set(
-        (offboardRes.data?.items ?? []).map((row) => String(row.emp_id ?? "").trim().toLowerCase())
-      );
-      const candidates = Array.from(
-        new Map(
-          onboardRows
-            .map((row) => {
-              const emp_id = String(row.emp_id ?? row.empId ?? "").trim();
-              if (!emp_id || offboardedIds.has(emp_id.toLowerCase())) return null;
-              const status = String(row.status ?? "").trim().toUpperCase();
-              if (
-                status === "INACTIVE" ||
-                normalizeEmployeeStatusKey(status) === "IN_NOTICE"
-              ) {
-                return null;
-              }
-              const name = String(row.name ?? "—").trim() || "—";
-              const email = String(row.email ?? "—").trim() || "—";
-              const user_type = String(row.user_type ?? row.userType ?? "").trim().toUpperCase();
-              return [emp_id.toLowerCase(), { emp_id, name, email, user_type }] as const;
-            })
-            .filter((entry): entry is readonly [string, OffboardCandidate] => Boolean(entry))
-        ).values()
-      ).sort((a, b) => a.emp_id.localeCompare(b.emp_id));
-      setOffboardCandidates(candidates);
-    } catch {
-      setOffboardCandidates([]);
-      showErrorToast("Failed to load active employees for offboarding.");
-    } finally {
-      setLoadingCandidates(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadOffboardCandidates();
-  }, [loadOffboardCandidates]);
-
-  useEffect(() => {
-    void loadOffboardList();
-  }, [loadOffboardList]);
-
-  useEffect(() => {
-    void loadAttritionSummary();
-  }, [loadAttritionSummary]);
-
-  useEffect(() => {
-    setListPage(0);
-  }, [debouncedSearch, filterType, filterFromDate, filterToDate]);
-
   useEffect(() => {
     setSelectedEmpIds([]);
     setBulkResendResults([]);
-  }, [debouncedSearch, filterType, filterFromDate, filterToDate, listPage]);
+  }, [search, filterType, filterFromDate, filterToDate, listPage]);
 
   const resendableEmpIdsOnPage = useMemo(
     () => resendableOffboardEmpIds(offboardedRows),
@@ -369,9 +231,9 @@ export function OffboardingPanel() {
   }
 
 
-  const totalPages = Math.max(1, Math.ceil(listTotal / listPageSize) || 1);
-  const rangeStart = listTotal === 0 ? 0 : listPage * listPageSize + 1;
-  const rangeEnd = Math.min(listTotal, (listPage + 1) * listPageSize);
+  const totalPages = Math.max(1, Math.ceil(listTotal / OFFBOARDING_LIST_PAGE_SIZE) || 1);
+  const rangeStart = listTotal === 0 ? 0 : listPage * OFFBOARDING_LIST_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(listTotal, (listPage + 1) * OFFBOARDING_LIST_PAGE_SIZE);
 
   const candidateOptions = useMemo(
     () =>
@@ -467,9 +329,7 @@ export function OffboardingPanel() {
       setOffboardingForm(createEmptyOffboardingForm());
       setListPage(0);
       showSuccessToast("Employee offboarded successfully.");
-      await loadOffboardCandidates();
-      await loadOffboardList();
-      await loadAttritionSummary();
+      await refreshOffboardingData();
     } catch (error) {
       const msg =
         error instanceof ApiError
@@ -485,87 +345,84 @@ export function OffboardingPanel() {
 
   return (
     <section className="relative flex min-h-0 flex-col gap-4">
-            <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        {loadingAttrition ? <LoadingOverlay label="Loading Attrition Summary" /> : null}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <Card className="p-0">
+        <CardHeader className="flex-row items-end justify-between gap-3 space-y-0">
           <div>
-            <h3 className="font-semibold">Attrition Summary</h3>
-            <p className="text-xs text-wt-text-muted mt-1">
+            <CardTitle>Attrition Summary</CardTitle>
+            <CardDescription>
               Financial-year exit metrics (Apr–Mar). Contractual exits are excluded.
-              {attritionExitCount != null ? ` · ${attritionExitCount} exit(s)` : ""}
-            </p>
+              {attritionExitCount != null && !loadingAttrition
+                ? ` · ${attritionExitCount} exit(s)`
+                : ""}
+            </CardDescription>
           </div>
+        </CardHeader>
+        <Separator />
+        <div className="flex justify-end px-6 py-4">
           <DropdownSelectField
             label="Financial Year (Start)"
-            className="min-w-[10rem]"
+            className="w-[11rem] shrink-0"
             value={fyStartYear}
             onChange={setFyStartYear}
-            options={financialYearOptions().map((year) => ({
-              value: year,
-              label: `FY ${year}–${String(Number(year) + 1).slice(-2)}`,
-            }))}
+            options={financialYearSelectOptions()}
           />
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <article className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
-              Attrition %
-            </p>
-            <p className="text-2xl font-semibold mt-2 tabular-nums text-rose-700">
-              {loadingAttrition ? (
-                <BlackLoader label="Loading Attrition %" size="sm" />
-              ) : (
-                formatPercent(attritionPercent)
-              )}
-            </p>
-          </article>
-          <article className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
-              Voluntary %
-            </p>
-            <p className="text-2xl font-semibold mt-2 tabular-nums text-sky-700">
-              {loadingAttrition ? (
-                <BlackLoader label="Loading Voluntary %" size="sm" />
-              ) : (
-                formatPercent(voluntaryPercent)
-              )}
-            </p>
-            <p className="text-xs text-wt-text-muted mt-1">Share of FY exits</p>
-          </article>
-          <article className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
-              Involuntary %
-            </p>
-            <p className="text-2xl font-semibold mt-2 tabular-nums text-amber-700">
-              {loadingAttrition ? (
-                <BlackLoader label="Loading Involuntary %" size="sm" />
-              ) : (
-                formatPercent(involuntaryPercent)
-              )}
-            </p>
-            <p className="text-xs text-wt-text-muted mt-1">Share of FY exits</p>
-          </article>
-        </div>
-      </div>
+        <CardContent className="pt-0">
+          {loadingAttrition ? (
+            <MetricCardsSkeleton count={3} />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <article className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
+                  Attrition %
+                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-rose-700">
+                  {formatPercent(attritionPercent)}
+                </p>
+              </article>
+              <article className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
+                  Voluntary %
+                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-sky-700">
+                  {formatPercent(voluntaryPercent)}
+                </p>
+                <p className="mt-1 text-xs text-wt-text-muted">Share of FY exits</p>
+              </article>
+              <article className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
+                  Involuntary %
+                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-amber-700">
+                  {formatPercent(involuntaryPercent)}
+                </p>
+                <p className="mt-1 text-xs text-wt-text-muted">Share of FY exits</p>
+              </article>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        {submitting ? <LoadingOverlay label="Submitting Offboarding" /> : null}
-        {loadingCandidates && !offboardCandidates.length ? (
-          <LoadingPanel label="Loading Active Employees" className="min-h-[16rem]" />
-        ) : (
-          <>
-            <h3 className="font-semibold mb-4">Employee Offboarding</h3>
+      <Card className="p-0">
+        <CardHeader>
+          <CardTitle>Employee Offboarding</CardTitle>
+          <CardDescription>
+            Record resignation details and submit offboarding for an active employee.
+          </CardDescription>
+        </CardHeader>
+        <Separator />
+        <CardContent>
+          {loadingCandidates && !offboardCandidates.length ? (
+            <FormGridSkeleton fields={8} />
+          ) : (
+            <>
             <div className="grid md:grid-cols-2 gap-3">
               <DropdownSelectField
                 label="Employee"
                 required
                 disabled={loadingCandidates || submitting}
                 placeholder={
-                  loadingCandidates
-                    ? "Loading Employees…"
-                    : candidateOptions.length
-                      ? "Select Employee"
-                      : "No Active Employees Available"
+                  candidateOptions.length ? "Select Employee" : "No Active Employees Available"
                 }
                 value={offboardingForm.emp_id}
                 onChange={handleEmployeeChange}
@@ -669,104 +526,94 @@ export function OffboardingPanel() {
               <p className="text-sm text-wt-text-muted mt-2">{offboardingNoticeLabel}</p>
             ) : null}
             <div className="mt-4">
-              <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" disabled={!canSubmit || submitting || loadingCandidates} onClick={() => void submitOffboarding()}
+              <Button
+                variant="brand"
+                size="sm"
+                type="button"
+                className="px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!canSubmit || submitting || loadingCandidates}
+                onClick={() => void submitOffboarding()}
               >
-                {submitting ? (
-                  <span className="inline-flex items-center gap-2">
-                    <BlackLoader label="Submitting Offboarding" size="sm" />
-                    Submitting Offboarding…
-                  </span>
-                ) : (
-                  "Submit Offboarding"
-                )}
+                {submitting ? "Submitting Offboarding…" : "Submit Offboarding"}
               </Button>
             </div>
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4 min-h-0">
-        {loadingList && offboardedRows.length ? (
-          <LoadingOverlay label="Loading Offboarded Employees" />
-        ) : null}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-semibold">Offboarded Employees</h3>
-          <p className="text-xs text-wt-text-muted tabular-nums">
-            {loadingList ? (
-              <span className="inline-flex items-center gap-2">
-                <BlackLoader label="Loading Offboarded Employees" size="sm" />
-                Loading…
-              </span>
-            ) : (
-              `${listTotal} total`
-            )}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="sr-only" htmlFor="offboard-list-search">
-            Search
-          </label>
-          <Input
+      <ManagementListCard
+        title="Offboarded Employees"
+        description={
+          loadingList
+            ? "Loading offboarded employees…"
+            : `${listTotal} total employee${listTotal === 1 ? "" : "s"}`
+        }
+        search={
+          <SearchInput
             id="offboard-list-search"
-            type="search"
-            className="h-10 min-w-[200px] flex-1"
-            placeholder="Search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
+            placeholder="Search"
             aria-label="Search offboarded employees"
             disabled={loadingList}
           />
-          <DatePickerField
-            label="LWD From"
-            value={filterFromDate}
-            onChange={(v) => {
-              setFilterFromDate(v);
-              setListPage(0);
-            }}
-            className="w-[10.5rem] shrink-0"
-          />
-          <DatePickerField
-            label="LWD To"
-            value={filterToDate}
-            onChange={(v) => {
-              setFilterToDate(v);
-              setListPage(0);
-            }}
-            className="w-[10.5rem] shrink-0"
-          />
-          <DropdownSelectField
-            label="User Type"
-            className="w-[10.5rem] shrink-0"
-            value={filterType}
-            onChange={(v) => {
-              setFilterType(v);
-              setListPage(0);
-            }}
-            placeholder="All types"
-            options={[
-              { value: "", label: "All types" },
-              ...USER_TYPE_FILTER_OPTIONS.filter(Boolean).map((t) => ({
-                value: t,
-                label: formatUserTypeLabel(t),
-              })),
-            ]}
-          />
-          <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm h-10 border border-wt-border rounded-lg" onClick={() => void loadOffboardList()}
-            disabled={loadingList}
-          >
-            Refresh
-          </Button>
-          {selectedResendableCount > 0 ? (
-            <Button variant="brand" size="sm" type="button" className="ml-auto px-3 py-2 text-sm h-10" disabled={loadingList || bulkResending || Boolean(resendingEmpId)} onClick={() => void handleBulkResendExitSurvey()}
+        }
+        filters={
+          <>
+            <DatePickerField
+              label="LWD From"
+              value={filterFromDate}
+              onChange={setFilterFromDate}
+              className="w-[10.5rem] shrink-0"
+            />
+            <DatePickerField
+              label="LWD To"
+              value={filterToDate}
+              onChange={setFilterToDate}
+              className="w-[10.5rem] shrink-0"
+            />
+            <DropdownSelectField
+              label="User Type"
+              className="w-[10.5rem] shrink-0"
+              value={filterType}
+              onChange={setFilterType}
+              placeholder="All types"
+              options={[
+                { value: "", label: "All types" },
+                ...USER_TYPE_FILTER_OPTIONS.filter(Boolean).map((t) => ({
+                  value: t,
+                  label: formatUserTypeLabel(t),
+                })),
+              ]}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              className="h-10 px-3 py-2 text-sm"
+              onClick={() => void refetchList()}
+              disabled={loadingList}
             >
-              {bulkResending
-                ? "Sending…"
-                : `Resend Exit Survey (${selectedResendableCount})`}
+              Refresh
             </Button>
-          ) : null}
-        </div>
-
+            {selectedResendableCount > 0 ? (
+              <Button
+                variant="brand"
+                size="sm"
+                type="button"
+                className="h-10 px-3 py-2 text-sm"
+                disabled={loadingList || bulkResending || Boolean(resendingEmpId)}
+                onClick={() => void handleBulkResendExitSurvey()}
+              >
+                {bulkResending
+                  ? "Sending…"
+                  : `Resend Exit Survey (${selectedResendableCount})`}
+              </Button>
+            ) : null}
+          </>
+        }
+      >
         {bulkResendResults.length ? (
           <div className="space-y-2 rounded-xl border border-wt-border bg-wt-surface-2/40 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -793,11 +640,15 @@ export function OffboardingPanel() {
           </div>
         ) : null}
 
-        {loadingList && !offboardedRows.length ? (
-          <LoadingPanel label="Loading Offboarded Employees" />
-        ) : offboardedRows.length ? (
-          <>
-            <div className={INNER_SCROLL_CLASS}>
+        <ManagementListContent
+          isLoading={loadingList}
+          isEmpty={!loadingList && !offboardedRows.length}
+          emptyTitle="No Offboarded Employees Found"
+          emptyDescription="Try adjusting your search or filters."
+          skeletonRows={8}
+          skeletonColumns={10}
+        >
+          <div className={INNER_SCROLL_CLASS}>
               <WtTable className="min-w-full border-separate border-spacing-0">
                 <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                   <TableRow className="hover:bg-transparent">
@@ -907,14 +758,11 @@ export function OffboardingPanel() {
               totalItems={listTotal}
               rangeStart={rangeStart}
               rangeEnd={rangeEnd}
-              pageSize={listPageSize}
+              pageSize={OFFBOARDING_LIST_PAGE_SIZE}
               onPageChange={setListPage}
             />
-          </>
-        ) : (
-          <p className="text-sm text-wt-text-muted">No Offboarded Employees Found.</p>
-        )}
-      </div>
+        </ManagementListContent>
+      </ManagementListCard>
     </section>
   );
 }

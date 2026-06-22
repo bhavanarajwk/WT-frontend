@@ -25,6 +25,10 @@ import { HrOnboardForm } from "@/components/employee-onboarding/HrOnboardForm";
 import { InvitedEmployeesTable } from "@/components/employee-onboarding/InvitedEmployeesTable";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { ApiDateField } from "@/components/dashboard/ui/forms";
+import {
+  ManagementListCard,
+  ManagementListContent,
+} from "@/components/dashboard/ui/ManagementListCard";
 import { defaultDashboardPathForRoles } from "@/constants/routes";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { parseBandsList } from "@/utils/masters";
@@ -214,9 +218,10 @@ export function EmployeePageClient() {
                 }}
               />
 
-              <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-semibold">Onboarded Employees</h3>
+              <ManagementListCard
+                title="Onboarded Employees"
+                description="Invited employees within the selected date range."
+                headerAction={
                   <Button
                     variant="ghost"
                     type="button"
@@ -231,58 +236,61 @@ export function EmployeePageClient() {
                   >
                     Refresh Employees
                   </Button>
-                </div>
-                <div className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-0.5">
-                  <ApiDateField
-                    label="From Date"
-                    value={invitedListFromDate}
-                    onChange={setInvitedListFromDate}
-                    className="w-42 shrink-0"
-                  />
-                  <ApiDateField
-                    label="To Date"
-                    value={invitedListToDate}
-                    onChange={setInvitedListToDate}
-                    className="w-42 shrink-0"
-                  />
-                  <Button
-                    variant="brand"
-                    type="button"
-                    className="h-10 shrink-0 px-3 text-sm"
-                    onClick={() =>
-                      runAction("Load invited employees", async () => {
-                        await loadInviteOnboardingPreview({
-                          from: invitedListFromDateRef.current,
-                          to: invitedListToDateRef.current,
-                        });
-                        resetOnboardForm();
-                      })
-                    }
-                    disabled={actionLoading}
-                  >
-                    Apply Dates
-                  </Button>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    className="h-10 shrink-0 px-3 text-sm"
-                    onClick={() =>
-                      runAction("Reset invited date range", async () => {
-                        const { from, to } = defaultInvitedEmployeesDateRange();
-                        setInvitedListFromDate(from);
-                        setInvitedListToDate(to);
-                        await loadInviteOnboardingPreview({ from, to });
-                        resetOnboardForm();
-                      })
-                    }
-                    disabled={actionLoading}
-                  >
-                    Last 7 Days
-                  </Button>
-                </div>
+                }
+                toolbar={
+                  <div className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-0.5">
+                    <ApiDateField
+                      label="From Date"
+                      value={invitedListFromDate}
+                      onChange={setInvitedListFromDate}
+                      className="w-42 shrink-0"
+                    />
+                    <ApiDateField
+                      label="To Date"
+                      value={invitedListToDate}
+                      onChange={setInvitedListToDate}
+                      className="w-42 shrink-0"
+                    />
+                    <Button
+                      variant="brand"
+                      type="button"
+                      className="h-10 shrink-0 px-3 text-sm"
+                      onClick={() =>
+                        runAction("Load invited employees", async () => {
+                          await loadInviteOnboardingPreview({
+                            from: invitedListFromDateRef.current,
+                            to: invitedListToDateRef.current,
+                          });
+                          resetOnboardForm();
+                        })
+                      }
+                      disabled={actionLoading}
+                    >
+                      Apply Dates
+                    </Button>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="h-10 shrink-0 px-3 text-sm"
+                      onClick={() =>
+                        runAction("Reset invited date range", async () => {
+                          const { from, to } = defaultInvitedEmployeesDateRange();
+                          setInvitedListFromDate(from);
+                          setInvitedListToDate(to);
+                          await loadInviteOnboardingPreview({ from, to });
+                          resetOnboardForm();
+                        })
+                      }
+                      disabled={actionLoading}
+                    >
+                      Last 7 Days
+                    </Button>
+                  </div>
+                }
+              >
                 {invitedApiServerRange ? (
                   <p
-                    className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
+                    className="mb-4 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
                     role="status"
                   >
                     The server returned data for {invitedApiServerRange.from} —{" "}
@@ -293,15 +301,22 @@ export function EmployeePageClient() {
                     <code className="text-[11px]">toDate</code>.
                   </p>
                 ) : null}
-                <InvitedEmployeesTable
-                  rows={inviteOnboardingRows}
-                  emptyLabel="No invited employees in this date range."
-                  loading={invitedListLoading}
-                  actionLoading={actionLoading || onboardingBusy}
-                  resendingEmail={resendingInviteEmail}
-                  onResendInvite={resendOnboardInvite}
-                />
-              </div>
+                <ManagementListContent
+                  isLoading={invitedListLoading}
+                  isEmpty={!invitedListLoading && !inviteOnboardingRows.length}
+                  emptyTitle="No invited employees in this date range."
+                  emptyDescription="Try adjusting your date range or refresh the list."
+                  skeletonRows={8}
+                  skeletonColumns={8}
+                >
+                  <InvitedEmployeesTable
+                    rows={inviteOnboardingRows}
+                    actionLoading={actionLoading || onboardingBusy}
+                    resendingEmail={resendingInviteEmail}
+                    onResendInvite={resendOnboardInvite}
+                  />
+                </ManagementListContent>
+              </ManagementListCard>
             </div>
           ) : null}
         </section>
