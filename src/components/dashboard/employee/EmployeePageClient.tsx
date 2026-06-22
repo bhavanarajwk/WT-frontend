@@ -21,6 +21,7 @@ import {
 import { compareApiDates, formatApiDateDisplay } from "@/utils/apiDate";
 import { createEmptyOnboardForm } from "@/utils/onboardFormState";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { CARD_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { HrOnboardForm } from "@/components/employee-onboarding/HrOnboardForm";
 import { InvitedEmployeesTable } from "@/components/employee-onboarding/InvitedEmployeesTable";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
@@ -198,9 +199,9 @@ export function EmployeePageClient() {
   return (
     <DashboardPageShell>
       <OnboardingGate>
-        <section className="space-y-4">
+        <section className={CARD_STACK_CLASS}>
           {hasHrAccess ? (
-            <div className="space-y-4">
+            <div className={CARD_STACK_CLASS}>
               <HrOnboardForm
                 formKey={onboardFormKey}
                 form={onboardForm}
@@ -238,7 +239,7 @@ export function EmployeePageClient() {
                   </Button>
                 }
                 toolbar={
-                  <div className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-0.5">
+                  <div className="flex flex-nowrap items-end gap-3 overflow-x-auto">
                     <ApiDateField
                       label="From Date"
                       value={invitedListFromDate}
@@ -290,7 +291,7 @@ export function EmployeePageClient() {
               >
                 {invitedApiServerRange ? (
                   <p
-                    className="mb-4 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
+                    className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
                     role="status"
                   >
                     The server returned data for {invitedApiServerRange.from} —{" "}

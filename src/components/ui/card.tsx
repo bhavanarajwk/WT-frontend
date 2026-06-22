@@ -2,6 +2,10 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import {
+  CARD_CONTENT_CLASS,
+  CARD_FOOTER_CLASS,
+  CARD_HEADER_CLASS,
+  CARD_TOOLBAR_CLASS,
   SECTION_DESCRIPTION_CLASS,
   SECTION_TITLE_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
@@ -23,7 +27,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-header"
-      className={cn("flex flex-col gap-1.5 px-6 py-5", className)}
+      className={cn("flex flex-col gap-1.5", CARD_HEADER_CLASS, className)}
       {...props}
     />
   );
@@ -45,18 +49,32 @@ function CardDescription({ className, ...props }: React.ComponentProps<"p">) {
   );
 }
 
+function CardToolbar({ className, ...props }: React.ComponentProps<"div">) {
+  return <div data-slot="card-toolbar" className={cn(CARD_TOOLBAR_CLASS, className)} {...props} />;
+}
+
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="card-content" className={cn("p-6", className)} {...props} />;
+  return (
+    <div data-slot="card-content" className={cn(CARD_CONTENT_CLASS, className)} {...props} />
+  );
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-footer"
-      className={cn("flex items-center border-t border-wt-border px-6 py-4", className)}
+      className={cn("flex items-center border-t border-wt-border", CARD_FOOTER_CLASS, className)}
       {...props}
     />
   );
 }
 
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardToolbar,
+  CardContent,
+  CardFooter,
+};

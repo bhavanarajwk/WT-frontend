@@ -204,7 +204,6 @@ export function InvitedEmployeesTable({
         </WtTable>
       </div>
       <ListPagination
-        className="mt-2"
         page={pagination.page}
         totalPages={pagination.totalPages}
         totalItems={pagination.totalItems}

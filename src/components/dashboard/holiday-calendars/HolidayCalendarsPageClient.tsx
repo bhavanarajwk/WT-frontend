@@ -15,6 +15,7 @@ import {
 import { useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { CARD_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import {
@@ -135,7 +136,7 @@ export function HolidayCalendarsPageClient() {
 
   return (
     <DashboardPageShell>
-      <div className="mx-auto w-full min-w-0 max-w-4xl space-y-5 overflow-x-hidden sm:space-y-6">
+      <div className={`mx-auto w-full min-w-0 max-w-4xl overflow-x-hidden ${CARD_STACK_CLASS}`}>
         <Card className="p-0">
           <CardHeader>
             <div className="flex min-w-0 items-start gap-3">

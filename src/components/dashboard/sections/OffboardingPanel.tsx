@@ -29,7 +29,14 @@ import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeSta
 import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { FormGridSkeleton, MetricCardsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  CARD_CONTENT_BELOW_TOOLBAR_CLASS,
+  CARD_CONTENT_STACK_CLASS,
+  CARD_FORM_ACTIONS_CLASS,
+  CARD_FORM_GRID_CLASS,
+  CARD_STACK_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardToolbar } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
@@ -344,7 +351,7 @@ export function OffboardingPanel() {
   }
 
   return (
-    <section className="relative flex min-h-0 flex-col gap-4">
+    <section className={CARD_STACK_CLASS}>
       <Card className="p-0">
         <CardHeader className="flex-row items-end justify-between gap-3 space-y-0">
           <div>
@@ -358,7 +365,7 @@ export function OffboardingPanel() {
           </div>
         </CardHeader>
         <Separator />
-        <div className="flex justify-end px-6 py-4">
+        <CardToolbar className="flex justify-end">
           <DropdownSelectField
             label="Financial Year (Start)"
             className="w-[11rem] shrink-0"
@@ -366,8 +373,8 @@ export function OffboardingPanel() {
             onChange={setFyStartYear}
             options={financialYearSelectOptions()}
           />
-        </div>
-        <CardContent className="pt-0">
+        </CardToolbar>
+        <CardContent className={CARD_CONTENT_BELOW_TOOLBAR_CLASS}>
           {loadingAttrition ? (
             <MetricCardsSkeleton count={3} />
           ) : (
@@ -415,8 +422,8 @@ export function OffboardingPanel() {
           {loadingCandidates && !offboardCandidates.length ? (
             <FormGridSkeleton fields={8} />
           ) : (
-            <>
-            <div className="grid md:grid-cols-2 gap-3">
+            <div className={CARD_CONTENT_STACK_CLASS}>
+            <div className={CARD_FORM_GRID_CLASS}>
               <DropdownSelectField
                 label="Employee"
                 required
@@ -523,9 +530,9 @@ export function OffboardingPanel() {
               </Label>
             </div>
             {offboardingNoticeLabel ? (
-              <p className="text-sm text-wt-text-muted mt-2">{offboardingNoticeLabel}</p>
+              <p className="text-sm text-wt-text-muted">{offboardingNoticeLabel}</p>
             ) : null}
-            <div className="mt-4">
+            <div className={CARD_FORM_ACTIONS_CLASS}>
               <Button
                 variant="brand"
                 size="sm"
@@ -537,7 +544,7 @@ export function OffboardingPanel() {
                 {submitting ? "Submitting Offboarding…" : "Submit Offboarding"}
               </Button>
             </div>
-            </>
+            </div>
           )}
         </CardContent>
       </Card>

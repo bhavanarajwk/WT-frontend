@@ -8,6 +8,10 @@ import { useEffect, useMemo, useRef } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { DatePickerField, DropdownSelectField, InputField } from "@/components/dashboard/ui/forms";
 import { FormGridSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import {
+  CARD_FORM_ACTIONS_CLASS,
+  CARD_FORM_GRID_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
   bandSelectOptions,
@@ -234,7 +238,7 @@ export function HrOnboardForm({
           <FormGridSkeleton fields={12} />
         ) : (
           <>
-            <div key={`${formKey}-work`} className="grid gap-3 sm:grid-cols-2">
+            <div key={`${formKey}-work`} className={CARD_FORM_GRID_CLASS}>
         <InputField
           label="Employee ID"
           required
@@ -392,7 +396,7 @@ export function HrOnboardForm({
         )}
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className={CARD_FORM_ACTIONS_CLASS}>
               <Button
                 variant="brand"
                 type="button"

@@ -7,6 +7,19 @@ export const SECTION_HEADER_CLASS = "mb-4 border-b border-wt-border pb-3";
 export const SECTION_TITLE_CLASS = "text-base font-semibold tracking-tight text-wt-text";
 export const SECTION_DESCRIPTION_CLASS = "mt-1.5 text-sm leading-relaxed text-wt-text-muted";
 
+/** Card shell zones — shared horizontal padding with matched vertical rhythm. */
+export const CARD_HEADER_CLASS = "px-6 py-5";
+export const CARD_TOOLBAR_CLASS = "px-6 py-5";
+export const CARD_CONTENT_CLASS = "p-6";
+export const CARD_CONTENT_BELOW_TOOLBAR_CLASS = "px-6 pb-6 pt-0";
+export const CARD_FOOTER_CLASS = "px-6 py-5";
+export const CARD_STACK_CLASS = "space-y-6";
+export const CARD_TOOLBAR_INNER_CLASS =
+  "flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between";
+export const CARD_CONTENT_STACK_CLASS = "space-y-6";
+export const CARD_FORM_GRID_CLASS = "grid gap-3 sm:grid-cols-2";
+export const CARD_FORM_ACTIONS_CLASS = "flex flex-wrap gap-3 pt-6";
+
 export const FORM_FIELD_CLASS = "flex flex-col gap-1.5";
 export const FIELD_LABEL_CLASS = "text-sm font-medium leading-none text-foreground";
 /** Shared height/padding for text inputs and selects in forms. */

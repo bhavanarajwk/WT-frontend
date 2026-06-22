@@ -275,7 +275,7 @@ export function EmployeeDirectoryPageClient() {
         }
       >
         {isError ? (
-          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800">
             <p>Could not load employees.{error instanceof Error ? ` ${error.message}` : ""}</p>
             <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
               Retry
@@ -407,9 +407,8 @@ export function EmployeeDirectoryPageClient() {
                 </WtTable>
               </ScrollableTable>
             </div>
-            <ListPagination
-              className="mt-4"
-              page={pagination.page}
+              <ListPagination
+                page={pagination.page}
               totalPages={pagination.totalPages}
               totalItems={pagination.totalItems}
               pageSize={pagination.pageSize}

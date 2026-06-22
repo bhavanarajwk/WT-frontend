@@ -2,10 +2,22 @@
 
 import type { ReactNode } from "react";
 
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardToolbar,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import {
+  CARD_CONTENT_BELOW_TOOLBAR_CLASS,
+  CARD_CONTENT_STACK_CLASS,
+  CARD_TOOLBAR_INNER_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 
 type ManagementListCardProps = {
@@ -41,27 +53,26 @@ export function ManagementListCard({
         {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
       </CardHeader>
 
-      {hasToolbar ? (
-        <>
-          <Separator />
-          <div className="px-6 py-4">
-            {toolbar ?? (
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                {search ? <div className="min-w-0 flex-1">{search}</div> : null}
-                {filters ? (
-                  <div className="flex flex-wrap items-end justify-start gap-2 sm:justify-end">
-                    {filters}
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
-        <Separator />
-      )}
+      <Separator />
 
-      <div className="p-6">{children}</div>
+      {hasToolbar ? (
+        <CardToolbar>
+          {toolbar ?? (
+            <div className={CARD_TOOLBAR_INNER_CLASS}>
+              {search ? <div className="min-w-0 flex-1">{search}</div> : null}
+              {filters ? (
+                <div className="flex flex-wrap items-end justify-start gap-3 sm:justify-end">
+                  {filters}
+                </div>
+              ) : null}
+            </div>
+          )}
+        </CardToolbar>
+      ) : null}
+
+      <CardContent className={hasToolbar ? CARD_CONTENT_BELOW_TOOLBAR_CLASS : undefined}>
+        <div className={CARD_CONTENT_STACK_CLASS}>{children}</div>
+      </CardContent>
     </Card>
   );
 }
