@@ -21,6 +21,7 @@ import {
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
+import { ImageCropDialog } from "@/components/dashboard/ImageCropDialog";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
 import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
 import { fetchSelfProfile, shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
@@ -70,6 +71,9 @@ export function ProfilePageLeanClient() {
     salary_slips: null,
   });
   const [selfProfilePic, setSelfProfilePic] = useState<File | null>(null);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImage, setCropImage] = useState<string | null>(null);
+  const [currentProfilePhotoName, setCurrentProfilePhotoName] = useState<string>("");
   const [isEditingOwnProfile, setIsEditingOwnProfile] = useState(false);
 
   useEffect(() => {
@@ -77,6 +81,44 @@ export function ProfilePageLeanClient() {
     const id = window.setTimeout(() => setToast(null), 2800);
     return () => window.clearTimeout(id);
   }, [toast]);
+
+  const handleProfilePicUpload = (file: File | null) => {
+    if (!file) {
+      setSelfProfilePic(null);
+      setCropImage(null);
+      setCurrentProfilePhotoName("");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setToast({ type: "error", message: "Please upload an image file (jpg/png/webp)." });
+      return;
+    }
+
+    if (file.size > MAX_ONBOARD_FILE_BYTES) {
+      setToast({ type: "error", message: "File exceeds 2 MB. Please upload a smaller file." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setCropImage(e.target?.result as string);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropConfirm = (croppedFile: File) => {
+    setSelfProfilePic(croppedFile);
+    setCurrentProfilePhotoName(croppedFile.name);
+    setCropDialogOpen(false);
+    setCropImage(null);
+  };
+
+  const handleDeleteProfilePic = () => {
+    setSelfProfilePic(null);
+    setCurrentProfilePhotoName("");
+  };
 
   const loadMyProfile = useCallback(async () => {
     setIsProfileLoading(true);
@@ -311,7 +353,15 @@ export function ProfilePageLeanClient() {
         </div>
       ) : null}
       <div className="mt-3">
-        <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
+        <FileField
+          label="Profile Picture (required)"
+          accept="image/*"
+          onPick={handleProfilePicUpload}
+          showDeleteButton={true}
+          currentFileName={currentProfilePhotoName}
+          onDelete={handleDeleteProfilePic}
+          required={true}
+        />
       </div>
       <div className="mt-4">
         <button
@@ -323,6 +373,9 @@ export function ProfilePageLeanClient() {
                 .split(",")
                 .map((item) => item.trim())
                 .filter(Boolean);
+              if (!selfProfilePic) {
+                throw new Error("Profile picture is mandatory. Please upload your profile picture.");
+              }
               if (priorEmploymentDocsForProfile) {
                 if (!selfProfileEmploymentFiles.reliving_letter) {
                   throw new Error("Please upload your relieving letter from the previous company.");
@@ -354,11 +407,11 @@ export function ProfilePageLeanClient() {
                   primary_skills: primarySkills.length ? primarySkills : null,
                   secondary_skills: selfProfileForm.secondary_skill
                     ? [
-                        {
-                          skill: selfProfileForm.secondary_skill.trim(),
-                          rating: Number(selfProfileForm.secondary_rating),
-                        },
-                      ]
+                      {
+                        skill: selfProfileForm.secondary_skill.trim(),
+                        rating: Number(selfProfileForm.secondary_rating),
+                      },
+                    ]
                     : [],
                   experience: yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
                   yoe: yoeValue,
@@ -394,6 +447,24 @@ export function ProfilePageLeanClient() {
       </div>
     </div>
   );
+
+
+  if (isEditingOwnProfile && cropImage) {
+    return (
+      <>
+        <ImageCropDialog
+          imageSrc={cropImage}
+          isOpen={cropDialogOpen}
+          onConfirm={handleCropConfirm}
+          onCancel={() => {
+            setCropDialogOpen(false);
+            setCropImage(null);
+          }}
+        />
+        {renderEditPanel()}
+      </>
+    );
+  }
 
   return (
     <>

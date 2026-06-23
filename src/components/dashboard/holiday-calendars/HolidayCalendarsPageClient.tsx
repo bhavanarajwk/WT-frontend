@@ -173,7 +173,7 @@ export function HolidayCalendarsPageClient() {
                   disabled={actionLoading}
                   onClick={() => holidayFileRef.current?.click()}
                 >
-                  <UploadIcon />
+                  <DownloadIcon />
                   Import CSV
                 </button>
                 <button
@@ -187,7 +187,8 @@ export function HolidayCalendarsPageClient() {
                     })
                   }
                 >
-                  <DownloadIcon />
+                  
+                  <UploadIcon />
                   Export CSV
                 </button>
               </div>
@@ -231,7 +232,7 @@ export function HolidayCalendarsPageClient() {
                   disabled={actionLoading}
                   onClick={() => assignmentFileRef.current?.click()}
                 >
-                  <UploadIcon />
+                  <DownloadIcon />
                   Import Assignments CSV
                 </button>
                 <button
@@ -245,7 +246,7 @@ export function HolidayCalendarsPageClient() {
                     })
                   }
                 >
-                  <DownloadIcon />
+                  <UploadIcon />
                   Export Assignments CSV
                 </button>
               </div>

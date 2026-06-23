@@ -643,7 +643,7 @@ export function OffboardingPanel() {
                 </div>
               )}
               <TextAreaField
-                label="Reason"
+                label="Details"
                 className="md:col-span-2"
                 rows={5}
                 value={offboardingForm.reason}
@@ -657,14 +657,6 @@ export function OffboardingPanel() {
                 value={offboardingForm.critical_skill}
                 onChange={(v) => setOffboardingForm((p) => ({ ...p, critical_skill: v }))}
                 placeholder="Describe critical skills impacted by this exit"
-              />
-              <TextAreaField
-                label="Expected Behavior"
-                className="md:col-span-2"
-                rows={5}
-                value={offboardingForm.expected_behavior}
-                onChange={(v) => setOffboardingForm((p) => ({ ...p, expected_behavior: v }))}
-                placeholder="Describe expected behavior during notice period"
               />
               <label className="text-xs text-wt-text-muted flex items-center gap-2 md:col-span-2">
                 <input

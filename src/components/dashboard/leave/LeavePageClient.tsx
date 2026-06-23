@@ -3205,7 +3205,7 @@ export function LeavePageClient() {
         </p>
       )}
       <div className="mt-3">
-        <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
+        <FileField label="Profile Picture (required)" required accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
         <button
@@ -3217,6 +3217,9 @@ export function LeavePageClient() {
                 .split(",")
                 .map((item) => item.trim())
                 .filter(Boolean);
+              if (!selfProfilePic) {
+                throw new Error("Profile picture is mandatory. Please upload your profile picture.");
+              }
               if (priorEmploymentDocsForProfile) {
                 if (!selfProfileEmploymentFiles.reliving_letter) {
                   throw new Error(
@@ -3512,7 +3515,7 @@ export function LeavePageClient() {
                           ) : leaveSubTab === "my" || leaveSubTab === "wfh" ? (
                         <section className="grid gap-4 xl:grid-cols-1">
                           <div className="space-y-4">
-                            {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
+                            {/*HR final-approval banner removed */}
                             {leaveSubTab === "my" &&
                             normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
                               <LeaveBalanceSummary />

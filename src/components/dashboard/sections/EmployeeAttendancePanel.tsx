@@ -49,8 +49,9 @@ const LEAVE_CELL_CLASS = `${NUMERIC_CELL_CLASS} w-36`;
 const ATTENDANCE_CELL_CLASS = `${NUMERIC_CELL_CLASS} w-44`;
 
 function defaultAttendanceDateRange(): { from: string; to: string } {
-  const to = new Date();
-  const from = new Date(2026, 0, 1);
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return { from: formatApiDate(from), to: formatApiDate(to) };
 }
 

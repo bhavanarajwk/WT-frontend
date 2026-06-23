@@ -5,12 +5,12 @@ import {
   parseApiDate,
 } from "@/utils/apiDate";
 
-export const INVITED_LIST_DEFAULT_DAYS = 7;
+
 
 export function defaultInvitedEmployeesDateRange(): { from: string; to: string } {
-  const to = new Date();
-  const from = new Date();
-  from.setDate(from.getDate() - INVITED_LIST_DEFAULT_DAYS);
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = new Date(now.getFullYear(), now.getMonth()+1, 0)
   return { from: formatApiDate(from), to: formatApiDate(to) };
 }
 

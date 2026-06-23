@@ -507,6 +507,9 @@ export function FileField({
   accept,
   multiple,
   required = false,
+  showDeleteButton = false,
+  currentFileName,
+  onDelete,
 }: {
   label: string;
   accept?: string;
@@ -514,24 +517,44 @@ export function FileField({
   required?: boolean;
   onPick?: (file: File | null) => void;
   onPickFiles?: (files: File[]) => void;
+  showDeleteButton?: boolean;
+  currentFileName?: string;
+  onDelete?: () => void;
 }) {
   const isMulti = Boolean(multiple);
+  const hasFile = Boolean(currentFileName);
+
   return (
     <label className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} />
-      <input
-        type="file"
-        accept={accept}
-        multiple={isMulti}
-        className={FORM_CONTROL_CLASS}
-        onChange={(e) => {
-          if (isMulti) {
-            onPickFiles?.(e.target.files?.length ? Array.from(e.target.files) : []);
-          } else {
-            onPick?.(e.target.files?.[0] ?? null);
-          }
-        }}
-      />
+      <div className="flex items-center gap-2">
+        <input
+          type="file"
+          accept={accept}
+          multiple={isMulti}
+          className={FORM_CONTROL_CLASS}
+          onChange={(e) => {
+            if (isMulti) {
+              onPickFiles?.(e.target.files?.length ? Array.from(e.target.files) : []);
+            } else {
+              onPick?.(e.target.files?.[0] ?? null);
+            }
+          }}
+        />
+        {showDeleteButton && hasFile && onDelete ? (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="btn-ghost px-2 py-2 text-rose-600 hover:bg-rose-50"
+            title="Delete current file"
+          >
+            ✕
+          </button>
+        ) : null}
+      </div>
+      {currentFileName ? (
+        <p className="text-xs text-wt-text-muted mt-1">Current: {currentFileName}</p>
+      ) : null}
     </label>
   );
 }

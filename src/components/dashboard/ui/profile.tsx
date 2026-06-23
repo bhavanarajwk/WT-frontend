@@ -25,6 +25,10 @@ export function resolveProfilePhotoSrc(profile: Record<string, unknown> | null |
     return raw;
   }
   const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "");
+  if (raw.startsWith("local://uploads/")) {
+    const filename = raw.slice("local://uploads/".length);
+    return `${base}/api/v1/profile/photo/${encodeURIComponent(filename)}`;
+  }
   return raw.startsWith("/") ? `${base}${raw}` : `${base}/${raw}`;
 }
 
@@ -65,6 +69,20 @@ export function formatSecondarySkillsForProfile(profile: Record<string, unknown>
   return single || "—";
 }
 
+async function downloadImage(src: string, filename: string) {
+  const response = await fetch(src, { credentials: "include" });
+  if (!response.ok) throw new Error("Unable to download profile image");
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function ProfilePhotoAvatar({
   profile,
   fallbackName,
@@ -78,20 +96,32 @@ export function ProfilePhotoAvatar({
   const initial = (displayName.charAt(0) || "?").toUpperCase();
 
   return (
-    <div
-      className="h-28 w-28 shrink-0 overflow-hidden rounded-lg border border-wt-border bg-wt-surface-2 flex items-center justify-center"
-      aria-hidden={!src || imageFailed}
-    >
+    <div className="flex flex-col items-center gap-2">
+      <div
+        className="h-28 w-28 shrink-0 overflow-hidden rounded-full border border-wt-border bg-wt-surface-2 flex items-center justify-center"
+        aria-hidden={!src || imageFailed}
+      >
+        {src && !imageFailed ? (
+          <img
+            src={src}
+            alt={`${displayName} profile photo`}
+            className="h-full w-full object-cover"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <span className="text-3xl font-semibold text-wt-text-muted">{initial}</span>
+        )}
+      </div>
+
       {src && !imageFailed ? (
-        <img
-          src={src}
-          alt={`${displayName} profile photo`}
-          className="h-full w-full object-cover"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <span className="text-3xl font-semibold text-wt-text-muted">{initial}</span>
-      )}
+        <button
+          type="button"
+          className="btn-secondary text-xs px-3 py-1.5"
+          onClick={() => void downloadImage(src, `${displayName.replace(/\s+/g, "_")}.jpg`)}
+        >
+          Download
+        </button>
+      ) : null}
     </div>
   );
 }
