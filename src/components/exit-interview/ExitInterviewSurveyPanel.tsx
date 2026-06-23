@@ -1,9 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { FormFieldsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { ExitInterviewFormFields } from "@/components/exit-interview/ExitInterviewFormFields";
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
@@ -25,6 +27,24 @@ function formatDateLabel(value: string | null): string {
   } catch {
     return value;
   }
+}
+
+function ExitSurveyDetailsSkeleton() {
+  return (
+    <div
+      className="mt-4 grid gap-3 rounded-xl border border-wt-border bg-wt-surface-1 p-4 sm:grid-cols-2"
+      aria-hidden
+    >
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-5 w-36" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-5 w-36" />
+      </div>
+    </div>
+  );
 }
 
 /** Exit survey (employee self-serve, including offboarded users in notice). */
@@ -90,6 +110,7 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
       const body = buildExitInterviewSubmitBody(formDefQ.data, answers);
       await exitInterviewService.submit(body);
       await queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
+      await queryClient.invalidateQueries({ queryKey: ["profile", "self"] });
       setInitialized(false);
     });
   };
@@ -100,9 +121,17 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
 
   return (
     <div className={className}>
-
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 px-5 py-6 md:px-7">
         <h3 className="text-lg font-semibold">Exit Survey</h3>
+
+        {profileQ.isLoading ? (
+          <>
+            <ExitSurveyDetailsSkeleton />
+            <div className="mt-6">
+              <FormFieldsSkeleton rows={6} />
+            </div>
+          </>
+        ) : null}
 
         {profileQ.isError ? (
           <p className="mt-3 text-sm text-rose-600">
@@ -111,13 +140,13 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
           </p>
         ) : null}
 
-        {statusMessage ? (
+        {!profileQ.isLoading && statusMessage ? (
           <p className="mt-3 text-sm text-wt-text-muted">{statusMessage}</p>
         ) : null}
 
-        {showForm && flags ? (
+        {!profileQ.isLoading && showForm && flags ? (
           <>
-            <div className="mt-4 grid gap-3 rounded-xl border border-wt-border bg-wt-surface-2/60 p-4 text-sm sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 rounded-xl border border-wt-border bg-wt-surface-1 p-4 text-sm sm:grid-cols-2">
               <div>
                 <span className="text-wt-text-muted">Resignation date</span>
                 <p className="font-medium tabular-nums">
@@ -142,6 +171,12 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
               <p className="mt-6 text-sm text-rose-600">Could not load the survey questions.</p>
             ) : null}
 
+            {formDefQ.isLoading ? (
+              <div className="mt-6">
+                <FormFieldsSkeleton rows={6} />
+              </div>
+            ) : null}
+
             {formDefQ.data && fields.length ? (
               <div className="mt-6">
                 <ExitInterviewFormFields
@@ -153,7 +188,14 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
                   disabled={actionLoading}
                 />
                 <div className="mt-6 flex justify-end">
-                  <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={actionLoading} onClick={handleSubmit} >
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    type="button"
+                    className="px-4 py-2 text-sm"
+                    disabled={actionLoading}
+                    onClick={handleSubmit}
+                  >
                     {actionLoading ? "Submitting…" : "Submit Exit Survey"}
                   </Button>
                 </div>
@@ -162,7 +204,7 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
           </>
         ) : null}
 
-        {flags?.exit_interview_submitted ? (
+        {!profileQ.isLoading && flags?.exit_interview_submitted ? (
           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
             Your responses have been recorded. No further action is needed.
           </div>

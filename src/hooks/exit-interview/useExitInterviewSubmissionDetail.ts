@@ -14,6 +14,10 @@ export function useExitInterviewSubmissionDetail(
   return useQuery({
     queryKey: ["exit-interview", "submission", id, endpoints.exitInterview.submissionByLookupId(id)],
     enabled,
+    staleTime: 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       const res = await exitInterviewService.getSubmission(id);
       return res.data ?? null;

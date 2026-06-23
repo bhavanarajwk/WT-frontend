@@ -9,6 +9,7 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 import { Textarea } from "@/components/ui/textarea";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { ExitInterviewResponsesView } from "@/components/exit-interview/ExitInterviewResponsesView";
+import { ProfileDetailsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
 import { useUpdateExitInterviewMinutesOfMeeting } from "@/hooks/exit-interview/useExitInterviewMinutesOfMeeting";
 import { useExitInterviewSubmissionDetail } from "@/hooks/exit-interview/useExitInterviewSubmissionDetail";
@@ -97,6 +98,8 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
         </Link>
 
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 px-5 py-6 md:px-7">
+          {detailQ.isLoading ? <ProfileDetailsSkeleton rows={6} /> : null}
+
           {detailQ.isError ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               Could not load this submission.

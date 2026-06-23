@@ -35,7 +35,7 @@ export function ListPagination({
 
   return (
     <div
-      className={`flex flex-wrap items-center justify-between gap-3 border-t border-wt-border pt-3 text-sm text-wt-text-muted ${className}`.trim()}
+      className={`flex flex-wrap items-center justify-between gap-3 mt-3 text-sm text-wt-text-muted ${className}`.trim()}
     >
       <span className="text-xs tabular-nums">
         {page + 1} of {totalPages}

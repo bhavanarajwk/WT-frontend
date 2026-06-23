@@ -16,17 +16,16 @@ import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
-import { hrmsService } from "@/services/hrms.service";
 import { exitInterviewService } from "@/services/exitInterview.service";
 import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
-import type { OffboardListItem } from "@/types/offboard";
 import { DatePickerField, SelectField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
-import { toPagedRows } from "@/utils/apiRows";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { useExitSurveyFollowUpList } from "@/hooks/exit-interview/useExitSurveyFollowUpList";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
   activeSortDirectionForColumn,
@@ -43,18 +42,15 @@ import {
   followUpRowLookupId,
   isResendableFollowUpRow,
   mergeEmpIdSelection,
-  mergeExitSurveyFollowUpRows,
   paginateFollowUpRows,
   resendableEmpIdFromRow,
   resendableEmpIdsFromRows,
   sortExitSurveyFollowUpRows,
-  type ExitSurveyFollowUpRow,
   type ExitSurveyStatusFilter,
 } from "@/utils/exitSurveyFollowUp";
 
 
 const DEFAULT_PAGE_SIZE = 10;
-const FOLLOW_UP_FETCH_SIZE = 100;
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
 function bulkResendResultClassName(
@@ -67,7 +63,6 @@ function bulkResendResultClassName(
 
 export function ExitSurveyFollowUpPanel() {
   const router = useRouter();
-  const [allRows, setAllRows] = useState<ExitSurveyFollowUpRow[]>([]);
   const [listPage, setListPage] = useState(0);
   const [listPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [lwdSortId, setLwdSortId] = useState(DEFAULT_EXIT_SURVEY_LWD_SORT_ID);
@@ -81,81 +76,47 @@ export function ExitSurveyFollowUpPanel() {
     DEFAULT_EXIT_SURVEY_STATUS_FILTER
   );
 
-  const [loadingList, setLoadingList] = useState(false);
   const [resendingEmpId, setResendingEmpId] = useState<string | null>(null);
   const [bulkResending, setBulkResending] = useState(false);
   const [selectedEmpIds, setSelectedEmpIds] = useState<string[]>([]);
   const [bulkResendResults, setBulkResendResults] = useState<ExitSurveyBulkResendItemResult[]>(
     []
   );
-  
-  const loadFollowUpList = useCallback(async () => {
-    setLoadingList(true);
-    try {
-      const hasCustomLwdFilter = Boolean(filterFromDate.trim() || filterToDate.trim());
-      const [offboardResult, onboardResult] = await Promise.allSettled([
-        hrmsService.getOffboardList({
-          page: 0,
-          size: FOLLOW_UP_FETCH_SIZE,
-          search: debouncedSearch.trim() || undefined,
-          type: filterType.trim() || undefined,
-          fromDate: hasCustomLwdFilter ? filterFromDate.trim() || undefined : undefined,
-          toDate: hasCustomLwdFilter ? filterToDate.trim() || undefined : undefined,
-        }),
-        hrmsService.getOnboardList({ page: "0", size: "500" }),
-      ]);
 
-      const offboardRes = offboardResult.status === "fulfilled" ? offboardResult.value : null;
-      const onboardRes = onboardResult.status === "fulfilled" ? onboardResult.value : null;
-
-      if (offboardResult.status === "rejected" && onboardResult.status === "rejected") {
-        throw offboardResult.reason;
-      }
-
-      const data = offboardRes?.data;
-
-      const onboardRows = onboardRes
-        ? toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes)
-        : [];
-      const inNoticeRows = filterInNoticeFollowUpRows(onboardRows, {
-        search: debouncedSearch,
-        type: filterType,
-        fromDate: hasCustomLwdFilter ? filterFromDate : undefined,
-        toDate: hasCustomLwdFilter ? filterToDate : undefined,
-      });
-      const merged = mergeExitSurveyFollowUpRows(
-        (data?.items ?? []) as OffboardListItem[],
-        inNoticeRows
-      );
-      setAllRows(merged);
-
-      if (offboardResult.status === "rejected") {
-        const reason = offboardResult.reason;
-        const msg =
-          reason instanceof ApiError
-            ? reason.message
-            : reason instanceof Error
-              ? reason.message
-              : "Offboard list failed; showing in-notice employees only.";
-        showErrorToast(msg);
-      }
-    } catch (error) {
-      setAllRows([]);
-      const msg =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Failed to load exit survey follow-up list.";
-      showErrorToast(msg);
-    } finally {
-      setLoadingList(false);
-    }
-  }, [debouncedSearch, filterType, filterFromDate, filterToDate]);
+  const followUpQ = useExitSurveyFollowUpList({
+    search: debouncedSearch,
+    filterType,
+    filterFromDate,
+    filterToDate,
+  });
+  const allRows = followUpQ.data?.rows ?? [];
+  const loadingList = followUpQ.isLoading || followUpQ.isFetching;
+  const warnedRef = useRef<string | null>(null);
+  const errorToastRef = useRef(false);
 
   useEffect(() => {
-    void loadFollowUpList();
-  }, [loadFollowUpList]);
+    const warning = followUpQ.data?.warning?.trim();
+    if (!warning || warnedRef.current === warning) return;
+    warnedRef.current = warning;
+    showErrorToast(warning);
+  }, [followUpQ.data?.warning]);
+
+  useEffect(() => {
+    if (!followUpQ.isError) {
+      errorToastRef.current = false;
+      return;
+    }
+    if (errorToastRef.current) return;
+    errorToastRef.current = true;
+    const error = followUpQ.error;
+    const msg =
+      error instanceof ApiError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Failed to load exit survey follow-up list.";
+    showErrorToast(msg);
+  }, [followUpQ.isError, followUpQ.error]);
 
   const filteredRows = useMemo(
     () => filterExitSurveyFollowUpByStatus(allRows, filterSurveyStatus),
@@ -353,7 +314,7 @@ export function ExitSurveyFollowUpPanel() {
             { value: "COMPLETED", label: "Completed" },
           ]}
         />
-        <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm h-10 border border-wt-border rounded-lg" onClick={() => void loadFollowUpList()}
+        <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm h-10 border border-wt-border rounded-lg" onClick={() => void followUpQ.refetch()}
           disabled={loadingList}
         >
           Refresh
@@ -392,11 +353,13 @@ export function ExitSurveyFollowUpPanel() {
         </div>
       ) : null}
 
-      {!loadingList && !rows.length ? (
+      {followUpQ.isLoading ? (
+        <TableRowsSkeleton rows={6} columns={5} />
+      ) : !rows.length ? (
         <p className="text-sm text-wt-text-muted">
           No employees in the exit survey follow-up window.
         </p>
-      ) : rows.length ? (
+      ) : (
         <>
           <ScrollableTable maxHeightClass="max-h-[min(60vh,480px)]">
             <WtTable>
@@ -542,10 +505,6 @@ export function ExitSurveyFollowUpPanel() {
             onPageChange={setListPage}
           />
         </>
-      ) : (
-        <p className="text-sm text-wt-text-muted">
-          No employees in the exit survey follow-up window.
-        </p>
       )}
     </div>
   );
