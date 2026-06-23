@@ -12,7 +12,6 @@ import {
 } from "@/components/dashboard/ui/wtTable";
 import { useMemo, useRef, useState } from "react";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { DEFAULT_PAGE_SIZE, useClientPagination } from "@/hooks/useClientPagination";
 import {
@@ -34,28 +33,27 @@ const DATA_COLUMNS = [
   "name",
   "email",
   "personal_email",
-  "status",
   "user_type",
   "department",
-  "created_at",
+  "created_on",
 ] as const;
 
 const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
-    id: "created_at_desc",
+    id: "created_on_desc",
     label: "Created",
-    columnKeys: ["created_at"],
+    columnKeys: ["created_on"],
     direction: "desc",
     type: "date",
-    getValue: (row) => pickRowField(row, ["created_at", "createdAt"]),
+    getValue: (row) => pickRowField(row, ["created_at", "createdAt", "created_on"]),
   },
   {
-    id: "created_at_asc",
+    id: "created_on_asc",
     label: "Created",
-    columnKeys: ["created_at"],
+    columnKeys: ["created_on"],
     direction: "asc",
     type: "date",
-    getValue: (row) => pickRowField(row, ["created_at", "createdAt"]),
+    getValue: (row) => pickRowField(row, ["created_at", "createdAt", "created_on"]),
   },
   {
     id: "name_asc",
@@ -178,13 +176,7 @@ export function InvitedEmployeesTable({
                 <TableRow key={rowKey}>
                   {displayColumns.map((col) => (
                     <TableCell key={col} className="px-3 py-2 whitespace-nowrap">
-                      {col === "status" ? (
-                        <EmployeeStatusBadge status={String(row[col] ?? "")} />
-                      ) : row[col] === null || row[col] === undefined ? (
-                        "—"
-                      ) : (
-                        String(row[col])
-                      )}
+                      {row[col] === null || row[col] === undefined ? "—" : String(row[col])}
                     </TableCell>
                   ))}
                   <TableCell className="px-3 py-2 whitespace-nowrap">

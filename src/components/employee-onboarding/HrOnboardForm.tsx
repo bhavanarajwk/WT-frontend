@@ -226,7 +226,7 @@ export function HrOnboardForm({
   return (
     <Card className="p-0">
       <CardHeader>
-        <CardTitle>Work Information</CardTitle>
+        <CardTitle>Information</CardTitle>
         <CardDescription>
           Complete the required work fields to create and invite the employee. They will complete
           personal details during self-service onboarding.

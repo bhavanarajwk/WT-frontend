@@ -1,7 +1,7 @@
 import {
   compareApiDates,
   formatApiDate,
-  formatApiDateTimeDisplay,
+  formatApiDateDisplay,
   parseApiDate,
 } from "@/utils/apiDate";
 
@@ -48,8 +48,8 @@ export function formatInvitedEmployeeTableRows(
 ): Array<Record<string, unknown>> {
   return rows.map((row) => {
     const createdRaw = String(row.created_at ?? row.createdAt ?? "").trim();
-    const createdDisplay = createdRaw ? formatApiDateTimeDisplay(createdRaw) : "—";
-    return { ...row, created_at: createdDisplay };
+    const createdOn = createdRaw ? formatApiDateDisplay(createdRaw) : "—";
+    return { ...row, created_on: createdOn };
   });
 }
 

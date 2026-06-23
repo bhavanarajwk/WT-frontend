@@ -220,7 +220,7 @@ export function EmployeePageClient() {
               />
 
               <ManagementListCard
-                title="Onboarded Employees"
+                title="Invited Employees"
                 description="Invited employees within the selected date range."
                 headerAction={
                   <Button
