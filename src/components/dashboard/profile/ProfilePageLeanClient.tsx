@@ -239,6 +239,12 @@ export function ProfilePageLeanClient() {
         <h4 className="mb-3 text-sm font-semibold text-wt-text">Personal &amp; Employment Information</h4>
         <div className="space-y-10 md:space-y-12 rounded-xl border border-wt-border bg-wt-surface-2/50 p-6 md:p-8">
           <section>
+            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">
+              Profile Photo
+            </h5>
+            <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
+          </section>
+          <section>
             <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Basic Information</h5>
             <dl className="space-y-3 text-sm">
               <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
@@ -502,16 +508,9 @@ export function ProfilePageLeanClient() {
               renderEditPanel()
             ) : (
               <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
-                <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex min-w-0 flex-1 items-start gap-5">
-                    <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
-                    <div className="min-w-0">
-                      <h3 className="mb-1 text-lg font-semibold">{profileDisplayName}</h3>
-                      <p className="text-sm text-wt-text-muted">
-                        Review your profile details before editing.
-                      </p>
-                    </div>
-                  </div>
+                <div className="mb-6 flex items-center justify-between gap-4">
+                  <h3 className="text-lg font-semibold">{profileDisplayName}</h3>
+
                   {employeeSelfServeProfile ? (
                     <button
                       type="button"
@@ -523,6 +522,7 @@ export function ProfilePageLeanClient() {
                     </button>
                   ) : null}
                 </div>
+
                 {renderProfileDetails()}
                 {!requiresSelfOnboarding ? renderAssignedProjects() : null}
                 {!requiresSelfOnboarding ? <ProfileEmployeeTrainingsSection enabled /> : null}

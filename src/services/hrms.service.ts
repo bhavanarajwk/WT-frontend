@@ -106,43 +106,6 @@ export interface ActiveNonBenchAllocationsPage {
   allocations: unknown[];
 }
 
-export interface EmployeeAttendanceLeaveDateRow {
-  leave_date: string;
-  value: number;
-}
-
-export interface EmployeeAttendanceLeaveEmployeeRow {
-  user_id: number;
-  emp_id: string | null;
-  name: string;
-  email: string;
-  leave_days_taken: number;
-  leave_dates: EmployeeAttendanceLeaveDateRow[];
-  total_attendance_days: number;
-  weekday_days_with_timelog: number;
-}
-
-export interface EmployeeAttendanceLeaveData {
-  from_date: string;
-  to_date: string;
-  working_weekdays_in_range: number;
-  current_page: number;
-  total_page: number;
-  page_size: number;
-  total_element: number;
-  employees: EmployeeAttendanceLeaveEmployeeRow[];
-}
-
-export interface EmployeeAttendanceLeaveQuery {
-  fromDate?: string;
-  toDate?: string;
-  page?: number;
-  size?: number;
-  search?: string;
-  type?: string;
-  band?: string;
-}
-
 export interface LeaveManagerOption {
   email: string;
   name: string;
@@ -281,7 +244,7 @@ export const hrmsService = {
   offboardEmployee(
     empId: string,
     payload: {
-      resignation_date: string;
+      resignation_date?: string;
       exit_type: "VOLUNTARY" | "INVOLUNTARY" | "CONTRACTUAL";
       last_working_day?: string;
       reason?: string | null;
@@ -780,22 +743,6 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<{ items: LeaveRecipientOption[] }>>(
       endpoints.userRequest.leaveRecipientOptions,
       { query }
-    );
-  },
-
-  /** GET /employee-attendance-leave — employee-wise attendance and leave in a date range. */
-  getEmployeeAttendanceLeave(params: EmployeeAttendanceLeaveQuery = {}) {
-    const query: Record<string, string> = {};
-    if (params.fromDate?.trim()) query.fromDate = params.fromDate.trim();
-    if (params.toDate?.trim()) query.toDate = params.toDate.trim();
-    if (params.page != null) query.page = String(params.page);
-    if (params.size != null) query.size = String(params.size);
-    if (params.search?.trim()) query.search = params.search.trim();
-    if (params.type?.trim()) query.type = params.type.trim();
-    if (params.band?.trim()) query.band = params.band.trim();
-    return apiClient.get<ApiEnvelope<EmployeeAttendanceLeaveData>>(
-      endpoints.employeeAttendanceLeave,
-      { query: applyApiDateQuery(query, ["fromDate", "toDate"]) }
     );
   },
 

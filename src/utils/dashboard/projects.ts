@@ -28,15 +28,31 @@ export function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) 
   });
 }
 
+function isTalentPoolProjectRow(row: Record<string, unknown>): boolean {
+  const billingStatus = String(row.billing_status ?? row.billingStatus ?? "")
+    .trim()
+    .toUpperCase();
+
+  const projectCode = String(row.project_code ?? row.projectCode ?? row.code ?? "")
+    .trim()
+    .toUpperCase();
+
+  return billingStatus === "TALENT_POOL" || projectCode === "BENCH";
+}
+
 export function buildProfileAssignedProjects(
   assignedInput: unknown,
   allocationInput?: unknown
 ): Array<Record<string, unknown>> {
   const normalizedProjects = normalizeAssignedProjects(toPagedRows(assignedInput));
   if (allocationInput === undefined) {
-    return normalizedProjects;
+    return normalizedProjects.filter((row) => !isTalentPoolProjectRow(row));
   }
-  return mergeProjectAndAllocationData(normalizedProjects, toPagedRows(allocationInput));
+
+  return mergeProjectAndAllocationData(
+    normalizedProjects,
+    toPagedRows(allocationInput)
+  ).filter((row) => !isTalentPoolProjectRow(row));
 }
 
 export function mergeProjectAndAllocationData(

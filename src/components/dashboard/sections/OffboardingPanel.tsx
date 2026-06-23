@@ -454,7 +454,7 @@ export function OffboardingPanel() {
     setToast(null);
     try {
       await hrmsService.offboardEmployee(empIdValue, {
-        resignation_date: resignationDate,
+        ...(isConsultantOffboarding ? {} : { resignation_date: resignationDate }),
         exit_type: resolveExitTypeForSubmit(),
         last_working_day: lastWorkingDay || undefined,
         reason: offboardingForm.reason.trim() || null,
@@ -584,6 +584,14 @@ export function OffboardingPanel() {
                 options={candidateOptions}
               />
               {isInternOffboarding ? (
+                <DatePickerField
+                  label="Last Working Day"
+                  required
+                  value={offboardingForm.last_working_day}
+                  onChange={handleLastWorkingDayChange}
+                  disabled={submitting}
+                />
+              ) : isConsultantOffboarding ? (
                 <DatePickerField
                   label="Last Working Day"
                   required

@@ -94,8 +94,6 @@ export const endpoints = {
     export: `${api}/export/timelogs`,
   },
 
-  employeeAttendanceLeave: `${api}/employee-attendance-leave`,
-
   userRequest: {
     root: `${api}/userRequest`,
     getRange: (fromDate: string, toDate: string, requestType: string) =>
