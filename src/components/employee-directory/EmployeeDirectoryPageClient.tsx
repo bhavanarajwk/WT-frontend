@@ -17,9 +17,7 @@ import { useMemo, useState, useCallback } from "react";
 import { DASHBOARD_ROUTES, employeeDirectoryProfilePath } from "@/constants/routes";
 import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmployeeDirectoryAccess";
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
-import { hrmsService } from "@/services/hrms.service";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -33,11 +31,9 @@ import {
 import {
   cleanEmployeeName,
   onboardRowToListRow,
-  rowEmail,
   rowEmpId,
 } from "@/utils/employeeDirectory";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
-import { isActiveUserStatus } from "@/utils/userStatus";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -145,8 +141,6 @@ export function EmployeeDirectoryPageClient() {
   const debouncedSearch = useDebouncedValue(search, 300);
   const [userTypeFilter, setUserTypeFilter] = useState<UserTypeFilterValue>("");
   const [sortId, setSortId] = useState("doj_desc");
-  const [resendingInviteEmail, setResendingInviteEmail] = useState<string | null>(null);
-  const { actionLoading, runAction } = useDashboardAction();
   const { authStatus, canView: canViewDirectory, queriesEnabled } =
     useEmployeeDirectoryAccess();
   const { data: rows = [], isLoading, isError, error, refetch } = useEmployeeDirectoryList({
@@ -202,22 +196,6 @@ export function EmployeeDirectoryPageClient() {
       }
     },
     []
-  );
-
-  const handleResendInvite = useCallback(
-    (email: string) => {
-      const normalized = email.trim().toLowerCase();
-      if (!normalized) return;
-      void runAction("Resend onboarding invite", async () => {
-        setResendingInviteEmail(normalized);
-        try {
-          await hrmsService.resendOnboardInvite({ email: normalized });
-        } finally {
-          setResendingInviteEmail(null);
-        }
-      });
-    },
-    [runAction]
   );
 
   if (authStatus !== "loading" && !canViewDirectory) {
@@ -338,15 +316,7 @@ export function EmployeeDirectoryPageClient() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pagination.pageItems.map(({ empId, display, record }) => {
-                      const workEmail = rowEmail(record);
-                      const isResendDisabled =
-                        isActiveUserStatus(display.status) ||
-                        !workEmail ||
-                        actionLoading;
-                      const isResending =
-                        Boolean(workEmail) && resendingInviteEmail === workEmail.toLowerCase();
-
+                    {pagination.pageItems.map(({ empId, display }) => {
                       return (
                         <TableRow
                           key={empId}
@@ -365,16 +335,7 @@ export function EmployeeDirectoryPageClient() {
                           {LIST_COLUMNS.map((col) => (
                             <TableCell key={col.key} className="whitespace-nowrap px-4 py-3">
                               {col.key === "status" ? (
-                                <div className="inline-flex items-center gap-2">
-                                  <EmployeeStatusBadge status={display.status} />
-                                  <Button variant="brand" size="xs" type="button" className="px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50" disabled={isResendDisabled || isResending} onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleResendInvite(workEmail);
-                                    }}
-                                  >
-                                    {isResending ? "Sending…" : "Resend"}
-                                  </Button>
-                                </div>
+                                <EmployeeStatusBadge status={display.status} />
                               ) : col.key === "name" ? (
                                 <span className="font-medium text-blue-600">{display[col.key]}</span>
                               ) : col.key === "email" ? (
