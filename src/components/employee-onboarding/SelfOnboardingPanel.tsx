@@ -1,12 +1,10 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import { InputField, SelectField, FileField, TextAreaField } from "@/components/dashboard/ui/forms";
-import { Input } from "@/components/ui/input";
-import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { isValidIndiaMobile, isValidPersonName } from "@/utils/dashboard/validation";
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import { validateResumeShareLink } from "@/utils/employeeResume";
@@ -195,16 +193,16 @@ export function SelfOnboardingPanel({
         Submit your onboarding survey to activate full portal access. Fields marked with * are required.
       </p>
       <div className="grid sm:grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1.5">
-          <FieldLabel label="Work Email" />
-          <Input
-            className="h-10 bg-muted text-muted-foreground"
+        <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+          Work email
+          <input
+            className={`${FORM_CONTROL_CLASS} bg-wt-surface-2 text-wt-text-muted`}
             type="email"
             value={email}
             readOnly
             disabled
           />
-        </div>
+        </label>
         <InputField
           label="Personal mail ID"
           type="email"
@@ -346,9 +344,9 @@ export function SelfOnboardingPanel({
         </p>
       )}
       <div className="mt-4">
-        <Button variant="brand" type="button" className="px-3 py-2" onClick={submit} disabled={actionLoading}>
+        <button type="button" className="btn-primary px-3 py-2" onClick={submit} disabled={actionLoading}>
           Submit Onboarding Form
-        </Button>
+        </button>
       </div>
     </div>
   );

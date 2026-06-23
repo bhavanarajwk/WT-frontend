@@ -1,14 +1,5 @@
 "use client";
 
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { EmployeeResumeLink } from "@/components/resumes/EmployeeResumeLink";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
 import {
@@ -18,7 +9,11 @@ import {
   SECTION_STACK_CLASS,
   SECTION_TITLE_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  SCROLLABLE_TABLE_CLASS,
+  ScrollableTable,
+  STICKY_TABLE_HEAD_CLASS,
+} from "@/components/dashboard/ui/ScrollableTable";
 import {
   buildGroupedProfileSections,
   formatProfileDisplayValue,
@@ -29,9 +24,9 @@ function ProfileTableRows({ entries }: { entries: ProfileDisplayEntry[] }) {
   return (
     <>
       {entries.map((entry) => (
-        <TableRow key={entry.label}>
-          <TableCell className={DETAIL_LABEL_CELL_CLASS}>{entry.label}</TableCell>
-          <TableCell className={DETAIL_VALUE_CELL_CLASS}>
+        <tr key={entry.label} className="border-t border-wt-border">
+          <td className={DETAIL_LABEL_CELL_CLASS}>{entry.label}</td>
+          <td className={DETAIL_VALUE_CELL_CLASS}>
             {entry.resumeShareHref !== undefined ? (
               <EmployeeResumeLink href={entry.resumeShareHref} />
             ) : entry.asStatusBadge ? (
@@ -39,8 +34,8 @@ function ProfileTableRows({ entries }: { entries: ProfileDisplayEntry[] }) {
             ) : (
               formatProfileDisplayValue(entry.value)
             )}
-          </TableCell>
-        </TableRow>
+          </td>
+        </tr>
       ))}
     </>
   );
@@ -69,17 +64,25 @@ export function FullProfileDetailsGrid({
             <h4 className={SECTION_TITLE_CLASS}>{section.title}</h4>
           </header>
           <ScrollableTable maxHeightClass={sectionMaxHeight} scrollChain={scrollChain}>
-            <WtTable>
-              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className={DETAIL_LABEL_CELL_CLASS}>Field</TableHead>
-                  <TableHead className={DETAIL_VALUE_CELL_CLASS}>Value</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <table className={SCROLLABLE_TABLE_CLASS}>
+              <thead className={STICKY_TABLE_HEAD_CLASS}>
+                <tr>
+                  <th
+                    className={`${DETAIL_LABEL_CELL_CLASS} text-left text-xs font-semibold tracking-wide`}
+                  >
+                    Field
+                  </th>
+                  <th
+                    className={`${DETAIL_VALUE_CELL_CLASS} text-left text-xs font-semibold tracking-wide text-wt-text-muted`}
+                  >
+                    Value
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
                 <ProfileTableRows entries={section.entries} />
-              </TableBody>
-            </WtTable>
+              </tbody>
+            </table>
           </ScrollableTable>
         </section>
       ))}

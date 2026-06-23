@@ -1,21 +1,27 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/api/error";
-import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import {
   formatActionErrorMessage,
   formatActionSuccessMessage,
 } from "@/utils/actionToast";
 
 export function useDashboardAction() {
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 2800);
+    return () => window.clearTimeout(id);
+  }, [toast]);
 
   const runAction = useCallback(async (label: string, fn: () => Promise<unknown>) => {
     setActionLoading(true);
     try {
       await fn();
-      showSuccessToast(formatActionSuccessMessage(label));
+      setToast({ type: "success", message: formatActionSuccessMessage(label) });
     } catch (error) {
       const backendMessage =
         error instanceof ApiError
@@ -23,11 +29,14 @@ export function useDashboardAction() {
           : error instanceof Error
             ? error.message
             : "";
-      showErrorToast(formatActionErrorMessage(label, backendMessage));
+      setToast({
+        type: "error",
+        message: formatActionErrorMessage(label, backendMessage),
+      });
     } finally {
       setActionLoading(false);
     }
   }, []);
 
-  return { actionLoading, runAction };
+  return { toast, actionLoading, runAction, setToast };
 }

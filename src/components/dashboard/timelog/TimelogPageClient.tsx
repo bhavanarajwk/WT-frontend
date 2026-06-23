@@ -1,13 +1,12 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { showErrorToast } from "@/lib/toast";
 import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { HrEmployeeTimelogWeekModal } from "@/components/dashboard/timelog/HrEmployeeTimelogWeekModal";
@@ -54,7 +53,6 @@ function unwrapPayload<T>(response: unknown): T {
 
 export function TimelogPageClient() {
   const pathname = usePathname();
-  const router = useRouter();
   const { user } = useAuth();
   const roles = user?.roles ?? [];
   const hasManagerAccess = roles.includes("ROLE_MANAGER");
@@ -99,7 +97,7 @@ export function TimelogPageClient() {
     [hrMonthlySummary.rows]
   );
 
-  const { actionLoading, runAction } = useDashboardAction();
+  const { toast, actionLoading, runAction, setToast } = useDashboardAction();
 
   const dayDates = useMemo(() => weekDaysMonSun(weekStart), [weekStart]);
   const dayKeys = useMemo(() => dayDates.map(formatApiDate), [dayDates]);
@@ -199,15 +197,21 @@ export function TimelogPageClient() {
       void loadWeek().catch((error) => {
         setWeekSnapshot(null);
         setRows([createEmptyGridRow(dayKeys)]);
-        showErrorToast(error instanceof Error ? error.message : "Unable to load timelog week");
+        setToast({
+          type: "error",
+          message: error instanceof Error ? error.message : "Unable to load timelog week",
+        });
       });
       return;
     }
     void loadWeek().catch((error) => {
       setWeekSnapshot(null);
-      showErrorToast(error instanceof Error ? error.message : "Unable to load timelog week");
+      setToast({
+        type: "error",
+        message: error instanceof Error ? error.message : "Unable to load timelog week",
+      });
     });
-  }, [isTeamView, isHrTeamView, subTab, teamEmployeeEmail, loadWeek, dayKeys]);
+  }, [isTeamView, isHrTeamView, subTab, teamEmployeeEmail, loadWeek, dayKeys, setToast]);
 
   const saveWeek = () =>
     void runAction("Save timelog draft", async () => {
@@ -298,22 +302,28 @@ export function TimelogPageClient() {
         <div className="space-y-6">
           {hasAmRole ? <HrReviewNoticeBanner /> : null}
 
-          <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
-            {canSeeTeamTab ? (
-              <PageTabs
-                embedded
-                aria-label="Timelog views"
-                value={subTab}
-                onValueChange={(value) => {
-                  router.push(value === "team" ? "/dashboard/timelog/team" : "/dashboard/timelog");
-                }}
-                items={[
-                  { value: "my", label: "My Timelogs" },
-                  { value: "team", label: "Team Timelogs" },
-                ]}
-              />
-            ) : null}
-            <div className={PAGE_TAB_BODY_CLASS}>
+          {canSeeTeamTab ? (
+            <div className="flex flex-wrap gap-2 border-b border-wt-border pb-2">
+              <Link
+                href="/dashboard/timelog"
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  subTab === "my" ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
+                }`}
+              >
+                My timelogs
+              </Link>
+              <Link
+                href="/dashboard/timelog/team"
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  subTab === "team" ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
+                }`}
+              >
+                Team timelogs
+              </Link>
+            </div>
+          ) : null}
+
+          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-semibold">
                 {isHrTeamView ? "Approved timelog hours" : isTeamView ? "Team timelogs" : "My weekly timesheet"}
@@ -323,19 +333,33 @@ export function TimelogPageClient() {
                   <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={loading} />
                 ) : null}
                 {!isHrTeamView ? (
-                  <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm border border-wt-border rounded-lg" disabled={loading} onClick={() => void loadWeek()}
+                  <button
+                    type="button"
+                    className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg"
+                    disabled={loading}
+                    onClick={() => void loadWeek()}
                   >
                     Refresh
-                  </Button>
+                  </button>
                 ) : null}
                 {!isTeamView ? (
                   <>
-                    <Button variant="outline" size="sm" type="button" className="px-4 py-2 text-sm border border-wt-border rounded-lg" disabled={actionLoading || loading} onClick={saveWeek} >
+                    <button
+                      type="button"
+                      className="btn-ghost px-4 py-2 text-sm border border-wt-border rounded-lg"
+                      disabled={actionLoading || loading}
+                      onClick={saveWeek}
+                    >
                       {actionLoading ? "Saving…" : "Save"}
-                    </Button>
-                    <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={actionLoading || loading} onClick={submitWeek} >
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary px-4 py-2 text-sm"
+                      disabled={actionLoading || loading}
+                      onClick={submitWeek}
+                    >
                       {actionLoading ? "Submitting…" : "Submit"}
-                    </Button>
+                    </button>
                   </>
                 ) : null}
               </div>
@@ -413,9 +437,9 @@ export function TimelogPageClient() {
                 onRowsChange={isTeamView ? () => {} : setRows}
               />
             )}
-            </div>
           </section>
         </div>
+        <DashboardToast toast={toast} />
         {isHrTeamView && hrWeekDetail ? (
           <HrEmployeeTimelogWeekModal
             open

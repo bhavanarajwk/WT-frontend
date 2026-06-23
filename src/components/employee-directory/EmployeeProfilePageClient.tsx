@@ -1,10 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  ProfileDetailsSkeleton,
-  ProfileHeaderSkeleton,
-} from "@/components/dashboard/ui/SectionSkeleton";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -35,6 +31,7 @@ import {
 } from "@/utils/employeeResume";
 import { canFetchEmployeeResumeApi } from "@/utils/roles";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
 import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
@@ -64,7 +61,7 @@ export function EmployeeProfilePageClient() {
     queriesEnabled,
     roles,
   } = useEmployeeDirectoryAccess();
-  const { actionLoading, runAction } = useDashboardAction();
+  const { toast, actionLoading, runAction } = useDashboardAction();
   const { data: profile, isLoading, isError, error, refetch } = useEmployeeProfile(empId, {
     enabled: queriesEnabled,
   });
@@ -228,7 +225,15 @@ export function EmployeeProfilePageClient() {
     );
   };
 
-  if (authStatus !== "loading" && !canViewProfile) {
+  if (authStatus === "loading") {
+    return (
+      <DashboardPageShell>
+        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm"><SectionLoading label="Loading" /></div>
+      </DashboardPageShell>
+    );
+  }
+
+  if (!canViewProfile) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
@@ -259,6 +264,7 @@ export function EmployeeProfilePageClient() {
 
   return (
     <DashboardPageShell className="employee-profile-page">
+      <DashboardToast toast={toast} />
 
       <div className="employee-profile-scroll-root employee-profile-panel rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="employee-profile-panel__header p-5 md:p-7 lg:p-8">
@@ -269,17 +275,15 @@ export function EmployeeProfilePageClient() {
             ← Back to directory
           </Link>
           {isLoading ? (
-            <div className="mt-8 space-y-6">
-              <ProfileHeaderSkeleton />
-            </div>
+            <SectionLoading className="mt-8 py-4" label="Loading employee profile…" />
           ) : null}
 
           {isError ? (
             <div className="mt-8 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               <p>Could not load profile.{error instanceof Error ? ` ${error.message}` : ""}</p>
-              <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
+              <button type="button" className="btn-ghost mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
                 Retry
-              </Button>
+              </button>
             </div>
           ) : null}
 
@@ -335,20 +339,18 @@ export function EmployeeProfilePageClient() {
               </div>
 
               {canOpenProfileEditor && !isEditing ? (
-                <Button variant="brand" size="sm" type="button" className="inline-flex shrink-0 items-center gap-2 px-4 py-2.5 text-sm" onClick={openEditor} >
+                <button
+                  type="button"
+                  className="btn-action inline-flex shrink-0 items-center gap-2 px-4 py-2.5 text-sm"
+                  onClick={openEditor}
+                >
                   <IconPencil />
                   {statusOnlyEdit ? "Edit Status" : "Edit Profile"}
-                </Button>
+                </button>
               ) : null}
             </div>
           ) : null}
         </div>
-
-        {isLoading && !isError ? (
-          <div className="employee-profile-panel__body px-5 pb-5 md:px-7 md:pb-7 lg:px-8 lg:pb-8">
-            <ProfileDetailsSkeleton rows={10} />
-          </div>
-        ) : null}
 
         {!isLoading && !isError ? (
           <div className="employee-profile-panel__body px-5 pb-5 md:px-7 md:pb-7 lg:px-8 lg:pb-8">

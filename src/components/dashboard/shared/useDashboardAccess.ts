@@ -7,8 +7,8 @@ import { useSelfProfile, selfProfileQueryKey } from "@/hooks/useSelfProfile";
 import { hasDmRole, hasManagerRole } from "@/utils/roles";
 import {
   isActiveUserStatus,
+  isInNoticeUserStatus,
   isOffboardedUserStatus,
-  isServingNoticeUserStatus,
   normalizeUserStatus,
   resolveProfileStatus,
 } from "@/utils/userStatus";
@@ -33,10 +33,10 @@ export function useDashboardAccess() {
   const profileQ = useSelfProfile(Boolean(user));
   /** Employment ended — applies regardless of manager/AM roles on the account. */
   const isOffboarded = isOffboardedUserStatus(profileStatus);
-  const isServingNotice = isServingNoticeUserStatus(profileStatus);
+  const isInNotice = isInNoticeUserStatus(profileStatus);
   const isPortalLocked = isPortalLockedProfile(profileQ.data ?? null);
   const requiresSelfOnboarding =
-    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded && !isServingNotice;
+    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded && !isInNotice;
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canAccessProfile = Boolean(user);
   const canAccessOverview = useMemo(
@@ -110,9 +110,7 @@ export function useDashboardAccess() {
     invalidateSelfProfile,
     profileStatus,
     isOffboarded,
-    isServingNotice,
-    /** @deprecated Use isServingNotice */
-    isInNotice: isServingNotice,
+    isInNotice,
     isPortalLocked,
     profile: profileQ.data ?? null,
     profileLoading: profileQ.isLoading,

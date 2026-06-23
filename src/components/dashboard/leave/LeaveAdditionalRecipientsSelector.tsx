@@ -2,10 +2,6 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { hrmsService, type LeaveRecipientOption } from "@/services/hrms.service";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { unwrapLeaveOptionItems } from "@/utils/leaveApiOptions";
 
 function optionLabel(option: LeaveRecipientOption): string {
@@ -141,34 +137,30 @@ export function LeaveAdditionalRecipientsSelector({
             );
             const label = option ? optionLabel(option) : email;
             return (
-              <Badge
+              <span
                 key={email}
-                variant="secondary"
-                className={`gap-1 pr-1 ${filledBadgeClass("neutral")}`}
+                className="inline-flex items-center gap-1 rounded-full border border-wt-border bg-wt-surface-2 px-2.5 py-1 text-xs"
               >
                 <span className="max-w-[220px] truncate">{label}</span>
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-wt-text-muted hover:text-wt-text"
                   aria-label={`Remove ${label}`}
                   disabled={disabled}
                   onClick={() => removeEmail(email)}
                 >
                   ×
-                </Button>
-              </Badge>
+                </button>
+              </span>
             );
           })}
         </div>
       ) : null}
 
       <div className="relative">
-        <Button
+        <button
           type="button"
-          variant="outline"
-          className="input-field flex h-auto w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-normal"
+          className="input-field flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm"
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-controls={listId}
@@ -179,7 +171,7 @@ export function LeaveAdditionalRecipientsSelector({
             {selectedEmails.length ? `${selectedEmails.length} selected` : "Select employees…"}
           </span>
           <span aria-hidden>▾</span>
-        </Button>
+        </button>
 
         {open ? (
           <div
@@ -211,11 +203,12 @@ export function LeaveAdditionalRecipientsSelector({
                       key={email}
                       className="flex cursor-pointer items-start gap-2 px-3 py-2 text-sm hover:bg-wt-surface-2"
                     >
-                      <Checkbox
+                      <input
+                        type="checkbox"
                         className="mt-0.5"
                         checked={checked}
                         disabled={disabled}
-                        onCheckedChange={(next) => toggleEmail(email, Boolean(next))}
+                        onChange={(event) => toggleEmail(email, event.target.checked)}
                       />
                       <span>
                         <span className="font-medium">{optionLabel(option)}</span>

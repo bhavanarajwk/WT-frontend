@@ -1,7 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -41,6 +39,7 @@ import {
 } from "@/utils/learning/materialVisibility";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 
 const HR_TABS = [
@@ -87,7 +86,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   const safeTab = tabs.some((t) => t.id === tab) ? tab : "overview";
 
   const qc = useQueryClient();
-  const { runAction } = useDashboardAction();
+  const { toast, runAction } = useDashboardAction();
   const tid = trainingId.trim();
 
   const detailQ = useTrainingDetail(tid, Boolean(tid), { employeeView: !hasHrAccess });
@@ -307,9 +306,9 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
             />
           </div>
         </div>
-        <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() => router.refresh()}>
+        <button type="button" className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() => router.refresh()}>
           Refresh view
-        </Button>
+        </button>
       </div>
 
       {detailQ.isError ? (
@@ -320,21 +319,20 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
-      <PageTabs
-        embedded
-        value={safeTab}
-        onValueChange={(value) => {
-          router.push(
-            `/dashboard/learning-development/trainings/${encodeURIComponent(tid)}?tab=${value}`
-          );
-        }}
-        items={tabs.map((t) => ({
-          value: t.id,
-          label: t.label,
-        }))}
-      />
-      <div className={PAGE_TAB_BODY_CLASS}>
+      <div className="flex flex-wrap gap-2 border-b border-wt-border pb-2">
+        {tabs.map((t) => (
+          <Link
+            key={t.id}
+            href={`/dashboard/learning-development/trainings/${encodeURIComponent(tid)}?tab=${t.id}`}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+              safeTab === t.id ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </div>
+
       {safeTab === "overview" && !detailQ.isError ? (
         hasHrAccess ? (
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
@@ -409,10 +407,14 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                 <InputField label="Venue" value={sessionForm.venue} onChange={(v) => setSessionForm((p) => ({ ...p, venue: v }))} />
                 <InputField label="Meeting link" value={sessionForm.meeting_link} onChange={(v) => setSessionForm((p) => ({ ...p, meeting_link: v }))} />
               </div>
-              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={sessionMut.isPending} onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(e instanceof Error ? e.message : "Failed") })}
+              <button
+                type="button"
+                className="btn-primary px-4 py-2 text-sm"
+                disabled={sessionMut.isPending}
+                onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(e instanceof Error ? e.message : "Failed") })}
               >
                 Create session
-              </Button>
+              </button>
             </section>
           ) : (
             <p className="text-sm text-wt-text-muted">Only HR/Admin can create sessions.</p>
@@ -443,9 +445,14 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                 placeholder="Select trainer"
                 options={trainerOptions.map((o) => ({ value: o.id, label: o.label }))}
               />
-              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={!trainerPick} onClick={assignTrainer} >
+              <button
+                type="button"
+                className="btn-primary px-4 py-2 text-sm shrink-0"
+                disabled={!trainerPick}
+                onClick={assignTrainer}
+              >
                 Assign
-              </Button>
+              </button>
             </div>
           ) : null}
           <AssignedTrainersList
@@ -472,14 +479,18 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                 placeholder="Select trainee"
                 options={addTraineeOptions.map((o) => ({ value: o.id, label: o.label }))}
               />
-              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0 disabled:opacity-40" disabled={addParticipantMut.isPending || !participantPick} onClick={() =>
+              <button
+                type="button"
+                className="btn-primary px-4 py-2 text-sm shrink-0 disabled:opacity-40"
+                disabled={addParticipantMut.isPending || !participantPick}
+                onClick={() =>
                   addParticipantMut.mutate(undefined, {
                     onError: (e) => alert(e instanceof Error ? e.message : "Failed"),
                   })
                 }
               >
                 {addParticipantMut.isPending ? "Adding…" : "Add trainee"}
-              </Button>
+              </button>
             </div>
           ) : null}
           <TrainingParticipantsList
@@ -526,10 +537,14 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               <div className="min-w-[160px] flex-1">
                 <FileField label="PDF" required accept=".pdf,application/pdf" onPick={setMaterialFile} />
               </div>
-              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadMaterialMut.isPending || !materialFile} onClick={() => uploadMaterialMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+              <button
+                type="button"
+                className="btn-primary px-4 py-2 text-sm shrink-0"
+                disabled={uploadMaterialMut.isPending || !materialFile}
+                onClick={() => uploadMaterialMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
               >
                 Upload
-              </Button>
+              </button>
             </div>
           ) : null}
           <DataTable
@@ -557,10 +572,14 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                 <div className="min-w-[160px] flex-1">
                   <FileField label="Assessment PDF" required accept=".pdf,application/pdf" onPick={setAssessmentFile} />
                 </div>
-                <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadAssessmentMut.isPending || !assessmentFile} onClick={() => uploadAssessmentMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+                <button
+                  type="button"
+                  className="btn-primary px-4 py-2 text-sm shrink-0"
+                  disabled={uploadAssessmentMut.isPending || !assessmentFile}
+                  onClick={() => uploadAssessmentMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
                 >
                   Upload
-                </Button>
+                </button>
               </div>
               <div className="w-full">
                 <InputField label="Description" value={assessmentForm.description} onChange={(v) => setAssessmentForm((p) => ({ ...p, description: v }))} />
@@ -590,9 +609,8 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           <EmployeeTrainingMyMarks trainingId={tid} enabled={safeTab === "scores"} />
         </section>
       ) : null}
-      </div>
-      </section>
     </div>
+    <DashboardToast toast={toast} />
     </>
   );
 }

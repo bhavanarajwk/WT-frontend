@@ -1,22 +1,10 @@
 "use client";
 
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { ApiError } from "@/api/error";
 import { hrmsService, type AllocationExtensionRequestRow, type AllocationExtensionRequestStatus } from "@/services/hrms.service";
 import { useAuth } from "@/context/AuthContext";
 import { ApiDateField, SelectField } from "@/components/dashboard/ui/forms";
-import { Button } from "@/components/ui/button";
 import {
   HrLeaveStatusToggle,
   type HrToggleStatus,
@@ -38,6 +26,7 @@ import {
 import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
 import { createEmptyAllocationExtensionForm } from "@/utils/allocationFormState";
 
+type Toast = { type: "success" | "error"; message: string } | null;
 
 function normalizeHrStatusFilter(value: string): AllocationExtensionRequestStatus | "" {
   const v = value.trim().toUpperCase();
@@ -63,7 +52,8 @@ export function AllocationExtensionPanel() {
   const hasManagerRole = userRoles.includes("ROLE_MANAGER");
   const canCreateRequest = hasManagerRole && !hasHrAccess;
 
-  
+  const [toast, setToast] = useState<Toast>(null);
+
   // Manager create form
   const [createForm, setCreateForm] = useState(createEmptyAllocationExtensionForm);
   const [creating, setCreating] = useState(false);
@@ -233,6 +223,7 @@ export function AllocationExtensionPanel() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setToast(null);
     try {
       if (visibleMode === "hr") {
         const res = await hrmsService.listAllocationExtensionRequests({
@@ -257,7 +248,7 @@ export function AllocationExtensionPanel() {
       setTotalElements(res.data.total_elements ?? 0);
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Failed to load extension requests.";
-      showErrorToast(msg);
+      setToast({ type: "error", message: msg });
       setRows([]);
       setTotalPages(1);
       setTotalElements(0);
@@ -287,16 +278,23 @@ export function AllocationExtensionPanel() {
     const reason = createForm.reason.trim();
 
     if (!userEmail || !projectCode || !requestedEndDate) {
-      showErrorToast("Employee, project, and requested end date are required.");
+      setToast({
+        type: "error",
+        message: "Employee, project, and requested end date are required.",
+      });
       return;
     }
 
     if (allocationContext && !allocationContext.extension_allowed) {
-      showErrorToast("Extension is not allowed for this allocation (no current end date).");
+      setToast({
+        type: "error",
+        message: "Extension is not allowed for this allocation (no current end date).",
+      });
       return;
     }
 
     setCreating(true);
+    setToast(null);
     try {
       const body = buildCreateAllocationExtensionBody({
         userEmail,
@@ -305,25 +303,26 @@ export function AllocationExtensionPanel() {
         reason: reason || undefined,
       });
       if (!body.requestedEndDate) {
-        showErrorToast("Enter a valid requested end date (dd/mm/yyyy).");
+        setToast({ type: "error", message: "Enter a valid requested end date (dd/mm/yyyy)." });
         setCreating(false);
         return;
       }
       const res = await hrmsService.createAllocationExtensionRequest(body);
-      showSuccessToast(`Extension request created (ID: ${res.data}).`);
+      setToast({ type: "success", message: `Extension request created (ID: ${res.data}).` });
       setCreateForm(createEmptyAllocationExtensionForm());
       setAllocationContext(null);
       setPage(0);
       void load();
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Failed to create extension request.";
-      showErrorToast(msg);
+      setToast({ type: "error", message: msg });
     } finally {
       setCreating(false);
     }
   }
 
   async function updateStatus(requestId: number, next: "APPROVED" | "REJECTED") {
+    setToast(null);
     setUpdatingRequestId(requestId);
     try {
       const res = await hrmsService.updateAllocationExtensionRequestStatus({
@@ -337,11 +336,11 @@ export function AllocationExtensionPanel() {
             : row
         )
       );
-      showSuccessToast(`Request ${next.toLowerCase()}.`);
+      setToast({ type: "success", message: `Request ${next.toLowerCase()}.` });
       void load();
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Failed to update status.";
-      showErrorToast(msg);
+      setToast({ type: "error", message: msg });
     } finally {
       setUpdatingRequestId(null);
     }
@@ -369,7 +368,19 @@ export function AllocationExtensionPanel() {
 
   return (
     <div className="space-y-4">
-            {canCreateRequest ? (
+      {toast ? (
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            toast.type === "success"
+              ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+              : "border-rose-300 bg-rose-50 text-rose-900"
+          }`}
+        >
+          {toast.message}
+        </div>
+      ) : null}
+
+      {canCreateRequest ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
           <h3 className="font-semibold">Request Allocation End-Date Extension</h3>
 
@@ -488,31 +499,28 @@ export function AllocationExtensionPanel() {
           </div>
 
           <div className="mt-4 flex items-center gap-2">
-            <Button
+            <button
               type="button"
-              variant="brand"
-              size="sm"
               disabled={
                 creating ||
                 loadingContext ||
                 (allocationContext != null && !allocationContext.extension_allowed)
               }
               onClick={() => void submitCreate()}
-              className="px-4 py-2 text-sm"
+              className="btn-primary px-4 py-2 text-sm"
             >
               {creating ? "Submitting…" : "Submit request"}
-            </Button>
-            <Button
+            </button>
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={() => {
                 setCreateForm(createEmptyAllocationExtensionForm());
                 setAllocationContext(null);
               }}
+              className="rounded-xl border border-wt-border bg-wt-surface-2 px-4 py-2 text-sm text-wt-text hover:bg-wt-surface-3"
             >
               Clear
-            </Button>
+            </button>
           </div>
         </section>
       ) : null}
@@ -557,41 +565,45 @@ export function AllocationExtensionPanel() {
             />
           ) : null}
 
-          <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="rounded-xl border border-wt-border bg-wt-surface-2 px-4 py-2 text-sm text-wt-text hover:bg-wt-surface-3"
+          >
             Refresh
-          </Button>
+          </button>
         </div>
 
         {rows.length ? (
-          <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-            <WtTable>
-              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Current end</TableHead>
-                  <TableHead>Requested end</TableHead>
-                  <TableHead>Status</TableHead>
+          <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
+            <table className="wt-scrollable-table text-sm">
+              <thead className="wt-table-sticky-head text-wt-text-muted">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Employee</th>
+                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Project</th>
+                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Current end</th>
+                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Requested end</th>
+                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Status</th>
                   {visibleMode === "hr" ? (
-                    <TableHead>Requested by</TableHead>
+                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Requested by</th>
                   ) : null}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                </tr>
+              </thead>
+              <tbody>
                 {rows.map((r) => {
                   const status = String(r.status ?? "PENDING").toUpperCase();
                   const hrStatus = toHrToggleStatus(status);
                   return (
-                    <TableRow key={String(r.id)}>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">{r.employee_name || "—"}</TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">{r.project_name || "—"}</TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                    <tr key={String(r.id)} className="border-t border-wt-border">
+                      <td className="px-3 py-2 whitespace-nowrap">{r.employee_name || "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{r.project_name || "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
                         {r.current_end_date ? asDateDisplayValue(r.current_end_date) : "—"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
                         {asDateDisplayValue(r.requested_end_date)}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
                         {visibleMode === "hr" ? (
                           <HrLeaveStatusToggle
                             value={hrStatus}
@@ -614,16 +626,16 @@ export function AllocationExtensionPanel() {
                             {status}
                           </span>
                         )}
-                      </TableCell>
+                      </td>
                       {visibleMode === "hr" ? (
-                        <TableCell className="px-3 py-2 whitespace-nowrap">{r.requested_by_name || "—"}</TableCell>
+                        <td className="px-3 py-2 whitespace-nowrap">{r.requested_by_name || "—"}</td>
                       ) : null}
-                    </TableRow>
+                    </tr>
                   );
                 })}
-              </TableBody>
-            </WtTable>
-          </ScrollableTable>
+              </tbody>
+            </table>
+          </div>
         ) : (
           <p className="text-sm text-wt-text-muted">{loading ? "Loading…" : "No extension requests found."}</p>
         )}
@@ -633,24 +645,22 @@ export function AllocationExtensionPanel() {
             Page {page + 1} of {Math.max(1, totalPages)}
           </p>
           <div className="inline-flex gap-2">
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               disabled={!canPrev}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
+              className="rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-1.5 text-sm text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
             >
               Prev
-            </Button>
-            <Button
+            </button>
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               disabled={!canNext}
               onClick={() => setPage((p) => p + 1)}
+              className="rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-1.5 text-sm text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
             >
               Next
-            </Button>
+            </button>
           </div>
         </div>
       </section>

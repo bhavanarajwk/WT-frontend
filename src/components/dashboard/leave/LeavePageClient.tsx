@@ -1,21 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
-import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -95,8 +80,6 @@ import {
   formatSecondarySkillsForProfile,
 } from "@/components/dashboard/ui/profile";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
-import { Badge } from "@/components/ui/badge";
-import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useClientPagination } from "@/hooks/useClientPagination";
@@ -111,6 +94,7 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import {
   compareApiDates,
   formatApiDate,
@@ -119,6 +103,7 @@ import {
   todayApiDate,
 } from "@/utils/apiDate";
 import {
+  approvalStageTone,
   canHrShowTeamRequestActions,
   canManagerActOnRequest,
   canManagerRejectRequest,
@@ -213,7 +198,8 @@ export function LeavePageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metrics, loading, refresh } = useOverviewData();
-    const [actionLoading, setActionLoading] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
@@ -620,6 +606,11 @@ export function LeavePageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfOnboardForm.yoe]);
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 2800);
+    return () => window.clearTimeout(id);
+  }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
     const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
@@ -1060,7 +1051,7 @@ export function LeavePageClient() {
     setActionLoading(true);
     try {
       await fn();
-      showSuccessToast(formatActionSuccessMessage(label));
+      setToast({ type: "success", message: formatActionSuccessMessage(label) });
     } catch (error) {
       const backendMessage =
         error instanceof ApiError
@@ -1068,7 +1059,10 @@ export function LeavePageClient() {
           : error instanceof Error
             ? error.message
             : "";
-      showErrorToast(formatActionErrorMessage(label, backendMessage));
+      setToast({
+        type: "error",
+        message: formatActionErrorMessage(label, backendMessage),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -2945,7 +2939,10 @@ export function LeavePageClient() {
         </p>
       )}
       <div className="mt-4">
-        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+        <button
+          type="button"
+          className="btn-primary px-3 py-2"
+          onClick={() =>
             runAction("Submit onboarding", async () => {
               if (!user?.email) {
                 throw new Error("Unable to resolve logged-in email.");
@@ -3063,7 +3060,7 @@ export function LeavePageClient() {
           disabled={actionLoading}
         >
           Submit Onboarding Form
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -3156,9 +3153,14 @@ export function LeavePageClient() {
             <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
           </div>
         </div>
-        <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
+        <button
+          type="button"
+          className="btn-primary px-4 py-2.5"
+          onClick={openOwnProfileEditor}
+          disabled={actionLoading}
+        >
           Edit Profile
-        </Button>
+        </button>
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
@@ -3206,7 +3208,10 @@ export function LeavePageClient() {
         <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+        <button
+          type="button"
+          className="btn-primary px-3 py-2"
+          onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
@@ -3306,12 +3311,15 @@ export function LeavePageClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </Button>
-        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
+        </button>
+        <button
+          type="button"
+          className="btn-ghost ml-2 px-3 py-2"
+          onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -3377,49 +3385,122 @@ export function LeavePageClient() {
     resetKeys: [teamLeaveSortId, employeeRequestFilters, teamLeaveSearch],
   });
 
-  const leaveTabItems = useMemo(() => {
-    if (isTeamLeaveRoute) {
-      return [
-        canViewTeamLeave ? { value: "team", label: "Team Requests" } : null,
-        hasHrAccess ? { value: "org", label: "All Employee Requests" } : null,
-        showCompOffTab ? { value: "comp-off", label: "Comp Off Credit" } : null,
-        hasHrAccess ? { value: "balances", label: "Balances" } : null,
-      ].filter((item): item is { value: string; label: string } => Boolean(item));
-    }
-
-    return [
-      { value: "my", label: "Leave Requests" },
-      showCompOffTab ? { value: "comp-off", label: "Comp Off Credit" } : null,
-      { value: "wfh", label: "WFH" },
-      hasHrAccess ? { value: "balances", label: "Balances" } : null,
-    ].filter((item): item is { value: string; label: string } => Boolean(item));
-  }, [canViewTeamLeave, hasHrAccess, isTeamLeaveRoute, showCompOffTab]);
-
   return (
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
+          <section className="space-y-4">
                           {showLeaveSubTabBar ? (
-                            <PageTabs
-                              embedded
-                              aria-label="Leave views"
-                              value={leaveSubTab}
-                              onValueChange={(value) =>
-                                setLeaveSubTab(
-                                  value as
-                                    | "my"
-                                    | "team"
-                                    | "org"
-                                    | "wfh"
-                                    | "comp-off"
-                                    | "balances"
-                                )
-                              }
-                              items={leaveTabItems}
-                            />
+                            <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
+                              {isTeamLeaveRoute ? (
+                                <>
+                                  {canViewTeamLeave ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setLeaveSubTab("team")}
+                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                        leaveSubTab === "team"
+                                          ? "bg-wt-surface-3 text-wt-text"
+                                          : "text-wt-text-muted hover:bg-wt-surface-2"
+                                      }`}
+                                    >
+                                      Team Requests
+                                    </button>
+                                  ) : null}
+                                  {hasHrAccess ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setLeaveSubTab("org")}
+                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                        leaveSubTab === "org"
+                                          ? "bg-wt-surface-3 text-wt-text"
+                                          : "text-wt-text-muted hover:bg-wt-surface-2"
+                                      }`}
+                                    >
+                                      All Employee Requests
+                                    </button>
+                                  ) : null}
+                                  {showCompOffTab ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setLeaveSubTab("comp-off")}
+                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                        leaveSubTab === "comp-off"
+                                          ? "bg-wt-surface-3 text-wt-text"
+                                          : "text-wt-text-muted hover:bg-wt-surface-2"
+                                      }`}
+                                    >
+                                      Comp Off Credit
+                                    </button>
+                                  ) : null}
+                                  {hasHrAccess ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setLeaveSubTab("balances")}
+                                      className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                        leaveSubTab === "balances"
+                                          ? "bg-wt-surface-3 text-wt-text"
+                                          : "text-wt-text-muted hover:bg-wt-surface-2"
+                                      }`}
+                                    >
+                                      Balances
+                                    </button>
+                                  ) : null}
+                                </>
+                              ) : (
+                                <>
+                              <button
+                                type="button"
+                                onClick={() => setLeaveSubTab("my")}
+                                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  leaveSubTab === "my"
+                                    ? "bg-wt-surface-3 text-wt-text"
+                                    : "text-wt-text-muted hover:bg-wt-surface-2"
+                                }`}
+                              >
+                                Leave Requests
+                              </button>
+                              {showCompOffTab ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setLeaveSubTab("comp-off")}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    leaveSubTab === "comp-off"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Comp Off Credit
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => setLeaveSubTab("wfh")}
+                                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                  leaveSubTab === "wfh"
+                                    ? "bg-wt-surface-3 text-wt-text"
+                                    : "text-wt-text-muted hover:bg-wt-surface-2"
+                                }`}
+                              >
+                                WFH
+                              </button>
+                              {hasHrAccess ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setLeaveSubTab("balances")}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    leaveSubTab === "balances"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Balances
+                                </button>
+                              ) : null}
+                                </>
+                              )}
+                            </div>
                           ) : null}
-                          <div className={PAGE_TAB_BODY_CLASS}>
                           {leaveSubTab === "balances" && hasHrAccess ? (
                             <HrLeaveBalancesPanel actionLoading={actionLoading} runAction={runAction} />
                           ) : leaveSubTab === "comp-off" ? (
@@ -3429,7 +3510,7 @@ export function LeavePageClient() {
                               forcedTab={compOffForcedTab}
                             />
                           ) : leaveSubTab === "my" || leaveSubTab === "wfh" ? (
-                        <div className="space-y-4">
+                        <section className="grid gap-4 xl:grid-cols-1">
                           <div className="space-y-4">
                             {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                             {leaveSubTab === "my" &&
@@ -3437,7 +3518,7 @@ export function LeavePageClient() {
                               <LeaveBalanceSummary />
                             ) : null}
                             <LeaveWorkflowNotice variant={leaveWorkflowVariant} />
-                            <div className="space-y-3">
+                            <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                               <h3 className="font-semibold mb-3">
                                 {leaveSubTab === "wfh" ? "Work from home" : "Time off/comp off"}
                               </h3>
@@ -3486,10 +3567,12 @@ export function LeavePageClient() {
                                 </div>
                                 {leaveSubTab === "my" &&
                                 normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
-                                  <Label className="text-sm flex items-center gap-2 font-normal">
-                                    <Checkbox
+                                  <label className="text-sm flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
                                       checked={leaveRequestForm.is_half_day}
-                                      onCheckedChange={(checked) => {
+                                      onChange={(e) => {
+                                        const checked = e.target.checked;
                                         setLeaveRequestForm((p) => ({
                                           ...p,
                                           is_half_day: checked,
@@ -3498,19 +3581,20 @@ export function LeavePageClient() {
                                       }}
                                     />
                                     Half-day leave (single day only)
-                                  </Label>
+                                  </label>
                                 ) : null}
                                 {requiresClientApproval &&
                                 (leaveSubTab === "wfh" ||
                                   normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE") ? (
-                                  <Label className="text-sm flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-normal text-amber-900">
-                                    <Checkbox
+                                  <label className="text-sm flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                                    <input
+                                      type="checkbox"
                                       className="mt-0.5"
                                       checked={leaveRequestForm.client_approval}
-                                      onCheckedChange={(checked) =>
+                                      onChange={(e) =>
                                         setLeaveRequestForm((p) => ({
                                           ...p,
-                                          client_approval: checked,
+                                          client_approval: e.target.checked,
                                         }))
                                       }
                                     />
@@ -3518,7 +3602,7 @@ export function LeavePageClient() {
                                       I confirm client approval for this request (required on active client/staffing
                                       projects).
                                     </span>
-                                  </Label>
+                                  </label>
                                 ) : null}
                                 {leaveSubTab === "my" &&
                                 normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
@@ -3539,7 +3623,10 @@ export function LeavePageClient() {
                                 <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                               </div>
                               <div className="mt-4 flex gap-2">
-                                <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+                                <button
+                                  type="button"
+                                  className="btn-primary px-3 py-2"
+                                  onClick={() =>
                                     runAction(
                                       userRequestActionLabel(
                                         leaveSubTab === "wfh" ? "WFH" : leaveRequestForm.request_type,
@@ -3681,21 +3768,24 @@ export function LeavePageClient() {
                                   disabled={actionLoading}
                                 >
                                   {editingLeaveRequestId ? "Save Changes" : "Submit Request"}
-                                </Button>
+                                </button>
                                 {editingLeaveRequestId ? (
-                                  <Button variant="ghost" type="button" className="px-3 py-2" onClick={() => {
+                                  <button
+                                    type="button"
+                                    className="btn-ghost px-3 py-2"
+                                    onClick={() => {
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
                                       setEditingLeaveRequestId("");
                                     }}
                                     disabled={actionLoading}
                                   >
                                     Cancel Edit
-                                  </Button>
+                                  </button>
                                 ) : null}
                               </div>
                             </div>
           
-                            <div className="space-y-3">
+                            <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                               <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                                 <h3 className="font-semibold">My Previous Requests</h3>
                                 <div className="flex flex-wrap items-end gap-2 flex-1 min-w-[200px] justify-end">
@@ -3711,20 +3801,23 @@ export function LeavePageClient() {
                                     onChange={(e) => setMyLeaveSearch(e.target.value)}
                                     aria-label="Search my leave requests"
                                   />
-                                  <Button variant="brand" type="button" className="px-3 py-2" onClick={() => runAction("Refresh my requests", loadMyLeaveRequests)}
+                                  <button
+                                    type="button"
+                                    className="btn-primary px-3 py-2"
+                                    onClick={() => runAction("Refresh my requests", loadMyLeaveRequests)}
                                     disabled={actionLoading}
                                   >
                                     Refresh
-                                  </Button>
+                                  </button>
                                 </div>
                               </div>
                               {activeSelfServeRequests.length ? (
-                                <ScrollableTable maxHeightClass="max-h-[min(50vh,380px)]">
-                                  <WtTable>
-                                    <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                      <TableRow className="hover:bg-transparent">
-                                        <TableHead>Request Type</TableHead>
-                                        <TableHead>
+                                <div className="wt-scroll-both max-h-[min(50vh,380px)] rounded-xl border border-wt-border">
+                                  <table className="wt-scrollable-table text-sm">
+                                    <thead className="wt-table-sticky-head text-wt-text-muted">
+                                      <tr>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Request Type</th>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                           <TableSortHeader
                                             label="From"
                                             activeDirection={activeSortDirectionForColumn(
@@ -3743,16 +3836,16 @@ export function LeavePageClient() {
                                               )
                                             }
                                           />
-                                        </TableHead>
-                                        <TableHead>To</TableHead>
-                                        <TableHead>Manager status</TableHead>
-                                        <TableHead>Manager reason</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Comments</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
+                                        </th>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager status</th>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager reason</th>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Status</th>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Comments</th>
+                                        <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Actions</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
                                       {myLeavePagination.pageItems.map((row, idx) => {
                                         const requestId = String(
                                           row.user_request_id ??
@@ -3771,28 +3864,32 @@ export function LeavePageClient() {
                                         );
                                         const isPending = finalStatus === "PENDING";
                                         return (
-                                          <TableRow key={`${requestId || "myreq"}-${idx}`}>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">
+                                          <tr key={`${requestId || "myreq"}-${idx}`} className="border-t border-wt-border">
+                                            <td className="px-3 py-2 whitespace-nowrap">
                                               {formatUserRequestTypeLabel(row.request_type ?? row.requestType)}
-                                            </TableCell>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.request_from_date ?? row.requestFromDate ?? "—")}</TableCell>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.request_to_date ?? row.requestToDate ?? "—")}</TableCell>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">
+                                            </td>
+                                            <td className="px-3 py-2 whitespace-nowrap">{String(row.request_from_date ?? row.requestFromDate ?? "—")}</td>
+                                            <td className="px-3 py-2 whitespace-nowrap">{String(row.request_to_date ?? row.requestToDate ?? "—")}</td>
+                                            <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(managerStatus)}`}>
                                               {formatApprovalStageLabel(managerStatus)}
-                                            </TableCell>
-                                            <TableCell
+                                            </td>
+                                            <td
                                               className="px-3 py-2 max-w-[200px] truncate"
                                               title={managerReason !== "—" ? managerReason : undefined}
                                             >
                                               {managerReason}
-                                            </TableCell>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">
+                                            </td>
+                                            <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(finalStatus)}`}>
                                               {formatApprovalStageLabel(finalStatus)}
-                                            </TableCell>
-                                            <TableCell className="px-3 py-2 max-w-[240px] truncate">{String(row.comments ?? "—")}</TableCell>
-                                            <TableCell className="px-3 py-2 text-right">
+                                            </td>
+                                            <td className="px-3 py-2 max-w-[240px] truncate">{String(row.comments ?? "—")}</td>
+                                            <td className="px-3 py-2 text-right">
                                               <div className="inline-flex items-center justify-end gap-1">
-                                                <Button variant="brand" size="xs" type="button" className="px-2.5 py-1.5 text-xs" disabled={actionLoading || !requestId || !isPending} onClick={() => {
+                                                <button
+                                                  type="button"
+                                                  className="btn-action px-2.5 py-1.5 text-xs"
+                                                  disabled={actionLoading || !requestId || !isPending}
+                                                  onClick={() => {
                                                     const rowType = String(
                                                       row.request_type ?? row.requestType ?? "LEAVE"
                                                     );
@@ -3813,11 +3910,10 @@ export function LeavePageClient() {
                                                   }}
                                                 >
                                                   Edit
-                                                </Button>
-                                                <Button
+                                                </button>
+                                                <button
                                                   type="button"
-                                                  variant="destructive"
-                                                  size="xs"
+                                                  className="rounded-lg px-2.5 py-1.5 text-xs border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50"
                                                   disabled={actionLoading || !requestId || !isPending}
                                                   onClick={() =>
                                                     runAction(
@@ -3841,15 +3937,15 @@ export function LeavePageClient() {
                                                   }
                                                 >
                                                   Revoke
-                                                </Button>
+                                                </button>
                                               </div>
-                                            </TableCell>
-                                          </TableRow>
+                                            </td>
+                                          </tr>
                                         );
                                       })}
-                                    </TableBody>
-                                  </WtTable>
-                                </ScrollableTable>
+                                    </tbody>
+                                  </table>
+                                </div>
                               ) : (leaveSubTab === "wfh" ? filteredWfhTabRequests : filteredLeaveTabRequests).length ? (
                                 <p className="text-sm text-wt-text-muted">
                                   No requests match your search.
@@ -3873,9 +3969,9 @@ export function LeavePageClient() {
                               ) : null}
                             </div>
                           </div>
-                        </div>
+                        </section>
                           ) : (leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave ? (
-                        <div className="space-y-4">
+                        <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
                           {leaveSubTab === "team" && hasManagerAccess && !hasHrAccess ? (
                             <ManagerTeamOnLeavePanel />
                           ) : null}
@@ -3906,7 +4002,10 @@ export function LeavePageClient() {
                               options={[...USER_REQUEST_FILTER_TYPE_OPTIONS]}
                               onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, requestType: v }))}
                             />
-                            <Button variant="brand" type="button" className="px-3 py-2 h-10" onClick={() =>
+                            <button
+                              type="button"
+                              className="btn-primary px-3 py-2 h-10"
+                              onClick={() =>
                                 runAction(
                                   leaveSubTab === "org" ? "Refresh employee requests" : "Refresh team requests",
                                   () =>
@@ -3918,7 +4017,7 @@ export function LeavePageClient() {
                               disabled={actionLoading}
                             >
                               Fetch Requests
-                            </Button>
+                            </button>
                             <label className="sr-only" htmlFor="team-leave-search">
                               Search team requests
                             </label>
@@ -3934,11 +4033,11 @@ export function LeavePageClient() {
                           </div>
 
                           {sortedEmployeeRequests.length ? (
-                            <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-                              <WtTable>
-                                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                  <TableRow className="hover:bg-transparent">
-                                    <TableHead>
+                            <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
+                              <table className="wt-scrollable-table text-sm">
+                                <thead className="wt-table-sticky-head text-wt-text-muted">
+                                  <tr>
+                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                       <TableSortHeader
                                         label="Employee"
                                         activeDirection={activeSortDirectionForColumn(
@@ -3957,9 +4056,9 @@ export function LeavePageClient() {
                                           )
                                         }
                                       />
-                                    </TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>
+                                    </th>
+                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Type</th>
+                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                       <TableSortHeader
                                         label="From"
                                         activeDirection={activeSortDirectionForColumn(
@@ -3978,28 +4077,28 @@ export function LeavePageClient() {
                                           )
                                         }
                                       />
-                                    </TableHead>
-                                    <TableHead>To</TableHead>
-                                    <TableHead>
+                                    </th>
+                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
+                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                       {hasHrAccess || hasDmAccess ? "Final status" : "Status"}
-                                    </TableHead>
+                                    </th>
                                     {hasHrAccess || hasDmAccess ? (
                                       <>
-                                        <TableHead>
+                                        <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                           {firstLineStatusColumnLabel}
-                                        </TableHead>
+                                        </th>
                                         {hasHrAccess ? (
-                                          <TableHead>
+                                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                             Manager reason
-                                          </TableHead>
+                                          </th>
                                         ) : null}
                                       </>
                                     ) : null}
-                                    <TableHead>Comments</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
+                                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Comments</th>
+                                    <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
                                   {teamLeavePagination.pageItems.map((row, idx) => {
                                     const requestId = String(
                                       row.user_request_id ??
@@ -4043,47 +4142,47 @@ export function LeavePageClient() {
                                         "—"
                                     ).trim();
                                     return (
-                                      <TableRow key={`${requestId || "req"}-${idx}`}>
-                                        <TableCell className="px-3 py-2 whitespace-nowrap">
+                                      <tr key={`${requestId || "req"}-${idx}`} className="border-t border-wt-border">
+                                        <td className="px-3 py-2 whitespace-nowrap">
                                           {employee || "—"}
                                           {isAm ? (
-                                            <Badge variant="secondary" className={`ml-2 text-[10px] ${filledBadgeClass("info")}`}>
+                                            <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 border border-blue-200">
                                               AM
-                                            </Badge>
+                                            </span>
                                           ) : null}
-                                        </TableCell>
-                                        <TableCell className="px-3 py-2 whitespace-nowrap">
+                                        </td>
+                                        <td className="px-3 py-2 whitespace-nowrap">
                                           {formatUserRequestTypeLabel(row.request_type ?? row.requestType)}
-                                        </TableCell>
-                                        <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.request_from_date ?? row.requestFromDate ?? "—")}</TableCell>
-                                        <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.request_to_date ?? row.requestToDate ?? "—")}</TableCell>
-                                        <TableCell className="px-3 py-2 whitespace-nowrap">
+                                        </td>
+                                        <td className="px-3 py-2 whitespace-nowrap">{String(row.request_from_date ?? row.requestFromDate ?? "—")}</td>
+                                        <td className="px-3 py-2 whitespace-nowrap">{String(row.request_to_date ?? row.requestToDate ?? "—")}</td>
+                                        <td className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(status)}`}>
                                           {formatApprovalStageLabel(status)}
-                                        </TableCell>
+                                        </td>
                                         {hasHrAccess || hasDmAccess ? (
                                           <>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">
+                                            <td
+                                              className={`px-3 py-2 whitespace-nowrap font-medium ${approvalStageTone(managerStatus)}`}
+                                            >
                                               {formatApprovalStageLabel(managerStatus)}
-                                            </TableCell>
+                                            </td>
                                             {hasHrAccess ? (
-                                              <TableCell
+                                              <td
                                                 className="px-3 py-2 max-w-[220px] truncate"
                                                 title={managerReason || undefined}
                                               >
                                                 {managerReason || "—"}
-                                              </TableCell>
+                                              </td>
                                             ) : null}
                                           </>
                                         ) : null}
-                                        <TableCell className="px-3 py-2 max-w-[220px] truncate">{String(row.comments ?? "—")}</TableCell>
-                                        <TableCell className="px-3 py-2 text-right">
+                                        <td className="px-3 py-2 max-w-[220px] truncate">{String(row.comments ?? "—")}</td>
+                                        <td className="px-3 py-2 text-right">
                                           {hrCanActOnRow ? (
                                             <div className="inline-flex items-center justify-end gap-1">
-                                              <Button
+                                              <button
                                                 type="button"
-                                                variant="outline"
-                                                size="xs"
-                                                className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
+                                                className="rounded-lg px-2.5 py-1.5 text-xs border border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10 disabled:opacity-50"
                                                 disabled={actionLoading || !requestId || isRowUpdating}
                                                 onClick={() =>
                                                   runAction(
@@ -4108,11 +4207,10 @@ export function LeavePageClient() {
                                                 }
                                               >
                                                 {isRowUpdating ? "…" : "Approve"}
-                                              </Button>
-                                              <Button
+                                              </button>
+                                              <button
                                                 type="button"
-                                                variant="destructive"
-                                                size="xs"
+                                                className="rounded-lg px-2.5 py-1.5 text-xs border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50"
                                                 disabled={actionLoading || !requestId || isRowUpdating}
                                                 onClick={() =>
                                                   runAction(
@@ -4137,15 +4235,13 @@ export function LeavePageClient() {
                                                 }
                                               >
                                                 Reject
-                                              </Button>
+                                              </button>
                                             </div>
                                           ) : showManagerActions ? (
                                             <div className="inline-flex items-center justify-end gap-1">
-                                              <Button
+                                              <button
                                                 type="button"
-                                                variant="outline"
-                                                size="xs"
-                                                className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
+                                                className="rounded-lg px-2.5 py-1.5 text-xs border border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10 disabled:opacity-50"
                                                 disabled={actionLoading || !requestId}
                                                 onClick={() =>
                                                   runAction(
@@ -4163,12 +4259,11 @@ export function LeavePageClient() {
                                                 }
                                               >
                                                 Approve
-                                              </Button>
+                                              </button>
                                               {showManagerReject ? (
-                                                <Button
+                                                <button
                                                   type="button"
-                                                  variant="destructive"
-                                                  size="xs"
+                                                  className="rounded-lg px-2.5 py-1.5 text-xs border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50"
                                                   disabled={actionLoading || !requestId}
                                                   onClick={() =>
                                                     openRejectDialog(
@@ -4178,7 +4273,7 @@ export function LeavePageClient() {
                                                   }
                                                 >
                                                   Reject
-                                                </Button>
+                                                </button>
                                               ) : null}
                                             </div>
                                           ) : blockedHint ? (
@@ -4186,13 +4281,13 @@ export function LeavePageClient() {
                                           ) : (
                                             <span className="text-wt-text-muted">—</span>
                                           )}
-                                        </TableCell>
-                                      </TableRow>
+                                        </td>
+                                      </tr>
                                     );
                                   })}
-                                </TableBody>
-                              </WtTable>
-                            </ScrollableTable>
+                                </tbody>
+                              </table>
+                            </div>
                           ) : employeeRequests.length ? (
                             <p className="text-sm text-wt-text-muted">
                               No requests match your search.
@@ -4216,9 +4311,8 @@ export function LeavePageClient() {
                               onPageSizeChange={teamLeavePagination.setPageSize}
                             />
                           ) : null}
-                        </div>
+                        </section>
                           ) : null}
-                          </div>
                         </section>
         </OnboardingGate>
       </DashboardPageShell>
@@ -4246,6 +4340,7 @@ export function LeavePageClient() {
               }
               loading={actionLoading}
             />
+            <DashboardToast toast={toast} />
     </>
   );
 }

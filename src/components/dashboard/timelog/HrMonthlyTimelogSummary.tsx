@@ -1,16 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import {
   formatMonthYearLabel,
@@ -53,21 +42,34 @@ export function HrMonthlyTimelogSummary({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-1.5 text-sm" disabled={loading} onClick={() => onMonthChange(shiftMonth(month, -1))}
+          <button
+            type="button"
+            className="btn-ghost rounded-lg border border-wt-border px-3 py-1.5 text-sm"
+            disabled={loading}
+            onClick={() => onMonthChange(shiftMonth(month, -1))}
           >
             Previous month
-          </Button>
+          </button>
           <span className="min-w-[10rem] text-center text-sm font-semibold tabular-nums">
             {formatMonthYearLabel(month)}
           </span>
-          <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-1.5 text-sm" disabled={loading || isCurrentMonth} onClick={() => onMonthChange(shiftMonth(month, 1))}
+          <button
+            type="button"
+            className="btn-ghost rounded-lg border border-wt-border px-3 py-1.5 text-sm"
+            disabled={loading || isCurrentMonth}
+            onClick={() => onMonthChange(shiftMonth(month, 1))}
           >
             Next month
-          </Button>
+          </button>
         </div>
-        <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-2 text-sm" disabled={loading} onClick={onRefresh} >
+        <button
+          type="button"
+          className="btn-ghost rounded-lg border border-wt-border px-3 py-2 text-sm"
+          disabled={loading}
+          onClick={onRefresh}
+        >
           Refresh
-        </Button>
+        </button>
       </div>
 
       {error ? (
@@ -83,44 +85,47 @@ export function HrMonthlyTimelogSummary({
           No approved timelog hours for this month.
         </p>
       ) : (
-        <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-          <WtTable>
-            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="sticky left-0 z-[1] bg-wt-surface-1">
+        <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
+          <table className="wt-scrollable-table text-sm">
+            <thead className="wt-table-sticky-head text-wt-text-muted">
+              <tr>
+                <th className="sticky left-0 z-[1] bg-wt-surface-2 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
                   Employee
-                </TableHead>
+                </th>
                 {weekStarts.map((weekStart, index) => (
-                  <TableHead key={weekStart} className="text-center">
+                  <th
+                    key={weekStart}
+                    className="whitespace-nowrap px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide"
+                  >
                     {weekColumnLabel(index)}
-                  </TableHead>
+                  </th>
                 ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+              </tr>
+            </thead>
+            <tbody>
               {rows.map((row) => {
                 const openWeek = defaultWeekForRow(row);
                 const rowClickable = Boolean(onRowClick && openWeek);
                 return (
-                  <TableRow
+                  <tr
                     key={row.email}
-                    className={`group ${
-                      rowClickable ? "cursor-pointer hover:bg-wt-page-bg/50" : ""
+                    className={`group border-t border-wt-border ${
+                      rowClickable ? "cursor-pointer hover:bg-wt-surface-2/80" : ""
                     }`}
                     onClick={() => {
                       if (rowClickable && openWeek) onRowClick?.(row, openWeek);
                     }}
                   >
-                    <TableCell className="sticky left-0 z-[1] bg-wt-surface-1 whitespace-nowrap group-hover:bg-wt-page-bg/50">
+                    <td className="sticky left-0 z-[1] bg-wt-surface-1 px-4 py-3 font-medium whitespace-nowrap group-hover:bg-wt-surface-2">
                       {row.label}
-                    </TableCell>
+                    </td>
                     {weekStarts.map((weekStart) => {
                       const hasHours = Number(row.hoursByWeek[weekStart] ?? 0) > 0;
                       return (
-                        <TableCell
+                        <td
                           key={`${row.email}-${weekStart}`}
-                          className={`text-center tabular-nums${
-                            hasHours && onRowClick ? "" : ""
+                          className={`px-4 py-3 text-center tabular-nums text-wt-text ${
+                            hasHours && onRowClick ? "hover:text-indigo-700" : ""
                           }`}
                           onClick={(event) => {
                             if (!onRowClick || !hasHours) return;
@@ -129,15 +134,15 @@ export function HrMonthlyTimelogSummary({
                           }}
                         >
                           {formatSummaryHours(row.hoursByWeek[weekStart])}
-                        </TableCell>
+                        </td>
                       );
                     })}
-                  </TableRow>
+                  </tr>
                 );
               })}
-            </TableBody>
-          </WtTable>
-        </ScrollableTable>
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

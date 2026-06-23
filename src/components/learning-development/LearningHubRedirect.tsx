@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export function LearningHubRedirect({ feature }: { feature: string }) {
@@ -10,9 +9,9 @@ export function LearningHubRedirect({ feature }: { feature: string }) {
       <p className="text-sm text-wt-text-muted">
         Open a training from the library, then use the tabs inside that training to manage {feature.toLowerCase()}.
       </p>
-      <Button variant="brand" size="sm" render={<Link href="/dashboard/learning-development/trainings" />}>
+      <Link href="/dashboard/learning-development/trainings" className="btn-primary inline-flex px-4 py-2 text-sm">
         Browse trainings
-      </Button>
+      </Link>
     </div>
   );
 }

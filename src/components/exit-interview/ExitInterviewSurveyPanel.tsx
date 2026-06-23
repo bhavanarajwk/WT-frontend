@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { ExitInterviewFormFields } from "@/components/exit-interview/ExitInterviewFormFields";
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
@@ -27,10 +27,10 @@ function formatDateLabel(value: string | null): string {
   }
 }
 
-/** Exit survey (employee self-serve, including employees serving notice). */
+/** Exit survey (employee self-serve, including offboarded users in notice). */
 export function ExitInterviewSurveyPanel({ className = "" }: { className?: string }) {
   const queryClient = useQueryClient();
-  const { actionLoading, runAction } = useDashboardAction();
+  const { toast, actionLoading, runAction } = useDashboardAction();
 
   const profileQ = useExitInterviewProfile();
   const flags = profileQ.data?.flags;
@@ -100,6 +100,7 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
 
   return (
     <div className={className}>
+      <DashboardToast toast={toast} />
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 px-5 py-6 md:px-7">
         <h3 className="text-lg font-semibold">Exit Survey</h3>
@@ -153,9 +154,14 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
                   disabled={actionLoading}
                 />
                 <div className="mt-6 flex justify-end">
-                  <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={actionLoading} onClick={handleSubmit} >
+                  <button
+                    type="button"
+                    className="btn-primary px-4 py-2 text-sm"
+                    disabled={actionLoading}
+                    onClick={handleSubmit}
+                  >
                     {actionLoading ? "Submitting…" : "Submit Exit Survey"}
-                  </Button>
+                  </button>
                 </div>
               </div>
             ) : null}

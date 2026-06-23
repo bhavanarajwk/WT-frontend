@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -97,10 +96,14 @@ export function ParticipantsPageClient() {
               placeholder="Select trainee"
               options={addTraineeOptions.map((o) => ({ value: o.id, label: o.label }))}
             />
-            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={addMut.isPending || !traineePick || !trainingId} onClick={() => addMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+            <button
+              type="button"
+              className="btn-primary px-4 py-2 text-sm shrink-0"
+              disabled={addMut.isPending || !traineePick || !trainingId}
+              onClick={() => addMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
             >
               {addMut.isPending ? "Adding…" : "Add trainee"}
-            </Button>
+            </button>
           </div>
           {onboardQ.isLoading ? (
             <SectionLoading compact label="Loading employees from onboard list…" className="py-2" />

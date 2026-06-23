@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SelectField } from "@/components/dashboard/ui/forms";
@@ -128,9 +127,13 @@ export function HrEmployeeTimelogWeekModal({
             </h2>
             <p className="mt-1 text-xs text-wt-text-muted">Approved timelog details (read-only)</p>
           </div>
-          <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-1.5 text-sm" onClick={onClose} >
+          <button
+            type="button"
+            className="btn-ghost rounded-lg border border-wt-border px-3 py-1.5 text-sm"
+            onClick={onClose}
+          >
             Close
-          </Button>
+          </button>
         </div>
 
         <div className="space-y-4 overflow-y-auto px-5 py-4 md:px-6">
@@ -142,10 +145,14 @@ export function HrEmployeeTimelogWeekModal({
               onChange={onWeekStartChange}
               options={weekOptions}
             />
-            <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-2 text-sm" disabled={loading} onClick={() => void loadWeek()}
+            <button
+              type="button"
+              className="btn-ghost rounded-lg border border-wt-border px-3 py-2 text-sm"
+              disabled={loading}
+              onClick={() => void loadWeek()}
             >
               Refresh
-            </Button>
+            </button>
           </div>
 
           {error ? (

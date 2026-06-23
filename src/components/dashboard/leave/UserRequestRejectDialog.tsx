@@ -1,7 +1,6 @@
 "use client";
 
 import { InputField } from "@/components/dashboard/ui/forms";
-import { Button } from "@/components/ui/button";
 
 type UserRequestRejectDialogProps = {
   open: boolean;
@@ -60,18 +59,22 @@ export function UserRequestRejectDialog({
           placeholder={reasonPlaceholder}
         />
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
+          <button
             type="button"
-            variant="destructive"
-            size="xs"
+            className="rounded-lg px-3 py-2 text-sm border border-wt-border hover:bg-wt-surface-2 disabled:opacity-50"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="rounded-lg px-3 py-2 text-sm border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50"
             onClick={onConfirm}
             disabled={confirmDisabled || loading || !reason.trim()}
           >
             {loading ? confirmingLabel : confirmLabel}
-          </Button>
+          </button>
         </div>
       </div>
     </div>

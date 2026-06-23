@@ -1,8 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
-import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -77,6 +75,7 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 
 
 
@@ -96,7 +95,8 @@ export function UploadsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metrics, loading, refresh } = useOverviewData();
-    const [actionLoading, setActionLoading] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
@@ -414,6 +414,11 @@ export function UploadsPageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfOnboardForm.yoe]);
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 2800);
+    return () => window.clearTimeout(id);
+  }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
     const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
@@ -835,7 +840,7 @@ export function UploadsPageClient() {
     setActionLoading(true);
     try {
       await fn();
-      showSuccessToast(formatActionSuccessMessage(label));
+      setToast({ type: "success", message: formatActionSuccessMessage(label) });
     } catch (error) {
       const backendMessage =
         error instanceof ApiError
@@ -843,7 +848,10 @@ export function UploadsPageClient() {
           : error instanceof Error
             ? error.message
             : "";
-      showErrorToast(formatActionErrorMessage(label, backendMessage));
+      setToast({
+        type: "error",
+        message: formatActionErrorMessage(label, backendMessage),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -2762,7 +2770,10 @@ export function UploadsPageClient() {
         </p>
       )}
       <div className="mt-4">
-        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+        <button
+          type="button"
+          className="btn-primary px-3 py-2"
+          onClick={() =>
             runAction("Submit onboarding", async () => {
               if (!user?.email) {
                 throw new Error("Unable to resolve logged-in email.");
@@ -2880,7 +2891,7 @@ export function UploadsPageClient() {
           disabled={actionLoading}
         >
           Submit Onboarding Form
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -2973,9 +2984,14 @@ export function UploadsPageClient() {
             <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
           </div>
         </div>
-        <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
+        <button
+          type="button"
+          className="btn-primary px-4 py-2.5"
+          onClick={openOwnProfileEditor}
+          disabled={actionLoading}
+        >
           Edit Profile
-        </Button>
+        </button>
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
@@ -3023,7 +3039,10 @@ export function UploadsPageClient() {
         <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+        <button
+          type="button"
+          className="btn-primary px-3 py-2"
+          onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
@@ -3123,12 +3142,15 @@ export function UploadsPageClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </Button>
-        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
+        </button>
+        <button
+          type="button"
+          className="btn-ghost ml-2 px-3 py-2"
+          onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -3176,6 +3198,7 @@ export function UploadsPageClient() {
                         </section>
         </OnboardingGate>
       </DashboardPageShell>
+            <DashboardToast toast={toast} />
     </>
   );
 }

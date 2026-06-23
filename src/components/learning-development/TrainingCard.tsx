@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/learning-development/ui/forms";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 
@@ -57,11 +56,9 @@ export function TrainingCard({
         </p>
       </div>
       {showEdit && onEdit ? (
-        <Button
+        <button
           type="button"
-          variant="link"
-          size="xs"
-          className="relative z-20 mt-3 h-auto self-start p-0 pointer-events-auto text-indigo-600"
+          className="relative z-20 mt-3 self-start pointer-events-auto text-xs font-medium text-indigo-600 hover:underline"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -69,7 +66,7 @@ export function TrainingCard({
           }}
         >
           Edit training
-        </Button>
+        </button>
       ) : null}
     </article>
   );

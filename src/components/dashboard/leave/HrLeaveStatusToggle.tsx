@@ -1,7 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-
 export type HrToggleStatus = "REJECTED" | "PENDING" | "APPROVED";
 
 const THREE_WAY: { value: HrToggleStatus; label: string }[] = [
@@ -49,15 +47,13 @@ export function HrLeaveStatusToggle({
       {options.map((opt) => {
         const isActive = value === opt.value && options.some((o) => o.value === value);
         return (
-          <Button
+          <button
             key={opt.value}
             type="button"
-            variant="ghost"
-            size="xs"
             disabled={isDisabled}
             aria-pressed={isActive}
             title={opt.label}
-            className={`min-w-[4.5rem] rounded-md px-2 py-1 ${
+            className={`min-w-[4.5rem] rounded-md px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
               isActive ? activeClasses(opt.value) : "text-wt-text-muted hover:bg-wt-surface-1 hover:text-wt-text"
             }`}
             onClick={() => {
@@ -65,7 +61,7 @@ export function HrLeaveStatusToggle({
             }}
           >
             {loading && isActive ? "…" : opt.label}
-          </Button>
+          </button>
         );
       })}
     </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useUpdateTraining } from "@/hooks/learning/useLearningTrainings";
 import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
@@ -63,10 +62,14 @@ export function TrainingStatusControl({
           }))}
           aria-label="Training status"
         />
-        <Button variant="brand" size="sm" type="button" className="mt-2 w-full px-3 py-2 text-sm" disabled={updateMut.isPending || draft === normalized} onClick={() => applyStatus().catch((e) => alert(e instanceof Error ? e.message : "Unable to update status"))}
+        <button
+          type="button"
+          className="btn-primary mt-2 w-full px-3 py-2 text-sm"
+          disabled={updateMut.isPending || draft === normalized}
+          onClick={() => applyStatus().catch((e) => alert(e instanceof Error ? e.message : "Unable to update status"))}
         >
           {updateMut.isPending ? "Saving…" : "Apply"}
-        </Button>
+        </button>
       </div>
     </details>
   );

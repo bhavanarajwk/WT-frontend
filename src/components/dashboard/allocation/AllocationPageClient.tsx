@@ -1,19 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
-import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -131,6 +118,7 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import {
   createEmptyAllocationForm,
   createEmptyProjectForm,
@@ -190,7 +178,8 @@ export function AllocationPageClient() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const talentPoolPrefillHandled = useRef<string | null>(null);
-    const [actionLoading, setActionLoading] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
     () => defaultInvitedEmployeesDateRange().from
@@ -540,6 +529,11 @@ export function AllocationPageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfOnboardForm.yoe]);
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 2800);
+    return () => window.clearTimeout(id);
+  }, [toast]);
 
   useEffect(() => {
         if (requiresSelfOnboarding) return;
@@ -834,7 +828,7 @@ export function AllocationPageClient() {
     setActionLoading(true);
     try {
       await fn();
-      showSuccessToast(formatActionSuccessMessage(label));
+      setToast({ type: "success", message: formatActionSuccessMessage(label) });
     } catch (error) {
       const backendMessage =
         error instanceof ApiError
@@ -842,7 +836,10 @@ export function AllocationPageClient() {
           : error instanceof Error
             ? error.message
             : "";
-      showErrorToast(formatActionErrorMessage(label, backendMessage));
+      setToast({
+        type: "error",
+        message: formatActionErrorMessage(label, backendMessage),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -3003,7 +3000,10 @@ export function AllocationPageClient() {
         </p>
       )}
       <div className="mt-4">
-        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+        <button
+          type="button"
+          className="btn-primary px-3 py-2"
+          onClick={() =>
             runAction("Submit onboarding", async () => {
               if (!user?.email) {
                 throw new Error("Unable to resolve logged-in email.");
@@ -3121,7 +3121,7 @@ export function AllocationPageClient() {
           disabled={actionLoading}
         >
           Submit Onboarding Form
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -3214,9 +3214,14 @@ export function AllocationPageClient() {
             <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
           </div>
         </div>
-        <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
+        <button
+          type="button"
+          className="btn-primary px-4 py-2.5"
+          onClick={openOwnProfileEditor}
+          disabled={actionLoading}
+        >
           Edit Profile
-        </Button>
+        </button>
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
@@ -3264,7 +3269,10 @@ export function AllocationPageClient() {
         <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+        <button
+          type="button"
+          className="btn-primary px-3 py-2"
+          onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
@@ -3364,12 +3372,15 @@ export function AllocationPageClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </Button>
-        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
+        </button>
+        <button
+          type="button"
+          className="btn-ghost ml-2 px-3 py-2"
+          onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -3381,30 +3392,60 @@ export function AllocationPageClient() {
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <>
                           {hasHrAccess ? (
-                            <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
-                              <PageTabs
-                                embedded
-                                aria-label="Allocation views"
-                                value={allocationHrSubTab}
-                                onValueChange={(value) => {
-                                  setAllocationHrSubTab(
-                                    value as "project" | "allocate" | "assign-pm" | "list"
-                                  );
-                                  if (value === "list") {
+                            <section className="space-y-4">
+                              <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setAllocationHrSubTab("project")}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    allocationHrSubTab === "project"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Create Project
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setAllocationHrSubTab("allocate")}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    allocationHrSubTab === "allocate"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Project allocation
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setAllocationHrSubTab("assign-pm")}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    allocationHrSubTab === "assign-pm"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Assign Project Manager
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAllocationHrSubTab("list");
                                     void loadAllocationsForHr();
                                     void loadAllocationForecasting();
-                                  }
-                                }}
-                                items={[
-                                  { value: "project", label: "Create Project" },
-                                  { value: "allocate", label: "Project Allocation" },
-                                  { value: "assign-pm", label: "Assign Project Manager" },
-                                  { value: "list", label: "Allocation List" },
-                                ]}
-                              />
-                              <div className={PAGE_TAB_BODY_CLASS}>
+                                  }}
+                                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                                    allocationHrSubTab === "list"
+                                      ? "bg-wt-surface-3 text-wt-text"
+                                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                                  }`}
+                                >
+                                  Allocation list
+                                </button>
+                              </div>
+          
                               {allocationHrSubTab === "project" ? (
-                              <div ref={projectCrudFormRef} className="space-y-4">
+                              <div ref={projectCrudFormRef} className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
                                 <h3 className="font-semibold">Create Project</h3>
                                 <div className="grid sm:grid-cols-2 gap-3">
                                   <InputField
@@ -3448,7 +3489,10 @@ export function AllocationPageClient() {
                                   />
                                 </div>
                                 <div className="flex flex-wrap gap-2">
-                                  <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+                                  <button
+                                    type="button"
+                                    className="btn-primary px-3 py-2"
+                                    onClick={() =>
                                       runAction(
                                         editingProjectCode ? "Update Project" : "Create Project",
                                         async () => {
@@ -3498,12 +3542,10 @@ export function AllocationPageClient() {
                                     disabled={actionLoading}
                                   >
                                     {editingProjectCode ? "Save Project" : "Create Project"}
-                                  </Button>
-                                  <Button
+                                  </button>
+                                  <button
                                     type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
+                                    className="rounded-lg p-2 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
                                     onClick={() =>
                                       runAction("Load projects", async () => {
                                         refreshHrProjects();
@@ -3515,9 +3557,9 @@ export function AllocationPageClient() {
                                     title="Refresh projects"
                                   >
                                     <IconRefresh />
-                                  </Button>
+                                  </button>
                                 </div>
-                                <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-3">
+                                <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-3">
                                   <p className="text-sm font-medium">All Projects</p>
                                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     <InputField
@@ -3543,11 +3585,11 @@ export function AllocationPageClient() {
                                   </div>
                                   {filteredProjects.length ? (
                                     <>
-                                    <ScrollableTable maxHeightClass="max-h-[min(50vh,420px)]">
-                                      <WtTable>
-                                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                          <TableRow className="hover:bg-transparent">
-                                            <TableHead>
+                                    <div className="wt-scroll-both max-h-[min(50vh,420px)] overflow-auto rounded-lg border border-wt-border">
+                                      <table className="wt-scrollable-table text-sm">
+                                        <thead className="wt-table-sticky-head text-wt-text-muted">
+                                          <tr>
+                                            <th className="px-3 py-2 text-left font-medium">
                                               <TableSortHeader
                                                 label="Project name"
                                                 activeDirection={activeSortDirectionForColumn(
@@ -3566,14 +3608,14 @@ export function AllocationPageClient() {
                                                   )
                                                 }
                                               />
-                                            </TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Start date</TableHead>
-                                            <TableHead>End date</TableHead>
-                                            <TableHead className="text-right w-20">Actions</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
+                                            </th>
+                                            <th className="px-3 py-2 text-left font-medium">Type</th>
+                                            <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Start date</th>
+                                            <th className="px-3 py-2 text-left font-medium whitespace-nowrap">End date</th>
+                                            <th className="px-3 py-2 text-right font-medium w-20">Actions</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
                                           {projectPagination.pageItems.map((row, idx) => {
                                             const code = String(row.project_code ?? row.projectCode ?? "").trim();
                                             const name = String(row.project_name ?? row.projectName ?? "");
@@ -3588,17 +3630,15 @@ export function AllocationPageClient() {
                                               String(row.end_date ?? row.endDate ?? "")
                                             );
                                             return (
-                                              <TableRow key={code || String(idx)}>
-                                                <TableCell className="px-3 py-2 max-w-[240px] truncate">{name || "—"}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{typ}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</TableCell>
-                                                <TableCell className="px-3 py-2 text-right">
-                                                  <Button
+                                              <tr key={code || String(idx)} className="border-t border-wt-border">
+                                                <td className="px-3 py-2 max-w-[240px] truncate font-medium">{name || "—"}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{typ}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</td>
+                                                <td className="px-3 py-2 text-right">
+                                                  <button
                                                     type="button"
-                                                    variant="ghost"
-                                                    size="icon-sm"
-                                                    className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600"
+                                                    className="rounded-lg p-2 text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600"
                                                     aria-label={`Delete project ${name || code}`}
                                                     title="Delete project"
                                                     disabled={actionLoading || !code}
@@ -3611,14 +3651,14 @@ export function AllocationPageClient() {
                                                     }
                                                   >
                                                     <IconTrash />
-                                                  </Button>
-                                                </TableCell>
-                                              </TableRow>
+                                                  </button>
+                                                </td>
+                                              </tr>
                                             );
                                           })}
-                                        </TableBody>
-                                      </WtTable>
-                                    </ScrollableTable>
+                                        </tbody>
+                                      </table>
+                                    </div>
                                     <ListPagination
                                       className="mt-3 px-1"
                                       page={projectPagination.page}
@@ -3641,7 +3681,7 @@ export function AllocationPageClient() {
           
                               {allocationHrSubTab === "allocate" ? (
                               <>
-                              <div ref={allocationFormRef} className="space-y-4">
+                              <div ref={allocationFormRef} className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
                                 <h3 className="font-semibold">Employee Allocation Form</h3>
                                 <div className="grid sm:grid-cols-2 gap-3">
                                   <div
@@ -3651,10 +3691,9 @@ export function AllocationPageClient() {
                                     <span className="block">
                                       <FieldLabel label="Employee" required />
                                     </span>
-                                    <Button
+                                    <button
                                       type="button"
-                                      variant="outline"
-                                      className="input-field flex h-auto w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-normal text-wt-text"
+                                      className="input-field flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-wt-text"
                                       aria-expanded={allocationEmployeePickerOpen}
                                       aria-haspopup="listbox"
                                       onClick={() => {
@@ -3669,7 +3708,7 @@ export function AllocationPageClient() {
                                       <span className="shrink-0 text-wt-text-muted" aria-hidden>
                                         ▾
                                       </span>
-                                    </Button>
+                                    </button>
                                     {allocationEmployeePickerOpen ? (
                                       <div
                                         className="absolute left-0 right-0 top-full z-50 mt-1 space-y-2 rounded-xl border border-wt-border bg-wt-surface-1 p-2 shadow-lg"
@@ -3686,10 +3725,9 @@ export function AllocationPageClient() {
                                           autoFocus
                                         />
                                         <div className="max-h-52 overflow-auto rounded-lg border border-wt-border">
-                                          <Button
+                                          <button
                                             type="button"
-                                            variant="ghost"
-                                            className="block h-auto w-full justify-start rounded-none px-3 py-2 font-normal text-wt-text-muted hover:bg-wt-surface-2"
+                                            className="block w-full px-3 py-2 text-left text-sm text-wt-text-muted hover:bg-wt-surface-2"
                                             onClick={() => {
                                               setAllocationForm((p) => ({ ...p, employee_email: "" }));
                                               setPickerEmployeeAllocations(null);
@@ -3699,15 +3737,14 @@ export function AllocationPageClient() {
                                             }}
                                           >
                                             Clear selection
-                                          </Button>
+                                          </button>
                                           {allocationEmployeesPickerFiltered.length ? (
                                             allocationEmployeesPickerFiltered.map((u) => (
-                                              <Button
+                                              <button
                                                 key={u.email}
                                                 type="button"
                                                 role="option"
-                                                variant="ghost"
-                                                className={`block h-auto w-full justify-start rounded-none border-t border-wt-border px-3 py-2 font-normal hover:bg-wt-surface-2 ${
+                                                className={`block w-full border-t border-wt-border px-3 py-2 text-left text-sm hover:bg-wt-surface-2 ${
                                                   allocationForm.employee_email === u.email
                                                     ? "bg-indigo-500/10 font-medium"
                                                     : ""
@@ -3719,7 +3756,7 @@ export function AllocationPageClient() {
                                                 }}
                                               >
                                                 {u.name}
-                                              </Button>
+                                              </button>
                                             ))
                                           ) : (
                                             <p className="px-3 py-4 text-center text-sm text-wt-text-muted">
@@ -3811,7 +3848,7 @@ export function AllocationPageClient() {
                                   <InputField label="End Date" value={allocationForm.end_date} onChange={(v) => setAllocationForm((p) => ({ ...p, end_date: v }))} type="date" />
                                 </div>
                                 {allocationForm.employee_email.trim() ? (
-                                  <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-2">
+                                  <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                       <p className="text-sm font-medium">
                                         {allocationEmployeeSelectLabel} — current &amp; future allocations
@@ -3839,48 +3876,51 @@ export function AllocationPageClient() {
                                     {!pickerEmployeeAllocationsLoading &&
                                     pickerEmployeeAllocations &&
                                     pickerEmployeeAllocations.allocations.length > 0 ? (
-                                      <ScrollableTable maxHeightClass="max-h-[min(40vh,280px)]">
-                                        <WtTable>
-                                          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                            <TableRow className="hover:bg-transparent">
-                                              <TableHead>Project</TableHead>
-                                              <TableHead>Allocation %</TableHead>
-                                              <TableHead>Start date</TableHead>
-                                              <TableHead>End date</TableHead>
-                                            </TableRow>
-                                          </TableHeader>
-                                          <TableBody>
+                                      <div className="wt-scroll-both max-h-[min(40vh,280px)] overflow-auto rounded-xl border border-wt-border">
+                                        <table className="wt-scrollable-table text-sm">
+                                          <thead className="wt-table-sticky-head text-wt-text-muted">
+                                            <tr>
+                                              <th className="text-left px-3 py-2 font-medium">Project</th>
+                                              <th className="text-left px-3 py-2 font-medium">Allocation %</th>
+                                              <th className="text-left px-3 py-2 font-medium">Start date</th>
+                                              <th className="text-left px-3 py-2 font-medium">End date</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
                                             {pickerEmployeeAllocations.allocations.map((row, idx) => (
-                                              <TableRow
+                                              <tr
                                                 key={`${allocationRowId(row) || "picker-alloc"}-${idx}`}
-                                               
+                                                className="border-t border-wt-border"
                                               >
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                <td className="px-3 py-2 whitespace-nowrap">
                                                   {allocationProjectDisplayName(row)}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                </td>
+                                                <td className="px-3 py-2 whitespace-nowrap">
                                                   {formatAllocatedPercentDisplay(row, allocationPercentLabels)}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                </td>
+                                                <td className="px-3 py-2 whitespace-nowrap">
                                                   {formatApiDateDisplay(
                                                     (row.start_date ?? row.startDate) as string | null | undefined
                                                   ) || "—"}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                </td>
+                                                <td className="px-3 py-2 whitespace-nowrap">
                                                   {formatApiDateDisplay(
                                                     (row.end_date ?? row.endDate) as string | null | undefined
                                                   ) || "—"}
-                                                </TableCell>
-                                              </TableRow>
+                                                </td>
+                                              </tr>
                                             ))}
-                                          </TableBody>
-                                        </WtTable>
-                                      </ScrollableTable>
+                                          </tbody>
+                                        </table>
+                                      </div>
                                     ) : null}
                                   </div>
                                 ) : null}
                                 <div className="flex flex-wrap gap-2">
-                                  <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+                                  <button
+                                    type="button"
+                                    className="btn-primary px-3 py-2"
+                                    onClick={() =>
                                       runAction(editingAllocationId ? "Update allocation" : "Create allocation", async () => {
                                         const employeeEmail = allocationForm.employee_email.trim();
                                         const projectCode = allocationForm.project_code.trim();
@@ -3964,12 +4004,10 @@ export function AllocationPageClient() {
                                     disabled={actionLoading}
                                   >
                                     {editingAllocationId ? "Save Allocation" : "Allocate Employee"}
-                                  </Button>
-                                  <Button
+                                  </button>
+                                  <button
                                     type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
+                                    className="rounded-lg p-2 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
                                     onClick={() =>
                                       runAction("Load allocations", async () => {
                                         await loadAllocationsForHr();
@@ -3987,7 +4025,7 @@ export function AllocationPageClient() {
                                     title="Refresh allocations"
                                   >
                                     <IconRefresh />
-                                  </Button>
+                                  </button>
                                 </div>
                               </div>
                               </>
@@ -4006,7 +4044,7 @@ export function AllocationPageClient() {
                                 <>
                                 <div
                                   ref={allocationRecordsRef}
-                                  className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-2"
+                                  className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2"
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
                                     <p className="text-sm font-medium">Allocation records</p>
@@ -4023,15 +4061,14 @@ export function AllocationPageClient() {
                                         onChange={(e) => setAllocationListSearch(e.target.value)}
                                         aria-label="Search allocations"
                                       />
-                                      <Button
+                                      <button
                                         type="button"
-                                        variant="outline"
-                                        size="xs"
+                                        className="rounded-lg border border-wt-border bg-wt-surface-1 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3 disabled:opacity-50"
                                         disabled={allocationsLoading || actionLoading}
                                         onClick={() => void loadAllocationsForHr()}
                                       >
                                         Refresh
-                                      </Button>
+                                      </button>
                                     </div>
                                   </div>
                                   {allocationsLoadError ? (
@@ -4041,11 +4078,11 @@ export function AllocationPageClient() {
                                     <SectionLoading label="Loading allocations…" />
                                   ) : sortedAllocations.length ? (
                                     <>
-                                    <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-                                      <WtTable>
-                                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                          <TableRow className="hover:bg-transparent">
-                                            <TableHead>
+                                    <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
+                                      <table className="wt-scrollable-table text-sm">
+                                        <thead className="wt-table-sticky-head text-wt-text-muted">
+                                          <tr>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                               <TableSortHeader
                                                 label="ALLOCATED PROJECT"
                                                 activeDirection={activeSortDirectionForColumn(
@@ -4064,13 +4101,13 @@ export function AllocationPageClient() {
                                                   )
                                                 }
                                               />
-                                            </TableHead>
-                                            <TableHead>EMPLOYEE NAME</TableHead>
-                                            <TableHead>PROJECT ROLE</TableHead>
-                                            <TableHead>
+                                            </th>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">EMPLOYEE NAME</th>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">PROJECT ROLE</th>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                               ALLOCATION %
-                                            </TableHead>
-                                            <TableHead>
+                                            </th>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                               <TableSortHeader
                                                 label="ALLOCATION TYPE"
                                                 activeDirection={activeSortDirectionForColumn(
@@ -4089,8 +4126,8 @@ export function AllocationPageClient() {
                                                   )
                                                 }
                                               />
-                                            </TableHead>
-                                            <TableHead>
+                                            </th>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                               <TableSortHeader
                                                 label="BILLING STATUS"
                                                 activeDirection={activeSortDirectionForColumn(
@@ -4109,13 +4146,13 @@ export function AllocationPageClient() {
                                                   )
                                                 }
                                               />
-                                            </TableHead>
-                                            <TableHead>START DATE</TableHead>
-                                            <TableHead>END DATE</TableHead>
-                                            <TableHead className="text-right">ACTIONS</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
+                                            </th>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">START DATE</th>
+                                            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">END DATE</th>
+                                            <th className="text-right px-3 py-2 font-medium whitespace-nowrap">ACTIONS</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
                                           {allocationPagination.pageItems.map((row, idx) => {
                                             const allocationId = String(
                                               row.id ?? row.allocation_id ?? row.allocationId ?? ""
@@ -4157,7 +4194,7 @@ export function AllocationPageClient() {
                                               selectedEmployeeAllocations?.highlightedAllocationId ===
                                                 allocationId;
                                             return (
-                                              <TableRow
+                                              <tr
                                                 key={`${allocationId || "alloc"}-${idx}`}
                                                 role="button"
                                                 tabIndex={0}
@@ -4180,24 +4217,34 @@ export function AllocationPageClient() {
                                                   }
                                                 }}
                                               >
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                <td className="px-3 py-2 whitespace-nowrap">
                                                   {allocationProjectDisplayName(row)}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.employee_name ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.role ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                </td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.employee_name ?? "—")}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.role ?? "—")}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">
                                                   {formatAllocatedPercentDisplay(
                                                     row as Record<string, unknown>,
                                                     allocationPercentLabels
                                                   )}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.allocation_type ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.billing_status ?? row.billingStatus ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.start_date ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.end_date ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 text-right">
+                                                </td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.allocation_type ?? "—")}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.billing_status ?? row.billingStatus ?? "—")}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.start_date ?? "—")}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{String(row.end_date ?? "—")}</td>
+                                                <td className="px-3 py-2 text-right">
                                                   <div className="inline-flex items-center justify-end gap-1">
-                                                    <Button variant="brand" size="icon-sm" type="button" className="disabled:opacity-40 disabled:pointer-events-none" aria-label={`Edit allocation ${allocationId || idx}`} title={ editable ? "Edit allocation" : "Superseded — edit the active row" } disabled={actionLoading || !editable} onClick={(e) => {
+                                                    <button
+                                                      type="button"
+                                                      className="btn-action-icon disabled:opacity-40 disabled:pointer-events-none"
+                                                      aria-label={`Edit allocation ${allocationId || idx}`}
+                                                      title={
+                                                        editable
+                                                          ? "Edit allocation"
+                                                          : "Superseded — edit the active row"
+                                                      }
+                                                      disabled={actionLoading || !editable}
+                                                      onClick={(e) => {
                                                         e.stopPropagation();
                                                         setAllocationForm((prev) => ({
                                                           ...prev,
@@ -4244,12 +4291,10 @@ export function AllocationPageClient() {
                                                       }}
                                                     >
                                                       <IconPencil />
-                                                    </Button>
-                                                    <Button
+                                                    </button>
+                                                    <button
                                                       type="button"
-                                                      variant="ghost"
-                                                      size="icon-sm"
-                                                      className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 disabled:pointer-events-none"
+                                                      className="rounded-lg p-2 text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 disabled:pointer-events-none"
                                                       aria-label={`Deallocate ${allocationId || idx}`}
                                                       title={
                                                         editable
@@ -4273,15 +4318,15 @@ export function AllocationPageClient() {
                                                       }}
                                                     >
                                                       <IconTrash />
-                                                    </Button>
+                                                    </button>
                                                   </div>
-                                                </TableCell>
-                                              </TableRow>
+                                                </td>
+                                              </tr>
                                             );
                                           })}
-                                        </TableBody>
-                                      </WtTable>
-                                    </ScrollableTable>
+                                        </tbody>
+                                      </table>
+                                    </div>
                                     <ListPagination
                                       className="mt-3 px-1"
                                       page={allocationPagination.page}
@@ -4316,47 +4361,46 @@ export function AllocationPageClient() {
                                               Total allocated:{" "}
                                               {selectedEmployeeAllocations.totalAllocatedPercent}%
                                             </p>
-                                            <Button
+                                            <button
                                               type="button"
-                                              variant="outline"
-                                              size="xs"
+                                              className="rounded-lg border border-wt-border bg-wt-surface-2 px-2.5 py-1 text-xs text-wt-text hover:bg-wt-surface-3"
                                               onClick={() => {
                                                 setSelectedEmployeeAllocations(null);
                                                 setEmployeeAllocationsError(null);
                                               }}
                                             >
                                               Close
-                                            </Button>
+                                            </button>
                                           </div>
                                         </div>
-                                        <ScrollableTable maxHeightClass="max-h-[min(50vh,360px)]">
-                                          <WtTable>
-                                            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                              <TableRow className="hover:bg-transparent">
-                                                <TableHead>
+                                        <div className="wt-scroll-both max-h-[min(50vh,360px)] rounded-xl border border-wt-border">
+                                          <table className="wt-scrollable-table text-sm">
+                                            <thead className="wt-table-sticky-head text-wt-text-muted">
+                                              <tr>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                                   ALLOCATED PROJECT
-                                                </TableHead>
-                                                <TableHead>
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                                   PROJECT ROLE
-                                                </TableHead>
-                                                <TableHead>
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                                   ALLOCATION %
-                                                </TableHead>
-                                                <TableHead>
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                                   ALLOCATION TYPE
-                                                </TableHead>
-                                                <TableHead>
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                                   BILLING STATUS
-                                                </TableHead>
-                                                <TableHead>
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                                   START DATE
-                                                </TableHead>
-                                                <TableHead>
+                                                </th>
+                                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                                                   END DATE
-                                                </TableHead>
-                                              </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
+                                                </th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
                                               {selectedEmployeeAllocations.allocations.map(
                                                 (detailRow, detailIdx) => {
                                                   const detailId = allocationRowId(detailRow);
@@ -4365,47 +4409,47 @@ export function AllocationPageClient() {
                                                     detailId ===
                                                       selectedEmployeeAllocations.highlightedAllocationId;
                                                   return (
-                                                    <TableRow
+                                                    <tr
                                                       key={`${detailId || "emp-alloc"}-${detailIdx}`}
                                                       className={`border-t border-wt-border ${
                                                         highlighted ? "bg-indigo-500/10 font-medium" : ""
                                                       }`}
                                                     >
-                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                      <td className="px-3 py-2 whitespace-nowrap">
                                                         {allocationProjectDisplayName(detailRow)}
-                                                      </TableCell>
-                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
                                                         {String(detailRow.role ?? "—")}
-                                                      </TableCell>
-                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
                                                         {formatAllocatedPercentDisplay(
                                                           detailRow,
                                                           allocationPercentLabels
                                                         )}
-                                                      </TableCell>
-                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
                                                         {String(detailRow.allocation_type ?? "—")}
-                                                      </TableCell>
-                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
                                                         {String(
                                                           detailRow.billing_status ??
                                                             detailRow.billingStatus ??
                                                             "—"
                                                         )}
-                                                      </TableCell>
-                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
                                                         {String(detailRow.start_date ?? "—")}
-                                                      </TableCell>
-                                                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                      </td>
+                                                      <td className="px-3 py-2 whitespace-nowrap">
                                                         {String(detailRow.end_date ?? "—")}
-                                                      </TableCell>
-                                                    </TableRow>
+                                                      </td>
+                                                    </tr>
                                                   );
                                                 }
                                               )}
-                                            </TableBody>
-                                          </WtTable>
-                                        </ScrollableTable>
+                                            </tbody>
+                                          </table>
+                                        </div>
                                       </div>
                                     ) : null}
                                     </>
@@ -4422,7 +4466,7 @@ export function AllocationPageClient() {
                                   )}
                                 </div>
 
-                                <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-3">
+                                <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-3">
                                   {allocationForecastLoadError ? (
                                     <p className="text-sm text-rose-700">{allocationForecastLoadError}</p>
                                   ) : null}
@@ -4471,7 +4515,6 @@ export function AllocationPageClient() {
                                 </div>
                                 </>
                               ) : null}
-                              </div>
                             </section>
                           ) : (
                             <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
@@ -4483,6 +4526,7 @@ export function AllocationPageClient() {
                         </>
         </OnboardingGate>
       </DashboardPageShell>
+            <DashboardToast toast={toast} />
     </>
   );
 }

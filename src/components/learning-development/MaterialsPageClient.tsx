@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -97,10 +96,14 @@ export function MaterialsPageClient() {
             <div className="min-w-[160px] flex-1">
               <FileField label="PDF" required accept=".pdf,application/pdf" onPick={setFile} />
             </div>
-            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadMut.isPending || !trainingId || !file} onClick={() => uploadMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+            <button
+              type="button"
+              className="btn-primary px-4 py-2 text-sm shrink-0"
+              disabled={uploadMut.isPending || !trainingId || !file}
+              onClick={() => uploadMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
             >
               Upload
-            </Button>
+            </button>
           </div>
         </section>
       ) : null}

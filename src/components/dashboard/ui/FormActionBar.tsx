@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
 import { UI_COPY } from "@/constants/uiCopy";
-import { cn } from "@/lib/utils";
 
 type FormActionBarProps = {
   onCancel: () => void;
@@ -19,7 +17,7 @@ type FormActionBarProps = {
 };
 
 const actionButtonClass =
-  "min-h-10 min-w-[8.5rem] px-5 py-2.5 w-full sm:w-auto";
+  "inline-flex min-h-10 min-w-[8.5rem] items-center justify-center rounded-lg px-5 py-2.5 text-sm font-medium";
 
 export function FormActionBar({
   onCancel,
@@ -38,13 +36,15 @@ export function FormActionBar({
 
   return (
     <div
-      className={cn(
+      className={[
         "rounded-xl border border-wt-border bg-wt-surface-1 px-5 py-4 md:px-6",
         sticky
           ? "sticky bottom-4 z-10 shadow-[0_8px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm supports-[backdrop-filter]:bg-wt-surface-1/95"
           : "shadow-sm",
-        className
-      )}
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
@@ -52,24 +52,22 @@ export function FormActionBar({
           {hint ? <p className="text-sm text-wt-text-muted">{hint}</p> : null}
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <Button
+          <button
             type="button"
-            variant="outline"
-            className={actionButtonClass}
+            className={`btn-ghost ${actionButtonClass} w-full sm:w-auto`}
             disabled={isDisabled}
             onClick={onCancel}
           >
             {cancelLabel}
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            variant="brand"
-            className={actionButtonClass}
+            className={`btn-primary ${actionButtonClass} w-full sm:w-auto`}
             disabled={isDisabled}
             onClick={onSave}
           >
             {saving ? savingLabel : saveLabel}
-          </Button>
+          </button>
         </div>
       </div>
     </div>

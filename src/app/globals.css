@@ -1,8 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-
-@custom-variant dark (&:is(.dark *));
 
 /* ------------------------------------------------------------------ */
 /* Design Tokens                                                         */
@@ -29,7 +25,6 @@
 
   /* Surface */
   --wt-bg:         #f4f7fb;
-  --wt-page-bg:    #eef3fb;
   --wt-surface-1:  #ffffff;
   --wt-surface-2:  #f8fafc;
   --wt-surface-3:  #eef2f7;
@@ -59,43 +54,10 @@
 
   /* Sticky table headers below dashboard page title bar */
   --wt-dashboard-header-offset: 4.75rem;
-  --background:  oklch(1 0 0);
-  --foreground:  oklch(0.145 0 0);
-  --card:  oklch(1 0 0);
-  --card-foreground:  oklch(0.145 0 0);
-  --popover:  oklch(1 0 0);
-  --popover-foreground:  oklch(0.145 0 0);
-  --primary:  oklch(0.205 0 0);
-  --primary-foreground:  oklch(0.985 0 0);
-  --secondary:  oklch(0.97 0 0);
-  --secondary-foreground:  oklch(0.205 0 0);
-  --muted:  oklch(0.97 0 0);
-  --muted-foreground:  oklch(0.556 0 0);
-  --accent:  oklch(0.97 0 0);
-  --accent-foreground:  oklch(0.205 0 0);
-  --destructive:  oklch(0.577 0.245 27.325);
-  --border:  oklch(0.922 0 0);
-  --input:  oklch(0.922 0 0);
-  --ring: #2469ff;
-  --chart-1:  oklch(0.87 0 0);
-  --chart-2:  oklch(0.556 0 0);
-  --chart-3:  oklch(0.439 0 0);
-  --chart-4:  oklch(0.371 0 0);
-  --chart-5:  oklch(0.269 0 0);
-  --radius:  0.625rem;
-  --sidebar:  oklch(0.985 0 0);
-  --sidebar-foreground:  oklch(0.145 0 0);
-  --sidebar-primary:  oklch(0.205 0 0);
-  --sidebar-primary-foreground:  oklch(0.985 0 0);
-  --sidebar-accent:  oklch(0.97 0 0);
-  --sidebar-accent-foreground:  oklch(0.205 0 0);
-  --sidebar-border:  oklch(0.922 0 0);
-  --sidebar-ring:  oklch(0.708 0 0);
 }
 
 [data-theme="dark"] {
   --wt-bg:         #0f0e17;
-  --wt-page-bg:    #12111c;
   --wt-surface-1:  #16151f;
   --wt-surface-2:  #1d1c2a;
   --wt-surface-3:  #252436;
@@ -114,8 +76,6 @@
   --wt-brand-hover:  #3d5f96;
   --wt-brand-active: #355095;
   --wt-brand-text:   #ffffff;
-
-  --ring: #4d8bff;
 }
 
 /* ------------------------------------------------------------------ */
@@ -123,7 +83,6 @@
 /* ------------------------------------------------------------------ */
 @theme inline {
   --color-wt-bg:        var(--wt-bg);
-  --color-wt-page-bg:   var(--wt-page-bg);
   --color-wt-surface-1: var(--wt-surface-1);
   --color-wt-surface-2: var(--wt-surface-2);
   --color-wt-surface-3: var(--wt-surface-3);
@@ -141,46 +100,7 @@
   --color-wt-violet-500:var(--wt-violet-500);
   --color-wt-border:    var(--wt-border);
   --color-wt-border-md: var(--wt-border-md);
-  --font-sans:  var(--font-sans);
-  --font-heading:  var(--font-sans);
-  --color-sidebar-ring:  var(--sidebar-ring);
-  --color-sidebar-border:  var(--sidebar-border);
-  --color-sidebar-accent-foreground:  var(--sidebar-accent-foreground);
-  --color-sidebar-accent:  var(--sidebar-accent);
-  --color-sidebar-primary-foreground:  var(--sidebar-primary-foreground);
-  --color-sidebar-primary:  var(--sidebar-primary);
-  --color-sidebar-foreground:  var(--sidebar-foreground);
-  --color-sidebar:  var(--sidebar);
-  --color-chart-5:  var(--chart-5);
-  --color-chart-4:  var(--chart-4);
-  --color-chart-3:  var(--chart-3);
-  --color-chart-2:  var(--chart-2);
-  --color-chart-1:  var(--chart-1);
-  --color-ring:  var(--ring);
-  --color-input:  var(--input);
-  --color-border:  var(--border);
-  --color-destructive:  var(--destructive);
-  --color-accent-foreground:  var(--accent-foreground);
-  --color-accent:  var(--accent);
-  --color-muted-foreground:  var(--muted-foreground);
-  --color-muted:  var(--muted);
-  --color-secondary-foreground:  var(--secondary-foreground);
-  --color-secondary:  var(--secondary);
-  --color-primary-foreground:  var(--primary-foreground);
-  --color-primary:  var(--primary);
-  --color-popover-foreground:  var(--popover-foreground);
-  --color-popover:  var(--popover);
-  --color-card-foreground:  var(--card-foreground);
-  --color-card:  var(--card);
-  --color-foreground:  var(--foreground);
-  --color-background:  var(--background);
-  --radius-sm:  calc(var(--radius) * 0.6);
-  --radius-md:  calc(var(--radius) * 0.8);
-  --radius-lg:  var(--radius);
-  --radius-xl:  calc(var(--radius) * 1.4);
-  --radius-2xl:  calc(var(--radius) * 1.8);
-  --radius-3xl:  calc(var(--radius) * 2.2);
-  --radius-4xl:  calc(var(--radius) * 2.6);
+  --font-sans:          var(--font-sans);
 }
 
 /* ------------------------------------------------------------------ */
@@ -363,55 +283,46 @@ body::-webkit-scrollbar {
 }
 
 /* Sticky headers for all data tables */
-.wt-scrollable-table,
-[data-slot="table"] {
+.wt-scrollable-table {
   width: 100%;
   min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
 }
 
-/* Sticky headers — only inside bounded scroll shells (never on page scroll) */
-.wt-scroll-both .wt-scrollable-table thead th,
-.wt-scroll-both [data-slot="table"] thead th,
-.wt-scroll-both-chain .wt-scrollable-table thead th,
-.wt-scroll-both-chain [data-slot="table"] thead th,
-.wt-scroll-chain .wt-scrollable-table thead th,
-.wt-scroll-chain [data-slot="table"] thead th,
-.wt-table-sticky-head th {
+.wt-scrollable-table thead th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background-color: var(--wt-surface-1);
+  background-color: var(--wt-surface-2);
   background-clip: padding-box;
   box-shadow: 0 1px 0 var(--wt-border);
 }
 
-/* Profile inline tables — static headers so body rows are not covered while scrolling */
-.wt-profile-table thead th,
-.wt-page-scroll main .wt-profile-table thead th {
-  position: static;
-  top: auto;
-  z-index: auto;
-  box-shadow: none;
+/* Table scroll shells — headers stick to the shell top (overrides page offset) */
+.wt-page-scroll main .wt-scroll-both .wt-scrollable-table thead th,
+.wt-page-scroll main .wt-scroll-both-chain .wt-scrollable-table thead th,
+.wt-page-scroll main .wt-scroll-chain .wt-scrollable-table thead th,
+.wt-scroll-both .wt-scrollable-table thead th,
+.wt-scroll-both-chain .wt-scrollable-table thead th,
+.wt-scroll-chain .wt-scrollable-table thead th {
+  top: 0;
+  z-index: 3;
 }
 
-[data-slot="table"] [data-slot="table-cell"] {
-  border-color: var(--border);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  color: var(--wt-text-muted);
+/* Page scroll — headers stay visible below the sticky dashboard title bar */
+.wt-page-scroll main .wt-scrollable-table thead th {
+  top: var(--wt-dashboard-header-offset);
+  z-index: 5;
 }
 
-[data-slot="table"] [data-slot="table-head"] {
-  border-color: var(--border);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  color: var(--wt-text-muted);
-}
-
-.wt-profile-table [data-slot="table-cell"] {
-  color: var(--wt-text);
+.wt-table-sticky-head th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--wt-surface-2);
+  background-clip: padding-box;
+  box-shadow: 0 1px 0 var(--wt-border);
 }
 
 /* Dashboard main pane: always scrollable; thin scrollbar for discoverability */
@@ -642,8 +553,8 @@ select.input-field {
 }
 
 .input-field:focus {
-  border-color: #2469ff;
-  box-shadow: none;
+  border-color: var(--wt-indigo-400);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
 }
 
 /* Native date input — hide default icon; DatePickerField provides its own */
@@ -745,6 +656,21 @@ select.input-field {
   animation: shimmer 1.8s ease infinite;
 }
 
+.toast-slide-in {
+  animation: toastSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(16px) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
 .noise::before {
   content: "";
   position: absolute;
@@ -808,7 +734,6 @@ select.input-field {
   color: #52525b;
 }
 
-.wt-status-badge--serving-notice,
 .wt-status-badge--in-notice {
   border-color: #52525b;
   background-color: #3f3f46;
@@ -839,7 +764,6 @@ select.input-field {
   color: #e4e4e7;
 }
 
-[data-theme="dark"] .wt-status-badge--serving-notice,
 [data-theme="dark"] .wt-status-badge--in-notice {
   border-color: #71717a;
   background-color: #3f3f46;
@@ -892,50 +816,4 @@ select.input-field {
 
 [data-theme="dark"] .wt-loading-overlay {
   background: rgba(15, 14, 23, 0.45);
-}
-
-.dark {
-  --background:  oklch(0.145 0 0);
-  --foreground:  oklch(0.985 0 0);
-  --card:  oklch(0.205 0 0);
-  --card-foreground:  oklch(0.985 0 0);
-  --popover:  oklch(0.205 0 0);
-  --popover-foreground:  oklch(0.985 0 0);
-  --primary:  oklch(0.922 0 0);
-  --primary-foreground:  oklch(0.205 0 0);
-  --secondary:  oklch(0.269 0 0);
-  --secondary-foreground:  oklch(0.985 0 0);
-  --muted:  oklch(0.269 0 0);
-  --muted-foreground:  oklch(0.708 0 0);
-  --accent:  oklch(0.269 0 0);
-  --accent-foreground:  oklch(0.985 0 0);
-  --destructive:  oklch(0.704 0.191 22.216);
-  --border:  oklch(1 0 0 / 10%);
-  --input:  oklch(1 0 0 / 15%);
-  --ring: #4d8bff;
-  --chart-1:  oklch(0.87 0 0);
-  --chart-2:  oklch(0.556 0 0);
-  --chart-3:  oklch(0.439 0 0);
-  --chart-4:  oklch(0.371 0 0);
-  --chart-5:  oklch(0.269 0 0);
-  --sidebar:  oklch(0.205 0 0);
-  --sidebar-foreground:  oklch(0.985 0 0);
-  --sidebar-primary:  oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground:  oklch(0.985 0 0);
-  --sidebar-accent:  oklch(0.269 0 0);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
-  --sidebar-border:  oklch(1 0 0 / 10%);
-  --sidebar-ring:  oklch(0.556 0 0);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
 }

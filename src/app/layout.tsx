@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
-import { Inter, Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
-import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,10 +20,9 @@ export default function RootLayout({
 }>) {
   return (
     
-    <html lang="en" className={cn("h-full", inter.variable, "font-sans", geist.variable)}>
+    <html lang="en" className={`${inter.variable} h-full`}>
       <body className="min-h-full bg-wt-bg text-wt-text antialiased">
         <AuthProvider>{children}</AuthProvider>
-        <Toaster />
       </body>
     </html>
   );
