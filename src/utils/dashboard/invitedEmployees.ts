@@ -4,6 +4,7 @@ import {
   formatApiDateDisplay,
   parseApiDate,
 } from "@/utils/apiDate";
+import { resolveEmployeeNameFromRow } from "@/utils/tableDisplay";
 
 export const INVITED_LIST_DEFAULT_DAYS = 7;
 
@@ -31,6 +32,20 @@ export function filterInvitedRowsByCreatedAtRange(
     const day = invitedRowCreatedAtApiDate(row);
     if (!day) return false;
     return compareApiDates(day, from) >= 0 && compareApiDates(day, to) <= 0;
+  });
+}
+
+/** Client-side name filter for invited employees list. */
+export function filterInvitedRowsByName(
+  rows: Array<Record<string, unknown>>,
+  query: string
+): Array<Record<string, unknown>> {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return rows;
+  return rows.filter((row) => {
+    const name = resolveEmployeeNameFromRow(row).toLowerCase();
+    if (name === "—") return false;
+    return name.includes(needle);
   });
 }
 

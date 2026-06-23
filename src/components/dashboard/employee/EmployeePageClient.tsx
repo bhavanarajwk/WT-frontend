@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
@@ -16,6 +16,7 @@ import {
 import {
   defaultInvitedEmployeesDateRange,
   filterInvitedRowsByCreatedAtRange,
+  filterInvitedRowsByName,
   formatInvitedEmployeeTableRows,
 } from "@/utils/dashboard/invitedEmployees";
 import { compareApiDates, formatApiDateDisplay } from "@/utils/apiDate";
@@ -30,7 +31,9 @@ import {
   ManagementListCard,
   ManagementListContent,
 } from "@/components/dashboard/ui/ManagementListCard";
+import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { defaultDashboardPathForRoles } from "@/constants/routes";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { parseBandsList } from "@/utils/masters";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
@@ -59,6 +62,9 @@ export function EmployeePageClient() {
     from: string;
     to: string;
   } | null>(null);
+  const [invitedNameSearch, setInvitedNameSearch] = useState("");
+
+  const debouncedInvitedNameSearch = useDebouncedValue(invitedNameSearch, 300);
 
   const invitedListFromDateRef = useRef(invitedListFromDate);
   const invitedListToDateRef = useRef(invitedListToDate);
@@ -196,6 +202,14 @@ export function EmployeePageClient() {
 
   const onboardingBusy = invitedListLoading || actionLoading;
 
+  const filteredInviteRows = useMemo(
+    () => filterInvitedRowsByName(inviteOnboardingRows, debouncedInvitedNameSearch),
+    [inviteOnboardingRows, debouncedInvitedNameSearch]
+  );
+
+  const hasActiveNameSearch = Boolean(debouncedInvitedNameSearch.trim());
+  const hasInvitedSourceRows = inviteOnboardingRows.length > 0;
+
   return (
     <DashboardPageShell>
       <OnboardingGate>
@@ -238,8 +252,18 @@ export function EmployeePageClient() {
                     Refresh Employees
                   </Button>
                 }
-                toolbar={
-                  <div className="flex flex-nowrap items-end gap-3 overflow-x-auto">
+                search={
+                  <SearchInput
+                    id="invited-employees-search"
+                    value={invitedNameSearch}
+                    onChange={setInvitedNameSearch}
+                    placeholder="Search by employee name"
+                    aria-label="Search invited employees by name"
+                    disabled={invitedListLoading}
+                  />
+                }
+                filters={
+                  <>
                     <ApiDateField
                       label="From Date"
                       value={invitedListFromDate}
@@ -286,7 +310,7 @@ export function EmployeePageClient() {
                     >
                       Last 7 Days
                     </Button>
-                  </div>
+                  </>
                 }
               >
                 {invitedApiServerRange ? (
@@ -304,14 +328,23 @@ export function EmployeePageClient() {
                 ) : null}
                 <ManagementListContent
                   isLoading={invitedListLoading}
-                  isEmpty={!invitedListLoading && !inviteOnboardingRows.length}
-                  emptyTitle="No invited employees in this date range."
-                  emptyDescription="Try adjusting your date range or refresh the list."
+                  isEmpty={!invitedListLoading && !filteredInviteRows.length}
+                  emptyTitle={
+                    hasActiveNameSearch && hasInvitedSourceRows
+                      ? "No invited employees match your search."
+                      : "No invited employees in this date range."
+                  }
+                  emptyDescription={
+                    hasActiveNameSearch && hasInvitedSourceRows
+                      ? "Try a different name or clear the search."
+                      : "Try adjusting your date range or refresh the list."
+                  }
                   skeletonRows={8}
                   skeletonColumns={8}
                 >
                   <InvitedEmployeesTable
-                    rows={inviteOnboardingRows}
+                    rows={filteredInviteRows}
+                    searchResetKey={debouncedInvitedNameSearch}
                     actionLoading={actionLoading || onboardingBusy}
                     resendingEmail={resendingInviteEmail}
                     onResendInvite={resendOnboardInvite}

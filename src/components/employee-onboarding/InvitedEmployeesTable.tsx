@@ -87,6 +87,7 @@ const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
 
 type Props = {
   rows: Array<Record<string, unknown>>;
+  searchResetKey?: string;
   actionLoading?: boolean;
   resendingEmail?: string | null;
   onResendInvite: (email: string) => void;
@@ -94,6 +95,7 @@ type Props = {
 
 export function InvitedEmployeesTable({
   rows,
+  searchResetKey = "",
   actionLoading = false,
   resendingEmail = null,
   onResendInvite,
@@ -113,7 +115,7 @@ export function InvitedEmployeesTable({
 
   const pagination = useClientPagination(sortedRows, {
     pageSize: DEFAULT_PAGE_SIZE,
-    resetKeys: [sortId],
+    resetKeys: [sortId, searchResetKey],
   });
 
   return (
