@@ -39,7 +39,7 @@ import {
   exitInterviewSubmissionDetailPath,
   EXIT_SURVEY_LWD_SORT_OPTIONS,
   filterExitSurveyFollowUpByStatus,
-  filterInNoticeFollowUpRows,
+  filterServingNoticeFollowUpRows,
   followUpRowLookupId,
   isResendableFollowUpRow,
   mergeEmpIdSelection,
@@ -117,7 +117,7 @@ export function ExitSurveyFollowUpPanel() {
       const onboardRows = onboardRes
         ? toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes)
         : [];
-      const inNoticeRows = filterInNoticeFollowUpRows(onboardRows, {
+      const servingNoticeRows = filterServingNoticeFollowUpRows(onboardRows, {
         search: debouncedSearch,
         type: filterType,
         fromDate: hasCustomLwdFilter ? filterFromDate : undefined,
@@ -125,7 +125,7 @@ export function ExitSurveyFollowUpPanel() {
       });
       const merged = mergeExitSurveyFollowUpRows(
         (data?.items ?? []) as OffboardListItem[],
-        inNoticeRows
+        servingNoticeRows
       );
       setAllRows(merged);
 
@@ -136,7 +136,7 @@ export function ExitSurveyFollowUpPanel() {
             ? reason.message
             : reason instanceof Error
               ? reason.message
-              : "Offboard list failed; showing in-notice employees only.";
+              : "Offboard list failed; showing serving notice employees only.";
         showErrorToast(msg);
       }
     } catch (error) {

@@ -808,6 +808,7 @@ select.input-field {
   color: #52525b;
 }
 
+.wt-status-badge--serving-notice,
 .wt-status-badge--in-notice {
   border-color: #52525b;
   background-color: #3f3f46;
@@ -838,6 +839,7 @@ select.input-field {
   color: #e4e4e7;
 }
 
+[data-theme="dark"] .wt-status-badge--serving-notice,
 [data-theme="dark"] .wt-status-badge--in-notice {
   border-color: #71717a;
   background-color: #3f3f46;

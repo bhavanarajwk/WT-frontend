@@ -27,7 +27,7 @@ function formatDateLabel(value: string | null): string {
   }
 }
 
-/** Exit survey (employee self-serve, including offboarded users in notice). */
+/** Exit survey (employee self-serve, including employees serving notice). */
 export function ExitInterviewSurveyPanel({ className = "" }: { className?: string }) {
   const queryClient = useQueryClient();
   const { actionLoading, runAction } = useDashboardAction();

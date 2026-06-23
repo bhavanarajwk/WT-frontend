@@ -7,7 +7,7 @@ import { hrmsService } from "@/services/hrms.service";
 import type { HrOffboardListItem } from "@/types/offboard";
 import { toPagedRows } from "@/utils/apiRows";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
+import { isServingNoticeUserStatus, normalizeEmployeeStatusKey } from "@/utils/userStatus";
 
 export type OffboardCandidate = {
   emp_id: string;
@@ -57,7 +57,10 @@ function buildOffboardCandidates(
           const emp_id = String(row.emp_id ?? row.empId ?? "").trim();
           if (!emp_id || offboardedIds.has(emp_id.toLowerCase())) return null;
           const status = String(row.status ?? "").trim().toUpperCase();
-          if (status === "INACTIVE" || normalizeEmployeeStatusKey(status) === "IN_NOTICE") {
+          if (
+            normalizeEmployeeStatusKey(status) === "INACTIVE" ||
+            isServingNoticeUserStatus(status)
+          ) {
             return null;
           }
           const name = String(row.name ?? "—").trim() || "—";
