@@ -333,7 +333,7 @@ export function EmployeeDirectoryPageClient() {
                           aria-label={`View profile for ${display.name}`}
                         >
                           {LIST_COLUMNS.map((col) => (
-                            <TableCell key={col.key} className="whitespace-nowrap px-4 py-3">
+                            <TableCell key={col.key} className="px-3 py-2 whitespace-nowrap">
                               {col.key === "status" ? (
                                 <EmployeeStatusBadge status={display.status} />
                               ) : col.key === "name" ? (
