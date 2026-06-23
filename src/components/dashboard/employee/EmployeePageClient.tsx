@@ -52,6 +52,7 @@ export function EmployeePageClient() {
   >([]);
   const [invitedListLoading, setInvitedListLoading] = useState(false);
   const [resendingInviteEmail, setResendingInviteEmail] = useState<string | null>(null);
+  const [bulkResendingInvites, setBulkResendingInvites] = useState(false);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
     () => defaultInvitedEmployeesDateRange().from
   );
@@ -191,6 +192,48 @@ export function EmployeePageClient() {
     },
     []
   );
+
+  const resendOnboardInvitesBulk = useCallback(async (emails: string[]) => {
+    const unique = [
+      ...new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean)),
+    ];
+    if (!unique.length || bulkResendingInvites) return;
+
+    setBulkResendingInvites(true);
+    let sent = 0;
+    let failed = 0;
+
+    try {
+      for (const email of unique) {
+        setResendingInviteEmail(email);
+        try {
+          await hrmsService.resendOnboardInvite({ email });
+          sent += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+    } finally {
+      setResendingInviteEmail(null);
+      setBulkResendingInvites(false);
+    }
+
+    if (failed === 0) {
+      showSuccessToast(
+        `Onboarding invites resent to ${sent} employee${sent === 1 ? "" : "s"}.`
+      );
+      return;
+    }
+    if (sent === 0) {
+      showErrorToast(
+        `Failed to resend invites to ${failed} employee${failed === 1 ? "" : "s"}.`
+      );
+      return;
+    }
+    showErrorToast(
+      `${sent} invite${sent === 1 ? "" : "s"} sent, ${failed} failed.`
+    );
+  }, [bulkResendingInvites]);
 
   useEffect(() => {
     if (!hasHrAccess) return;
@@ -347,7 +390,9 @@ export function EmployeePageClient() {
                     searchResetKey={debouncedInvitedNameSearch}
                     actionLoading={actionLoading || onboardingBusy}
                     resendingEmail={resendingInviteEmail}
+                    bulkResending={bulkResendingInvites}
                     onResendInvite={resendOnboardInvite}
+                    onBulkResendInvite={resendOnboardInvitesBulk}
                   />
                 </ManagementListContent>
               </ManagementListCard>
