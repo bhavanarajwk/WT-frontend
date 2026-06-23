@@ -583,7 +583,7 @@ export function OffboardingPanel() {
                 onChange={handleEmployeeChange}
                 options={candidateOptions}
               />
-              {isInternOffboarding ? (
+              {!selectedCandidate ? null : isInternOffboarding ? (
                 <DatePickerField
                   label="Last Working Day"
                   required
