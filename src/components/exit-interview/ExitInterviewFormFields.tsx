@@ -2,7 +2,12 @@
 
 import type { FormField } from "@/types/exit-interview";
 import { ReadonlyDateField } from "@/components/dashboard/ui/forms";
-import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/components/ui/button";
 import { isReadonlyField, textareaPlaceholder } from "@/utils/exitInterview";
 
 function FieldError({ message }: { message?: string }) {
@@ -14,7 +19,7 @@ function ReadonlyControl({ field, value }: { field: FormField; value: string }) 
   if (field.widget === "readonly_date") {
     return <ReadonlyDateField value={value} />;
   }
-  return <input className={`${FORM_CONTROL_CLASS} opacity-80`} value={value} disabled readOnly />;
+  return <Input className="h-10 opacity-80" value={value} disabled readOnly />;
 }
 
 function MultiSelectControl({
@@ -49,16 +54,15 @@ function MultiSelectControl({
   return (
     <div className="space-y-2">
       {options.map((opt) => (
-        <label key={opt.value} className="flex items-start gap-2 text-sm text-wt-text">
-          <input
-            type="checkbox"
+        <Label key={opt.value} className="flex items-start gap-2 text-sm font-normal text-wt-text">
+          <Checkbox
             className="mt-0.5"
             checked={selected.includes(opt.value)}
             disabled={disabled}
-            onChange={() => toggle(opt.value)}
+            onCheckedChange={() => toggle(opt.value)}
           />
           <span>{opt.label}</span>
-        </label>
+        </Label>
       ))}
     </div>
   );
@@ -76,20 +80,19 @@ function SingleSelectControl({
   disabled?: boolean;
 }) {
   return (
-    <div className="space-y-2">
+    <RadioGroup
+      value={value}
+      onValueChange={onChange}
+      disabled={disabled}
+      className="space-y-2"
+    >
       {(field.options ?? []).map((opt) => (
-        <label key={opt.value} className="flex items-center gap-2 text-sm text-wt-text">
-          <input
-            type="radio"
-            name={field.key}
-            checked={value === opt.value}
-            disabled={disabled}
-            onChange={() => onChange(opt.value)}
-          />
+        <Label key={opt.value} className="flex items-center gap-2 text-sm font-normal text-wt-text">
+          <RadioGroupItem value={opt.value} />
           <span>{opt.label}</span>
-        </label>
+        </Label>
       ))}
-    </div>
+    </RadioGroup>
   );
 }
 
@@ -112,19 +115,21 @@ function ScaleControl({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
         {buttons.map((n) => (
-          <button
+          <Button
             key={n}
             type="button"
+            variant="ghost"
+            size="sm"
             disabled={disabled}
             onClick={() => onChange(n)}
-            className={`min-w-[2.25rem] rounded-lg border px-2 py-1.5 text-sm tabular-nums transition ${
+            className={`min-w-[2.25rem] rounded-lg border px-2 py-1.5 tabular-nums ${
               value === n
-                ? "border-indigo-500 bg-indigo-50 text-indigo-800"
+                ? "border-indigo-500 bg-indigo-50 text-indigo-800 hover:bg-indigo-50 hover:text-indigo-800"
                 : "border-wt-border bg-wt-surface-1 text-wt-text hover:bg-wt-surface-2"
             }`}
           >
             {n}
-          </button>
+          </Button>
         ))}
       </div>
       {(field.min_label || field.max_label) && (
@@ -182,8 +187,8 @@ export function ExitInterviewFormFields({
                   ((answers[field.key] as string[]) ?? []).includes("OTHER") ? (
                     <label className="mt-3 flex flex-col gap-1 text-xs text-wt-text-muted">
                       Please specify
-                      <input
-                        className={FORM_CONTROL_CLASS}
+                      <Input
+                        className="mt-3 h-10"
                         value={String(answers[field.other_field] ?? "")}
                         disabled={disabled}
                         onChange={(e) => onChange(field.other_field!, e.target.value)}
@@ -212,8 +217,8 @@ export function ExitInterviewFormFields({
               ) : null}
 
               {field.widget === "textarea" ? (
-                <textarea
-                  className="input-field mt-0 min-h-[100px] w-full px-3 py-2 text-sm"
+                <Textarea
+                  className="mt-0 min-h-[100px]"
                   value={String(answers[field.key] ?? "")}
                   placeholder={textareaPlaceholder(field)}
                   disabled={disabled}

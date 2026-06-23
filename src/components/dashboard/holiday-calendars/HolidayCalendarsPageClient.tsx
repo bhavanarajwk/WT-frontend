@@ -1,10 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
+import { useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { CARD_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
+import {
+  ManagementListCard,
+  ManagementListContent,
+} from "@/components/dashboard/ui/ManagementListCard";
 import { hrmsService, type HolidayCalendarDetail } from "@/services/hrms.service";
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -67,42 +84,42 @@ function DownloadIcon() {
   );
 }
 
+import { Badge } from "@/components/ui/badge";
+import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
+
 function HolidayTypeBadge({ optional }: { optional: boolean }) {
-  if (optional) {
-    return (
-      <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
-        Optional
-      </span>
-    );
-  }
   return (
-    <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-      Mandatory
-    </span>
+    <Badge
+      variant="secondary"
+      className={optional ? filledBadgeClass("warning") : filledBadgeClass("slate")}
+    >
+      {optional ? "Optional" : "Mandatory"}
+    </Badge>
   );
 }
 
 export function HolidayCalendarsPageClient() {
   const { hasHrAccess } = useDashboardAccess();
-  const { toast, actionLoading, runAction } = useDashboardAction();
-  const [detail, setDetail] = useState<HolidayCalendarDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { actionLoading, runAction } = useDashboardAction();
   const holidayFileRef = useRef<HTMLInputElement>(null);
   const assignmentFileRef = useRef<HTMLInputElement>(null);
 
-  const loadCalendar = useCallback(async () => {
-    setIsLoading(true);
-    try {
+  const calendarQ = useQuery({
+    queryKey: ["holiday-calendar", "company"],
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
       const res = await hrmsService.getCompanyHolidayCalendar();
-      setDetail((res as { data?: HolidayCalendarDetail }).data ?? null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      return (res as { data?: HolidayCalendarDetail }).data ?? null;
+    },
+  });
 
-  useEffect(() => {
-    void loadCalendar();
-  }, [loadCalendar]);
+  const detail = calendarQ.data ?? null;
+  const isLoading = calendarQ.isLoading;
+
+  const loadCalendar = useCallback(async () => {
+    await calendarQ.refetch();
+  }, [calendarQ]);
 
   async function importHolidays(file: File) {
     const res = await hrmsService.importHolidayCalendarsCsv(file);
@@ -118,41 +135,45 @@ export function HolidayCalendarsPageClient() {
   const holidayCount = detail?.holidays?.length ?? detail?.holiday_count ?? 0;
 
   return (
-    <>
-      <DashboardPageShell>
-        <div className="mx-auto w-full min-w-0 max-w-4xl space-y-5 overflow-x-hidden sm:space-y-6">
-          <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <DashboardPageShell>
+      <div className={`mx-auto w-full min-w-0 max-w-4xl overflow-x-hidden ${CARD_STACK_CLASS}`}>
+        <Card className="p-0">
+          <CardHeader>
             <div className="flex min-w-0 items-start gap-3">
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600">
                 <CalendarIcon />
               </span>
               <div className="min-w-0">
-                <h1 className="text-lg font-semibold tracking-tight sm:text-xl lg:text-2xl">
-                  Holiday Calendar
-                </h1>
-                <p className="mt-1 max-w-2xl text-sm leading-relaxed text-wt-text-muted">
+                <CardTitle>Holiday Calendar</CardTitle>
+                <CardDescription>
                   Configure company holidays and associate calendars with employees during onboarding,
                   from the employee profile, or via CSV import.
-                </p>
+                </CardDescription>
               </div>
             </div>
-          </header>
+          </CardHeader>
+          <Separator />
+          <CardContent className="text-sm text-indigo-900">
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3">
+              <strong>Note:</strong> Import holiday dates for the company calendar below. Assign
+              calendars to employees individually during onboarding, from the employee profile, or
+              using the employee assignment CSV.
+            </div>
+          </CardContent>
+        </Card>
 
-          <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-900">
-            <strong>Note:</strong> Import holiday dates for the company calendar below. Assign calendars
-            to employees individually during onboarding, from the employee profile, or using the
-            employee assignment CSV.
-          </div>
-
-          {hasHrAccess ? (
-            <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4 shadow-sm sm:p-5">
-              <h2 className="text-base font-semibold sm:text-lg">Holiday Import &amp; Export</h2>
-              <p className="mt-1 text-sm text-wt-text-muted">
+        {hasHrAccess ? (
+          <Card className="p-0">
+            <CardHeader>
+              <CardTitle>Holiday Import &amp; Export</CardTitle>
+              <CardDescription>
                 CSV columns: <code className="text-indigo-700">holiday_date</code>,{" "}
                 <code className="text-indigo-700">name</code>, optional{" "}
                 <code className="text-indigo-700">is_optional</code>.
-              </p>
-
+              </CardDescription>
+            </CardHeader>
+            <Separator />
+            <CardContent>
               <input
                 ref={holidayFileRef}
                 type="file"
@@ -166,19 +187,21 @@ export function HolidayCalendarsPageClient() {
                 }}
               />
 
-              <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-                <button
+              <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                <Button
+                  variant="outline"
                   type="button"
-                  className="btn-secondary w-full"
+                  className="w-full"
                   disabled={actionLoading}
                   onClick={() => holidayFileRef.current?.click()}
                 >
                   <UploadIcon />
                   Import CSV
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
                   type="button"
-                  className="btn-secondary w-full"
+                  className="w-full"
                   disabled={actionLoading}
                   onClick={() =>
                     runAction("Export Holidays", async () => {
@@ -189,19 +212,23 @@ export function HolidayCalendarsPageClient() {
                 >
                   <DownloadIcon />
                   Export CSV
-                </button>
+                </Button>
               </div>
-            </section>
-          ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
-          {hasHrAccess ? (
-            <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4 shadow-sm sm:p-5">
-              <h2 className="text-base font-semibold sm:text-lg">Employee Calendar Assignments</h2>
-              <p className="mt-1 text-sm text-wt-text-muted">
+        {hasHrAccess ? (
+          <Card className="p-0">
+            <CardHeader>
+              <CardTitle>Employee Calendar Assignments</CardTitle>
+              <CardDescription>
                 CSV columns: <code className="text-indigo-700">email</code>,{" "}
                 <code className="text-indigo-700">calendar_code</code>.
-              </p>
-
+              </CardDescription>
+            </CardHeader>
+            <Separator />
+            <CardContent>
               <input
                 ref={assignmentFileRef}
                 type="file"
@@ -213,8 +240,9 @@ export function HolidayCalendarsPageClient() {
                   if (!file) return;
                   runAction("Import Assignments", async () => {
                     const res = await hrmsService.importEmployeeHolidayAssignmentsCsv(file);
-                    const data = (res as { data?: { processed?: number; skipped?: number; errors?: string[] } })
-                      .data;
+                    const data = (res as {
+                      data?: { processed?: number; skipped?: number; errors?: string[] };
+                    }).data;
                     if (data?.errors?.length) {
                       throw new Error(
                         `Imported ${data.processed ?? 0}, skipped ${data.skipped ?? 0}. ${data.errors[0]}`
@@ -224,19 +252,21 @@ export function HolidayCalendarsPageClient() {
                 }}
               />
 
-              <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-                <button
+              <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                <Button
+                  variant="outline"
                   type="button"
-                  className="btn-secondary w-full"
+                  className="w-full"
                   disabled={actionLoading}
                   onClick={() => assignmentFileRef.current?.click()}
                 >
                   <UploadIcon />
                   Import Assignments CSV
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
                   type="button"
-                  className="btn-secondary w-full"
+                  className="w-full"
                   disabled={actionLoading}
                   onClick={() =>
                     runAction("Export Assignments", async () => {
@@ -247,102 +277,89 @@ export function HolidayCalendarsPageClient() {
                 >
                   <DownloadIcon />
                   Export Assignments CSV
-                </button>
+                </Button>
               </div>
-            </section>
-          ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
-          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4 shadow-sm sm:p-5">
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <h2 className="text-base font-semibold sm:text-lg">
-                  {detail?.name ?? "Company Holiday Calendar"}
-                </h2>
-                {detail?.description ? (
-                  <p className="mt-1 text-sm text-wt-text-muted">{detail.description}</p>
-                ) : null}
-                <p className="mt-2 text-sm tabular-nums text-wt-text-muted">
-                  {isLoading ? "Loading…" : `${holidayCount} holidays`}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="btn-ghost w-full shrink-0 px-3 py-2 text-sm sm:w-auto"
-                disabled={actionLoading || isLoading}
-                onClick={() => runAction("Refresh Calendar", loadCalendar)}
-              >
-                Refresh
-              </button>
-            </div>
-
-            {isLoading ? (
-              <div className="flex items-center justify-center gap-2 rounded-xl border border-wt-border bg-wt-surface-2/50 px-4 py-12 text-sm text-wt-text-muted">
-                <span className="spinner" />
-                Loading Holidays…
-              </div>
-            ) : detail?.holidays?.length ? (
-              <>
-                <div className="space-y-2 md:hidden">
-                  {detail.holidays.map((holiday) => (
-                    <div
-                      key={holiday.id}
-                      className="rounded-lg border border-wt-border bg-wt-surface-2/30 px-3 py-2.5"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-medium">{holiday.name}</p>
-                        <HolidayTypeBadge optional={holiday.is_optional} />
-                      </div>
-                      <p className="mt-1 text-xs tabular-nums text-wt-text-muted">
-                        {holiday.holiday_date}
-                      </p>
+        <ManagementListCard
+          title={detail?.name ?? "Company Holiday Calendar"}
+          description={
+            detail?.description ??
+            (isLoading ? "Loading holiday calendar…" : `${holidayCount} holidays`)
+          }
+          headerAction={
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              className="w-full shrink-0 px-3 py-2 text-sm sm:w-auto"
+              disabled={actionLoading || isLoading}
+              onClick={() => runAction("Refresh Calendar", loadCalendar)}
+            >
+              Refresh
+            </Button>
+          }
+        >
+          <ManagementListContent
+            isLoading={isLoading}
+            isEmpty={!isLoading && !detail?.holidays?.length}
+            emptyTitle="No Holidays Configured Yet"
+            emptyDescription={
+              hasHrAccess
+                ? "Import a CSV with holiday_date and name columns."
+                : "HR has not added company holidays yet."
+            }
+            emptyIcon={<CalendarIcon className="h-8 w-8 opacity-40" />}
+            skeletonRows={6}
+            skeletonColumns={3}
+          >
+            <>
+              <div className="space-y-2 md:hidden">
+                {detail?.holidays?.map((holiday) => (
+                  <div
+                    key={holiday.id}
+                    className="rounded-lg border border-wt-border bg-wt-surface-2/30 px-3 py-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium">{holiday.name}</p>
+                      <HolidayTypeBadge optional={holiday.is_optional} />
                     </div>
-                  ))}
-                </div>
-                <div className="hidden overflow-auto rounded-lg border border-wt-border md:block">
-                  <table className="min-w-full text-sm">
-                    <thead className="sticky top-0 bg-wt-surface-2 text-wt-text-muted">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-medium">Date</th>
-                        <th className="px-3 py-2 text-left font-medium">Holiday</th>
-                        <th className="px-3 py-2 text-left font-medium">Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.holidays.map((holiday) => (
-                        <tr key={holiday.id} className="border-t border-wt-border">
-                          <td className="whitespace-nowrap px-3 py-2 font-medium tabular-nums">
-                            {holiday.holiday_date}
-                          </td>
-                          <td className="px-3 py-2">{holiday.name}</td>
-                          <td className="px-3 py-2">
-                            <HolidayTypeBadge optional={holiday.is_optional} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-wt-border bg-wt-surface-2/40 px-4 py-12 text-center">
-                <CalendarIcon className="mb-3 h-8 w-8 opacity-40" />
-                <p className="text-sm font-medium">No Holidays Configured Yet</p>
-                {hasHrAccess ? (
-                  <p className="mt-2 max-w-sm text-xs leading-relaxed text-wt-text-muted">
-                    Import a CSV with <code className="text-indigo-700">holiday_date</code> and{" "}
-                    <code className="text-indigo-700">name</code> columns.
-                  </p>
-                ) : (
-                  <p className="mt-2 text-xs text-wt-text-muted">
-                    HR has not added company holidays yet.
-                  </p>
-                )}
+                    <p className="mt-1 text-xs tabular-nums text-wt-text-muted">
+                      {holiday.holiday_date}
+                    </p>
+                  </div>
+                ))}
               </div>
-            )}
-          </section>
-        </div>
-      </DashboardPageShell>
-      <DashboardToast toast={toast} />
-    </>
+              <div className="hidden overflow-auto rounded-lg border border-wt-border md:block">
+                <WtTable className="min-w-full">
+                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Date</TableHead>
+                      <TableHead>Holiday</TableHead>
+                      <TableHead>Type</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detail?.holidays?.map((holiday) => (
+                      <TableRow key={holiday.id}>
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {holiday.holiday_date}
+                        </TableCell>
+                        <TableCell className="px-3 py-2">{holiday.name}</TableCell>
+                        <TableCell className="px-3 py-2">
+                          <HolidayTypeBadge optional={holiday.is_optional} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </WtTable>
+              </div>
+            </>
+          </ManagementListContent>
+        </ManagementListCard>
+      </div>
+    </DashboardPageShell>
   );
 }

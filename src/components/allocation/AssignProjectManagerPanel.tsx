@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { useAllocationProjectEmployees } from "@/hooks/useAllocationProjectEmployees";
@@ -141,19 +142,7 @@ export function AssignProjectManagerPanel({
           Project manager cannot be assigned on BENCH or GLOBAL projects.
         </p>
       ) : null}
-      <button
-        type="button"
-        className="btn-primary px-3 py-2 text-sm"
-        disabled={
-          actionLoading ||
-          !projectKey.trim() ||
-          !submitProjectCode ||
-          !userEmail ||
-          benchOrGlobal ||
-          employeesLoading ||
-          !employeeOptions.length
-        }
-        onClick={() =>
+      <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" disabled={ actionLoading || !projectKey.trim() || !submitProjectCode || !userEmail || benchOrGlobal || employeesLoading || !employeeOptions.length } onClick={() =>
           runAction("Assign Project Manager", async () => {
             const email = normalizePickerEmail(userEmail);
             const code = submitProjectCode;
@@ -167,7 +156,7 @@ export function AssignProjectManagerPanel({
         }
       >
         Assign Project Manager
-      </button>
+      </Button>
     </div>
   );
 }

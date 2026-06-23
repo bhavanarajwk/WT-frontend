@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService, type LeaveManagerOption } from "@/services/hrms.service";
+import { Checkbox } from "@/components/ui/checkbox";
 import { unwrapLeaveOptionItems } from "@/utils/leaveApiOptions";
 
 function optionLabel(option: LeaveManagerOption): string {
@@ -96,18 +97,17 @@ export function LeaveManagerSelector({
               key={email}
               className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-wt-surface-2"
             >
-              <input
-                type="checkbox"
+              <Checkbox
                 className="mt-0.5"
                 checked={checked}
                 disabled={disabled}
-                onChange={(event) => {
-                  const next = new Set(selectedSet);
-                  if (event.target.checked) next.add(email.toLowerCase());
-                  else next.delete(email.toLowerCase());
+                onCheckedChange={(next) => {
+                  const nextSet = new Set(selectedSet);
+                  if (next) nextSet.add(email.toLowerCase());
+                  else nextSet.delete(email.toLowerCase());
                   const ordered = options
                     .map((row) => String(row.email ?? "").trim().toLowerCase())
-                    .filter((value) => next.has(value));
+                    .filter((value) => nextSet.has(value));
                   onChange(ordered);
                 }}
               />

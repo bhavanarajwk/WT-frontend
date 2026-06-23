@@ -1,5 +1,16 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import {
   subCategoriesFor,
   subCategoryRequired,
@@ -96,23 +107,23 @@ export function WeeklyTimelogGrid({
 
   return (
     <div className="space-y-3">
-      <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
-        <table className="min-w-[1040px] w-full text-sm wt-scrollable-table">
-          <thead className="wt-table-sticky-head text-wt-text-muted">
-            <tr>
-              <th className="text-left px-2 py-2 font-medium min-w-[120px]">Project</th>
-              <th className="text-left px-2 py-2 font-medium min-w-[108px]">Task Category</th>
-              <th className="text-left px-2 py-2 font-medium min-w-[120px]">Sub category</th>
-              <th className="text-left px-2 py-2 font-medium min-w-[200px]">Description</th>
+      <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+        <WtTable className="min-w-[1040px]">
+          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="px-2 py-2 min-w-[120px]">Project</TableHead>
+              <TableHead className="px-2 py-2 min-w-[108px]">Task Category</TableHead>
+              <TableHead className="px-2 py-2 min-w-[120px]">Sub category</TableHead>
+              <TableHead className="px-2 py-2 min-w-[200px]">Description</TableHead>
               {dayDates.map((d, i) => (
-                <th key={dayKeys[i]} className="text-center px-1 py-2 font-medium min-w-[2.75rem] w-11 whitespace-nowrap text-xs">
+                <TableHead key={dayKeys[i]} className="text-center px-1 py-2 min-w-[2.75rem] w-11 whitespace-nowrap">
                   {formatDayHeader(d)}
-                </th>
+                </TableHead>
               ))}
-              <th className="text-center px-2 py-2 font-medium min-w-[3rem]">Total</th>
-            </tr>
-          </thead>
-          <tbody>
+              <TableHead className="text-center px-2 py-2 min-w-[3rem]">Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((row) => {
               const selectedProject = projectOptions.find(
                 (p) => p.project_code.toUpperCase() === row.project_code.trim().toUpperCase()
@@ -129,24 +140,24 @@ export function WeeklyTimelogGrid({
               const metadataEditable = isRowMetadataEditable(row, dayKeys);
 
               return (
-                <tr key={row.clientKey} className="border-t border-wt-border align-top">
+                <TableRow key={row.clientKey} className="align-top">
                   {readOnly ? (
                     <>
-                      <td className="px-2 py-2 font-medium">{projectLabel(row, projectOptions)}</td>
-                      <td className="px-2 py-2">{taskCategoryLabel(row)}</td>
-                      <td className="px-2 py-2 text-wt-text-muted">{subCategoryLabel(row)}</td>
-                      <td className="px-2 py-2 min-w-[200px] text-wt-text-muted">
+                      <TableCell className="px-2 py-2">{projectLabel(row, projectOptions)}</TableCell>
+                      <TableCell className="px-2 py-2">{taskCategoryLabel(row)}</TableCell>
+                      <TableCell className="px-2 py-2">{subCategoryLabel(row)}</TableCell>
+                      <TableCell className="px-2 py-2 min-w-[200px]">
                         {readOnlyText(row.comment)}
-                      </td>
+                      </TableCell>
                       {dayKeys.map((key) => (
-                        <td key={key} className="px-1 py-2 text-center align-top tabular-nums">
+                        <TableCell key={key} className="px-1 py-2 text-center align-top tabular-nums">
                           {formatHoursDisplay(Number(row.hours_by_date[key] ?? 0))}
-                        </td>
+                        </TableCell>
                       ))}
                     </>
                   ) : (
                     <>
-                      <td className="px-2 py-2">
+                      <TableCell className="px-2 py-2">
                         <select
                           className="input-field w-full px-2 py-1.5 text-sm"
                           disabled={!metadataEditable}
@@ -171,8 +182,8 @@ export function WeeklyTimelogGrid({
                             </option>
                           ))}
                         </select>
-                      </td>
-                      <td className="px-2 py-2">
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
                         <select
                           className="input-field w-full px-2 py-1.5 text-sm"
                           disabled={!metadataEditable || !row.project_code}
@@ -193,8 +204,8 @@ export function WeeklyTimelogGrid({
                             </option>
                           ))}
                         </select>
-                      </td>
-                      <td className="px-2 py-2">
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
                         {subOptions.length ? (
                           <select
                             className="input-field w-full px-2 py-1.5 text-sm"
@@ -218,8 +229,8 @@ export function WeeklyTimelogGrid({
                         ) : (
                           <span className="text-wt-text-muted text-xs py-2 block">—</span>
                         )}
-                      </td>
-                      <td className="px-2 py-2 min-w-[200px]">
+                      </TableCell>
+                      <TableCell className="px-2 py-2 min-w-[200px]">
                         <input
                           className="input-field w-full min-w-[180px] px-2 py-1.5 text-sm"
                           disabled={!metadataEditable}
@@ -230,12 +241,12 @@ export function WeeklyTimelogGrid({
                           placeholder="Optional"
                           aria-label="Description"
                         />
-                      </td>
+                      </TableCell>
                       {dayKeys.map((key) => {
                         const cellStatus = row.status_by_date?.[key];
                         const cellEditable = isTimelogCellEditable(cellStatus);
                         return (
-                          <td key={key} className="px-1 py-2 text-center align-top">
+                          <TableCell key={key} className="px-1 py-2 text-center align-top">
                             <input
                               type="number"
                               min={0}
@@ -250,80 +261,84 @@ export function WeeklyTimelogGrid({
                                 onRowsChange(updateRow(rows, row.clientKey, { hours_by_date }));
                               }}
                             />
-                          </td>
+                          </TableCell>
                         );
                       })}
                     </>
                   )}
-                  <td className="px-2 py-2 text-center font-medium whitespace-nowrap tabular-nums">
+                  <TableCell className="px-2 py-2 text-center whitespace-nowrap tabular-nums">
                     {formatHoursDisplay(total)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
+          </TableBody>
           <tfoot>
-            <tr className="border-t-2 border-wt-border bg-wt-surface-2 font-medium">
-              <td colSpan={4} className="px-2 py-2 text-right text-wt-text-muted">
+            <TableRow className="border-t-2 bg-wt-surface-1 font-medium">
+              <TableCell colSpan={4} className="px-2 py-2 text-right">
                 Daily totals
-              </td>
+              </TableCell>
               {dayKeys.map((key) => {
                 const total = totals[key] ?? 0;
                 return (
-                  <td
+                  <TableCell
                     key={key}
                     className={`px-2 py-2 text-center tabular-nums ${dailyHourHighlightClass(
                       dailyHourHighlight(total)
                     )}`}
                   >
                     {formatHoursDisplay(total)}
-                  </td>
+                  </TableCell>
                 );
               })}
-              <td className="px-2 py-2 text-center tabular-nums">{formatHoursDisplay(weekSum)}</td>
-            </tr>
+              <TableCell className="px-2 py-2 text-center tabular-nums">{formatHoursDisplay(weekSum)}</TableCell>
+            </TableRow>
             {canApprove ? (
-              <tr className="border-t border-wt-border bg-wt-surface-1">
-                <td colSpan={4} className="px-2 py-2 text-right text-xs text-wt-text-muted">
+              <TableRow className="bg-wt-surface-1">
+                <TableCell colSpan={4} className="px-2 py-2 text-right">
                   Day actions
-                </td>
+                </TableCell>
                 {dayKeys.map((key) => {
                   const showActions = dayHasSubmittedEntries(rows, key);
                   return (
-                    <td key={key} className="px-1 py-2 text-center align-top">
+                    <TableCell key={key} className="px-1 py-2 text-center align-top">
                       {showActions ? (
                         <div className="flex flex-col gap-1">
-                          <button
+                          <Button
                             type="button"
-                            className="rounded border border-emerald-300 px-1 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-50"
+                            variant="outline"
+                            size="xs"
+                            className="border-emerald-300 px-1 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
                             onClick={() => onApproveDay?.(key)}
                           >
                             Approve
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
-                            className="rounded border border-rose-300 px-1 py-0.5 text-[10px] font-medium text-rose-700 hover:bg-rose-50"
+                            variant="destructive"
+                            size="xs"
+                            className="px-1 py-0.5 text-[10px]"
                             onClick={() => onRejectDay?.(key)}
                           >
                             Reject
-                          </button>
+                          </Button>
                         </div>
                       ) : (
                         <span className="text-xs text-wt-text-muted">—</span>
                       )}
-                    </td>
+                    </TableCell>
                   );
                 })}
-                <td className="px-2 py-2" />
-              </tr>
+                <TableCell className="px-2 py-2" />
+              </TableRow>
             ) : null}
           </tfoot>
-        </table>
-      </div>
+        </WtTable>
+      </ScrollableTable>
       {!readOnly ? (
-        <button type="button" className="btn-ghost px-3 py-1.5 text-sm border border-wt-border rounded-lg" onClick={addRow}>
+        <Button variant="outline" size="sm" type="button" className="px-3 py-1.5 text-sm border border-wt-border rounded-lg" onClick={addRow}>
           Add row
-        </button>
+        </Button>
       ) : null}
     </div>
   );

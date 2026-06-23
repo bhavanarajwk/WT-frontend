@@ -1,6 +1,19 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { Button } from "@/components/ui/button";
+import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
@@ -11,7 +24,6 @@ import {
 import { DatePickerField } from "@/components/dashboard/ui/forms";
 import { formatApiDate, formatApiDateDisplay } from "@/utils/apiDate";
 
-type Toast = { type: "success" | "error"; message: string } | null;
 
 type AttendanceSummary = {
   from_date: string;
@@ -34,19 +46,16 @@ const ATTENDANCE_USER_TYPE_LABEL: Record<AttendanceUserTypeTab, string> = {
   INTERN: "Interns",
 };
 
-const NAME_HEADER_CLASS = "px-3 py-2 text-left font-medium";
-const EMAIL_HEADER_CLASS = "px-3 py-2 text-left font-medium hidden sm:table-cell";
-const NUMERIC_HEADER_CLASS =
-  "px-3 py-2 text-center font-medium whitespace-nowrap tabular-nums";
-const LEAVE_COLUMN_CLASS = `${NUMERIC_HEADER_CLASS} w-36`;
-const ATTENDANCE_COLUMN_CLASS = `${NUMERIC_HEADER_CLASS} w-44`;
+const EMAIL_HEADER_CLASS = "hidden sm:table-cell";
+const LEAVE_COLUMN_CLASS = "text-center tabular-nums w-36";
+const ATTENDANCE_COLUMN_CLASS = "text-center tabular-nums w-44";
 const STICKY_HEADER_CLASS =
-  "sticky top-0 z-10 bg-wt-surface-2 text-wt-text-muted shadow-[inset_0_-1px_0_var(--wt-border)]";
-const NAME_CELL_CLASS = "px-3 py-2 text-left truncate";
-const EMAIL_CELL_CLASS = "px-3 py-2 text-left truncate hidden sm:table-cell text-wt-text-muted";
-const NUMERIC_CELL_CLASS = "px-3 py-2 text-center tabular-nums whitespace-nowrap";
-const LEAVE_CELL_CLASS = `${NUMERIC_CELL_CLASS} w-36`;
-const ATTENDANCE_CELL_CLASS = `${NUMERIC_CELL_CLASS} w-44`;
+  "sticky top-0 z-10 bg-wt-surface-1 shadow-[inset_0_-1px_0_var(--wt-border)]";
+const NAME_CELL_CLASS = "truncate";
+const EMAIL_CELL_CLASS = "truncate hidden sm:table-cell";
+const NUMERIC_CELL_CLASS = "text-center tabular-nums w-36";
+const LEAVE_CELL_CLASS = NUMERIC_CELL_CLASS;
+const ATTENDANCE_CELL_CLASS = "text-center tabular-nums w-44";
 
 function defaultAttendanceDateRange(): { from: string; to: string } {
   const to = new Date();
@@ -76,8 +85,7 @@ export function EmployeeAttendancePanel() {
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [toast, setToast] = useState<Toast>(null);
-
+  
   const scrollRootRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const nextPageRef = useRef(0);
@@ -97,11 +105,11 @@ export function EmployeeAttendancePanel() {
     const from = filtersRef.current.from;
     const to = filtersRef.current.to;
     if (!from || !to) {
-      setToast({ type: "error", message: "From Date And To Date Are Required." });
+      showErrorToast("From Date And To Date Are Required.");
       return;
     }
     if (Date.parse(to) < Date.parse(from)) {
-      setToast({ type: "error", message: "To Date Cannot Be Earlier Than From Date." });
+      showErrorToast("To Date Cannot Be Earlier Than From Date.");
       return;
     }
 
@@ -111,7 +119,6 @@ export function EmployeeAttendancePanel() {
     loadingLockRef.current = true;
     if (isFirstPage) {
       setLoading(true);
-      setToast(null);
     } else {
       setLoadingMore(true);
     }
@@ -156,7 +163,7 @@ export function EmployeeAttendancePanel() {
         setEmployees([]);
         setSummary(null);
       }
-      setToast({ type: "error", message: msg });
+      showErrorToast(msg);
       hasMoreRef.current = false;
     } finally {
       loadingLockRef.current = false;
@@ -214,11 +221,6 @@ export function EmployeeAttendancePanel() {
     return () => observer.disconnect();
   }, [fetchNextPage, loading, loadingMore, employees.length]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 3200);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   const workingWeekdays = summary?.working_weekdays_in_range ?? 0;
   const totalItems = summary?.total_element ?? 0;
@@ -227,48 +229,19 @@ export function EmployeeAttendancePanel() {
 
   return (
     <section className="space-y-4">
-      {toast ? (
-        <div
-          className={`sticky top-0 z-30 rounded-xl border px-4 py-3 text-sm shadow-sm ${
-            toast.type === "success"
-              ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-800"
-              : "border-rose-600/30 bg-rose-500/10 text-rose-800"
-          }`}
-          role="status"
-          aria-live="polite"
-        >
-          {toast.message}
-        </div>
-      ) : null}
-
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h3 className="font-semibold">Attendance</h3>
-
-        <div
-          className="flex flex-wrap gap-2 border-b border-wt-border pb-3"
-          role="tablist"
+            <div className="rounded-2xl border border-wt-border bg-wt-surface-1">
+        <PageTabs
+          embedded
           aria-label="Employee User Type"
-        >
-          {ATTENDANCE_USER_TYPE_TABS.map((tab) => {
-            const isActive = userTypeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  isActive
-                    ? "bg-wt-surface-3 text-wt-text"
-                    : "text-wt-text-muted hover:bg-wt-surface-2"
-                }`}
-                onClick={() => setUserTypeTab(tab.id)}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+          value={userTypeTab}
+          onValueChange={(value) => setUserTypeTab(value as AttendanceUserTypeTab)}
+          items={ATTENDANCE_USER_TYPE_TABS.map((tab) => ({
+            value: tab.id,
+            label: tab.label,
+          }))}
+        />
+        <div className={PAGE_TAB_BODY_CLASS}>
+        <h3 className="font-semibold">Attendance</h3>
 
         <div className="flex flex-wrap items-end gap-3">
           <DatePickerField
@@ -342,46 +315,46 @@ export function EmployeeAttendancePanel() {
               ref={scrollRootRef}
               className="wt-scroll-both max-h-[min(70vh,560px)] overflow-auto rounded-xl border border-wt-border"
             >
-              <table className="w-full min-w-full border-separate border-spacing-0 text-sm">
+              <WtTable className="min-w-full border-separate border-spacing-0">
                 <colgroup>
                   <col className="min-w-0" />
                   <col className="min-w-[12rem]" />
                   <col className="w-36" />
                   <col className="w-44" />
                 </colgroup>
-                <thead className="wt-table-sticky-head text-wt-text-muted">
-                  <tr>
-                    <th className={`${STICKY_HEADER_CLASS} ${NAME_HEADER_CLASS}`}>Name</th>
-                    <th className={`${STICKY_HEADER_CLASS} ${EMAIL_HEADER_CLASS}`}>Email</th>
-                    <th className={`${STICKY_HEADER_CLASS} ${LEAVE_COLUMN_CLASS}`}>Leave Days</th>
-                    <th className={`${STICKY_HEADER_CLASS} ${ATTENDANCE_COLUMN_CLASS}`}>
+                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className={STICKY_HEADER_CLASS}>Name</TableHead>
+                    <TableHead className={`${STICKY_HEADER_CLASS} ${EMAIL_HEADER_CLASS}`}>Email</TableHead>
+                    <TableHead className={`${STICKY_HEADER_CLASS} ${LEAVE_COLUMN_CLASS}`}>Leave Days</TableHead>
+                    <TableHead className={`${STICKY_HEADER_CLASS} ${ATTENDANCE_COLUMN_CLASS}`}>
                       Attendance Days
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {employees.map((row) => (
-                    <tr
+                    <TableRow
                       key={String(row.user_id ?? row.emp_id ?? row.name)}
-                      className="border-t border-wt-border hover:bg-wt-surface-2/50"
+                      className="hover:bg-wt-page-bg/50"
                     >
-                      <td className={NAME_CELL_CLASS} title={row.name?.trim() || undefined}>
+                      <TableCell className={NAME_CELL_CLASS} title={row.name?.trim() || undefined}>
                         {row.name?.trim() || "—"}
-                      </td>
-                      <td className={EMAIL_CELL_CLASS} title={row.email?.trim() || undefined}>
+                      </TableCell>
+                      <TableCell className={EMAIL_CELL_CLASS} title={row.email?.trim() || undefined}>
                         {row.email?.trim() || "—"}
-                      </td>
-                      <td
+                      </TableCell>
+                      <TableCell
                         className={`${LEAVE_CELL_CLASS} cursor-default`}
                         title={formatLeaveDatesHover(row)}
                       >
                         {row.leave_days_taken}
-                      </td>
-                      <td className={ATTENDANCE_CELL_CLASS}>{row.total_attendance_days}</td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className={ATTENDANCE_CELL_CLASS}>{row.total_attendance_days}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </WtTable>
               <div ref={loadMoreRef} className="px-3 py-3 text-center text-xs text-wt-text-muted">
                 {loadingMore ? (
                   <span className="inline-flex items-center justify-center gap-2">
@@ -399,6 +372,7 @@ export function EmployeeAttendancePanel() {
             No {audienceLabel} Found For This Range.
           </p>
         ) : null}
+        </div>
       </div>
     </section>
   );

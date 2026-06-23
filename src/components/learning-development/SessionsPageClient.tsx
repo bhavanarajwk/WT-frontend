@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -72,14 +73,10 @@ export function SessionsPageClient() {
             <InputField label="Venue" value={sessionForm.venue} onChange={(v) => setSessionForm((p) => ({ ...p, venue: v }))} />
             <InputField label="Meeting link" value={sessionForm.meeting_link} onChange={(v) => setSessionForm((p) => ({ ...p, meeting_link: v }))} />
           </div>
-          <button
-            type="button"
-            className="btn-primary px-4 py-2 text-sm"
-            disabled={sessionMut.isPending || !trainingId.trim()}
-            onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+          <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={sessionMut.isPending || !trainingId.trim()} onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
           >
             Add Session
-          </button>
+          </Button>
         </section>
       ) : (
         <p className="text-sm text-wt-text-muted">Session creation is limited to HR/Admin.</p>

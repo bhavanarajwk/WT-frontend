@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -35,12 +36,9 @@ function HrLearningDashboard() {
             Open a training card to manage sessions, trainers, trainees, attendance, and scores.
           </p>
         </div>
-        <Link
-          href="/dashboard/learning-development/trainings?create=1"
-          className="btn-primary px-4 py-2 text-sm"
-        >
+        <Button variant="brand" size="sm" className="px-4 py-2 text-sm" render={<Link href="/dashboard/learning-development/trainings?create=1" className="px-4 py-2 text-sm" />}>
           New training
-        </Link>
+        </Button>
       </div>
 
       <article className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 max-w-xs">

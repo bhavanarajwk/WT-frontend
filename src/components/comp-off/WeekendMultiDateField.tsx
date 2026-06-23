@@ -2,6 +2,10 @@
 
 import { useRef, useState } from "react";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field } from "@/components/ui/field";
+import { cn } from "@/lib/utils";
 import {
   API_DATE_PLACEHOLDER,
   apiDateFieldValue,
@@ -101,14 +105,14 @@ export function WeekendMultiDateField({
   const atMax = value.length >= maxDates;
 
   return (
-    <div className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
+    <Field className={cn("flex flex-col gap-1.5", className)}>
       <FieldLabel label={label} required={required} />
       <div className="relative">
-        <input
+        <Input
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          className="input-field api-date-field px-3 py-2 pr-10 text-sm w-full"
+          className="api-date-field h-10 pr-10"
           value={draft}
           placeholder={atMax ? "Maximum dates selected" : API_DATE_PLACEHOLDER}
           disabled={disabled || atMax}
@@ -153,19 +157,21 @@ export function WeekendMultiDateField({
             e.target.value = "";
           }}
         />
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           tabIndex={-1}
           disabled={disabled || atMax}
           aria-label={`Open calendar for ${label}`}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-wt-text-muted hover:text-wt-text hover:bg-wt-surface-2 disabled:opacity-50 disabled:pointer-events-none"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-wt-text-muted hover:text-wt-text hover:bg-wt-surface-2"
           onClick={(e) => {
             e.preventDefault();
             openPicker();
           }}
         >
           <CalendarIcon />
-        </button>
+        </Button>
       </div>
       {value.length ? (
         <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -176,14 +182,16 @@ export function WeekendMultiDateField({
             >
               {apiDateFieldValue(date)}
               {!disabled ? (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   className="rounded p-0.5 text-wt-text-muted hover:text-rose-600 hover:bg-wt-surface-3"
                   aria-label={`Remove ${date}`}
                   onClick={() => removeDate(date)}
                 >
                   ×
-                </button>
+                </Button>
               ) : null}
             </span>
           ))}
@@ -194,6 +202,6 @@ export function WeekendMultiDateField({
           {error}
         </p>
       ) : null}
-    </div>
+    </Field>
   );
 }

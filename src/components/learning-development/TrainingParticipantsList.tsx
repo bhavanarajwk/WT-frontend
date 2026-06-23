@@ -1,6 +1,7 @@
 "use client";
 
 import { EnrollmentStatusBadge } from "@/components/learning-development/EnrollmentStatusBadge";
+import { Button } from "@/components/ui/button";
 import {
   participantRowDisplayLabel,
   participantRowUserId,
@@ -59,24 +60,28 @@ export function TrainingParticipantsList({
             {showActions ? (
               <div className="flex shrink-0 items-center gap-1.5">
                 {canComplete && onMarkCompleted ? (
-                  <button
+                  <Button
                     type="button"
-                    className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+                    variant="outline"
+                    size="xs"
+                    className="border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
                     disabled={isUpdating}
                     onClick={() => onMarkCompleted(participant.userId)}
                   >
                     {isUpdating ? "…" : "Complete"}
-                  </button>
+                  </Button>
                 ) : null}
                 {canWithdraw && onMarkWithdrawn ? (
-                  <button
+                  <Button
                     type="button"
-                    className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                    variant="outline"
+                    size="xs"
+                    className="border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100"
                     disabled={isUpdating}
                     onClick={() => onMarkWithdrawn(participant.userId)}
                   >
                     {isUpdating ? "…" : "Withdraw"}
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             ) : null}

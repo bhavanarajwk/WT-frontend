@@ -1,11 +1,12 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { Textarea } from "@/components/ui/textarea";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { ExitInterviewResponsesView } from "@/components/exit-interview/ExitInterviewResponsesView";
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
@@ -37,7 +38,7 @@ function formatDateTime(value: string | null): string {
 export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId: string }) {
   const { hasHrAccess, userRoles } = useDashboardAccess();
   const canView = hasHrAccess || userRoles.includes("ROLE_ADMIN");
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
 
   const detailQ = useExitInterviewSubmissionDetail(lookupId, { enabled: canView });
   const formDefQ = useExitInterviewFormDefinition({ enabled: canView && Boolean(detailQ.data) });
@@ -87,7 +88,6 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
 
   return (
     <DashboardPageShell>
-      <DashboardToast toast={toast} />
       <div className="mx-auto max-w-4xl space-y-4">
         <Link
           href={DASHBOARD_ROUTES["exit-interview-submissions"]}
@@ -183,17 +183,12 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
                       HR notes from the exit survey discussion. Clear the field and save to remove.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className="btn-primary px-3 py-1.5 text-sm"
-                    disabled={momSaving}
-                    onClick={saveMinutesOfMeeting}
-                  >
+                  <Button variant="brand" size="sm" type="button" className="px-3 py-1.5 text-sm" disabled={momSaving} onClick={saveMinutesOfMeeting} >
                     {momSaving ? "Saving…" : "Save MOM"}
-                  </button>
+                  </Button>
                 </div>
-                <textarea
-                  className="input-field min-h-[140px] w-full px-3 py-2 text-sm"
+                <Textarea
+                  className="min-h-[140px]"
                   value={minutesOfMeeting}
                   onChange={(e) => setMinutesOfMeeting(e.target.value)}
                   disabled={momSaving}

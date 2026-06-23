@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useRef } from "react";
 import { formatApiDate, normalizeWeekStart, weekRangeLabel } from "@/utils/timelog/weekDates";
 
@@ -55,16 +56,10 @@ export function WeekPickerField({
 
   return (
     <div className={`flex items-center gap-2 ${className ?? ""}`.trim()}>
-      <button
-        type="button"
-        disabled={disabled}
-        aria-label="Select week"
-        className="btn-ghost inline-flex items-center gap-2 px-3 py-2 text-sm border border-wt-border rounded-lg hover:bg-wt-surface-2 disabled:opacity-50"
-        onClick={openPicker}
-      >
+      <Button variant="outline" size="sm" type="button" disabled={disabled} aria-label="Select week" className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-wt-border rounded-lg hover:bg-wt-surface-2 disabled:opacity-50" onClick={openPicker} >
         <CalendarIcon />
         <span className="whitespace-nowrap">{weekRangeLabel(normalized)}</span>
-      </button>
+      </Button>
       <input
         ref={pickerRef}
         type="date"
