@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
@@ -16,16 +16,24 @@ import {
 import {
   defaultInvitedEmployeesDateRange,
   filterInvitedRowsByCreatedAtRange,
+  filterInvitedRowsByName,
   formatInvitedEmployeeTableRows,
 } from "@/utils/dashboard/invitedEmployees";
 import { compareApiDates, formatApiDateDisplay } from "@/utils/apiDate";
 import { createEmptyOnboardForm } from "@/utils/onboardFormState";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { CARD_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { HrOnboardForm } from "@/components/employee-onboarding/HrOnboardForm";
 import { InvitedEmployeesTable } from "@/components/employee-onboarding/InvitedEmployeesTable";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { ApiDateField } from "@/components/dashboard/ui/forms";
+import {
+  ManagementListCard,
+  ManagementListContent,
+} from "@/components/dashboard/ui/ManagementListCard";
+import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { defaultDashboardPathForRoles } from "@/constants/routes";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { parseBandsList } from "@/utils/masters";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
@@ -44,6 +52,7 @@ export function EmployeePageClient() {
   >([]);
   const [invitedListLoading, setInvitedListLoading] = useState(false);
   const [resendingInviteEmail, setResendingInviteEmail] = useState<string | null>(null);
+  const [bulkResendingInvites, setBulkResendingInvites] = useState(false);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
     () => defaultInvitedEmployeesDateRange().from
   );
@@ -54,6 +63,9 @@ export function EmployeePageClient() {
     from: string;
     to: string;
   } | null>(null);
+  const [invitedNameSearch, setInvitedNameSearch] = useState("");
+
+  const debouncedInvitedNameSearch = useDebouncedValue(invitedNameSearch, 300);
 
   const invitedListFromDateRef = useRef(invitedListFromDate);
   const invitedListToDateRef = useRef(invitedListToDate);
@@ -181,6 +193,48 @@ export function EmployeePageClient() {
     []
   );
 
+  const resendOnboardInvitesBulk = useCallback(async (emails: string[]) => {
+    const unique = [
+      ...new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean)),
+    ];
+    if (!unique.length || bulkResendingInvites) return;
+
+    setBulkResendingInvites(true);
+    let sent = 0;
+    let failed = 0;
+
+    try {
+      for (const email of unique) {
+        setResendingInviteEmail(email);
+        try {
+          await hrmsService.resendOnboardInvite({ email });
+          sent += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+    } finally {
+      setResendingInviteEmail(null);
+      setBulkResendingInvites(false);
+    }
+
+    if (failed === 0) {
+      showSuccessToast(
+        `Onboarding invites resent to ${sent} employee${sent === 1 ? "" : "s"}.`
+      );
+      return;
+    }
+    if (sent === 0) {
+      showErrorToast(
+        `Failed to resend invites to ${failed} employee${failed === 1 ? "" : "s"}.`
+      );
+      return;
+    }
+    showErrorToast(
+      `${sent} invite${sent === 1 ? "" : "s"} sent, ${failed} failed.`
+    );
+  }, [bulkResendingInvites]);
+
   useEffect(() => {
     if (!hasHrAccess) return;
     if (inviteOnboardingRows.length) return;
@@ -191,12 +245,20 @@ export function EmployeePageClient() {
 
   const onboardingBusy = invitedListLoading || actionLoading;
 
+  const filteredInviteRows = useMemo(
+    () => filterInvitedRowsByName(inviteOnboardingRows, debouncedInvitedNameSearch),
+    [inviteOnboardingRows, debouncedInvitedNameSearch]
+  );
+
+  const hasActiveNameSearch = Boolean(debouncedInvitedNameSearch.trim());
+  const hasInvitedSourceRows = inviteOnboardingRows.length > 0;
+
   return (
     <DashboardPageShell>
       <OnboardingGate>
-        <section className="space-y-4">
+        <section className={CARD_STACK_CLASS}>
           {hasHrAccess ? (
-            <div className="space-y-4">
+            <div className={CARD_STACK_CLASS}>
               <HrOnboardForm
                 formKey={onboardFormKey}
                 form={onboardForm}
@@ -214,9 +276,10 @@ export function EmployeePageClient() {
                 }}
               />
 
-              <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-semibold">Onboarded Employees</h3>
+              <ManagementListCard
+                title="Invited Employees"
+                description="Invited employees within the selected date range."
+                headerAction={
                   <Button
                     variant="ghost"
                     type="button"
@@ -231,55 +294,68 @@ export function EmployeePageClient() {
                   >
                     Refresh Employees
                   </Button>
-                </div>
-                <div className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-0.5">
-                  <ApiDateField
-                    label="From Date"
-                    value={invitedListFromDate}
-                    onChange={setInvitedListFromDate}
-                    className="w-42 shrink-0"
+                }
+                search={
+                  <SearchInput
+                    id="invited-employees-search"
+                    value={invitedNameSearch}
+                    onChange={setInvitedNameSearch}
+                    placeholder="Search by employee name"
+                    aria-label="Search invited employees by name"
+                    disabled={invitedListLoading}
                   />
-                  <ApiDateField
-                    label="To Date"
-                    value={invitedListToDate}
-                    onChange={setInvitedListToDate}
-                    className="w-42 shrink-0"
-                  />
-                  <Button
-                    variant="brand"
-                    type="button"
-                    className="h-10 shrink-0 px-3 text-sm"
-                    onClick={() =>
-                      runAction("Load invited employees", async () => {
-                        await loadInviteOnboardingPreview({
-                          from: invitedListFromDateRef.current,
-                          to: invitedListToDateRef.current,
-                        });
-                        resetOnboardForm();
-                      })
-                    }
-                    disabled={actionLoading}
-                  >
-                    Apply Dates
-                  </Button>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    className="h-10 shrink-0 px-3 text-sm"
-                    onClick={() =>
-                      runAction("Reset invited date range", async () => {
-                        const { from, to } = defaultInvitedEmployeesDateRange();
-                        setInvitedListFromDate(from);
-                        setInvitedListToDate(to);
-                        await loadInviteOnboardingPreview({ from, to });
-                        resetOnboardForm();
-                      })
-                    }
-                    disabled={actionLoading}
-                  >
-                    Last 7 Days
-                  </Button>
-                </div>
+                }
+                filters={
+                  <>
+                    <ApiDateField
+                      label="From Date"
+                      value={invitedListFromDate}
+                      onChange={setInvitedListFromDate}
+                      className="w-42 shrink-0"
+                    />
+                    <ApiDateField
+                      label="To Date"
+                      value={invitedListToDate}
+                      onChange={setInvitedListToDate}
+                      className="w-42 shrink-0"
+                    />
+                    <Button
+                      variant="brand"
+                      type="button"
+                      className="h-10 shrink-0 px-3 text-sm"
+                      onClick={() =>
+                        runAction("Load invited employees", async () => {
+                          await loadInviteOnboardingPreview({
+                            from: invitedListFromDateRef.current,
+                            to: invitedListToDateRef.current,
+                          });
+                          resetOnboardForm();
+                        })
+                      }
+                      disabled={actionLoading}
+                    >
+                      Apply Dates
+                    </Button>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="h-10 shrink-0 px-3 text-sm"
+                      onClick={() =>
+                        runAction("Reset invited date range", async () => {
+                          const { from, to } = defaultInvitedEmployeesDateRange();
+                          setInvitedListFromDate(from);
+                          setInvitedListToDate(to);
+                          await loadInviteOnboardingPreview({ from, to });
+                          resetOnboardForm();
+                        })
+                      }
+                      disabled={actionLoading}
+                    >
+                      Last 7 Days
+                    </Button>
+                  </>
+                }
+              >
                 {invitedApiServerRange ? (
                   <p
                     className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
@@ -293,15 +369,33 @@ export function EmployeePageClient() {
                     <code className="text-[11px]">toDate</code>.
                   </p>
                 ) : null}
-                <InvitedEmployeesTable
-                  rows={inviteOnboardingRows}
-                  emptyLabel="No invited employees in this date range."
-                  loading={invitedListLoading}
-                  actionLoading={actionLoading || onboardingBusy}
-                  resendingEmail={resendingInviteEmail}
-                  onResendInvite={resendOnboardInvite}
-                />
-              </div>
+                <ManagementListContent
+                  isLoading={invitedListLoading}
+                  isEmpty={!invitedListLoading && !filteredInviteRows.length}
+                  emptyTitle={
+                    hasActiveNameSearch && hasInvitedSourceRows
+                      ? "No invited employees match your search."
+                      : "No invited employees in this date range."
+                  }
+                  emptyDescription={
+                    hasActiveNameSearch && hasInvitedSourceRows
+                      ? "Try a different name or clear the search."
+                      : "Try adjusting your date range or refresh the list."
+                  }
+                  skeletonRows={8}
+                  skeletonColumns={8}
+                >
+                  <InvitedEmployeesTable
+                    rows={filteredInviteRows}
+                    searchResetKey={debouncedInvitedNameSearch}
+                    actionLoading={actionLoading || onboardingBusy}
+                    resendingEmail={resendingInviteEmail}
+                    bulkResending={bulkResendingInvites}
+                    onResendInvite={resendOnboardInvite}
+                    onBulkResendInvite={resendOnboardInvitesBulk}
+                  />
+                </ManagementListContent>
+              </ManagementListCard>
             </div>
           ) : null}
         </section>

@@ -1,10 +1,17 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { DatePickerField, DropdownSelectField, InputField } from "@/components/dashboard/ui/forms";
+import { FormGridSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import {
+  CARD_FORM_ACTIONS_CLASS,
+  CARD_FORM_GRID_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
   bandSelectOptions,
@@ -217,16 +224,21 @@ export function HrOnboardForm({
   }
 
   return (
-    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-      <div className="mb-4 space-y-1">
-        <h3 className="font-semibold">Work Information</h3>
-        <p className="text-sm text-wt-text-muted">
+    <Card className="p-0">
+      <CardHeader>
+        <CardTitle>Information</CardTitle>
+        <CardDescription>
           Complete the required work fields to create and invite the employee. They will complete
           personal details during self-service onboarding.
-        </p>
-      </div>
-
-      <div key={`${formKey}-work`} className="grid gap-3 sm:grid-cols-2">
+        </CardDescription>
+      </CardHeader>
+      <Separator />
+      <CardContent>
+        {optionsLoading ? (
+          <FormGridSkeleton fields={12} />
+        ) : (
+          <>
+            <div key={`${formKey}-work`} className={CARD_FORM_GRID_CLASS}>
         <InputField
           label="Employee ID"
           required
@@ -251,8 +263,6 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.user_type}
-          loading={optionsLoading}
-          loadingLabel="Loading options…"
           options={options.user_types}
           onChange={(v) =>
             setForm((p) => {
@@ -269,8 +279,6 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.department}
-          loading={optionsLoading}
-          loadingLabel="Loading options…"
           options={options.departments}
           onChange={(v) =>
             setForm((p) => ({
@@ -286,18 +294,14 @@ export function HrOnboardForm({
             label="Band"
             required
             placeholder={
-              optionsLoading
-                ? "Loading bands…"
-                : !form.department.trim()
-                  ? "Select Department First"
-                  : bandOptions.length
-                    ? "Select"
-                    : "No Bands Available"
+              !form.department.trim()
+                ? "Select Department First"
+                : bandOptions.length
+                  ? "Select"
+                  : "No Bands Available"
             }
             value={form.band_id ? String(form.band_id) : ""}
-            loading={optionsLoading}
-            loadingLabel="Loading bands…"
-            disabled={form.user_type === "INTERN" || !form.department.trim() || (!optionsLoading && !bandOptions.length)}
+            disabled={form.user_type === "INTERN" || !form.department.trim() || !bandOptions.length}
             options={bandOptions}
             onChange={(v) =>
               setForm((p) => ({
@@ -337,8 +341,6 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.work_mode}
-          loading={optionsLoading}
-          loadingLabel="Loading options…"
           options={options.work_modes}
           onChange={(v) => setForm((p) => ({ ...p, work_mode: v }))}
         />
@@ -347,8 +349,6 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.work_location_type}
-          loading={optionsLoading}
-          loadingLabel="Loading options…"
           options={options.work_location_types}
           onChange={(v) => setForm((p) => ({ ...p, work_location_type: v }))}
         />
@@ -357,8 +357,6 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.category}
-          loading={optionsLoading}
-          loadingLabel="Loading options…"
           options={options.categories}
           onChange={(v) => setForm((p) => ({ ...p, category: v }))}
         />
@@ -366,16 +364,10 @@ export function HrOnboardForm({
           label="Reporting Manager"
           required
           placeholder={
-            optionsLoading
-              ? "Loading managers…"
-              : options.reporting_managers.length
-                ? "Select"
-                : "No Employees Available"
+            options.reporting_managers.length ? "Select" : "No Employees Available"
           }
           value={form.reporting_manager_id}
-          loading={optionsLoading}
-          loadingLabel="Loading managers…"
-          disabled={!optionsLoading && !options.reporting_managers.length}
+          disabled={!options.reporting_managers.length}
           options={options.reporting_managers}
           onChange={(v) => setForm((p) => ({ ...p, reporting_manager_id: v }))}
         />
@@ -402,13 +394,22 @@ export function HrOnboardForm({
             onChange={(v) => setForm((p) => ({ ...p, doj: v }))}
           />
         )}
-      </div>
+            </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="brand" type="button" className="px-3 py-2" disabled={actionLoading} onClick={submit} >
-          Create And Invite Employee
-        </Button>
-      </div>
-    </div>
+            <div className={CARD_FORM_ACTIONS_CLASS}>
+              <Button
+                variant="brand"
+                type="button"
+                className="px-3 py-2"
+                disabled={actionLoading}
+                onClick={submit}
+              >
+                Create And Invite Employee
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -48,7 +48,11 @@ function ExitSurveyDetailsSkeleton() {
 }
 
 /** Exit survey (employee self-serve, including offboarded users in notice). */
-export function ExitInterviewSurveyPanel({ className = "" }: { className?: string }) {
+export function ExitInterviewSurveyPanel({
+  className = "",
+}: {
+  className?: string;
+}) {
   const queryClient = useQueryClient();
   const { actionLoading, runAction } = useDashboardAction();
 
@@ -58,12 +62,14 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
 
   const showForm = Boolean(
     flags?.exit_interview_applicable &&
-      flags.can_fill_exit_interview &&
-      !flags.exit_interview_submitted
+    flags.can_fill_exit_interview &&
+    !flags.exit_interview_submitted,
   );
 
   const formDefQ = useExitInterviewFormDefinition({
-    enabled: Boolean(flags?.exit_interview_applicable && !flags?.exit_interview_submitted),
+    enabled: Boolean(
+      flags?.exit_interview_applicable && !flags?.exit_interview_submitted,
+    ),
   });
   const fields = formDefQ.data?.fields ?? [];
 
@@ -109,7 +115,9 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
     void runAction("Submit exit survey", async () => {
       const body = buildExitInterviewSubmitBody(formDefQ.data, answers);
       await exitInterviewService.submit(body);
-      await queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["profile", "exit-interview"],
+      });
       await queryClient.invalidateQueries({ queryKey: ["profile", "self"] });
       setInitialized(false);
     });
@@ -136,7 +144,9 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
         {profileQ.isError ? (
           <p className="mt-3 text-sm text-rose-600">
             Could not load your profile.
-            {profileQ.error instanceof Error ? ` ${profileQ.error.message}` : ""}
+            {profileQ.error instanceof Error
+              ? ` ${profileQ.error.message}`
+              : ""}
           </p>
         ) : null}
 
@@ -161,14 +171,18 @@ export function ExitInterviewSurveyPanel({ className = "" }: { className?: strin
               </div>
               {daysLeft != null ? (
                 <div className="sm:col-span-2">
-                  <span className="text-wt-text-muted">Days until last working day</span>
+                  <span className="text-wt-text-muted">
+                    Days until last working day
+                  </span>
                   <p className="font-medium tabular-nums">{daysLeft}</p>
                 </div>
               ) : null}
             </div>
 
             {formDefQ.isError ? (
-              <p className="mt-6 text-sm text-rose-600">Could not load the survey questions.</p>
+              <p className="mt-6 text-sm text-rose-600">
+                Could not load the survey questions.
+              </p>
             ) : null}
 
             {formDefQ.isLoading ? (
