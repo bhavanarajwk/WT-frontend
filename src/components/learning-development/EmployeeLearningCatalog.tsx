@@ -1,7 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
@@ -86,16 +85,7 @@ export function EmployeeLearningCatalog() {
         </p>
       </div>
       {openQ.isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
-              <Skeleton className="h-5 w-3/4" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-8 w-24" />
-            </div>
-          ))}
-        </div>
+        <SectionLoading label="Loading open trainings…" />
       ) : sortedOpen.length === 0 ? (
         <p className="text-sm text-wt-text-muted">
           No open trainings right now. HR must set type Optional or Hybrid and status Scheduled.
@@ -112,10 +102,14 @@ export function EmployeeLearningCatalog() {
                   {enrolled ? (
                     <span className="text-xs font-medium text-emerald-700">Enrolled</span>
                   ) : (
-                    <Button variant="brand" size="xs" type="button" className="px-3 py-1.5 text-xs" disabled={enrollMut.isPending && enrollingId === id} onClick={() => enroll(id)}
+                    <button
+                      type="button"
+                      className="btn-primary px-3 py-1.5 text-xs"
+                      disabled={enrollMut.isPending && enrollingId === id}
+                      onClick={() => enroll(id)}
                     >
                       {enrollMut.isPending && enrollingId === id ? "Enrolling…" : "Enroll"}
-                    </Button>
+                    </button>
                   )}
                 </div>
               </div>

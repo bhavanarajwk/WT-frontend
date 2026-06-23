@@ -1,18 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
-import { Skeleton } from "@/components/ui/skeleton";
-import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMyTrainingMarks } from "@/hooks/learning/useLearningTrainings";
 import { ApiError } from "@/api/error";
@@ -80,20 +68,7 @@ export function EmployeeTrainingMyMarks({
   });
 
   if (marksQ.isLoading) {
-    return (
-      <div className="space-y-4" aria-hidden>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="rounded-xl border border-wt-border bg-wt-surface-2 p-4 space-y-2">
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-8 w-16" />
-              <Skeleton className="h-3 w-40" />
-            </div>
-          ))}
-        </div>
-        <TableRowsSkeleton rows={4} columns={4} />
-      </div>
-    );
+    return <SectionLoading label="Loading your scores…" />;
   }
 
   if (marksQ.isError) {
@@ -102,14 +77,18 @@ export function EmployeeTrainingMyMarks({
       <div className="space-y-3">
         <p className="text-sm text-wt-text-muted">{message}</p>
         {showEnroll ? (
-          <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={enrollMut.isPending} onClick={() =>
+          <button
+            type="button"
+            className="btn-primary px-4 py-2 text-sm"
+            disabled={enrollMut.isPending}
+            onClick={() =>
               enrollMut.mutate(undefined, {
                 onError: (e) => alert(e instanceof Error ? e.message : String(e)),
               })
             }
           >
             {enrollMut.isPending ? "Enrolling…" : "Enroll in this training"}
-          </Button>
+          </button>
         ) : null}
       </div>
     );
@@ -169,30 +148,30 @@ export function EmployeeTrainingMyMarks({
         </article>
       </div>
 
-      <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-        <WtTable>
-          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-            <TableRow className="hover:bg-transparent">
-              <TableHead>Assessment</TableHead>
-              <TableHead>Weight</TableHead>
-              <TableHead>Score (%)</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-lg border border-wt-border">
+        <table className="wt-scrollable-table text-sm">
+          <thead className="wt-table-sticky-head text-wt-text-muted">
+            <tr>
+              <th className="text-left px-3 py-2 font-medium">Assessment</th>
+              <th className="text-left px-3 py-2 font-medium">Weight</th>
+              <th className="text-left px-3 py-2 font-medium">Score (%)</th>
+              <th className="text-left px-3 py-2 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>
             {marks.assessments.map((a) => (
-              <TableRow key={a.assessmentId}>
-                <TableCell className="px-3 py-2">{a.name}</TableCell>
-                <TableCell className="px-3 py-2">
+              <tr key={a.assessmentId} className="border-t border-wt-border">
+                <td className="px-3 py-2">{a.name}</td>
+                <td className="px-3 py-2 text-wt-text-muted">
                   {a.weightPercent > 0 ? `${a.weightPercent}%` : "—"}
-                </TableCell>
-                <TableCell className="px-3 py-2">{a.score}%</TableCell>
-                <TableCell className="px-3 py-2">Published</TableCell>
-              </TableRow>
+                </td>
+                <td className="px-3 py-2 font-medium text-sky-700">{a.score}%</td>
+                <td className="px-3 py-2 text-emerald-700">Published</td>
+              </tr>
             ))}
-          </TableBody>
-        </WtTable>
-      </ScrollableTable>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

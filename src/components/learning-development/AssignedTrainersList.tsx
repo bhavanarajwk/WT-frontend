@@ -1,7 +1,6 @@
 "use client";
 
 import { IconTrash } from "@/components/dashboard/ui/icons";
-import { Button } from "@/components/ui/button";
 import { cleanEmployeeName } from "@/utils/employeeDirectory";
 
 function trainerRowUserId(row: Record<string, unknown>): string {
@@ -56,18 +55,16 @@ export function AssignedTrainersList({
           >
             <p className="min-w-0 flex-1 truncate font-medium text-wt-text">{name}</p>
             {canManage && userId && onRemove ? (
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600"
+                className="shrink-0 rounded-lg p-2 text-wt-text-muted transition hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-50"
                 disabled={isRemoving}
                 onClick={() => onRemove(userId)}
                 aria-label={isRemoving ? `Removing ${name}` : `Remove ${name}`}
                 title={isRemoving ? "Removing…" : "Remove trainer"}
               >
                 <IconTrash />
-              </Button>
+              </button>
             ) : null}
           </li>
         );

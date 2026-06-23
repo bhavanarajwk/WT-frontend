@@ -1,20 +1,21 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { formatMaterialVisibility } from "@/utils/learning/materialVisibility";
 
-function materialVisibilityTone(value: unknown): string {
-  const normalized = String(value ?? "").trim().toUpperCase();
-  if (normalized === "EMPLOYEE") return filledBadgeClass("info");
-  if (normalized === "HR_ONLY") return filledBadgeClass("violet");
-  return filledBadgeClass("neutral");
-}
-
 export function MaterialVisibilityBadge({ value }: { value: unknown }) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  const tone =
+    normalized === "EMPLOYEE"
+      ? "bg-sky-500/15 text-sky-800 border-sky-500/30"
+      : normalized === "HR_ONLY"
+        ? "bg-violet-500/15 text-violet-800 border-violet-500/30"
+        : "bg-wt-surface-2 text-wt-text-muted border-wt-border";
+
   return (
-    <Badge variant="secondary" className={materialVisibilityTone(value)}>
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${tone}`}
+    >
       {formatMaterialVisibility(value)}
-    </Badge>
+    </span>
   );
 }

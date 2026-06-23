@@ -16,7 +16,7 @@ export function WebTrakBrand({
     variant === "login"
       ? "h-[min(26vw,142px)] w-auto max-w-[min(94vw,460px)]"
       : variant === "sidebar"
-        ? "h-9 w-auto max-w-full object-left"
+        ? "h-9 w-auto max-w-[210px] sm:h-10"
         : "h-8 w-auto max-w-[200px] sm:h-9";
 
   const rowAlign = variant === "sidebar" ? "justify-start" : "justify-center";

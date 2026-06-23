@@ -1,16 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useState } from "react";
 import { hrmsService, type ManagerTeamOnLeaveRow } from "@/services/hrms.service";
@@ -54,9 +43,9 @@ export function ManagerTeamOnLeavePanel() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <InputField label="As of date" type="date" value={asOfDate} onChange={setAsOfDate} />
-          <Button variant="outline" type="button" className="px-3 py-2 h-10 border border-wt-border" onClick={() => void load()}>
+          <button type="button" className="btn-ghost px-3 py-2 h-10 border border-wt-border" onClick={() => void load()}>
             Refresh
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -64,30 +53,30 @@ export function ManagerTeamOnLeavePanel() {
       {error ? <p className="text-sm text-rose-700">{error}</p> : null}
 
       {!loading && !error && rows.length ? (
-        <ScrollableTable maxHeightClass="max-h-48" className="!rounded-lg">
-          <WtTable>
-            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>Employee</TableHead>
-                <TableHead>Project</TableHead>
-                <TableHead>Leave date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <div className="wt-scroll-both max-h-48 rounded-lg border border-wt-border">
+          <table className="wt-scrollable-table text-sm">
+            <thead className="wt-table-sticky-head text-wt-text-muted">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium">Employee</th>
+                <th className="text-left px-3 py-2 font-medium">Project</th>
+                <th className="text-left px-3 py-2 font-medium">Leave date</th>
+              </tr>
+            </thead>
+            <tbody>
               {rows.map((row, idx) => (
-                <TableRow key={`${row.employee_email ?? idx}`}>
-                  <TableCell className="px-3 py-2 whitespace-nowrap">
+                <tr key={`${row.employee_email ?? idx}`} className="border-t border-wt-border">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     {row.employee_name ?? row.employee_email ?? "—"}
-                  </TableCell>
-                  <TableCell className="px-3 py-2 whitespace-nowrap">
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
                     {row.project_name ?? row.project_code ?? "—"}
-                  </TableCell>
-                  <TableCell className="px-3 py-2 whitespace-nowrap">{row.leave_date ?? "—"}</TableCell>
-                </TableRow>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">{row.leave_date ?? "—"}</td>
+                </tr>
               ))}
-            </TableBody>
-          </WtTable>
-        </ScrollableTable>
+            </tbody>
+          </table>
+        </div>
       ) : null}
 
       {!loading && !error && !rows.length ? (

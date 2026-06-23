@@ -1,16 +1,5 @@
 "use client";
 
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import { Button } from "@/components/ui/button";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { useMemo, useState } from "react";
 import type { TimelogWeekSnapshot } from "@/utils/timelog/gridState";
 import {
@@ -80,52 +69,55 @@ export function TeamTimelogTable({ snapshot, dayDates, dayKeys }: TeamTimelogTab
 
   return (
     <div className="space-y-3">
-      <ScrollableTable maxHeightClass="max-h-[min(65vh,560px)]">
-        <WtTable>
-          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-            <TableRow className="hover:bg-transparent">
-              <TableHead>
-                <Button
+      <div className="wt-scroll-both max-h-[min(65vh,560px)] overflow-auto rounded-xl border border-wt-border">
+        <table className="wt-scrollable-table text-sm">
+          <thead className="wt-table-sticky-head text-wt-text-muted">
+            <tr>
+              <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="inline-flex h-auto items-center gap-1 p-0 hover:text-wt-text"
+                  className="inline-flex items-center gap-1 hover:text-wt-text"
                   onClick={() => setDateSort((prev) => (prev === "asc" ? "desc" : "asc"))}
                 >
                   Date
                   <span className="text-[10px] not-italic" aria-hidden>
                     {dateSort === "asc" ? "↑" : "↓"}
                   </span>
-                </Button>
-              </TableHead>
+                </button>
+              </th>
               {DETAIL_COLUMNS.map((col) => (
-                <TableHead key={col.key}>
+                <th
+                  key={col.key}
+                  className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                >
                   {col.label}
-                </TableHead>
+                </th>
               ))}
-              <TableHead>Day total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+              <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
+                Day total
+              </th>
+            </tr>
+          </thead>
+          <tbody>
             {sortedDays.map((day: TeamTimelogDayRow, idx) => (
-              <TableRow
+              <tr
                 key={day.log_date}
-                className={idx > 0 ? "border-t-2" : ""}
+                className={idx > 0 ? "border-t-2 border-wt-border" : ""}
               >
-                <TableCell className="align-top">{day.log_date_label}</TableCell>
+                <td className="whitespace-nowrap px-4 py-4 align-top font-medium">{day.log_date_label}</td>
                 {DETAIL_COLUMNS.map((col) => (
-                  <TableCell key={col.key} className="align-top min-w-[7rem]">
+                  <td key={col.key} className="px-4 py-4 align-top min-w-[7rem]">
                     <StackedCell lines={day.entries} field={col.key} />
-                  </TableCell>
+                  </td>
                 ))}
-                <TableCell className="align-top tabular-nums">
+                <td className="whitespace-nowrap px-4 py-4 align-top font-semibold tabular-nums">
                   {formatHoursDisplay(day.total_hours)}
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </WtTable>
-      </ScrollableTable>
+          </tbody>
+        </table>
+      </div>
 
       <div className="rounded-xl border border-wt-border bg-wt-surface-2/60 px-4 py-3 text-sm text-right">
         <span className="text-wt-text-muted">Week total:</span>{" "}

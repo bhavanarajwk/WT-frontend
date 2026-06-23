@@ -1,20 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableCheckbox,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import Link from "next/link";
-import { showErrorToast, showSuccessToast } from "@/lib/toast";
-import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -25,6 +11,7 @@ import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
 import type { OffboardListItem } from "@/types/offboard";
 import { DatePickerField, SelectField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { toPagedRows } from "@/utils/apiRows";
 import { formatApiDateDisplay } from "@/utils/apiDate";
@@ -39,7 +26,7 @@ import {
   exitInterviewSubmissionDetailPath,
   EXIT_SURVEY_LWD_SORT_OPTIONS,
   filterExitSurveyFollowUpByStatus,
-  filterServingNoticeFollowUpRows,
+  filterInNoticeFollowUpRows,
   followUpRowLookupId,
   isResendableFollowUpRow,
   mergeEmpIdSelection,
@@ -52,6 +39,7 @@ import {
   type ExitSurveyStatusFilter,
 } from "@/utils/exitSurveyFollowUp";
 
+type Toast = { type: "success" | "error"; message: string } | null;
 
 const DEFAULT_PAGE_SIZE = 10;
 const FOLLOW_UP_FETCH_SIZE = 100;
@@ -88,7 +76,8 @@ export function ExitSurveyFollowUpPanel() {
   const [bulkResendResults, setBulkResendResults] = useState<ExitSurveyBulkResendItemResult[]>(
     []
   );
-  
+  const [toast, setToast] = useState<Toast>(null);
+
   const loadFollowUpList = useCallback(async () => {
     setLoadingList(true);
     try {
@@ -117,7 +106,7 @@ export function ExitSurveyFollowUpPanel() {
       const onboardRows = onboardRes
         ? toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes)
         : [];
-      const servingNoticeRows = filterServingNoticeFollowUpRows(onboardRows, {
+      const inNoticeRows = filterInNoticeFollowUpRows(onboardRows, {
         search: debouncedSearch,
         type: filterType,
         fromDate: hasCustomLwdFilter ? filterFromDate : undefined,
@@ -125,7 +114,7 @@ export function ExitSurveyFollowUpPanel() {
       });
       const merged = mergeExitSurveyFollowUpRows(
         (data?.items ?? []) as OffboardListItem[],
-        servingNoticeRows
+        inNoticeRows
       );
       setAllRows(merged);
 
@@ -136,8 +125,8 @@ export function ExitSurveyFollowUpPanel() {
             ? reason.message
             : reason instanceof Error
               ? reason.message
-              : "Offboard list failed; showing serving notice employees only.";
-        showErrorToast(msg);
+              : "Offboard list failed; showing in-notice employees only.";
+        setToast({ type: "error", message: msg });
       }
     } catch (error) {
       setAllRows([]);
@@ -147,7 +136,7 @@ export function ExitSurveyFollowUpPanel() {
           : error instanceof Error
             ? error.message
             : "Failed to load exit survey follow-up list.";
-      showErrorToast(msg);
+      setToast({ type: "error", message: msg });
     } finally {
       setLoadingList(false);
     }
@@ -217,6 +206,11 @@ export function ExitSurveyFollowUpPanel() {
     setSelectedEmpIds((prev) => mergeEmpIdSelection(prev, resendableEmpIdsOnPage));
   }
 
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 3200);
+    return () => window.clearTimeout(id);
+  }, [toast]);
 
   const totalPages = Math.max(1, Math.ceil(listTotal / listPageSize) || 1);
   const rangeStart = listTotal === 0 ? 0 : listPage * listPageSize + 1;
@@ -226,6 +220,7 @@ export function ExitSurveyFollowUpPanel() {
     const normalized = empId.trim();
     if (!normalized) return;
     setResendingEmpId(normalized);
+    setToast(null);
     let successMessage: string | null = null;
     let errorMessage: string | null = null;
     try {
@@ -247,17 +242,17 @@ export function ExitSurveyFollowUpPanel() {
       setResendingEmpId(null);
     }
     if (successMessage) {
-      showSuccessToast(successMessage);
+      setToast({ type: "success", message: successMessage });
     } else if (errorMessage) {
-      showErrorToast(errorMessage);
+      setToast({ type: "error", message: errorMessage });
     }
   }
 
   async function handleBulkResendExitSurvey() {
     if (!selectedEmpIds.length || bulkResending) return;
     setBulkResending(true);
-    let resultSummary: string | null = null;
-    let resultIsError = false;
+    setToast(null);
+    let successToast: Toast = null;
     let errorMessage: string | null = null;
     try {
       const res = await exitInterviewService.resendSurveyBulk(selectedEmpIds);
@@ -267,8 +262,10 @@ export function ExitSurveyFollowUpPanel() {
         `Exit survey reminders processed: ${data?.sent_count ?? 0} sent, ${data?.skipped_count ?? 0} skipped${
           data?.failed_count ? `, ${data.failed_count} failed` : ""
         }.`;
-      resultSummary = summary;
-      resultIsError = (data?.failed_count ?? 0) > 0;
+      successToast = {
+        type: (data?.failed_count ?? 0) > 0 ? "error" : "success",
+        message: summary,
+      };
       setSelectedEmpIds([]);
       setBulkResendResults(data?.results ?? []);
     } catch (error) {
@@ -281,25 +278,25 @@ export function ExitSurveyFollowUpPanel() {
     } finally {
       setBulkResending(false);
     }
-    if (resultSummary) {
-      if (resultIsError) showErrorToast(resultSummary);
-      else showSuccessToast(resultSummary);
+    if (successToast) {
+      setToast(successToast);
     } else if (errorMessage) {
-      showErrorToast(errorMessage);
+      setToast({ type: "error", message: errorMessage });
     }
   }
 
   return (
     <div className="space-y-4">
+      <DashboardToast toast={toast} />
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="sr-only" htmlFor="exit-survey-follow-up-search">
           Search
         </label>
-        <Input
+        <input
           id="exit-survey-follow-up-search"
           type="search"
-          className="h-10 min-w-[200px] flex-1"
+          className="input-field min-w-[200px] flex-1 px-3 py-2 text-sm"
           placeholder="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -353,16 +350,23 @@ export function ExitSurveyFollowUpPanel() {
             { value: "COMPLETED", label: "Completed" },
           ]}
         />
-        <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm h-10 border border-wt-border rounded-lg" onClick={() => void loadFollowUpList()}
+        <button
+          type="button"
+          className="btn-ghost px-3 py-2 text-sm h-10 border border-wt-border rounded-lg"
+          onClick={() => void loadFollowUpList()}
           disabled={loadingList}
         >
           Refresh
-        </Button>
+        </button>
         {selectedResendableCount > 0 ? (
-          <Button variant="brand" size="sm" type="button" className="ml-auto px-3 py-2 text-sm h-10" disabled={loadingList || bulkResending || Boolean(resendingEmpId)} onClick={() => void handleBulkResendExitSurvey()}
+          <button
+            type="button"
+            className="btn-action ml-auto px-3 py-2 text-sm h-10"
+            disabled={loadingList || bulkResending || Boolean(resendingEmpId)}
+            onClick={() => void handleBulkResendExitSurvey()}
           >
             {bulkResending ? "Sending…" : `Resend Exit Survey (${selectedResendableCount})`}
-          </Button>
+          </button>
         ) : null}
       </div>
 
@@ -370,10 +374,13 @@ export function ExitSurveyFollowUpPanel() {
         <div className="space-y-2 rounded-xl border border-wt-border bg-wt-surface-1 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-sm font-semibold">Bulk Resend Results</h4>
-            <Button variant="ghost" size="xs" type="button" className="px-2 py-1 text-xs" onClick={() => setBulkResendResults([])}
+            <button
+              type="button"
+              className="btn-ghost px-2 py-1 text-xs"
+              onClick={() => setBulkResendResults([])}
             >
               Dismiss
-            </Button>
+            </button>
           </div>
           <ul className="max-h-48 space-y-2 overflow-y-auto text-sm">
             {bulkResendResults.map((result) => (
@@ -398,30 +405,32 @@ export function ExitSurveyFollowUpPanel() {
         </p>
       ) : rows.length ? (
         <>
-          <ScrollableTable maxHeightClass="max-h-[min(60vh,480px)]">
-            <WtTable>
-              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-10">
+          <div className="wt-scroll-both max-h-[min(60vh,480px)] rounded-xl border border-wt-border">
+            <table className="wt-scrollable-table text-sm">
+              <thead className="wt-table-sticky-head text-wt-text-muted">
+                <tr>
+                  <th className="w-10 px-3 py-2 font-medium">
                     <span className="sr-only">Select</span>
-                    <TableCheckbox
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-wt-border"
                       checked={allResendableOnPageSelected}
-                      indeterminate={
-                        someResendableOnPageSelected && !allResendableOnPageSelected
-                      }
+                      ref={(el) => {
+                        if (el) el.indeterminate = someResendableOnPageSelected;
+                      }}
                       disabled={
                         !resendableEmpIdsOnPage.length ||
                         loadingList ||
                         bulkResending ||
                         Boolean(resendingEmpId)
                       }
-                      onCheckedChange={(checked) => toggleSelectAllOnPage(Boolean(checked))}
+                      onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
                       aria-label="Select all resendable employees on this page"
                     />
-                  </TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>
+                  </th>
+                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Name</th>
+                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Email</th>
+                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                     <TableSortHeader
                       label="Last Working Day"
                       sortable
@@ -436,11 +445,11 @@ export function ExitSurveyFollowUpPanel() {
                         )
                       }
                     />
-                  </TableHead>
-                  <TableHead>Survey</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                  </th>
+                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Survey</th>
+                </tr>
+              </thead>
+              <tbody>
                 {rows.map((row) => {
                   const empId = resendableEmpIdFromRow(row);
                   const lookupId = followUpRowLookupId(row);
@@ -453,9 +462,9 @@ export function ExitSurveyFollowUpPanel() {
                     row.submission_status === "SUBMITTED" || row.exit_survey_submitted === true;
 
                   return (
-                    <TableRow
+                    <tr
                       key={lookupId || empId || row.email}
-                      className={`hover:bg-wt-page-bg/50 ${
+                      className={`border-t border-wt-border hover:bg-wt-surface-2/50 ${
                         isSelected ? "bg-indigo-50/70" : ""
                       } ${canView && detailHref ? "cursor-pointer" : ""}`}
                       onClick={(event) => {
@@ -469,19 +478,19 @@ export function ExitSurveyFollowUpPanel() {
                         router.push(detailHref);
                       }}
                     >
-                      <TableCell className="px-3 py-2" data-no-row-nav>
+                      <td className="px-3 py-2" data-no-row-nav>
                         {canResend ? (
-                          <TableCheckbox
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-wt-border"
                             checked={isSelected}
                             disabled={loadingList || bulkResending || isResending}
-                            onCheckedChange={(checked) =>
-                              toggleRowSelection(empId, Boolean(checked))
-                            }
+                            onChange={(e) => toggleRowSelection(empId, e.target.checked)}
                             aria-label={`Select ${row.employee_name || empId}`}
                           />
                         ) : null}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
                         {canView && detailHref ? (
                           <Link
                             href={detailHref}
@@ -493,12 +502,12 @@ export function ExitSurveyFollowUpPanel() {
                         ) : (
                           row.employee_name || "—"
                         )}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">{row.email || "—"}</TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{row.email || "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap tabular-nums">
                         {formatApiDateDisplay(row.last_working_day) || "—"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap" data-no-row-nav>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap" data-no-row-nav>
                         {submitted ? (
                           canView && detailHref ? (
                             <Link
@@ -515,23 +524,27 @@ export function ExitSurveyFollowUpPanel() {
                           <div className="inline-flex items-center gap-2">
                             <span className="text-xs text-wt-text-muted">Pending</span>
                             {canResend ? (
-                              <Button variant="brand" size="xs" type="button" className="px-2.5 py-1 text-xs" disabled={loadingList || isResending || bulkResending} onClick={(e) => {
+                              <button
+                                type="button"
+                                className="btn-action px-2.5 py-1 text-xs"
+                                disabled={loadingList || isResending || bulkResending}
+                                onClick={(e) => {
                                   e.stopPropagation();
                                   void handleResendExitSurvey(empId, row.email);
                                 }}
                               >
                                 {isResending ? "Sending…" : "Resend Exit Survey"}
-                              </Button>
+                              </button>
                             ) : null}
                           </div>
                         )}
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   );
                 })}
-              </TableBody>
-            </WtTable>
-          </ScrollableTable>
+              </tbody>
+            </table>
+          </div>
           <ListPagination
             page={listPage}
             totalPages={totalPages}

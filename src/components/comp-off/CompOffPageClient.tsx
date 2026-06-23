@@ -1,29 +1,16 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { compOffService } from "@/services/compOff.service";
 import { InputField, SelectField, TextAreaField } from "@/components/dashboard/ui/forms";
-import { Badge } from "@/components/ui/badge";
-import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { ProjectSelectField } from "@/components/comp-off/ProjectSelectField";
 import { WeekendMultiDateField } from "@/components/comp-off/WeekendMultiDateField";
 import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
@@ -129,7 +116,7 @@ export function CompOffPageClient({
   const earnOnly = flowScope === "earn";
   const pathname = usePathname();
   const { user } = useAuth();
-  const { actionLoading, runAction } = useDashboardAction();
+  const { toast, actionLoading, runAction } = useDashboardAction();
   const {
     hasHrAccess,
     hasManagerAccess,
@@ -839,21 +826,35 @@ export function CompOffPageClient({
     (!earnOnly && !forcedTab && canReviewTeam && (!canApplyCompOff || mainTab === "team"));
 
   const pageBody = (
-    <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
-      {!embedded && canApplyCompOff && canReviewTeam ? (
-        <PageTabs
-          embedded
-          aria-label="Comp-off views"
-          value={mainTab}
-          onValueChange={(value) => setMainTab(value as "my" | "team")}
-          items={[
-            { value: "my", label: "My Comp-off" },
-            { value: "team", label: "Team Review" },
-          ]}
-        />
-      ) : null}
-      <div className={PAGE_TAB_BODY_CLASS}>
+    <section className="space-y-4">
       {!embedded ? <h2 className="text-xl font-semibold text-wt-text">Comp-off</h2> : null}
+
+      {!embedded && canApplyCompOff && canReviewTeam ? (
+              <div className="flex flex-wrap gap-2 border-b border-wt-border pb-3">
+                <button
+                  type="button"
+                  onClick={() => setMainTab("my")}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    mainTab === "my"
+                      ? "bg-wt-surface-3 text-wt-text"
+                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                  }`}
+                >
+                  My comp-off
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMainTab("team")}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                    mainTab === "team"
+                      ? "bg-wt-surface-3 text-wt-text"
+                      : "text-wt-text-muted hover:bg-wt-surface-2"
+                  }`}
+                >
+                  Team review
+                </button>
+              </div>
+            ) : null}
 
             {showMyCompOff ? (
               <div className="space-y-4">
@@ -917,12 +918,22 @@ export function CompOffPageClient({
                       value={earnForm.comments}
                       onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
                     />
-                    <Button variant="brand" type="button" className="px-3 py-2" disabled={ actionLoading || !earnForm.project_code.trim() || !earnForm.worked_dates.length || !earnForm.comments.trim() || managerEmailResolving } onClick={() =>
+                    <button
+                      type="button"
+                      className="btn-primary px-3 py-2"
+                      disabled={
+                        actionLoading ||
+                        !earnForm.project_code.trim() ||
+                        !earnForm.worked_dates.length ||
+                        !earnForm.comments.trim() ||
+                        managerEmailResolving
+                      }
+                      onClick={() =>
                         runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
                       }
                     >
                       {editingRequestId ? "Save earn request" : "Submit earn request"}
-                    </Button>
+                    </button>
                   </div>
 
                   {!earnOnly ? (
@@ -956,42 +967,46 @@ export function CompOffPageClient({
                         }
                       />
                       ) : null}
-                      <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" disabled={actionLoading} onClick={() => runAction("Refresh my comp-off requests", loadMyRequests)}
+                      <button
+                        type="button"
+                        className="btn-primary px-3 py-2 text-sm"
+                        disabled={actionLoading}
+                        onClick={() => runAction("Refresh my comp-off requests", loadMyRequests)}
                       >
                         Refresh
-                      </Button>
+                      </button>
                     </div>
                   </div>
                   {filteredMyRequests.length ? (
-                    <ScrollableTable maxHeightClass="max-h-[min(50vh,400px)]">
-                      <WtTable>
-                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                          <TableRow className="hover:bg-transparent">
+                    <div className="wt-scroll-both max-h-[min(50vh,400px)] rounded-xl border border-wt-border">
+                      <table className="wt-scrollable-table text-sm">
+                        <thead className="wt-table-sticky-head text-wt-text-muted">
+                          <tr>
                             {earnOnly ? (
                               <>
-                                <TableHead>Project</TableHead>
-                                <TableHead>Worked date</TableHead>
+                                <th className="text-left px-3 py-2 font-medium">Project</th>
+                                <th className="text-left px-3 py-2 font-medium">Worked date</th>
                               </>
                             ) : (
                               <>
-                                <TableHead>Type</TableHead>
-                                <TableHead>From</TableHead>
-                                <TableHead>To</TableHead>
+                                <th className="text-left px-3 py-2 font-medium">Type</th>
+                                <th className="text-left px-3 py-2 font-medium">From</th>
+                                <th className="text-left px-3 py-2 font-medium">To</th>
                               </>
                             )}
-                            <TableHead>Status</TableHead>
-                            <TableHead>Manager status</TableHead>
+                            <th className="text-left px-3 py-2 font-medium">Status</th>
+                            <th className="text-left px-3 py-2 font-medium">Manager status</th>
                             {!earnOnly ? (
                               <>
-                                <TableHead>Manager reason</TableHead>
-                                <TableHead>HR status</TableHead>
+                                <th className="text-left px-3 py-2 font-medium">Manager reason</th>
+                                <th className="text-left px-3 py-2 font-medium">HR status</th>
                               </>
                             ) : null}
-                            <TableHead>Comments</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                            <th className="text-left px-3 py-2 font-medium">Comments</th>
+                            <th className="text-right px-3 py-2 font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
                           {filteredMyRequests.map((row, idx) => {
                             const id = requestRowId(row);
                             const status = requestRowStatus(row);
@@ -1013,11 +1028,11 @@ export function CompOffPageClient({
                             const hrSt =
                               !earnOnly && flow === "COMP_OFF" ? requestHrStatus(row) : "—";
                             return (
-                              <TableRow key={`${id || idx}`}>
+                              <tr key={`${id || idx}`} className="border-t border-wt-border">
                                 {earnOnly ? (
                                   <>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">{earnProjectLabel(row)}</TableCell>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">
+                                    <td className="px-3 py-2 whitespace-nowrap">{earnProjectLabel(row)}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
                                       {String(
                                         pickRowField(
                                           row,
@@ -1027,39 +1042,39 @@ export function CompOffPageClient({
                                           "requestFromDate"
                                         ) ?? "—"
                                       )}
-                                    </TableCell>
+                                    </td>
                                   </>
                                 ) : (
                                   <>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</TableCell>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">
+                                    <td className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
                                       {String(
                                         pickRowField(row, "request_from_date", "requestFromDate") ?? "—"
                                       )}
-                                    </TableCell>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
                                       {String(
                                         pickRowField(row, "request_to_date", "requestToDate") ?? "—"
                                       )}
-                                    </TableCell>
+                                    </td>
                                   </>
                                 )}
-                                <TableCell className="px-3 py-2 whitespace-nowrap">{status}</TableCell>
-                                <TableCell className="px-3 py-2 whitespace-nowrap">{mgrStatus}</TableCell>
+                                <td className="px-3 py-2 whitespace-nowrap">{status}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">{mgrStatus}</td>
                                 {!earnOnly ? (
                                   <>
-                                    <TableCell
+                                    <td
                                       className="px-3 py-2 max-w-[140px] truncate"
                                       title={mgrReason !== "—" ? mgrReason : undefined}
                                     >
                                       {mgrReason}
-                                    </TableCell>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
                                       {flow === "COMP_OFF" ? hrSt : "—"}
-                                    </TableCell>
+                                    </td>
                                   </>
                                 ) : null}
-                                <TableCell className="px-3 py-2 max-w-[200px] truncate">
+                                <td className="px-3 py-2 max-w-[200px] truncate">
                                   {String(
                                     pickRowField(
                                       row,
@@ -1071,12 +1086,16 @@ export function CompOffPageClient({
                                       "workDescription"
                                     ) ?? "—"
                                   )}
-                                </TableCell>
-                                <TableCell className="px-3 py-2 text-right">
+                                </td>
+                                <td className="px-3 py-2 text-right">
                                   {isPending && id ? (
                                     <div className="inline-flex gap-1">
                                       {canEdit ? (
-                                        <Button variant="brand" size="xs" type="button" className="px-2 py-1 text-xs" disabled={actionLoading} onClick={() => {
+                                        <button
+                                          type="button"
+                                          className="btn-action px-2 py-1 text-xs"
+                                          disabled={actionLoading}
+                                          onClick={() => {
                                             setUsageForm({
                                               request_from_date: String(
                                                 pickRowField(row, "request_from_date", "requestFromDate") ?? ""
@@ -1098,12 +1117,11 @@ export function CompOffPageClient({
                                           }}
                                         >
                                           Edit
-                                        </Button>
+                                        </button>
                                       ) : null}
-                                      <Button
+                                      <button
                                         type="button"
-                                        variant="destructive"
-                                        size="xs"
+                                        className="rounded-lg px-2 py-1 text-xs border border-rose-600/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                         disabled={actionLoading}
                                         onClick={() =>
                                           runAction(
@@ -1119,18 +1137,18 @@ export function CompOffPageClient({
                                         }
                                       >
                                         Revoke
-                                      </Button>
+                                      </button>
                                     </div>
                                   ) : (
                                     <span className="text-wt-text-muted">—</span>
                                   )}
-                                </TableCell>
-                              </TableRow>
+                                </td>
+                              </tr>
                             );
                           })}
-                        </TableBody>
-                      </WtTable>
-                    </ScrollableTable>
+                        </tbody>
+                      </table>
+                    </div>
                   ) : (
                     <p className="text-sm text-wt-text-muted">No comp-off requests yet.</p>
                   )}
@@ -1172,47 +1190,51 @@ export function CompOffPageClient({
                       }
                     />
                   ) : null}
-                  <Button variant="brand" type="button" className="px-3 py-2 h-10" disabled={actionLoading} onClick={() =>
+                  <button
+                    type="button"
+                    className="btn-primary px-3 py-2 h-10"
+                    disabled={actionLoading}
+                    onClick={() =>
                       runAction(compOffTeamReviewActionLabel("COMP_OFF", "fetch"), () =>
                         loadTeamRequests({ raiseOnError: true })
                       )
                     }
                   >
                     Fetch requests
-                  </Button>
+                  </button>
                 </div>
 
                 {teamRequests.length ? (
-                  <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-                    <WtTable>
-                      <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead>Employee</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>From</TableHead>
-                          <TableHead>To</TableHead>
-                          <TableHead>Description</TableHead>
+                  <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
+                    <table className="wt-scrollable-table text-sm">
+                      <thead className="wt-table-sticky-head text-wt-text-muted">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Employee</th>
+                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Type</th>
+                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">From</th>
+                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">To</th>
+                          <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Description</th>
                           {isHrOnly ? (
                             <>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Manager status</TableHead>
-                              <TableHead>Manager reason</TableHead>
+                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Status</th>
+                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager status</th>
+                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager reason</th>
                             </>
                           ) : (
                             <>
-                              <TableHead>Manager status</TableHead>
+                              <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager status</th>
                               {!managerOnlyReview ? (
-                                <TableHead>Manager reason</TableHead>
+                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Manager reason</th>
                               ) : null}
                               {hasHrAccess ? (
-                                <TableHead>HR status</TableHead>
+                                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">HR status</th>
                               ) : null}
-                              <TableHead className="text-right">Actions</TableHead>
+                              <th className="text-right px-3 py-2 font-medium whitespace-nowrap">Actions</th>
                             </>
                           )}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                        </tr>
+                      </thead>
+                      <tbody>
                         {teamRequests.map((row, idx) => {
                           const id = requestRowId(row);
                           const flow = normalizeCompOffRequestType(
@@ -1258,28 +1280,34 @@ export function CompOffPageClient({
                           const canReview =
                             !isRowUpdating &&
                             (canManagerActEarn || canManagerActUsage || canHrActUsage);
+                          const tone = (s: string) =>
+                            s === "APPROVED"
+                              ? "text-emerald-700"
+                              : s === "REJECTED"
+                                ? "text-rose-700"
+                                : "text-wt-text";
                           return (
-                            <TableRow key={`${id || idx}`}>
-                              <TableCell className="px-3 py-2 whitespace-nowrap">
+                            <tr key={`${id || idx}`} className="border-t border-wt-border">
+                              <td className="px-3 py-2 whitespace-nowrap">
                                 {compOffEmployeeDisplayName(row, teamEmployeeNames)}
                                 {isAm ? (
-                                  <Badge variant="secondary" className={`ml-2 text-[10px] ${filledBadgeClass("info")}`}>
+                                  <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 border border-blue-200">
                                     AM
-                                  </Badge>
+                                  </span>
                                 ) : null}
-                              </TableCell>
-                              <TableCell className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</TableCell>
-                              <TableCell className="px-3 py-2 whitespace-nowrap">
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">
                                 {String(
                                   pickRowField(row, "request_from_date", "requestFromDate") ?? "—"
                                 )}
-                              </TableCell>
-                              <TableCell className="px-3 py-2 whitespace-nowrap">
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap">
                                 {String(
                                   pickRowField(row, "request_to_date", "requestToDate") ?? "—"
                                 )}
-                              </TableCell>
-                              <TableCell
+                              </td>
+                              <td
                                 className="px-3 py-2 max-w-[200px] truncate"
                                 title={String(
                                   pickRowField(row, "comments", "comment", "description", "remarks") ?? ""
@@ -1288,48 +1316,46 @@ export function CompOffPageClient({
                                 {String(
                                   pickRowField(row, "comments", "comment", "description", "remarks") ?? "—"
                                 )}
-                              </TableCell>
+                              </td>
                               {isHrOnly ? (
                                 <>
-                                  <TableCell className="px-3 py-2 whitespace-nowrap">
+                                  <td className={`px-3 py-2 whitespace-nowrap font-medium ${tone(finalStatus)}`}>
                                     {finalStatus}
-                                  </TableCell>
-                                  <TableCell className="px-3 py-2 whitespace-nowrap">
+                                  </td>
+                                  <td className={`px-3 py-2 whitespace-nowrap font-medium ${tone(managerStatus)}`}>
                                     {managerStatus}
-                                  </TableCell>
-                                  <TableCell
+                                  </td>
+                                  <td
                                     className="px-3 py-2 max-w-[180px] truncate"
                                     title={managerReason !== "—" ? managerReason : undefined}
                                   >
                                     {managerReason}
-                                  </TableCell>
+                                  </td>
                                 </>
                               ) : (
                                 <>
-                                  <TableCell className="px-3 py-2 whitespace-nowrap">
+                                  <td className={`px-3 py-2 whitespace-nowrap font-medium ${tone(managerStatus)}`}>
                                     {managerStatus}
-                                  </TableCell>
+                                  </td>
                                   {!managerOnlyReview ? (
-                                    <TableCell
+                                    <td
                                       className="px-3 py-2 max-w-[180px] truncate"
                                       title={managerReason !== "—" ? managerReason : undefined}
                                     >
                                       {managerReason}
-                                    </TableCell>
+                                    </td>
                                   ) : null}
                                   {hasHrAccess ? (
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">
+                                    <td className={`px-3 py-2 whitespace-nowrap font-medium ${tone(hrStatus)}`}>
                                       {flow === "COMP_OFF" ? hrStatus : "—"}
-                                    </TableCell>
+                                    </td>
                                   ) : null}
-                                  <TableCell className="px-3 py-2 text-right whitespace-nowrap">
+                                  <td className="px-3 py-2 text-right whitespace-nowrap">
                                     {canReview && flow ? (
                                       <div className="inline-flex items-center gap-1">
-                                        <Button
+                                        <button
                                           type="button"
-                                          variant="outline"
-                                          size="xs"
-                                          className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
+                                          className="rounded-lg px-2.5 py-1.5 text-xs border border-emerald-600/25 text-emerald-800 bg-emerald-50/40 hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed"
                                           disabled={!id || isRowUpdating}
                                           onClick={() =>
                                             runAction(
@@ -1342,29 +1368,28 @@ export function CompOffPageClient({
                                           }
                                         >
                                           {isRowUpdating ? "…" : "Approve"}
-                                        </Button>
-                                        <Button
+                                        </button>
+                                        <button
                                           type="button"
-                                          variant="destructive"
-                                          size="xs"
+                                          className="rounded-lg px-2.5 py-1.5 text-xs border border-rose-600/25 text-rose-800 bg-rose-50/40 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed"
                                           disabled={!id || isRowUpdating}
                                           onClick={() => openRejectDialog(id, flow)}
                                         >
                                           Reject
-                                        </Button>
+                                        </button>
                                       </div>
                                     ) : (
                                       <span className="text-wt-text-muted">—</span>
                                     )}
-                                  </TableCell>
+                                  </td>
                                 </>
                               )}
-                            </TableRow>
+                            </tr>
                           );
                         })}
-                      </TableBody>
-                    </WtTable>
-                  </ScrollableTable>
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
                   <p className="text-sm text-wt-text-muted">
                     No requests loaded. Click <strong>Fetch requests</strong>.
@@ -1372,7 +1397,6 @@ export function CompOffPageClient({
                 )}
               </div>
             ) : null}
-      </div>
     </section>
   );
 
@@ -1415,6 +1439,7 @@ export function CompOffPageClient({
       <>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
         {rejectDialog}
+        <DashboardToast toast={toast} />
       </>
     );
   }
@@ -1425,6 +1450,7 @@ export function CompOffPageClient({
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
       </DashboardPageShell>
       {rejectDialog}
+      <DashboardToast toast={toast} />
     </>
   );
 }

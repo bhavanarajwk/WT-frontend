@@ -1,15 +1,5 @@
 "use client";
 
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -141,19 +131,19 @@ export function TraineeAttendanceAnalytics({
               </p>
             </article>
           </div>
-          <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-            <WtTable>
-              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>Session date</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-lg border border-wt-border">
+            <table className="wt-scrollable-table text-sm">
+              <thead className="wt-table-sticky-head text-wt-text-muted">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium">Session date</th>
+                  <th className="text-left px-3 py-2 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
                 {sessionRows.map((row) => (
-                  <TableRow key={row.sessionId}>
-                    <TableCell className="px-3 py-2 whitespace-nowrap">{row.sessionDate}</TableCell>
-                    <TableCell className="px-3 py-2 whitespace-nowrap">
+                  <tr key={row.sessionId} className="border-t border-wt-border">
+                    <td className="px-3 py-2 whitespace-nowrap">{row.sessionDate}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
                       <span
                         className={
                           isPresentStatus(row.status)
@@ -165,12 +155,12 @@ export function TraineeAttendanceAnalytics({
                       >
                         {row.status}
                       </span>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 ))}
-              </TableBody>
-            </WtTable>
-          </ScrollableTable>
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>

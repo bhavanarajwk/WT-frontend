@@ -1,13 +1,5 @@
 "use client";
 
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { ApiError } from "@/api/error";
@@ -15,10 +7,9 @@ import { useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
 import { hrmsService } from "@/services/hrms.service";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { normalizeMyTrainingMarks } from "@/utils/learning/trainingScores";
-import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
 import {
   PROFILE_TABLE_BODY_CELL,
-  PROFILE_TABLE_CLASS,
   PROFILE_TABLE_HEAD_CELL,
   PROFILE_TABLE_SCROLL,
 } from "@/components/dashboard/profile/profileTableStyles";
@@ -116,48 +107,48 @@ export function ProfileEmployeeTrainingsSection({ enabled = true }: { enabled?: 
     [openTrainingsQ.data]
   );
 
-  const loading = openTrainingsQ.isLoading;
+  const loading = openTrainingsQ.isLoading || myMarksQueries.some((query) => query.isLoading);
 
   return (
     <div className="mt-8 border-t border-wt-border pt-6">
       <h4 className="mb-3 text-sm font-semibold text-wt-text">Training Details</h4>
         {loading ? (
-          <TableRowsSkeleton rows={3} columns={4} />
+          <ProfileSectionLoader message="Loading training details..." />
         ) : rows.length === 0 ? (
           <p className="text-sm text-wt-text-muted">No trainings found.</p>
         ) : (
           <div className={PROFILE_TABLE_SCROLL}>
-            <WtTable className={PROFILE_TABLE_CLASS}>
-              <TableHeader className="bg-wt-surface-1 [&_tr]:border-b">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Training Name</TableHead>
-                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Assessment Score</TableHead>
-                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Completion Date</TableHead>
-                  <TableHead className={PROFILE_TABLE_HEAD_CELL}>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <table className="min-w-full text-sm">
+              <thead className="bg-wt-surface-2 text-wt-text-muted">
+                <tr>
+                  <th className={PROFILE_TABLE_HEAD_CELL}>Training Name</th>
+                  <th className={PROFILE_TABLE_HEAD_CELL}>Assessment Score</th>
+                  <th className={PROFILE_TABLE_HEAD_CELL}>Completion Date</th>
+                  <th className={PROFILE_TABLE_HEAD_CELL}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
                 {rows.map((row, index) => {
                   const trainingId = String(row.id ?? "").trim();
                   return (
-                    <TableRow key={trainingRowKey(row, index)}>
-                      <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                    <tr key={trainingRowKey(row, index)} className="border-t border-wt-border">
+                      <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                         {readTrainingName(row)}
-                      </TableCell>
-                      <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                      </td>
+                      <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                         {readAssessmentScore(trainingId, marksByTrainingId)}
-                      </TableCell>
-                      <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                      </td>
+                      <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                         {readCompletionDate(row)}
-                      </TableCell>
-                      <TableCell className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
+                      </td>
+                      <td className={`${PROFILE_TABLE_BODY_CELL} whitespace-nowrap`}>
                         {readTrainingStatus(row)}
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   );
                 })}
-              </TableBody>
-            </WtTable>
+              </tbody>
+            </table>
           </div>
         )}
     </div>

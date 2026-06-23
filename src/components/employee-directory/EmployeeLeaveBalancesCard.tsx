@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useEmployeeLeaveBalances } from "@/hooks/employee-directory/useEmployeeLeaveBalances";
 
@@ -36,9 +35,9 @@ export function EmployeeLeaveBalancesCard({
         {isError ? (
           <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
             Could not load balances.{error instanceof Error ? ` ${error.message}` : ""}
-            <Button variant="ghost" size="xs" type="button" className="mt-2 px-2 py-1 text-xs" onClick={() => void refetch()}>
+            <button type="button" className="btn-ghost mt-2 px-2 py-1 text-xs" onClick={() => void refetch()}>
               Retry
-            </Button>
+            </button>
           </div>
         ) : null}
 

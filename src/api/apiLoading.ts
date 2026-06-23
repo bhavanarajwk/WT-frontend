@@ -32,9 +32,23 @@ export function subscribeApiLoading(listener: Listener) {
   };
 }
 
-/** Track in-flight HTTP requests (telemetry only — no global UI overlay). */
-export function attachApiLoadingTelemetry(_client: HttpClient) {
+/** Track in-flight HTTP requests for the global loading overlay. */
+export function attachApiLoadingTelemetry(client: HttpClient) {
   if (attached) return;
   attached = true;
-  // Intentionally no-op: page UI must not block on background API calls.
+
+  client.useRequest((url, init) => {
+    begin();
+    return { url, init };
+  });
+
+  client.useResponse((response) => {
+    end();
+    return response;
+  });
+
+  client.useError((error) => {
+    end();
+    throw error;
+  });
 }

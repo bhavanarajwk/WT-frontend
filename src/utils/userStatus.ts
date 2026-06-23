@@ -1,9 +1,4 @@
-export type EmployeeStatusTone =
-  | "active"
-  | "inactive"
-  | "invited"
-  | "serving_notice"
-  | "neutral";
+export type EmployeeStatusTone = "active" | "inactive" | "invited" | "in_notice" | "neutral";
 
 export function normalizeUserStatus(status: unknown): string {
   return String(status ?? "").trim().toUpperCase();
@@ -15,19 +10,8 @@ export function normalizeEmployeeStatusKey(status: unknown): string {
     .trim()
     .toUpperCase()
     .replace(/[\s-]+/g, "_");
-
-  if (compact === "ONBOARDING") return "INVITED";
-  if (compact === "OFFBOARDED") return "INACTIVE";
-  if (
-    compact === "IN_NOTICE" ||
-    compact === "INNOTICE" ||
-    compact === "SERVING_NOTICE" ||
-    compact === "SERVINGNOTICE" ||
-    compact === "NOTICE"
-  ) {
-    return "SERVING_NOTICE";
-  }
-
+  if (compact === "INNOTICE") return "IN_NOTICE";
+  if (compact === "NOTICE") return "IN_NOTICE";
   return compact;
 }
 
@@ -40,8 +24,10 @@ export function formatEmployeeStatusLabel(status: unknown): string {
       return "Inactive";
     case "INVITED":
       return "Invited";
-    case "SERVING_NOTICE":
-      return "Serving Notice";
+    case "IN_NOTICE":
+      return "In Notice";
+    case "ONBOARDING":
+      return "Onboarding";
     case "PENDING":
       return "Pending";
     default: {
@@ -59,7 +45,7 @@ export function getEmployeeStatusTone(status: unknown): EmployeeStatusTone {
   if (key === "ACTIVE") return "active";
   if (key === "INACTIVE") return "inactive";
   if (key === "INVITED") return "invited";
-  if (key === "SERVING_NOTICE") return "serving_notice";
+  if (key === "IN_NOTICE") return "in_notice";
   return "neutral";
 }
 
@@ -76,13 +62,8 @@ export function isOffboardedUserStatus(status: unknown): boolean {
   return normalizeEmployeeStatusKey(status) === "INACTIVE";
 }
 
-export function isServingNoticeUserStatus(status: unknown): boolean {
-  return normalizeEmployeeStatusKey(status) === "SERVING_NOTICE";
-}
-
-/** @deprecated Use isServingNoticeUserStatus */
 export function isInNoticeUserStatus(status: unknown): boolean {
-  return isServingNoticeUserStatus(status);
+  return normalizeEmployeeStatusKey(status) === "IN_NOTICE";
 }
 
 /** Status from GET /profile (or session user). */

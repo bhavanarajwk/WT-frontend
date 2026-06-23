@@ -1,17 +1,12 @@
 "use client";
 
-import { isValidElement, type ReactNode, useMemo, useState } from "react";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
+import { useMemo, useState } from "react";
 import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
+  SCROLLABLE_TABLE_CLASS,
+  ScrollableTable,
+  STICKY_TABLE_HEAD_CLASS,
+} from "@/components/dashboard/ui/ScrollableTable";
+import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import {
   activeSortDirectionForColumn,
@@ -35,12 +30,10 @@ export function DataTable({
   paginate = true,
   pageSize: initialPageSize,
   resetPaginationKeys,
-  maxHeightClass,
-  scrollChain = false,
 }: {
   title?: string;
   columns: string[];
-  rows: Array<Record<string, unknown | ReactNode>>;
+  rows: Array<Record<string, unknown>>;
   emptyLabel: string;
   compact?: boolean;
   sortOptions?: ListSortOption<Record<string, unknown>>[];
@@ -50,8 +43,6 @@ export function DataTable({
   paginate?: boolean;
   pageSize?: number;
   resetPaginationKeys?: readonly unknown[];
-  maxHeightClass?: string;
-  scrollChain?: boolean;
 }) {
   const [internalSortId, setInternalSortId] = useState(
     () => defaultSortId ?? sortOptions?.[0]?.id ?? ""
@@ -60,11 +51,7 @@ export function DataTable({
   const setSortId = onSortIdChange ?? setInternalSortId;
 
   const { columns: displayColumns, rows: displaySourceRows } = useMemo(
-    () =>
-      prepareTableForDisplay(
-        columns,
-        rows.map((row) => ({ ...row })) as Array<Record<string, unknown>>
-      ),
+    () => prepareTableForDisplay(columns, rows),
     [columns, rows]
   );
 
@@ -73,7 +60,7 @@ export function DataTable({
     return applyListSort(displaySourceRows, sortId, sortOptions);
   }, [displaySourceRows, sortId, sortOptions]);
 
-  useClientPagination(sortedRows, {
+  const pagination = useClientPagination(sortedRows, {
     pageSize: initialPageSize,
     resetKeys: resetPaginationKeys ?? (sortOptions?.length ? [sortId] : undefined),
   });
@@ -89,13 +76,18 @@ export function DataTable({
     );
   }
 
+  const cellClass = compact ? "px-1.5 py-1 whitespace-nowrap" : "px-3 py-2 whitespace-nowrap";
+  const headCellClass = compact
+    ? "text-left px-1.5 py-1 font-medium whitespace-nowrap"
+    : "text-left px-3 py-2 font-medium whitespace-nowrap";
+
   return (
     <div className="space-y-2">
       {title ? <p className="text-sm font-medium">{title}</p> : null}
-      <ScrollableTable maxHeightClass={maxHeightClass} scrollChain={scrollChain}>
-        <WtTable>
-          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-            <TableRow className="hover:bg-transparent">
+      <ScrollableTable>
+        <table className={SCROLLABLE_TABLE_CLASS}>
+          <thead className={STICKY_TABLE_HEAD_CLASS}>
+            <tr>
               {displayColumns.map((col) => {
                 const columnSortOpts = sortOptions?.length ? sortOptionsForColumn(col, sortOptions) : [];
                 const activeDir =
@@ -103,7 +95,7 @@ export function DataTable({
                     ? activeSortDirectionForColumn(col, sortId, sortOptions)
                     : null;
                 return (
-                  <TableHead key={col}>
+                  <th key={col} className={headCellClass}>
                     <TableSortHeader
                       label={formatTableColumnHeader(col)}
                       activeDirection={activeDir}
@@ -114,27 +106,23 @@ export function DataTable({
                           : undefined
                       }
                     />
-                  </TableHead>
+                  </th>
                 );
               })}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+            </tr>
+          </thead>
+          <tbody>
             {displayRows.map((row, idx) => (
-              <TableRow key={idx}>
+              <tr key={idx} className="border-t border-wt-border">
                 {displayColumns.map((col) => (
-                  <TableCell key={col}>
-                    {row[col] === null || row[col] === undefined
-                      ? "—"
-                      : isValidElement(row[col])
-                        ? (row[col] as ReactNode)
-                        : String(row[col])}
-                  </TableCell>
+                  <td key={col} className={cellClass}>
+                    {row[col] === null || row[col] === undefined ? "—" : String(row[col])}
+                  </td>
                 ))}
-              </TableRow>
+              </tr>
             ))}
-          </TableBody>
-        </WtTable>
+          </tbody>
+        </table>
       </ScrollableTable>
     </div>
   );

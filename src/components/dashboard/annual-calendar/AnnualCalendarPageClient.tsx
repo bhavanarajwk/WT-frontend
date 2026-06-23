@@ -1,22 +1,13 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
-import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { InputField } from "@/components/dashboard/ui/forms";
+import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { hrmsService, type AnnualCalendarItem } from "@/services/hrms.service";
 
 function parseAnnualCalendarRows(res: unknown): AnnualCalendarItem[] {
@@ -46,7 +37,7 @@ function resolveAnnualCalendarUrl(rawValue: unknown): string | null {
 
 export function AnnualCalendarPageClient() {
   const { hasHrAccess } = useDashboardAccess();
-  const { actionLoading, runAction } = useDashboardAction();
+  const { toast, actionLoading, runAction } = useDashboardAction();
   const [rows, setRows] = useState<AnnualCalendarItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [year, setYear] = useState(String(new Date().getFullYear()));
@@ -120,59 +111,67 @@ export function AnnualCalendarPageClient() {
                   value={title}
                   onChange={setTitle}
                 />
-                <div className="sm:col-span-2">
-                  <InputField
-                    label="Document Link (Google Docs / Sheets)"
+                <label className="flex flex-col gap-1 text-xs text-wt-text-muted sm:col-span-2">
+                  Document link (Google Docs / Sheets)
+                  <input
+                    className={FORM_CONTROL_CLASS}
                     value={documentLink}
-                    onChange={setDocumentLink}
+                    onChange={(e) => setDocumentLink(e.target.value)}
                     placeholder="https://docs.google.com/spreadsheets/d/..."
                   />
-                </div>
+                </label>
               </div>
-              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={actionLoading} onClick={() =>
+              <button
+                type="button"
+                className="btn-primary px-4 py-2 text-sm"
+                disabled={actionLoading}
+                onClick={() =>
                   runAction("Upload annual calendar", async () => {
                     await submitUpload();
                   })
                 }
               >
                 Upload calendar
-              </Button>
+              </button>
             </section>
           ) : null}
 
           <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h4 className="font-semibold">Available Calendars</h4>
-              <Button variant="ghost" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() =>
+              <button
+                type="button"
+                className="btn-ghost px-3 py-2 text-sm"
+                onClick={() =>
                   runAction("Refresh annual calendar list", async () => {
                     await loadCalendars();
                   })
                 }
               >
                 Refresh
-              </Button>
+              </button>
             </div>
             {isLoading ? (
-              <TableRowsSkeleton rows={4} columns={4} />
+              <SectionLoading label="Loading calendars…" />
             ) : sortedRows.length === 0 ? (
               <p className="text-sm text-wt-text-muted">No annual calendars uploaded yet.</p>
             ) : (
-              <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-                <WtTable>
-                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead>Year</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Created by</TableHead>
-                      <TableHead>Updated</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+              <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
+                <table className="wt-scrollable-table text-sm">
+                  <thead className="wt-table-sticky-head text-wt-text-muted">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Year</th>
+                      <th className="px-3 py-2 text-left font-medium">Title</th>
+                      <th className="px-3 py-2 text-left font-medium">Created by</th>
+                      <th className="px-3 py-2 text-left font-medium">Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {sortedRows.map((row) => {
                       const resolvedUrl = resolveAnnualCalendarUrl(row.document_link);
                       return (
-                        <TableRow key={String(row.id)}>
-                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                        <tr key={String(row.id)} className="border-t border-wt-border">
+                          <td className="px-3 py-2 whitespace-nowrap">
                             {resolvedUrl ? (
                               <a
                                 href={resolvedUrl}
@@ -185,24 +184,25 @@ export function AnnualCalendarPageClient() {
                             ) : (
                               String(row.year ?? "—")
                             )}
-                          </TableCell>
-                          <TableCell className="px-3 py-2">{String(row.title ?? "—")}</TableCell>
-                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                          </td>
+                          <td className="px-3 py-2">{String(row.title ?? "—")}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">
                             {String(row.created_by_name ?? "—")}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
                             {String(row.updated_at ?? row.created_at ?? "—")}
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       );
                     })}
-                  </TableBody>
-                </WtTable>
-              </ScrollableTable>
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         </div>
       </DashboardPageShell>
+      <DashboardToast toast={toast} />
     </>
   );
 }

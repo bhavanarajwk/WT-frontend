@@ -1,15 +1,5 @@
 "use client";
 
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 
 import { useMemo } from "react";
@@ -104,28 +94,28 @@ export function TraineeScoreAnalytics({
       {scoresLoading ? (
         <SectionLoading compact label="Loading saved scores…" className="py-2" />
       ) : null}
-      <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-        <WtTable>
-          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="sticky left-0 bg-wt-surface-1 z-10">
+      <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
+        <table className="wt-scrollable-table text-sm">
+          <thead className="wt-table-sticky-head text-wt-text-muted">
+            <tr>
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap sticky left-0 bg-wt-surface-2 z-10">
                 Employee
-              </TableHead>
+              </th>
               {assessmentColumns.map((a) => (
-                <TableHead
+                <th
                   key={a.id}
-                  className="min-w-[7rem]"
+                  className="text-left px-3 py-2 font-medium whitespace-nowrap min-w-[7rem]"
                   title={a.name}
                 >
                   {a.name}
-                </TableHead>
+                </th>
               ))}
-              <TableHead className="min-w-[8rem]">
+              <th className="text-left px-3 py-2 font-medium whitespace-nowrap min-w-[8rem]">
                 Overall avg score
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
             {traineeRows.map((trainee) => {
               const participant = findParticipantScoreForTrainee(
                 savedScores,
@@ -139,10 +129,10 @@ export function TraineeScoreAnalytics({
               );
 
               return (
-                <TableRow key={trainee.key}>
-                  <TableCell className="sticky left-0 bg-wt-surface-1 z-10">
+                <tr key={trainee.key} className="border-t border-wt-border">
+                  <td className="px-3 py-2 whitespace-nowrap font-medium sticky left-0 bg-wt-surface-1 z-10">
                     {trainee.name}
-                  </TableCell>
+                  </td>
                   {assessmentColumns.map((a) => {
                     const score = scoreForAssessment(
                       a.id,
@@ -151,20 +141,24 @@ export function TraineeScoreAnalytics({
                       a.id === selectedAssessmentId
                     );
                     return (
-                      <TableCell key={a.id} className="whitespace-nowrap">
-                        {score != null ? `${score}%` : "—"}
-                      </TableCell>
+                      <td key={a.id} className="px-3 py-2 whitespace-nowrap">
+                        {score != null ? (
+                          <span className="font-medium">{score}%</span>
+                        ) : (
+                          <span className="text-wt-text-muted">—</span>
+                        )}
+                      </td>
                     );
                   })}
-                  <TableCell className="whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap font-semibold text-indigo-700">
                     {overall != null ? `${overall}%` : "—"}
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               );
             })}
-          </TableBody>
-        </WtTable>
-      </ScrollableTable>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

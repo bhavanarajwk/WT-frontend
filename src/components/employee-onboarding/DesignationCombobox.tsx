@@ -6,9 +6,7 @@ import { hrmsService } from "@/services/hrms.service";
 import type { Designation } from "@/types/masters";
 import { parseDesignation, parseDesignationList } from "@/utils/masters";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Field } from "@/components/ui/field";
+import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -31,7 +29,6 @@ export function DesignationCombobox({
   canCreate?: boolean;
   onError?: (message: string) => void;
 }) {
-  const inputId = useId();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -170,12 +167,12 @@ export function DesignationCombobox({
     : "Search or select designation";
 
   return (
-    <Field className="flex flex-col gap-1.5">
-      <FieldLabel label="Designation" required={required} htmlFor={inputId} />
+    <label className="text-xs text-wt-text-muted flex flex-col gap-1">
+      <FieldLabel label="Designation" required={required} />
       <div ref={rootRef} className="relative">
-        <Input
-          id={inputId}
+        <input
           type="text"
+          className={FORM_CONTROL_CLASS}
           value={query}
           disabled={isDisabled}
           required={required}
@@ -209,38 +206,36 @@ export function DesignationCombobox({
             ) : null}
             {options.map((item) => (
               <li key={item.id}>
-                <Button
+                <button
                   type="button"
                   role="option"
-                  variant="ghost"
                   aria-selected={value === item.name}
-                  className={`block h-auto w-full justify-start rounded-none px-3 py-2 font-normal hover:bg-wt-surface-2 ${
+                  className={`block w-full px-3 py-2 text-left hover:bg-wt-surface-2 ${
                     value === item.name ? "bg-wt-surface-2 font-medium" : ""
                   }`}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => selectDesignation(item.name)}
                 >
                   {item.name}
-                </Button>
+                </button>
               </li>
             ))}
             {showAddOption ? (
               <li className="border-t border-wt-border">
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  className="block h-auto w-full justify-start rounded-none px-3 py-2 text-indigo-700 hover:bg-indigo-50"
+                  className="block w-full px-3 py-2 text-left text-indigo-700 hover:bg-indigo-50 disabled:opacity-60"
                   disabled={isCreating}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => void handleCreate()}
                 >
                   {isCreating ? "Adding…" : `Add "${trimmedQuery}" as new designation`}
-                </Button>
+                </button>
               </li>
             ) : null}
           </ul>
         ) : null}
       </div>
-    </Field>
+    </label>
   );
 }

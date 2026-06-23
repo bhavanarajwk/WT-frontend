@@ -7,3 +7,5 @@ export type LeaveSubTab = "my" | "team";
 export type AllocationHrSubTab = "project" | "allocate" | "list";
 
 export type ThemePreference = "light" | "dark" | "system";
+
+export type ToastState = { type: "success" | "error"; message: string } | null;
