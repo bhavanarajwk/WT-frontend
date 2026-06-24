@@ -116,7 +116,7 @@ export function HrEmployeeTimelogWeekModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="hr-timelog-week-title"
-        className="flex max-h-[min(92vh,900px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 shadow-xl"
+        className="flex max-h-[min(92vh,900px)] w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-wt-border bg-wt-surface-1 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-wt-border px-5 py-4 md:px-6">

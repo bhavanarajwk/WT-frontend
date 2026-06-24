@@ -43,7 +43,7 @@ export function createEmptyGridRow(dayKeys: string[]): TimelogGridRow {
 }
 
 export function gridRowsFromWeekSnapshot(snapshot: TimelogWeekSnapshot | null, dayKeys: string[]): TimelogGridRow[] {
-  if (!snapshot?.rows?.length) return [createEmptyGridRow(dayKeys)];
+  if (!snapshot?.rows?.length) return [];
   return snapshot.rows.map((row, index) => {
     const hours_by_date: Record<string, string> = {};
     for (const key of dayKeys) {

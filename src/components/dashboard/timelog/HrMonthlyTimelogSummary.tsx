@@ -84,7 +84,7 @@ export function HrMonthlyTimelogSummary({
           No approved timelog hours for this month.
         </p>
       ) : (
-        <div className="wt-scroll-both overflow-x-auto rounded-xl border border-wt-border">
+        <div className="wt-scroll-both overflow-x-auto rounded-lg border border-wt-border">
           <table className="min-w-full text-sm">
             <thead className="bg-wt-surface-2 text-wt-text-muted">
               <tr>

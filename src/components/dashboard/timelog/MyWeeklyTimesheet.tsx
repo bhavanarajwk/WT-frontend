@@ -2,6 +2,7 @@
 
 import { WeekPickerField } from "@/components/dashboard/timelog/WeekPickerField";
 import { WeeklyTimelogGrid } from "@/components/dashboard/timelog/WeeklyTimelogGrid";
+import { TimelogEntrySheet } from "@/components/dashboard/timelog/TimelogEntrySheet";
 import { useMyWeeklyTimesheet } from "@/hooks/timelog/useMyWeeklyTimesheet";
 
 export function MyWeeklyTimesheet() {
@@ -11,48 +12,41 @@ export function MyWeeklyTimesheet() {
     dayDates,
     dayKeys,
     rows,
-    setRows,
     projectOptions,
     loading,
     error,
     actionLoading,
     load,
-    save,
-    submit,
+    editingEntry,
+    sheetOpen,
+    openAddSheet,
+    editEntry,
+    closeSheet,
+    saveEntry,
+    submitEntry,
   } = useMyWeeklyTimesheet();
 
-  const isBusy = loading || actionLoading;
-
   return (
-    <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+    <section className="rounded-xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold">My weekly timesheet</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={isBusy} />
-          <button
-            type="button"
-            className="btn-primary px-4 py-2 text-sm"
-            disabled={isBusy}
-            onClick={load}
-          >
-            {loading ? "Loading\u2026" : "Load"}
-          </button>
+          <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={loading || actionLoading} />
           <button
             type="button"
             className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg"
-            disabled={isBusy}
-            onClick={() => load()}
+            disabled={loading || actionLoading}
+            onClick={load}
           >
-            Refresh
+            {loading ? "Loading\u2026" : "Load"}
           </button>
         </div>
       </div>
 
       <p className="text-xs text-wt-text-muted">
-        <span className="font-medium text-wt-text">Load</span> fetches timelog entries for the selected week.{" "}
-        <span className="font-medium text-wt-text">Save Draft</span> keeps entries visible only to you.{" "}
-        <span className="font-medium text-wt-text">Submit for Approval</span> sends draft and rejected entries to your
-        manager for approval.
+        <span className="font-medium text-wt-text">Load</span> fetches your entries.{" "}
+        <span className="font-medium text-wt-text">Add entry</span> opens a panel to log hours.{" "}
+        Click a row to edit.
       </p>
 
       {error ? (
@@ -61,32 +55,44 @@ export function MyWeeklyTimesheet() {
         </div>
       ) : null}
 
-      <WeeklyTimelogGrid
-        rows={rows}
-        dayDates={dayDates}
-        dayKeys={dayKeys}
-        projectOptions={projectOptions}
-        onRowsChange={setRows}
-      />
-
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="btn-ghost px-4 py-2 text-sm border border-wt-border rounded-lg"
-          disabled={isBusy}
-          onClick={() => void save()}
-        >
-          {actionLoading ? "Saving\u2026" : "Save Draft"}
-        </button>
-        <button
-          type="button"
           className="btn-primary px-4 py-2 text-sm"
-          disabled={isBusy}
-          onClick={() => void submit()}
+          disabled={loading || actionLoading}
+          onClick={openAddSheet}
         >
-          {actionLoading ? "Submitting\u2026" : "Submit for Approval"}
+          Add entry
         </button>
       </div>
+
+      {!loading && !rows.length ? (
+        <p className="py-8 text-center text-sm text-wt-text-muted">
+          No entries for this week. Click <span className="font-medium text-wt-text">Add entry</span> to log hours.
+        </p>
+      ) : (
+        <WeeklyTimelogGrid
+          rows={rows}
+          dayDates={dayDates}
+          dayKeys={dayKeys}
+          projectOptions={projectOptions}
+          readOnly
+          onRowClick={editEntry}
+          onRowsChange={() => {}}
+        />
+      )}
+
+      <TimelogEntrySheet
+        open={sheetOpen}
+        entry={editingEntry}
+        dayDates={dayDates}
+        dayKeys={dayKeys}
+        projectOptions={projectOptions}
+        actionLoading={actionLoading}
+        onSave={saveEntry}
+        onSubmit={submitEntry}
+        onClose={closeSheet}
+      />
     </section>
   );
 }

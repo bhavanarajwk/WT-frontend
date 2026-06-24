@@ -321,6 +321,16 @@ body::-webkit-scrollbar {
   animation: spin 0.7s linear infinite;
 }
 
+/* Slide-in from right */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.animate-slide-in {
+  animation: slideInRight 0.25s ease-out;
+}
+
 /* Fade-in */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }

@@ -31,6 +31,7 @@ type WeeklyTimelogGridProps = {
   canApprove?: boolean;
   onApproveDay?: (dayKey: string) => void;
   onRejectDay?: (dayKey: string) => void;
+  onRowClick?: (row: TimelogGridRow) => void;
   onRowsChange: (rows: TimelogGridRow[]) => void;
 };
 
@@ -73,6 +74,7 @@ export function WeeklyTimelogGrid({
   canApprove = false,
   onApproveDay,
   onRejectDay,
+  onRowClick,
   onRowsChange,
 }: WeeklyTimelogGridProps) {
   const totals = dailyTotals(rows, dayKeys);
@@ -96,7 +98,7 @@ export function WeeklyTimelogGrid({
 
   return (
     <div className="space-y-3">
-      <div className="wt-scroll-both overflow-x-auto rounded-xl border border-wt-border">
+      <div className="wt-scroll-both overflow-x-auto rounded-lg border border-wt-border">
         <table className="min-w-[1040px] w-full text-sm border-collapse">
           <thead className="bg-wt-surface-2 text-wt-text-muted">
             <tr>
@@ -129,7 +131,11 @@ export function WeeklyTimelogGrid({
               const metadataEditable = isRowMetadataEditable(row, dayKeys);
 
               return (
-                <tr key={row.clientKey} className="border-t border-wt-border align-top">
+                <tr
+                  key={row.clientKey}
+                  className={`border-t border-wt-border align-top ${readOnly && onRowClick ? "cursor-pointer hover:bg-wt-surface-2" : ""}`}
+                  onClick={() => { if (readOnly && onRowClick) onRowClick(row); }}
+                >
                   {readOnly ? (
                     <>
                       <td className="px-2 py-2 font-medium">{projectLabel(row, projectOptions)}</td>

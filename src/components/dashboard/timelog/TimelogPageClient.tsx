@@ -245,7 +245,7 @@ export function TimelogPageClient() {
           ) : null}
 
           {isHrTeamView ? (
-            <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+            <section className="rounded-xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
               <HrMonthlyTimelogSummary
                 month={hrMonth}
                 onMonthChange={setHrMonth}
@@ -262,7 +262,7 @@ export function TimelogPageClient() {
           ) : null}
 
           {isTeamView && !isHrTeamView ? (
-            <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+            <section className="rounded-xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="font-semibold">Team timelogs</h2>
                 <div className="flex flex-wrap items-center gap-2">

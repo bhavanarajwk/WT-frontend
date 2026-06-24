@@ -6,7 +6,6 @@ import { hrmsService } from "@/services/hrms.service";
 import { ApiError } from "@/api/error";
 import {
   gridRowsFromWeekSnapshot,
-  hasSubmittableEntries,
   type TimelogGridRow,
   type TimelogWeekSnapshot,
   weekPayloadFromGridRows,
@@ -24,9 +23,10 @@ import {
 export function useMyWeeklyTimesheet() {
   const [weekStart, setWeekStart] = useState(() => normalizeWeekStart(new Date()));
   const [activeWeekKey, setActiveWeekKey] = useState(() => formatApiDate(normalizeWeekStart(new Date())));
-  const [rows, setRows] = useState<TimelogGridRow[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [editingEntry, setEditingEntry] = useState<TimelogGridRow | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const dayDates = useMemo(() => weekDaysMonSun(weekStart), [weekStart]);
   const dayKeys = useMemo(() => dayDates.map(formatApiDate), [dayDates]);
@@ -42,13 +42,17 @@ export function useMyWeeklyTimesheet() {
 
   const weekQuery = useQuery({
     queryKey: ["my-timelog-week", activeWeekKey],
+    staleTime: 0,
     queryFn: async () => {
       const res = await hrmsService.getTimelogWeek({ weekStart: activeWeekKey });
-      const snapshot = ((res as { data?: TimelogWeekSnapshot }).data ?? res) as TimelogWeekSnapshot;
-      setRows(gridRowsFromWeekSnapshot(snapshot, dayKeys));
-      return snapshot;
+      return ((res as { data?: TimelogWeekSnapshot }).data ?? res) as TimelogWeekSnapshot;
     },
   });
+
+  const rows = useMemo(
+    () => (weekQuery.data ? gridRowsFromWeekSnapshot(weekQuery.data, dayKeys) : []),
+    [weekQuery.data, dayKeys]
+  );
 
   const projectOptions = useMemo(
     () => projectOptionsFromPayload(optionsQuery.data ?? null),
@@ -59,7 +63,8 @@ export function useMyWeeklyTimesheet() {
     setActionError(null);
     const key = formatApiDate(normalizeWeekStart(weekStart));
     setActiveWeekKey(key);
-  }, [weekStart]);
+    void weekQuery.refetch();
+  }, [weekStart, weekQuery]);
 
   const runAction = useCallback(async (fn: () => Promise<unknown>) => {
     setActionLoading(true);
@@ -74,26 +79,41 @@ export function useMyWeeklyTimesheet() {
     }
   }, []);
 
-  const save = useCallback(async () => {
-    const payloadRows = weekPayloadFromGridRows(rows, dayKeys);
-    if (!payloadRows.length) throw new Error("Add at least one draft entry before saving.");
+  const openAddSheet = useCallback(() => {
+    setEditingEntry(null);
+    setSheetOpen(true);
+  }, []);
+
+  const editEntry = useCallback((row: TimelogGridRow) => {
+    setEditingEntry(row);
+    setSheetOpen(true);
+  }, []);
+
+  const closeSheet = useCallback(() => {
+    setSheetOpen(false);
+    setEditingEntry(null);
+  }, []);
+
+  const saveEntry = useCallback(async (row: TimelogGridRow) => {
+    const weekStartKey = formatApiDate(normalizeWeekStart(weekStart));
     await runAction(async () => {
+      const payloadRows = weekPayloadFromGridRows([row], dayKeys);
+      if (!payloadRows.length) throw new Error("Add at least one hour before saving.");
       await hrmsService.saveTimelogWeek({
-        week_start: formatApiDate(normalizeWeekStart(weekStart)),
+        week_start: weekStartKey,
         rows: payloadRows,
       });
       await weekQuery.refetch();
+      closeSheet();
     });
-  }, [rows, dayKeys, weekStart, weekQuery, runAction]);
+  }, [weekStart, dayKeys, weekQuery, runAction, closeSheet]);
 
-  const submit = useCallback(async () => {
+  const submitEntry = useCallback(async (row: TimelogGridRow) => {
     const weekStartKey = formatApiDate(normalizeWeekStart(weekStart));
     await runAction(async () => {
-      const payloadRows = weekPayloadFromGridRows(rows, dayKeys);
+      const payloadRows = weekPayloadFromGridRows([row], dayKeys);
       if (payloadRows.length) {
         await hrmsService.saveTimelogWeek({ week_start: weekStartKey, rows: payloadRows });
-      } else if (!hasSubmittableEntries(rows, dayKeys)) {
-        throw new Error("Save draft hours before submitting to your manager.");
       }
       try {
         await hrmsService.submitTimelogWeek({ week_start: weekStartKey });
@@ -104,8 +124,9 @@ export function useMyWeeklyTimesheet() {
         throw error;
       }
       await weekQuery.refetch();
+      closeSheet();
     });
-  }, [rows, dayKeys, weekStart, weekQuery, runAction]);
+  }, [weekStart, dayKeys, weekQuery, runAction, closeSheet]);
 
   return {
     weekStart,
@@ -113,13 +134,17 @@ export function useMyWeeklyTimesheet() {
     dayDates,
     dayKeys,
     rows,
-    setRows,
     projectOptions,
-    loading: weekQuery.isLoading || weekQuery.isRefetching,
+    loading: weekQuery.isFetching && !weekQuery.isPaused,
     error: weekQuery.error ? (weekQuery.error instanceof Error ? weekQuery.error.message : "Unable to load timelog week") : actionError,
     actionLoading,
     load,
-    save,
-    submit,
+    editingEntry,
+    sheetOpen,
+    openAddSheet,
+    editEntry,
+    closeSheet,
+    saveEntry,
+    submitEntry,
   };
 }
