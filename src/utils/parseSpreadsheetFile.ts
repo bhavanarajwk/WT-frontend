@@ -31,13 +31,31 @@ function findHeaderRowIndex(matrix: string[][]): number {
         .replace(/[._]+/g, " ")
         .replace(/\s+/g, " ")
     );
+    const hasSlNo = normalized.some((cell) => /\bsl\.?\s*no\b/.test(cell));
     const hasDate = normalized.some((cell) => /\bdate\b/.test(cell));
     const hasHoliday = normalized.some(
-      (cell) => /\bholiday\b/.test(cell) || cell === "name" || cell === "holiday name"
+      (cell) =>
+        (/\bholiday\b/.test(cell) || cell === "name" || cell === "holiday name") &&
+        !/\bcalendar\b/.test(cell)
     );
-    if (hasDate && hasHoliday) return i;
+    if (hasSlNo && hasDate && hasHoliday) return i;
   }
   return 0;
+}
+
+function trimTrailingEmptySheetRows(matrix: string[][], headerIndex: number): string[][] {
+  const trimmed = matrix.slice(0, headerIndex + 1);
+  const dataRows = matrix.slice(headerIndex + 1);
+  let lastDataIndex = dataRows.length - 1;
+
+  while (lastDataIndex >= 0) {
+    const row = dataRows[lastDataIndex] ?? [];
+    const hasPrimaryData = row.slice(0, 4).some((cell) => cell.trim().length > 0);
+    if (hasPrimaryData) break;
+    lastDataIndex -= 1;
+  }
+
+  return [...trimmed, ...dataRows.slice(0, lastDataIndex + 1)];
 }
 
 function buildParsedSheet(headers: string[], matrixRows: string[][]): ParsedSpreadsheet {
@@ -97,12 +115,11 @@ function parseCsvText(text: string): ParsedSpreadsheet {
   const headerIndex = findHeaderRowIndex(matrix);
   const headers = (matrix[headerIndex] ?? []).map((header, index) => header.trim() || `Column ${index + 1}`);
 
-  return buildParsedSheet(headers, matrix.slice(headerIndex + 1));
+  return buildParsedSheet(headers, trimTrailingEmptySheetRows(matrix, headerIndex).slice(headerIndex + 1));
 }
 
-async function parseXlsxFile(file: File): Promise<ParsedSpreadsheet> {
+async function parseXlsxBuffer(buffer: ArrayBuffer): Promise<ParsedSpreadsheet> {
   const XLSX = await import("xlsx");
-  const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) {
@@ -128,7 +145,31 @@ async function parseXlsxFile(file: File): Promise<ParsedSpreadsheet> {
     (header, index) => header.trim() || `Column ${index + 1}`
   );
 
-  return buildParsedSheet(headers, normalizedMatrix.slice(headerIndex + 1));
+  return buildParsedSheet(
+    headers,
+    trimTrailingEmptySheetRows(normalizedMatrix, headerIndex).slice(headerIndex + 1)
+  );
+}
+
+async function parseXlsxFile(file: File): Promise<ParsedSpreadsheet> {
+  const buffer = await file.arrayBuffer();
+  return parseXlsxBuffer(buffer);
+}
+
+export async function parseSpreadsheetBuffer(
+  buffer: ArrayBuffer | Uint8Array,
+  fileName: string
+): Promise<ParsedSpreadsheet> {
+  const lowerName = fileName.toLowerCase();
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+
+  if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) {
+    const copy = bytes.slice().buffer;
+    return parseXlsxBuffer(copy);
+  }
+
+  const text = new TextDecoder().decode(bytes);
+  return parseCsvText(text);
 }
 
 export async function parseSpreadsheetFile(file: File): Promise<ParsedSpreadsheet> {

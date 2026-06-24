@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
@@ -20,25 +21,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  holidayCalendarStorageQueryKey,
+  useHolidayCalendarStorage,
+} from "@/hooks/holiday-calendars/useHolidayCalendarStorage";
 import { showErrorToast } from "@/lib/toast";
+import { holidayCalendarStorageService } from "@/services/holidayCalendarStorage.service";
 import { parseSpreadsheetFile } from "@/utils/parseSpreadsheetFile";
 import {
-  filterHolidayRowsByYear,
   HOLIDAY_CALENDAR_COLUMNS,
   normalizeHolidayCalendarRows,
   type HolidayCalendarColumnKey,
   type HolidayCalendarRow,
-  yearsFromHolidayRows,
 } from "@/utils/holidayCalendarTable";
+import { holidayCalendarStorageFileName } from "@/utils/holidayCalendarStorage";
 import { downloadCsvFile } from "@/utils/parseSpreadsheetFile";
 
-const DEFAULT_YEAR_SPAN = 5;
+const YEAR_LOOKBACK = 15;
 const HOLIDAY_TABLE_COLUMN_COUNT = HOLIDAY_CALENDAR_COLUMNS.length;
 
-function defaultYearOptions(anchorYear: number): string[] {
-  return Array.from({ length: DEFAULT_YEAR_SPAN * 2 + 1 }, (_, index) =>
-    String(anchorYear - DEFAULT_YEAR_SPAN + index)
-  );
+function yearSelectOptions(anchorYear: number): string[] {
+  return Array.from({ length: YEAR_LOOKBACK + 1 }, (_, index) => String(anchorYear - index));
 }
 
 const HOLIDAY_COLUMN_WIDTHS: Record<HolidayCalendarColumnKey, string> = {
@@ -58,25 +61,32 @@ function cellClassName(key: HolidayCalendarColumnKey): string {
 
 export function HolidayCalendarsPageClient() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(String(currentYear));
-  const [rows, setRows] = useState<HolidayCalendarRow[]>([]);
-  const [parsing, setParsing] = useState(false);
-  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [uploading, setUploading] = useState(false);
 
-  const yearOptions = useMemo(() => {
-    const fromData = yearsFromHolidayRows(rows);
-    const merged = new Set([...defaultYearOptions(currentYear), ...fromData.map(String)]);
-    return Array.from(merged)
-      .map(Number)
-      .sort((a, b) => b - a)
-      .map(String);
-  }, [currentYear, rows]);
+  const storageQuery = useHolidayCalendarStorage(selectedYear);
+  const loading = storageQuery.isFetching || uploading;
 
-  const filteredRows = useMemo(
-    () => filterHolidayRowsByYear(rows, Number(selectedYear)),
-    [rows, selectedYear]
-  );
+  const rows = useMemo(() => {
+    if (storageQuery.data?.year !== Number(selectedYear)) return [];
+    return storageQuery.data.rows;
+  }, [storageQuery.data, selectedYear]);
+
+  const loadedStorageFileName = storageQuery.data?.fileName ?? "";
+
+  useEffect(() => {
+    if (!storageQuery.isError) return;
+    const error = storageQuery.error;
+    showErrorToast(
+      error instanceof Error ? error.message : "Failed to load holiday calendar from storage."
+    );
+  }, [storageQuery.isError, storageQuery.error]);
+
+  const yearOptions = useMemo(() => yearSelectOptions(currentYear), [currentYear]);
+
+  const filteredRows = useMemo(() => rows, [rows]);
 
   const yearSelectItems = useMemo(
     () => yearOptions.map((year) => ({ value: year, label: year })),
@@ -84,7 +94,7 @@ export function HolidayCalendarsPageClient() {
   );
 
   async function handleUpload(file: File) {
-    setParsing(true);
+    setUploading(true);
     try {
       const parsed = await parseSpreadsheetFile(file);
       if (!parsed.columns.length) {
@@ -98,21 +108,21 @@ export function HolidayCalendarsPageClient() {
         );
       }
 
-      setRows(normalizedRows);
-      setUploadedFileName(file.name);
+      const uploadYear = holidayCalendarStorageService.resolveUploadYear(
+        file.name,
+        normalizedRows,
+        currentYear
+      );
+      await holidayCalendarStorageService.uploadFile(file, uploadYear, normalizedRows);
 
-      const yearsInFile = yearsFromHolidayRows(normalizedRows);
-      if (yearsInFile.length) {
-        const preferred =
-          yearsInFile.find((year) => year === currentYear) ?? yearsInFile[0] ?? currentYear;
-        setSelectedYear(String(preferred));
-      }
+      setSelectedYear(String(uploadYear));
+      await queryClient.invalidateQueries({
+        queryKey: holidayCalendarStorageQueryKey(uploadYear),
+      });
     } catch (error) {
-      setRows([]);
-      setUploadedFileName("");
-      showErrorToast(error instanceof Error ? error.message : "Could not parse the uploaded file.");
+      showErrorToast(error instanceof Error ? error.message : "Could not upload the holiday calendar.");
     } finally {
-      setParsing(false);
+      setUploading(false);
     }
   }
 
@@ -124,18 +134,21 @@ export function HolidayCalendarsPageClient() {
       )
     );
 
-    downloadCsvFile(`holiday-calendar-${selectedYear}.csv`, exportColumns, exportRows);
+    downloadCsvFile(`holiday_calendar_${selectedYear}.csv`, exportColumns, exportRows);
   }
+
+  const storageLabel =
+    loadedStorageFileName || holidayCalendarStorageFileName(Number(selectedYear), ".csv");
+
+  const description = storageQuery.data
+    ? `Showing holidays for ${selectedYear}. Loaded file: ${storageLabel}`
+    : `Upload a CSV or XLSX file to store holidays by year as holiday_calendar_${selectedYear} in Linode Object Storage.`;
 
   return (
     <DashboardPageShell>
       <ManagementListCard
         title="Holiday Calendar"
-        description={
-          uploadedFileName
-            ? `Upload a CSV or XLSX file to preview holidays by year. Loaded file: ${uploadedFileName}`
-            : "Upload a CSV or XLSX file to preview holidays by year. Nothing is saved to the server yet."
-        }
+        description={description}
         headerAction={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <input
@@ -154,7 +167,7 @@ export function HolidayCalendarsPageClient() {
               variant="brand"
               type="button"
               className="h-10 shrink-0 px-4"
-              disabled={parsing}
+              disabled={loading}
               onClick={() => fileInputRef.current?.click()}
             >
               Upload
@@ -163,7 +176,7 @@ export function HolidayCalendarsPageClient() {
               variant="outline"
               type="button"
               className="h-10 shrink-0 px-4"
-              disabled={parsing}
+              disabled={loading || !filteredRows.length}
               onClick={handleDownload}
             >
               Download
@@ -209,7 +222,7 @@ export function HolidayCalendarsPageClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {parsing ? (
+              {loading ? (
                 Array.from({ length: 5 }).map((_, rowIndex) => (
                   <TableRow key={`holiday-skeleton-${rowIndex}`}>
                     {HOLIDAY_CALENDAR_COLUMNS.map((column) => (

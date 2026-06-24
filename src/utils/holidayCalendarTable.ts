@@ -87,11 +87,11 @@ function resolveSourceColumns(columns: string[]): Record<HolidayCalendarColumnKe
   return sourceByKey;
 }
 
-function parseHolidayDate(value: string): Date | null {
+function parseHolidayDate(value: string, contextYear?: number): Date | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
 
-  const dmy = trimmed.match(/^(\d{1,2})[-/]([A-Za-z]{3,})[-/](\d{4})$/);
+  const dmy = trimmed.match(/^(\d{1,2})[-/\s]+([A-Za-z]{3,})[-/\s]+(\d{4})$/);
   if (dmy) {
     const month = MONTHS[dmy[2].slice(0, 3).toLowerCase()];
     if (month == null) return null;
@@ -99,29 +99,43 @@ function parseHolidayDate(value: string): Date | null {
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  const parsed = Date.parse(trimmed);
-  if (!Number.isNaN(parsed)) {
-    return new Date(parsed);
+  const dm = trimmed.match(/^(\d{1,2})[-/\s]+([A-Za-z]{3,})$/);
+  if (dm && contextYear != null) {
+    const month = MONTHS[dm[2].slice(0, 3).toLowerCase()];
+    if (month == null) return null;
+    const date = new Date(contextYear, month, Number(dm[1]));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  if (/\b(19|20)\d{2}\b/.test(trimmed)) {
+    const parsed = Date.parse(trimmed);
+    if (!Number.isNaN(parsed)) {
+      return new Date(parsed);
+    }
   }
 
   return null;
 }
 
-export function extractYearFromHolidayDate(date: string): number | null {
+export function extractYearFromHolidayDate(date: string, contextYear?: number): number | null {
   const trimmed = date.trim();
   if (!trimmed) return null;
 
-  const fromParsed = parseHolidayDate(trimmed);
+  const explicitYear = trimmed.match(/\b(19|20)\d{2}\b/);
+  if (explicitYear) {
+    return Number(explicitYear[0]);
+  }
+
+  const fromParsed = parseHolidayDate(trimmed, contextYear);
   if (fromParsed) {
     return fromParsed.getFullYear();
   }
 
-  const match = trimmed.match(/\b(19|20)\d{2}\b/);
-  return match ? Number(match[0]) : null;
+  return contextYear ?? null;
 }
 
-function formatDayName(value: string): string {
-  const parsed = parseHolidayDate(value);
+function formatDayName(value: string, contextYear?: number): string {
+  const parsed = parseHolidayDate(value, contextYear);
   if (!parsed) return "";
   return parsed.toLocaleDateString("en-US", { weekday: "long" });
 }
@@ -135,25 +149,75 @@ export function yearsFromHolidayRows(rows: HolidayCalendarRow[]): number[] {
   return Array.from(years).sort((a, b) => b - a);
 }
 
-export function filterHolidayRowsByYear(rows: HolidayCalendarRow[], year: number): HolidayCalendarRow[] {
-  const hasYearData = rows.some((row) => extractYearFromHolidayDate(row.date) != null);
-  if (!hasYearData) return rows;
-  return rows.filter((row) => extractYearFromHolidayDate(row.date) === year);
+export function filterHolidayRowsByYear(
+  rows: HolidayCalendarRow[],
+  year: number,
+  contextYear: number = year
+): HolidayCalendarRow[] {
+  const hasExplicitYearData = rows.some((row) => /\b(19|20)\d{2}\b/.test(row.date));
+  if (!hasExplicitYearData) return rows;
+
+  return rows.filter((row) => extractYearFromHolidayDate(row.date, contextYear) === year);
 }
 
 export function normalizeHolidayCalendarRows(parsed: ParsedSpreadsheet): HolidayCalendarRow[] {
   const sourceByKey = resolveSourceColumns(parsed.columns);
+  const normalized: HolidayCalendarRow[] = [];
 
-  return parsed.rows
-    .map((row, index) => normalizeHolidayCalendarRow(row, sourceByKey, index))
-    .filter((row) => isHolidayDataRow(row));
+  for (let index = 0; index < parsed.rows.length; index += 1) {
+    const row = normalizeHolidayCalendarRow(parsed.rows[index], sourceByKey, index);
+
+    if (
+      normalized.length > 0 &&
+      !row.holiday.trim() &&
+      !row.date.trim() &&
+      !row.sl_no.trim()
+    ) {
+      break;
+    }
+
+    if (!isHolidayDataRow(row)) continue;
+    normalized.push(row);
+  }
+
+  return dedupeHolidayCalendarRows(normalized);
+}
+
+/** Excel edits often leave stale rows in the file. Keep the last row per Sl. No. */
+export function dedupeHolidayCalendarRows(rows: HolidayCalendarRow[]): HolidayCalendarRow[] {
+  const bySerial = new Map<string, HolidayCalendarRow>();
+  const withoutSerial: HolidayCalendarRow[] = [];
+
+  for (const row of rows) {
+    const serial = row.sl_no.trim();
+    if (/^\d+$/.test(serial)) {
+      bySerial.set(serial, row);
+      continue;
+    }
+    withoutSerial.push(row);
+  }
+
+  const deduped = [...bySerial.entries()]
+    .sort(([left], [right]) => Number(left) - Number(right))
+    .map(([, row]) => row);
+
+  const seen = new Set(deduped.map((row) => `${row.date}|${row.holiday}`));
+  for (const row of withoutSerial) {
+    const key = `${row.date}|${row.holiday}`;
+    if (seen.has(key)) continue;
+    deduped.push(row);
+    seen.add(key);
+  }
+
+  return deduped;
 }
 
 function isHolidayDataRow(row: HolidayCalendarRow): boolean {
-  if (row.holiday.trim()) return true;
-  if (row.date.trim()) return true;
-  if (row.day.trim() && row.optional.trim()) return true;
-  return false;
+  const holiday = row.holiday.trim();
+  const date = row.date.trim();
+  if (!holiday || !date) return false;
+  if (/^holiday\s*calendar\b/i.test(holiday)) return false;
+  return true;
 }
 
 function normalizeHolidayCalendarRow(
