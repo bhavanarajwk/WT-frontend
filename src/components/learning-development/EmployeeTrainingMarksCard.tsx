@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useQueries } from "@tanstack/react-query";
 import Link from "next/link";
@@ -42,37 +52,27 @@ function TrainingScoresTable({
   rows: Array<{ trainingId: string; trainingName: string; scoresLabel: string }>;
   scrollChain?: boolean;
 }) {
-  const shellClass = scrollChain
-    ? "wt-scroll-both-chain max-h-[min(48vh,420px)] overflow-auto rounded-lg border border-wt-border"
-    : "wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-lg border border-wt-border";
-
-  return (
-    <div className={shellClass}>
-      <table className="wt-scrollable-table text-sm">
-        <thead className="wt-table-sticky-head text-wt-text-muted">
-          <tr>
-            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Training</th>
-            <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Scores</th>
-          </tr>
-        </thead>
-        <tbody>
+    return (
+    <ScrollableTable scrollChain={scrollChain} maxHeightClass={scrollChain ? "max-h-[min(48vh,420px)]" : "max-h-[min(70vh,520px)]"} className="!rounded-lg">
+      <WtTable>
+        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+          <TableRow className="hover:bg-transparent">
+            <TableHead>Training</TableHead>
+            <TableHead>Scores</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((row) => (
-            <tr key={row.trainingId} className="border-t border-wt-border">
-              <td className="px-3 py-2 font-medium text-wt-text">{row.trainingName}</td>
-              <td
-                className={`px-3 py-2 ${
-                  row.scoresLabel.endsWith("%")
-                    ? "font-semibold tabular-nums text-wt-text"
-                    : "text-wt-text-muted"
-                }`}
-              >
+            <TableRow key={row.trainingId}>
+              <TableCell className="px-3 py-2">{row.trainingName}</TableCell>
+              <TableCell className="px-3 py-2 tabular-nums">
                 {row.scoresLabel}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </WtTable>
+    </ScrollableTable>
   );
 }
 

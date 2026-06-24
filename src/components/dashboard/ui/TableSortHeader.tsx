@@ -1,6 +1,9 @@
 "use client";
 
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { SortDirection } from "@/utils/listSort";
+import { cn } from "@/lib/utils";
 
 export function TableSortHeader({
   label,
@@ -16,43 +19,39 @@ export function TableSortHeader({
   className?: string;
 }) {
   if (!sortable || !onSort) {
-    return <span className={className}>{label}</span>;
+    return <span className={cn("text-sm font-medium text-wt-text-muted", className)}>{label}</span>;
   }
 
+  const SortIcon =
+    activeDirection === "asc" ? ArrowUp : activeDirection === "desc" ? ArrowDown : ChevronsUpDown;
+
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={onSort}
-      className={`inline-flex items-center gap-1 font-medium text-inherit hover:text-wt-text ${className}`.trim()}
+      className={cn(
+        "-ml-2 h-8 px-2 text-sm font-medium text-wt-text-muted hover:bg-transparent hover:text-wt-text-muted",
+        className
+      )}
       aria-label={`Sort by ${label}`}
+      aria-sort={
+        activeDirection === "asc"
+          ? "ascending"
+          : activeDirection === "desc"
+            ? "descending"
+            : "none"
+      }
     >
       <span>{label}</span>
-      <span className="inline-flex flex-col leading-none" aria-hidden>
-        <SortArrow direction={activeDirection} />
-      </span>
-    </button>
-  );
-}
-
-function SortArrow({ direction }: { direction: SortDirection | null }) {
-  if (direction === "asc") {
-    return (
-      <svg width="12" height="12" viewBox="0 0 12 12" className="text-wt-text">
-        <path d="M6 3l3.5 4.5H2.5L6 3z" fill="currentColor" />
-      </svg>
-    );
-  }
-  if (direction === "desc") {
-    return (
-      <svg width="12" height="12" viewBox="0 0 12 12" className="text-wt-text">
-        <path d="M6 9L2.5 4.5h7L6 9z" fill="currentColor" />
-      </svg>
-    );
-  }
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" className="text-wt-text-muted/70">
-      <path d="M6 2.5L8 5.5H4L6 2.5z" fill="currentColor" />
-      <path d="M6 9.5L4 6.5h4L6 9.5z" fill="currentColor" />
-    </svg>
+      <SortIcon
+        className={cn(
+          "size-3.5 shrink-0",
+          activeDirection ? "text-foreground" : "text-muted-foreground"
+        )}
+        aria-hidden
+      />
+    </Button>
   );
 }

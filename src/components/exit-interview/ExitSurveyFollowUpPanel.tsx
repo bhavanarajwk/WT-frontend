@@ -1,19 +1,31 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCheckbox,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import Link from "next/link";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
-import { hrmsService } from "@/services/hrms.service";
 import { exitInterviewService } from "@/services/exitInterview.service";
 import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
-import type { OffboardListItem } from "@/types/offboard";
 import { DatePickerField, SelectField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
-import { toPagedRows } from "@/utils/apiRows";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { useExitSurveyFollowUpList } from "@/hooks/exit-interview/useExitSurveyFollowUpList";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
   activeSortDirectionForColumn,
@@ -26,36 +38,36 @@ import {
   exitInterviewSubmissionDetailPath,
   EXIT_SURVEY_LWD_SORT_OPTIONS,
   filterExitSurveyFollowUpByStatus,
-  filterInNoticeFollowUpRows,
+  filterServingNoticeFollowUpRows,
   followUpRowLookupId,
   isResendableFollowUpRow,
   mergeEmpIdSelection,
-  mergeExitSurveyFollowUpRows,
   paginateFollowUpRows,
   resendableEmpIdFromRow,
   resendableEmpIdsFromRows,
   sortExitSurveyFollowUpRows,
-  type ExitSurveyFollowUpRow,
   type ExitSurveyStatusFilter,
 } from "@/utils/exitSurveyFollowUp";
 
-type Toast = { type: "success" | "error"; message: string } | null;
-
 const DEFAULT_PAGE_SIZE = 10;
-const FOLLOW_UP_FETCH_SIZE = 100;
-const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
+const USER_TYPE_FILTER_OPTIONS = [
+  "",
+  "FULLTIME",
+  "INTERN",
+  "CONSULTANT",
+] as const;
 
 function bulkResendResultClassName(
-  status: ExitSurveyBulkResendItemResult["status"]
+  status: ExitSurveyBulkResendItemResult["status"],
 ): string {
-  if (status === "SENT") return "border-emerald-200 bg-emerald-50 text-emerald-900";
+  if (status === "SENT")
+    return "border-emerald-200 bg-emerald-50 text-emerald-900";
   if (status === "FAILED") return "border-red-200 bg-red-50 text-red-900";
   return "border-amber-200 bg-amber-50 text-amber-900";
 }
 
 export function ExitSurveyFollowUpPanel() {
   const router = useRouter();
-  const [allRows, setAllRows] = useState<ExitSurveyFollowUpRow[]>([]);
   const [listPage, setListPage] = useState(0);
   const [listPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [lwdSortId, setLwdSortId] = useState(DEFAULT_EXIT_SURVEY_LWD_SORT_ID);
@@ -65,116 +77,93 @@ export function ExitSurveyFollowUpPanel() {
   const [filterFromDate, setFilterFromDate] = useState("");
   const [filterToDate, setFilterToDate] = useState("");
   const [filterType, setFilterType] = useState("");
-  const [filterSurveyStatus, setFilterSurveyStatus] = useState<ExitSurveyStatusFilter>(
-    DEFAULT_EXIT_SURVEY_STATUS_FILTER
-  );
+  const [filterSurveyStatus, setFilterSurveyStatus] =
+    useState<ExitSurveyStatusFilter>(DEFAULT_EXIT_SURVEY_STATUS_FILTER);
 
-  const [loadingList, setLoadingList] = useState(false);
   const [resendingEmpId, setResendingEmpId] = useState<string | null>(null);
   const [bulkResending, setBulkResending] = useState(false);
   const [selectedEmpIds, setSelectedEmpIds] = useState<string[]>([]);
-  const [bulkResendResults, setBulkResendResults] = useState<ExitSurveyBulkResendItemResult[]>(
-    []
-  );
-  const [toast, setToast] = useState<Toast>(null);
+  const [bulkResendResults, setBulkResendResults] = useState<
+    ExitSurveyBulkResendItemResult[]
+  >([]);
 
-  const loadFollowUpList = useCallback(async () => {
-    setLoadingList(true);
-    try {
-      const hasCustomLwdFilter = Boolean(filterFromDate.trim() || filterToDate.trim());
-      const [offboardResult, onboardResult] = await Promise.allSettled([
-        hrmsService.getOffboardList({
-          page: 0,
-          size: FOLLOW_UP_FETCH_SIZE,
-          search: debouncedSearch.trim() || undefined,
-          type: filterType.trim() || undefined,
-          fromDate: hasCustomLwdFilter ? filterFromDate.trim() || undefined : undefined,
-          toDate: hasCustomLwdFilter ? filterToDate.trim() || undefined : undefined,
-        }),
-        hrmsService.getOnboardList({ page: "0", size: "500" }),
-      ]);
-
-      const offboardRes = offboardResult.status === "fulfilled" ? offboardResult.value : null;
-      const onboardRes = onboardResult.status === "fulfilled" ? onboardResult.value : null;
-
-      if (offboardResult.status === "rejected" && onboardResult.status === "rejected") {
-        throw offboardResult.reason;
-      }
-
-      const data = offboardRes?.data;
-
-      const onboardRows = onboardRes
-        ? toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes)
-        : [];
-      const inNoticeRows = filterInNoticeFollowUpRows(onboardRows, {
-        search: debouncedSearch,
-        type: filterType,
-        fromDate: hasCustomLwdFilter ? filterFromDate : undefined,
-        toDate: hasCustomLwdFilter ? filterToDate : undefined,
-      });
-      const merged = mergeExitSurveyFollowUpRows(
-        (data?.items ?? []) as OffboardListItem[],
-        inNoticeRows
-      );
-      setAllRows(merged);
-
-      if (offboardResult.status === "rejected") {
-        const reason = offboardResult.reason;
-        const msg =
-          reason instanceof ApiError
-            ? reason.message
-            : reason instanceof Error
-              ? reason.message
-              : "Offboard list failed; showing in-notice employees only.";
-        setToast({ type: "error", message: msg });
-      }
-    } catch (error) {
-      setAllRows([]);
-      const msg =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Failed to load exit survey follow-up list.";
-      setToast({ type: "error", message: msg });
-    } finally {
-      setLoadingList(false);
-    }
-  }, [debouncedSearch, filterType, filterFromDate, filterToDate]);
+  const followUpQ = useExitSurveyFollowUpList({
+    search: debouncedSearch,
+    filterType,
+    filterFromDate,
+    filterToDate,
+  });
+  const allRows = followUpQ.data?.rows ?? [];
+  const loadingList = followUpQ.isLoading || followUpQ.isFetching;
+  const warnedRef = useRef<string | null>(null);
+  const errorToastRef = useRef(false);
 
   useEffect(() => {
-    void loadFollowUpList();
-  }, [loadFollowUpList]);
+    const warning = followUpQ.data?.warning?.trim();
+    if (!warning || warnedRef.current === warning) return;
+    warnedRef.current = warning;
+    showErrorToast(warning);
+  }, [followUpQ.data?.warning]);
+
+  useEffect(() => {
+    if (!followUpQ.isError) {
+      errorToastRef.current = false;
+      return;
+    }
+    if (errorToastRef.current) return;
+    errorToastRef.current = true;
+    const error = followUpQ.error;
+    const msg =
+      error instanceof ApiError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Failed to load exit survey follow-up list.";
+    showErrorToast(msg);
+  }, [followUpQ.isError, followUpQ.error]);
 
   const filteredRows = useMemo(
     () => filterExitSurveyFollowUpByStatus(allRows, filterSurveyStatus),
-    [allRows, filterSurveyStatus]
+    [allRows, filterSurveyStatus],
   );
 
   const sortedRows = useMemo(
     () => sortExitSurveyFollowUpRows(filteredRows, lwdSortId),
-    [filteredRows, lwdSortId]
+    [filteredRows, lwdSortId],
   );
 
   const listTotal = sortedRows.length;
 
   const rows = useMemo(
     () => paginateFollowUpRows(sortedRows, listPage, listPageSize),
-    [sortedRows, listPage, listPageSize]
+    [sortedRows, listPage, listPageSize],
   );
 
   useEffect(() => {
     setListPage(0);
-  }, [debouncedSearch, filterType, filterFromDate, filterToDate, lwdSortId, filterSurveyStatus]);
+  }, [
+    debouncedSearch,
+    filterType,
+    filterFromDate,
+    filterToDate,
+    lwdSortId,
+    filterSurveyStatus,
+  ]);
 
   useEffect(() => {
     setSelectedEmpIds([]);
     setBulkResendResults([]);
-  }, [debouncedSearch, filterType, filterFromDate, filterToDate, filterSurveyStatus]);
+  }, [
+    debouncedSearch,
+    filterType,
+    filterFromDate,
+    filterToDate,
+    filterSurveyStatus,
+  ]);
 
   const resendableEmpIdsOnPage = useMemo(
     () => resendableEmpIdsFromRows(rows),
-    [rows]
+    [rows],
   );
 
   const selectedResendableCount = selectedEmpIds.length;
@@ -199,18 +188,14 @@ export function ExitSurveyFollowUpPanel() {
   function toggleSelectAllOnPage(checked: boolean) {
     if (!checked) {
       setSelectedEmpIds((prev) =>
-        prev.filter((empId) => !resendableEmpIdsOnPage.includes(empId))
+        prev.filter((empId) => !resendableEmpIdsOnPage.includes(empId)),
       );
       return;
     }
-    setSelectedEmpIds((prev) => mergeEmpIdSelection(prev, resendableEmpIdsOnPage));
+    setSelectedEmpIds((prev) =>
+      mergeEmpIdSelection(prev, resendableEmpIdsOnPage),
+    );
   }
-
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 3200);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   const totalPages = Math.max(1, Math.ceil(listTotal / listPageSize) || 1);
   const rangeStart = listTotal === 0 ? 0 : listPage * listPageSize + 1;
@@ -220,7 +205,6 @@ export function ExitSurveyFollowUpPanel() {
     const normalized = empId.trim();
     if (!normalized) return;
     setResendingEmpId(normalized);
-    setToast(null);
     let successMessage: string | null = null;
     let errorMessage: string | null = null;
     try {
@@ -242,17 +226,17 @@ export function ExitSurveyFollowUpPanel() {
       setResendingEmpId(null);
     }
     if (successMessage) {
-      setToast({ type: "success", message: successMessage });
+      showSuccessToast(successMessage);
     } else if (errorMessage) {
-      setToast({ type: "error", message: errorMessage });
+      showErrorToast(errorMessage);
     }
   }
 
   async function handleBulkResendExitSurvey() {
     if (!selectedEmpIds.length || bulkResending) return;
     setBulkResending(true);
-    setToast(null);
-    let successToast: Toast = null;
+    let resultSummary: string | null = null;
+    let resultIsError = false;
     let errorMessage: string | null = null;
     try {
       const res = await exitInterviewService.resendSurveyBulk(selectedEmpIds);
@@ -262,10 +246,8 @@ export function ExitSurveyFollowUpPanel() {
         `Exit survey reminders processed: ${data?.sent_count ?? 0} sent, ${data?.skipped_count ?? 0} skipped${
           data?.failed_count ? `, ${data.failed_count} failed` : ""
         }.`;
-      successToast = {
-        type: (data?.failed_count ?? 0) > 0 ? "error" : "success",
-        message: summary,
-      };
+      resultSummary = summary;
+      resultIsError = (data?.failed_count ?? 0) > 0;
       setSelectedEmpIds([]);
       setBulkResendResults(data?.results ?? []);
     } catch (error) {
@@ -278,25 +260,24 @@ export function ExitSurveyFollowUpPanel() {
     } finally {
       setBulkResending(false);
     }
-    if (successToast) {
-      setToast(successToast);
+    if (resultSummary) {
+      if (resultIsError) showErrorToast(resultSummary);
+      else showSuccessToast(resultSummary);
     } else if (errorMessage) {
-      setToast({ type: "error", message: errorMessage });
+      showErrorToast(errorMessage);
     }
   }
 
   return (
     <div className="space-y-4">
-      <DashboardToast toast={toast} />
-
       <div className="flex flex-wrap items-end gap-3">
         <label className="sr-only" htmlFor="exit-survey-follow-up-search">
           Search
         </label>
-        <input
+        <Input
           id="exit-survey-follow-up-search"
           type="search"
-          className="input-field min-w-[200px] flex-1 px-3 py-2 text-sm"
+          className="h-10 min-w-[200px] flex-1"
           placeholder="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -350,23 +331,29 @@ export function ExitSurveyFollowUpPanel() {
             { value: "COMPLETED", label: "Completed" },
           ]}
         />
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           type="button"
-          className="btn-ghost px-3 py-2 text-sm h-10 border border-wt-border rounded-lg"
-          onClick={() => void loadFollowUpList()}
+          className="px-3 py-2 text-sm h-10 border border-wt-border rounded-lg"
+          onClick={() => void followUpQ.refetch()}
           disabled={loadingList}
         >
           Refresh
-        </button>
+        </Button>
         {selectedResendableCount > 0 ? (
-          <button
+          <Button
+            variant="brand"
+            size="sm"
             type="button"
-            className="btn-action ml-auto px-3 py-2 text-sm h-10"
+            className="ml-auto px-3 py-2 text-sm h-10"
             disabled={loadingList || bulkResending || Boolean(resendingEmpId)}
             onClick={() => void handleBulkResendExitSurvey()}
           >
-            {bulkResending ? "Sending…" : `Resend Exit Survey (${selectedResendableCount})`}
-          </button>
+            {bulkResending
+              ? "Sending…"
+              : `Resend Exit Survey (${selectedResendableCount})`}
+          </Button>
         ) : null}
       </div>
 
@@ -374,13 +361,15 @@ export function ExitSurveyFollowUpPanel() {
         <div className="space-y-2 rounded-xl border border-wt-border bg-wt-surface-1 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-sm font-semibold">Bulk Resend Results</h4>
-            <button
+            <Button
+              variant="ghost"
+              size="xs"
               type="button"
-              className="btn-ghost px-2 py-1 text-xs"
+              className="px-2 py-1 text-xs"
               onClick={() => setBulkResendResults([])}
             >
               Dismiss
-            </button>
+            </Button>
           </div>
           <ul className="max-h-48 space-y-2 overflow-y-auto text-sm">
             {bulkResendResults.map((result) => (
@@ -399,98 +388,116 @@ export function ExitSurveyFollowUpPanel() {
         </div>
       ) : null}
 
-      {!loadingList && !rows.length ? (
+      {followUpQ.isLoading ? (
+        <TableRowsSkeleton rows={6} columns={5} />
+      ) : !rows.length ? (
         <p className="text-sm text-wt-text-muted">
           No employees in the exit survey follow-up window.
         </p>
-      ) : rows.length ? (
+      ) : (
         <>
-          <div className="wt-scroll-both max-h-[min(60vh,480px)] rounded-xl border border-wt-border">
-            <table className="wt-scrollable-table text-sm">
-              <thead className="wt-table-sticky-head text-wt-text-muted">
-                <tr>
-                  <th className="w-10 px-3 py-2 font-medium">
+          <ScrollableTable maxHeightClass="max-h-[min(60vh,480px)]">
+            <WtTable>
+              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10">
                     <span className="sr-only">Select</span>
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-wt-border"
+                    <TableCheckbox
                       checked={allResendableOnPageSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = someResendableOnPageSelected;
-                      }}
+                      indeterminate={
+                        someResendableOnPageSelected &&
+                        !allResendableOnPageSelected
+                      }
                       disabled={
                         !resendableEmpIdsOnPage.length ||
                         loadingList ||
                         bulkResending ||
                         Boolean(resendingEmpId)
                       }
-                      onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
+                      onCheckedChange={(checked) =>
+                        toggleSelectAllOnPage(Boolean(checked))
+                      }
                       aria-label="Select all resendable employees on this page"
                     />
-                  </th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Name</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Email</th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
+                  </TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>
                     <TableSortHeader
                       label="Last Working Day"
                       sortable
                       activeDirection={activeSortDirectionForColumn(
                         "last_working_day",
                         lwdSortId,
-                        EXIT_SURVEY_LWD_SORT_OPTIONS
+                        EXIT_SURVEY_LWD_SORT_OPTIONS,
                       )}
                       onSort={() =>
                         setLwdSortId((current) =>
-                          toggleColumnSort("last_working_day", current, EXIT_SURVEY_LWD_SORT_OPTIONS)
+                          toggleColumnSort(
+                            "last_working_day",
+                            current,
+                            EXIT_SURVEY_LWD_SORT_OPTIONS,
+                          ),
                         )
                       }
                     />
-                  </th>
-                  <th className="text-left px-3 py-2 font-medium whitespace-nowrap">Survey</th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                  <TableHead>Survey</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((row) => {
                   const empId = resendableEmpIdFromRow(row);
                   const lookupId = followUpRowLookupId(row);
                   const canView = canViewExitSurveySubmission(row);
                   const canResend = isResendableFollowUpRow(row);
-                  const isResending = Boolean(empId && resendingEmpId === empId);
-                  const isSelected = Boolean(empId && selectedEmpIds.includes(empId));
-                  const detailHref = lookupId ? exitInterviewSubmissionDetailPath(lookupId) : null;
+                  const isResending = Boolean(
+                    empId && resendingEmpId === empId,
+                  );
+                  const isSelected = Boolean(
+                    empId && selectedEmpIds.includes(empId),
+                  );
+                  const detailHref = lookupId
+                    ? exitInterviewSubmissionDetailPath(lookupId)
+                    : null;
                   const submitted =
-                    row.submission_status === "SUBMITTED" || row.exit_survey_submitted === true;
+                    row.submission_status === "SUBMITTED" ||
+                    row.exit_survey_submitted === true;
 
                   return (
-                    <tr
+                    <TableRow
                       key={lookupId || empId || row.email}
-                      className={`border-t border-wt-border hover:bg-wt-surface-2/50 ${
+                      className={`hover:bg-wt-page-bg/50 ${
                         isSelected ? "bg-indigo-50/70" : ""
                       } ${canView && detailHref ? "cursor-pointer" : ""}`}
                       onClick={(event) => {
                         if (!canView || !detailHref) return;
                         const target = event.target as HTMLElement;
                         if (
-                          target.closest("button, a, input, label, [data-no-row-nav]")
+                          target.closest(
+                            "button, a, input, label, [data-no-row-nav]",
+                          )
                         ) {
                           return;
                         }
                         router.push(detailHref);
                       }}
                     >
-                      <td className="px-3 py-2" data-no-row-nav>
+                      <TableCell className="px-3 py-2" data-no-row-nav>
                         {canResend ? (
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 rounded border-wt-border"
+                          <TableCheckbox
                             checked={isSelected}
-                            disabled={loadingList || bulkResending || isResending}
-                            onChange={(e) => toggleRowSelection(empId, e.target.checked)}
+                            disabled={
+                              loadingList || bulkResending || isResending
+                            }
+                            onCheckedChange={(checked) =>
+                              toggleRowSelection(empId, Boolean(checked))
+                            }
                             aria-label={`Select ${row.employee_name || empId}`}
                           />
                         ) : null}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">
                         {canView && detailHref ? (
                           <Link
                             href={detailHref}
@@ -502,12 +509,17 @@ export function ExitSurveyFollowUpPanel() {
                         ) : (
                           row.employee_name || "—"
                         )}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{row.email || "—"}</td>
-                      <td className="px-3 py-2 whitespace-nowrap tabular-nums">
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">
+                        {row.email || "—"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
                         {formatApiDateDisplay(row.last_working_day) || "—"}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap" data-no-row-nav>
+                      </TableCell>
+                      <TableCell
+                        className="px-3 py-2 whitespace-nowrap"
+                        data-no-row-nav
+                      >
                         {submitted ? (
                           canView && detailHref ? (
                             <Link
@@ -518,33 +530,43 @@ export function ExitSurveyFollowUpPanel() {
                               View responses
                             </Link>
                           ) : (
-                            <span className="text-xs font-medium text-emerald-700">Submitted</span>
+                            <span className="text-xs font-medium text-emerald-700">
+                              Submitted
+                            </span>
                           )
                         ) : (
                           <div className="inline-flex items-center gap-2">
-                            <span className="text-xs text-wt-text-muted">Pending</span>
+                            <span className="text-xs text-wt-text-muted">
+                              Pending
+                            </span>
                             {canResend ? (
-                              <button
+                              <Button
+                                variant="brand"
+                                size="xs"
                                 type="button"
-                                className="btn-action px-2.5 py-1 text-xs"
-                                disabled={loadingList || isResending || bulkResending}
+                                className="px-2.5 py-1 text-xs"
+                                disabled={
+                                  loadingList || isResending || bulkResending
+                                }
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   void handleResendExitSurvey(empId, row.email);
                                 }}
                               >
-                                {isResending ? "Sending…" : "Resend Exit Survey"}
-                              </button>
+                                {isResending
+                                  ? "Sending…"
+                                  : "Resend Exit Survey"}
+                              </Button>
                             ) : null}
                           </div>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </WtTable>
+          </ScrollableTable>
           <ListPagination
             page={listPage}
             totalPages={totalPages}
@@ -555,10 +577,6 @@ export function ExitSurveyFollowUpPanel() {
             onPageChange={setListPage}
           />
         </>
-      ) : (
-        <p className="text-sm text-wt-text-muted">
-          No employees in the exit survey follow-up window.
-        </p>
       )}
     </div>
   );

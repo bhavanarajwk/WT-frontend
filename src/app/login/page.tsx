@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -178,13 +179,7 @@ function LoginPageInner() {
         <div className="mt-12 flex w-full flex-col gap-5 sm:mt-14 sm:gap-6">
           {error ? <ErrorBanner message={error} /> : null}
 
-          <button
-            id="google-signin-btn"
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={googleLoading}
-            className="btn-primary w-full max-w-[380px] self-center rounded-lg py-3.5 text-base sm:py-4"
-          >
+          <Button variant="brand" size="lg" id="google-signin-btn" type="button" onClick={handleGoogleSignIn} disabled={googleLoading} className="w-full max-w-[380px] self-center rounded-lg py-3.5 text-base sm:py-4" >
             {googleLoading ? (
               <>
                 <span className="spinner" />
@@ -196,7 +191,7 @@ function LoginPageInner() {
                 Continue with Google
               </>
             )}
-          </button>
+          </Button>
 
           <p className="max-w-md self-center text-center text-xs leading-relaxed text-slate-400">
             Only registered company accounts can sign in.

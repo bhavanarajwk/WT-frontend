@@ -1,6 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
@@ -9,7 +11,6 @@ import { formatActionErrorMessage, formatActionSuccessMessage } from "@/utils/ac
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import { createEmptySelfProfileForm } from "@/utils/profileFormState";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboardingPanel";
 import { InputField, SelectField, FileField } from "@/components/dashboard/ui/forms";
 import {
@@ -21,9 +22,12 @@ import {
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
-import { ImageCropDialog } from "@/components/dashboard/ImageCropDialog";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
-import { ProfileSectionLoader } from "@/components/dashboard/profile/ProfileSectionLoader";
+import {
+  ProfileDetailsSkeleton,
+  ProfileHeaderSkeleton,
+  TableRowsSkeleton,
+} from "@/components/dashboard/ui/SectionSkeleton";
 import { fetchSelfProfile, shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import {
   isActiveUserStatus,
@@ -44,8 +48,7 @@ export function ProfilePageLeanClient() {
   const restrictForPendingOnboarding = isEmployee && !hasHrAccess && !hasManagerAccess;
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
 
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(() =>
@@ -71,54 +74,8 @@ export function ProfilePageLeanClient() {
     salary_slips: null,
   });
   const [selfProfilePic, setSelfProfilePic] = useState<File | null>(null);
-  const [cropDialogOpen, setCropDialogOpen] = useState(false);
-  const [cropImage, setCropImage] = useState<string | null>(null);
-  const [currentProfilePhotoName, setCurrentProfilePhotoName] = useState<string>("");
   const [isEditingOwnProfile, setIsEditingOwnProfile] = useState(false);
 
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 2800);
-    return () => window.clearTimeout(id);
-  }, [toast]);
-
-  const handleProfilePicUpload = (file: File | null) => {
-    if (!file) {
-      setSelfProfilePic(null);
-      setCropImage(null);
-      setCurrentProfilePhotoName("");
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      setToast({ type: "error", message: "Please upload an image file (jpg/png/webp)." });
-      return;
-    }
-
-    if (file.size > MAX_ONBOARD_FILE_BYTES) {
-      setToast({ type: "error", message: "File exceeds 2 MB. Please upload a smaller file." });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setCropImage(e.target?.result as string);
-      setCropDialogOpen(true);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleCropConfirm = (croppedFile: File) => {
-    setSelfProfilePic(croppedFile);
-    setCurrentProfilePhotoName(croppedFile.name);
-    setCropDialogOpen(false);
-    setCropImage(null);
-  };
-
-  const handleDeleteProfilePic = () => {
-    setSelfProfilePic(null);
-    setCurrentProfilePhotoName("");
-  };
 
   const loadMyProfile = useCallback(async () => {
     setIsProfileLoading(true);
@@ -186,11 +143,11 @@ export function ProfilePageLeanClient() {
     setActionLoading(true);
     try {
       await fn();
-      setToast({ type: "success", message: formatActionSuccessMessage(label) });
+      showSuccessToast(formatActionSuccessMessage(label));
     } catch (error) {
       const backendMessage =
         error instanceof ApiError ? error.message : error instanceof Error ? error.message : "";
-      setToast({ type: "error", message: formatActionErrorMessage(label, backendMessage) });
+      showErrorToast(formatActionErrorMessage(label, backendMessage));
     } finally {
       setActionLoading(false);
     }
@@ -238,12 +195,6 @@ export function ProfilePageLeanClient() {
       <div>
         <h4 className="mb-3 text-sm font-semibold text-wt-text">Personal &amp; Employment Information</h4>
         <div className="space-y-10 md:space-y-12 rounded-xl border border-wt-border bg-wt-surface-2/50 p-6 md:p-8">
-          <section>
-            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">
-              Profile Photo
-            </h5>
-            <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
-          </section>
           <section>
             <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Basic Information</h5>
             <dl className="space-y-3 text-sm">
@@ -359,29 +310,15 @@ export function ProfilePageLeanClient() {
         </div>
       ) : null}
       <div className="mt-3">
-        <FileField
-          label="Profile Picture (required)"
-          accept="image/*"
-          onPick={handleProfilePicUpload}
-          showDeleteButton={true}
-          currentFileName={currentProfilePhotoName}
-          onDelete={handleDeleteProfilePic}
-          required={true}
-        />
+        <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
                 .map((item) => item.trim())
                 .filter(Boolean);
-              if (!selfProfilePic) {
-                throw new Error("Profile picture is mandatory. Please upload your profile picture.");
-              }
               if (priorEmploymentDocsForProfile) {
                 if (!selfProfileEmploymentFiles.reliving_letter) {
                   throw new Error("Please upload your relieving letter from the previous company.");
@@ -413,11 +350,11 @@ export function ProfilePageLeanClient() {
                   primary_skills: primarySkills.length ? primarySkills : null,
                   secondary_skills: selfProfileForm.secondary_skill
                     ? [
-                      {
-                        skill: selfProfileForm.secondary_skill.trim(),
-                        rating: Number(selfProfileForm.secondary_rating),
-                      },
-                    ]
+                        {
+                          skill: selfProfileForm.secondary_skill.trim(),
+                          rating: Number(selfProfileForm.secondary_rating),
+                        },
+                      ]
                     : [],
                   experience: yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
                   yoe: yoeValue,
@@ -441,46 +378,20 @@ export function ProfilePageLeanClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </button>
-        <button
-          type="button"
-          className="btn-ghost ml-2 px-3 py-2"
-          onClick={() => setIsEditingOwnProfile(false)}
+        </Button>
+        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
-
-
-  if (isEditingOwnProfile && cropImage) {
-    return (
-      <>
-        <ImageCropDialog
-          imageSrc={cropImage}
-          isOpen={cropDialogOpen}
-          onConfirm={handleCropConfirm}
-          onCancel={() => {
-            setCropDialogOpen(false);
-            setCropImage(null);
-          }}
-        />
-        {renderEditPanel()}
-      </>
-    );
-  }
 
   return (
     <>
       <DashboardPageShell>
         <section className="w-full">
-          {isProfileLoading ? (
-            <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
-              <ProfileSectionLoader message="Loading profile..." />
-            </div>
-          ) : null}
           {isOffboarded ? <OffboardedBanner /> : null}
           {!isProfileLoading && !isOffboarded && requiresSelfOnboarding ? <OnboardingPendingBanner /> : null}
           {!isProfileLoading && !isOffboarded && employeeSelfServeProfile && requiresSelfOnboarding ? (
@@ -503,36 +414,51 @@ export function ProfilePageLeanClient() {
             />
           ) : null}
 
-          {!isProfileLoading && !isOffboarded && (!employeeSelfServeProfile || !requiresSelfOnboarding) ? (
-            isEditingOwnProfile ? (
+          {!isOffboarded && (!employeeSelfServeProfile || !requiresSelfOnboarding || isProfileLoading) ? (
+            isEditingOwnProfile && !isProfileLoading ? (
               renderEditPanel()
             ) : (
               <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
-                <div className="mb-6 flex items-center justify-between gap-4">
-                  <h3 className="text-lg font-semibold">{profileDisplayName}</h3>
-
+                {isProfileLoading ? (
+                  <>
+                    <ProfileHeaderSkeleton />
+                    <div className="mt-6">
+                      <ProfileDetailsSkeleton />
+                    </div>
+                    <div className="mt-8 border-t border-wt-border pt-6">
+                      <h4 className="mb-3 text-sm font-semibold text-wt-text">Project Details</h4>
+                      <TableRowsSkeleton rows={3} columns={5} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex min-w-0 flex-1 items-start gap-5">
+                    <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
+                    <div className="min-w-0">
+                      <h3 className="mb-1 text-lg font-semibold">{profileDisplayName}</h3>
+                      <p className="text-sm text-wt-text-muted">
+                        Review your profile details before editing.
+                      </p>
+                    </div>
+                  </div>
                   {employeeSelfServeProfile ? (
-                    <button
-                      type="button"
-                      className="btn-primary px-4 py-2.5"
-                      onClick={openOwnProfileEditor}
-                      disabled={actionLoading}
-                    >
+                    <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
                       Edit Profile
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
-
                 {renderProfileDetails()}
                 {!requiresSelfOnboarding ? renderAssignedProjects() : null}
                 {!requiresSelfOnboarding ? <ProfileEmployeeTrainingsSection enabled /> : null}
+                  </>
+                )}
               </div>
             )
           ) : null}
         </section>
       </DashboardPageShell>
 
-      <DashboardToast toast={toast} />
     </>
   );
 }

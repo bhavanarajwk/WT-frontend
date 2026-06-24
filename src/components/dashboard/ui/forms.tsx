@@ -1,22 +1,31 @@
 "use client";
 
-import { Children, isValidElement, useRef, type ReactElement, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { Children, isValidElement, useId, useRef, type ReactElement, type ReactNode } from "react";
+import { CalendarIcon } from "lucide-react";
 import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 import {
   SearchableSelectCombobox,
   type SearchableSelectOption,
 } from "@/components/dashboard/ui/SearchableSelectCombobox";
-
-export { SearchableSelectCombobox, type SearchableSelectOption };
-
-const ADAPTIVE_SELECT_SEARCH_THRESHOLD = 6;
-
+import { Field, FieldLabel as ShadcnFieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
-  FIELD_LABEL_CLASS,
-  FORM_CONTROL_CLASS,
-  FORM_CONTROL_WITH_CHEVRON_CLASS,
-  FORM_FIELD_CLASS,
-} from "@/components/dashboard/ui/uiLayout";
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { formatUILabel } from "@/utils/titleCase";
 import {
   API_DATE_PLACEHOLDER,
@@ -27,35 +36,30 @@ import {
   maskApiDateInput,
 } from "@/utils/apiDate";
 
-export function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+export { SearchableSelectCombobox, type SearchableSelectOption };
+
+const ADAPTIVE_SELECT_SEARCH_THRESHOLD = 6;
+
+export function FieldLabel({
+  label,
+  required,
+  htmlFor,
+  className,
+}: {
+  label: string;
+  required?: boolean;
+  htmlFor?: string;
+  className?: string;
+}) {
   return (
-    <span className={`inline-flex items-baseline gap-0.5 ${FIELD_LABEL_CLASS}`}>
-      <span>{formatUILabel(label)}</span>
+    <ShadcnFieldLabel htmlFor={htmlFor} className={className}>
+      {formatUILabel(label)}
       {required ? (
-        <span className="shrink-0 text-rose-600 leading-none" aria-hidden>
+        <span className="text-destructive" aria-hidden>
           *
         </span>
       ) : null}
-    </span>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-      aria-hidden
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
+    </ShadcnFieldLabel>
   );
 }
 
@@ -78,6 +82,7 @@ export function ApiDateField({
   max?: string;
   className?: string;
 }) {
+  const fieldId = useId();
   const pickerRef = useRef<HTMLInputElement>(null);
 
   function openPicker() {
@@ -90,14 +95,15 @@ export function ApiDateField({
   }
 
   return (
-    <label className={`${FORM_FIELD_CLASS} ${className ?? ""}`.trim()}>
-      <FieldLabel label={label} required={required} />
-      <div className="relative">
-        <input
+    <Field className={cn(FORM_FIELD_CLASS, className)}>
+      <FieldLabel label={label} required={required} htmlFor={fieldId} />
+      <InputGroup className="h-10">
+        <InputGroupInput
+          id={fieldId}
           type="text"
           inputMode="numeric"
           autoComplete="off"
-          className={`${FORM_CONTROL_CLASS} api-date-field pr-10`}
+          className="api-date-field"
           value={apiDateFieldValue(value)}
           placeholder={API_DATE_PLACEHOLDER}
           disabled={disabled}
@@ -120,40 +126,41 @@ export function ApiDateField({
           disabled={disabled}
           onChange={(e) => onChange(inputValueToApiDate(e.target.value))}
         />
-        <button
-          type="button"
-          tabIndex={-1}
-          disabled={disabled}
-          aria-label={`Open calendar for ${label}`}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-wt-text-muted hover:text-wt-text hover:bg-wt-surface-2 disabled:opacity-50 disabled:pointer-events-none"
-          onClick={(e) => {
-            e.preventDefault();
-            openPicker();
-          }}
-        >
-          <CalendarIcon />
-        </button>
-      </div>
-    </label>
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            type="button"
+            tabIndex={-1}
+            disabled={disabled}
+            aria-label={`Open calendar for ${label}`}
+            onClick={(e) => {
+              e.preventDefault();
+              openPicker();
+            }}
+          >
+            <CalendarIcon className="size-4" />
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
+    </Field>
   );
 }
 
 export function ReadonlyDateField({ value, className }: { value: string; className?: string }) {
   return (
-    <div className={`relative ${className ?? ""}`.trim()}>
-      <input
+    <InputGroup className={cn("h-10 opacity-80", className)}>
+      <InputGroupInput
         type="text"
-        className={`${FORM_CONTROL_CLASS} api-date-field pr-10 opacity-80`}
+        className="api-date-field"
         value={apiDateFieldValue(value)}
         placeholder={API_DATE_PLACEHOLDER}
         disabled
         readOnly
         aria-readonly
       />
-      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-wt-text-muted">
-        <CalendarIcon />
-      </span>
-    </div>
+      <InputGroupAddon align="inline-end">
+        <CalendarIcon className="size-4 text-muted-foreground" aria-hidden />
+      </InputGroupAddon>
+    </InputGroup>
   );
 }
 
@@ -174,6 +181,8 @@ export function InputField({
   placeholder?: string;
   disabled?: boolean;
 }) {
+  const fieldId = useId();
+
   if (type === "date") {
     return (
       <ApiDateField
@@ -187,10 +196,10 @@ export function InputField({
   }
 
   return (
-    <label className={FORM_FIELD_CLASS}>
-      <FieldLabel label={label} required={required} />
-      <input
-        className={FORM_CONTROL_CLASS}
+    <Field className={FORM_FIELD_CLASS}>
+      <FieldLabel label={label} required={required} htmlFor={fieldId} />
+      <Input
+        id={fieldId}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         type={type}
@@ -199,7 +208,7 @@ export function InputField({
         aria-required={required || undefined}
         disabled={disabled}
       />
-    </label>
+    </Field>
   );
 }
 
@@ -222,11 +231,14 @@ export function TextAreaField({
   className?: string;
   textareaClassName?: string;
 }) {
+  const fieldId = useId();
+
   return (
-    <label className={`${FORM_FIELD_CLASS} ${className ?? ""}`.trim()}>
-      <FieldLabel label={label} required={required} />
-      <textarea
-        className={`input-field min-h-[100px] w-full px-3 py-2 text-sm resize-y break-words whitespace-pre-wrap ${textareaClassName ?? ""}`.trim()}
+    <Field className={cn(FORM_FIELD_CLASS, className)}>
+      <FieldLabel label={label} required={required} htmlFor={fieldId} />
+      <Textarea
+        id={fieldId}
+        className={cn("min-h-[100px] resize-y break-words whitespace-pre-wrap", textareaClassName)}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -234,7 +246,7 @@ export function TextAreaField({
         aria-required={required || undefined}
         rows={rows}
       />
-    </label>
+    </Field>
   );
 }
 
@@ -275,22 +287,8 @@ function withPlaceholderOption(
   return [{ value: "", label: placeholder }, ...items];
 }
 
-function ChevronDownIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-wt-text-muted"
-      aria-hidden
-    >
-      <path
-        fillRule="evenodd"
-        d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
+function selectItemsEqual(a: SearchableSelectOption, b: SearchableSelectOption) {
+  return a.value === b.value;
 }
 
 /** Selection-only dropdown with a visible chevron (no free-text entry). */
@@ -302,6 +300,8 @@ export function DropdownSelectField({
   required = false,
   placeholder = "Select",
   disabled = false,
+  loading = false,
+  loadingLabel = "Loading…",
   className,
 }: {
   label: string;
@@ -311,33 +311,41 @@ export function DropdownSelectField({
   required?: boolean;
   placeholder?: string;
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   className?: string;
 }) {
-  const items = normalizeSelectOptions(options);
+  const fieldId = useId();
+  const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
+  const selected = items.find((opt) => opt.value === value) ?? null;
+
   return (
-    <label className={`text-xs text-wt-text-muted flex flex-col gap-1 ${className ?? ""}`.trim()}>
-      <FieldLabel label={label} required={required} />
-      <div className="relative">
-        <select
-          className={FORM_CONTROL_WITH_CHEVRON_CLASS}
-          value={value}
-          required={required}
-          disabled={disabled}
-          aria-label={label}
-          onChange={(event) => onChange(event.target.value)}
-        >
-          <option value="" disabled={required}>
-            {placeholder}
-          </option>
-          {items.map((option) => (
-            <option key={`${option.value}-${option.label}`} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDownIcon />
-      </div>
-    </label>
+    <Field className={cn(FORM_FIELD_CLASS, className)}>
+      <FieldLabel label={label} required={required} htmlFor={fieldId} />
+      <Select
+        value={selected}
+        onValueChange={(item) => onChange(item?.value ?? "")}
+        disabled={disabled || loading}
+        required={required}
+        items={items}
+        isItemEqualToValue={selectItemsEqual}
+      >
+        <SelectTrigger id={fieldId} aria-busy={loading || undefined}>
+          <SelectValue placeholder={loading ? loadingLabel : placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {loading ? (
+            <div className="px-2 py-2 text-sm text-wt-text-muted">{loadingLabel}</div>
+          ) : (
+            items.map((option) => (
+              <SelectItem key={`${option.value}-${option.label}`} value={option}>
+                {option.label}
+              </SelectItem>
+            ))
+          )}
+        </SelectContent>
+      </Select>
+    </Field>
   );
 }
 
@@ -349,6 +357,8 @@ export function AdaptiveSelectField({
   required = false,
   placeholder,
   disabled = false,
+  loading = false,
+  loadingLabel = "Loading…",
   className,
   searchPlaceholder = "Search…",
 }: {
@@ -359,41 +369,47 @@ export function AdaptiveSelectField({
   required?: boolean;
   placeholder?: string;
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   className?: string;
   searchPlaceholder?: string;
 }) {
+  const fieldId = useId();
   const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
   const selectableCount = items.filter((opt) => opt.value !== "").length;
   const useSearch = selectableCount > ADAPTIVE_SELECT_SEARCH_THRESHOLD;
-  const dropdownInputClassName = FORM_CONTROL_WITH_CHEVRON_CLASS;
 
   return (
-    <label className={`${FORM_FIELD_CLASS} ${className ?? ""}`.trim()}>
-      <FieldLabel label={label} required={required} />
+    <Field className={cn(FORM_FIELD_CLASS, className)}>
+      <FieldLabel label={label} required={required} htmlFor={fieldId} />
       {useSearch ? (
         <SearchableSelectCombobox
+          id={fieldId}
           value={value}
           onChange={onChange}
           options={items}
-          placeholder={searchPlaceholder}
+          placeholder={loading ? loadingLabel : searchPlaceholder}
           required={required}
-          disabled={disabled}
+          disabled={disabled || loading}
+          loading={loading}
+          loadingLabel={loadingLabel}
           aria-label={label}
           showChevron
-          inputClassName={dropdownInputClassName}
         />
       ) : (
         <DropdownSelect
+          id={fieldId}
           value={value}
           onChange={onChange}
           options={items}
           required={required}
           disabled={disabled}
+          loading={loading}
+          loadingLabel={loadingLabel}
           aria-label={label}
-          selectClassName={dropdownInputClassName}
         />
       )}
-    </label>
+    </Field>
   );
 }
 
@@ -405,6 +421,8 @@ export function SelectField({
   required = false,
   placeholder,
   disabled = false,
+  loading = false,
+  loadingLabel = "Loading…",
   className,
 }: {
   label: string;
@@ -414,6 +432,8 @@ export function SelectField({
   required?: boolean;
   placeholder?: string;
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   className?: string;
 }) {
   return (
@@ -425,6 +445,8 @@ export function SelectField({
       required={required}
       placeholder={placeholder}
       disabled={disabled}
+      loading={loading}
+      loadingLabel={loadingLabel}
       className={className}
       searchPlaceholder={placeholder ?? "Search…"}
     />
@@ -450,11 +472,13 @@ export function NativeSelectField({
   className?: string;
   children: ReactNode;
 }) {
+  const fieldId = useId();
   const items = withPlaceholderOption(optionsFromSelectChildren(children), placeholder, required);
   return (
-    <label className={`${FORM_FIELD_CLASS} ${className ?? ""}`.trim()}>
-      <FieldLabel label={label} required={required} />
+    <Field className={cn(FORM_FIELD_CLASS, className)}>
+      <FieldLabel label={label} required={required} htmlFor={fieldId} />
       <SearchableSelectCombobox
+        id={fieldId}
         value={value}
         onChange={onChange}
         options={items}
@@ -463,7 +487,7 @@ export function NativeSelectField({
         disabled={disabled}
         aria-label={label}
       />
-    </label>
+    </Field>
   );
 }
 
@@ -521,18 +545,21 @@ export function FileField({
   currentFileName?: string;
   onDelete?: () => void;
 }) {
+  const fieldId = useId();
   const isMulti = Boolean(multiple);
   const hasFile = Boolean(currentFileName);
 
   return (
-    <label className={FORM_FIELD_CLASS}>
-      <FieldLabel label={label} required={required} />
+    <Field className={FORM_FIELD_CLASS}>
+      <FieldLabel label={label} required={required} htmlFor={fieldId} />
       <div className="flex items-center gap-2">
-        <input
+        <Input
+          id={fieldId}
           type="file"
           accept={accept}
           multiple={isMulti}
-          className={FORM_CONTROL_CLASS}
+          required={required}
+          className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1 file:text-sm file:font-medium"
           onChange={(e) => {
             if (isMulti) {
               onPickFiles?.(e.target.files?.length ? Array.from(e.target.files) : []);
@@ -542,20 +569,21 @@ export function FileField({
           }}
         />
         {showDeleteButton && hasFile && onDelete ? (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={onDelete}
-            className="btn-ghost px-2 py-2 text-rose-600 hover:bg-rose-50"
+            className="shrink-0 px-3 py-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
             title="Delete current file"
           >
-            ✕
-          </button>
+            Remove
+          </Button>
         ) : null}
       </div>
       {currentFileName ? (
         <p className="text-xs text-wt-text-muted mt-1">Current: {currentFileName}</p>
       ) : null}
-    </label>
+    </Field>
   );
 }
 
@@ -573,13 +601,17 @@ export function UploadTile({
   loading: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-3 space-y-2">
+    <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
       <p className="text-sm font-medium">{label}</p>
-      <input type="file" className="input-field px-2 py-1.5 text-sm" onChange={(e) => onPick(e.target.files?.[0] ?? null)} />
-      <p className="text-xs text-wt-text-muted truncate">{file ? file.name : "No file selected"}</p>
-      <button type="button" className="btn-primary px-2.5 py-1.5 text-sm" onClick={onUpload} disabled={loading || !file}>
+      <Input
+        className="h-10 cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1 file:text-sm file:font-medium"
+        type="file"
+        onChange={(e) => onPick(e.target.files?.[0] ?? null)}
+      />
+      <p className="truncate text-xs text-muted-foreground">{file ? file.name : "No file selected"}</p>
+      <Button variant="brand" size="sm" type="button" className="px-2.5 py-1.5 text-sm" onClick={onUpload} disabled={loading || !file}>
         Upload
-      </button>
+      </Button>
     </div>
   );
 }

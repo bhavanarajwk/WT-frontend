@@ -1,8 +1,8 @@
-import type { HTMLAttributes, ReactNode } from "react";
+import type { HTMLAttributes } from "react";
 
 export const SCROLLABLE_TABLE_CLASS = "wt-scrollable-table text-sm";
 
-export const STICKY_TABLE_HEAD_CLASS = "wt-table-sticky-head text-wt-text-muted";
+export const STICKY_TABLE_HEAD_CLASS = "wt-table-sticky-head [&_tr]:border-b";
 
 export const SCROLLABLE_TABLE_SHELL_CLASS =
   "wt-scroll-both overflow-auto rounded-xl border border-wt-border";

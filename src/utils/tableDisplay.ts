@@ -140,6 +140,7 @@ const COLUMN_HEADER_LABELS: Record<string, string> = {
   date_of_joining: "Date of joining",
   date_of_birth: "Date of birth",
   phone_number: "Phone number",
+  created_on: "Created on",
   user_type: "User type",
   work_mode: "Work mode",
   log_date: "Log date",

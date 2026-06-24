@@ -1,5 +1,16 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -27,20 +38,22 @@ function AttendanceToggle({
   return (
     <div className="inline-flex rounded-lg border border-wt-border p-0.5 text-xs font-medium">
       {(["PRESENT", "ABSENT"] as const).map((status) => (
-        <button
+        <Button
           key={status}
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => onChange(status)}
-          className={`rounded-md px-3 py-1.5 transition ${
+          className={`rounded-md px-3 py-1.5 ${
             value === status
               ? status === "PRESENT"
-                ? "bg-emerald-600 text-white"
-                : "bg-rose-600 text-white"
+                ? "bg-emerald-600 text-white hover:bg-emerald-600 hover:text-white"
+                : "bg-rose-600 text-white hover:bg-rose-600 hover:text-white"
               : "text-wt-text-muted hover:bg-wt-surface-2"
           }`}
         >
           {status === "PRESENT" ? "Present" : "Absent"}
-        </button>
+        </Button>
       ))}
     </div>
   );
@@ -151,20 +164,14 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wt-border pb-4">
           <h2 className="font-semibold">Trainee Attendance</h2>
-          <button
-            type="button"
-            className="btn-primary px-4 py-2 text-sm"
-            disabled={
-              saveMut.isPending || !trainingId || !sessionId || !traineeRows.length
-            }
-            onClick={() =>
+          <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={ saveMut.isPending || !trainingId || !sessionId || !traineeRows.length } onClick={() =>
               saveMut.mutate(undefined, {
                 onError: (e) => alert(e instanceof Error ? e.message : String(e)),
               })
             }
           >
             {saveMut.isPending ? "Saving…" : "Save attendance"}
-          </button>
+          </Button>
         </div>
 
         {!trainingId ? (
@@ -176,33 +183,33 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
         ) : traineeRows.length === 0 ? (
           <p className="text-sm text-wt-text-muted">No trainees enrolled for this training.</p>
         ) : (
-          <div className="wt-scroll-both max-h-[min(70vh,520px)] overflow-auto rounded-xl border border-wt-border">
-            <table className="wt-scrollable-table text-sm">
-              <thead className="wt-table-sticky-head text-wt-text-muted">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium">Trainee</th>
-                  <th className="text-left px-3 py-2 font-medium">Status</th>
-                  <th className="text-left px-3 py-2 font-medium">Attendance</th>
-                </tr>
-              </thead>
-              <tbody>
+          <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+            <WtTable>
+              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Trainee</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Attendance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {traineeRows.map((row) => (
-                  <tr key={row.key} className="border-t border-wt-border">
-                    <td className="px-3 py-2 whitespace-nowrap">{row.name}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{row.enrollmentStatus}</td>
-                    <td className="px-3 py-2">
+                  <TableRow key={row.key}>
+                    <TableCell className="px-3 py-2 whitespace-nowrap">{row.name}</TableCell>
+                    <TableCell className="px-3 py-2 whitespace-nowrap">{row.enrollmentStatus}</TableCell>
+                    <TableCell className="px-3 py-2">
                       <AttendanceToggle
                         value={attendanceByUser[row.userId] ?? "PRESENT"}
                         onChange={(v) =>
                           setAttendanceByUser((prev) => ({ ...prev, [row.userId]: v }))
                         }
                       />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </WtTable>
+          </ScrollableTable>
         )}
       </section>
 
