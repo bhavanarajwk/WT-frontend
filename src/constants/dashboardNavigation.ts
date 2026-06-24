@@ -55,12 +55,6 @@ export const dashboardNavigation: NavItem[] = [
         icon: "bookUser",
       },
       {
-        id: "employee-attendance",
-        label: "Attendance",
-        roles: ["ROLE_HR", "ROLE_ADMIN"],
-        icon: "calendarCheck",
-      },
-      {
         id: "holiday-calendars",
         label: "Holiday Calendar",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
@@ -287,7 +281,6 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   overview: "Overview",
   "employee-directory": "Employee Directory",
   employee: "Onboard Employee",
-  "employee-attendance": "Attendance",
   offboarding: "Offboarding",
   leave: "Employee Leave Requests",
   "leave-team": "Leave Requests",

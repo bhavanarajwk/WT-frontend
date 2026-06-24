@@ -67,70 +67,51 @@ export function resolveRequestTypesForFetch(requestType: string): string[] {
   return [requestType.trim()];
 }
 
-async function fetchUserRequestPathPages(params: {
+async function fetchUserRequestsFromRoot(params: {
   fromDate: string;
   toDate: string;
-  requestTypes: string[];
+  requestType?: string;
+  page?: number;
+  size?: number;
+  selfOnly?: boolean;
   empEmails?: string;
-  extraQuery?: Record<string, string>;
 }): Promise<Array<Record<string, unknown>>> {
   const normalizedFrom = toApiDateParam(params.fromDate) ?? params.fromDate.trim();
   const normalizedTo = toApiDateParam(params.toDate) ?? params.toDate.trim();
-  const query = { page: "0", size: "200", ...params.extraQuery };
-  const email = params.empEmails?.trim();
-  const collected: Array<Record<string, unknown>> = [];
+  const query: Record<string, string> = {
+    fromDate: normalizedFrom,
+    toDate: normalizedTo,
+    requestType: params.requestType?.trim() || "ALL",
+    page: String(params.page ?? 0),
+    size: String(params.size ?? 200),
+  };
+  if (params.selfOnly) query.selfOnly = "true";
+  if (params.empEmails?.trim()) query.empEmails = params.empEmails.trim();
 
-  for (const requestType of params.requestTypes) {
-    const paths: string[] = [];
-    if (email) {
-      paths.push(
-        endpoints.userRequest.getByEmployees(email, normalizedFrom, normalizedTo, requestType)
-      );
+  try {
+    const res = await apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
+      query: applyApiDateQuery(query, ["fromDate", "toDate"]),
+    });
+    return dedupeUserRequestRows(toPagedRows(res.data ?? res));
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
+      return [];
     }
-    paths.push(endpoints.userRequest.getRange(normalizedFrom, normalizedTo, requestType));
-
-    for (const path of paths) {
-      try {
-        const res = await apiClient.get<ApiEnvelope<unknown>>(path, { query });
-        collected.push(...toPagedRows(res.data ?? res));
-      } catch {
-        /* try next path/type */
-      }
-    }
+    throw error;
   }
-
-  return dedupeUserRequestRows(collected);
 }
 
-/** Team / scoped lists — prefer a single ALL call, then canonical types only. */
+/** Team / scoped lists — single GET on `/userRequest` (no legacy path fallbacks). */
 export async function listScopedUserRequests(params: {
   fromDate: string;
   toDate: string;
   requestType?: string;
   empEmails?: string;
 }): Promise<Array<Record<string, unknown>>> {
-  const primaryTypes = resolveRequestTypesForFetch(params.requestType ?? "ALL");
-
-  if (primaryTypes[0] === "ALL") {
-    const allRows = await fetchUserRequestPathPages({
-      fromDate: params.fromDate,
-      toDate: params.toDate,
-      requestTypes: ["ALL"],
-      empEmails: params.empEmails,
-    });
-    if (allRows.length) return allRows;
-    return fetchUserRequestPathPages({
-      fromDate: params.fromDate,
-      toDate: params.toDate,
-      requestTypes: [...USER_REQUEST_FETCH_TYPES],
-      empEmails: params.empEmails,
-    });
-  }
-
-  return fetchUserRequestPathPages({
+  return fetchUserRequestsFromRoot({
     fromDate: params.fromDate,
     toDate: params.toDate,
-    requestTypes: primaryTypes,
+    requestType: params.requestType ?? "ALL",
     empEmails: params.empEmails,
   });
 }
@@ -665,101 +646,23 @@ export function formatStageRejectionReason(stage: unknown, reason: unknown): str
 
 
 /** GET /api/v1/userRequest?...&selfOnly=true — logged-in user's requests with approval fields. */
-
 export async function listSelfUserRequests(params: {
-
   fromDate: string;
-
   toDate: string;
-
   requestType?: string;
-
   page?: number;
-
   size?: number;
-
   empEmail?: string;
-
 }): Promise<Array<Record<string, unknown>>> {
-
-  const normalizedFrom = toApiDateParam(params.fromDate) ?? params.fromDate.trim();
-
-  const normalizedTo = toApiDateParam(params.toDate) ?? params.toDate.trim();
-
-  const requestType = params.requestType?.trim() || "ALL";
-
-  const page = params.page ?? 0;
-
-  const size = params.size ?? 200;
-
-  const selfOnlyQuery = {
-
-    fromDate: normalizedFrom,
-
-    toDate: normalizedTo,
-
-    requestType,
-
-    selfOnly: "true",
-
-    page: String(page),
-
-    size: String(size),
-
-  };
-
-
-
-  const parse = (res: ApiEnvelope<unknown>) => toPagedRows(res.data ?? res);
-
-
-
-  try {
-
-    const res = await apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
-
-      query: applyApiDateQuery(selfOnlyQuery, ["fromDate", "toDate"]),
-
-    });
-
-    return parse(res);
-
-  } catch (error) {
-
-    if (!(error instanceof ApiError) || (error.status !== 405 && error.status !== 404)) {
-
-      throw error;
-
-    }
-
-  }
-
-
-
-  const email = params.empEmail?.trim();
-
-  const legacyRows = await fetchUserRequestPathPages({
+  return fetchUserRequestsFromRoot({
     fromDate: params.fromDate,
     toDate: params.toDate,
-    requestTypes: resolveRequestTypesForFetch(requestType),
-    empEmails: email,
-    extraQuery: { selfOnly: "true" },
+    requestType: params.requestType ?? "ALL",
+    page: params.page,
+    size: params.size,
+    selfOnly: true,
+    empEmails: params.empEmail,
   });
-
-  if (legacyRows.length) return legacyRows;
-
-  if (requestType === "ALL") {
-    return fetchUserRequestPathPages({
-      fromDate: params.fromDate,
-      toDate: params.toDate,
-      requestTypes: [...USER_REQUEST_FETCH_TYPES],
-      empEmails: email,
-      extraQuery: { selfOnly: "true" },
-    });
-  }
-
-  return legacyRows;
-
 }
 
 

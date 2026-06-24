@@ -2,11 +2,11 @@ import { cleanEmployeeName } from "@/utils/employeeDirectory";
 import { parseApiDate } from "@/utils/apiDate";
 import { compareSortValues, type ListSortOption } from "@/utils/listSort";
 import type { OffboardListItem } from "@/types/offboard";
-import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
+import { isServingNoticeUserStatus } from "@/utils/userStatus";
 import { exitInterviewSubmissionDetailPath } from "@/constants/routes";
 
 export type ExitSurveyFollowUpRow = OffboardListItem & {
-  is_in_notice?: boolean;
+  is_serving_notice?: boolean;
 };
 
 export const DEFAULT_EXIT_SURVEY_LWD_SORT_ID = "lwd_desc";
@@ -88,11 +88,18 @@ export function pickLastWorkingDay(row: Record<string, unknown>): string {
   ).trim();
 }
 
-export function isInNoticeEmployee(row: Record<string, unknown>): boolean {
-  return normalizeEmployeeStatusKey(row.status) === "IN_NOTICE";
+export function isServingNoticeEmployee(row: Record<string, unknown>): boolean {
+  return isServingNoticeUserStatus(row.status);
 }
 
-export function mapInNoticeFollowUpRow(row: Record<string, unknown>): ExitSurveyFollowUpRow | null {
+/** @deprecated Use isServingNoticeEmployee */
+export function isInNoticeEmployee(row: Record<string, unknown>): boolean {
+  return isServingNoticeEmployee(row);
+}
+
+export function mapServingNoticeFollowUpRow(
+  row: Record<string, unknown>
+): ExitSurveyFollowUpRow | null {
   const emp_id = String(row.emp_id ?? row.empId ?? "").trim() || null;
   const email = String(row.email ?? "").trim();
   if (!emp_id && !email) return null;
@@ -107,9 +114,12 @@ export function mapInNoticeFollowUpRow(row: Record<string, unknown>): ExitSurvey
     can_view_submission: false,
     submission_status: "PENDING",
     lookup_id: emp_id || email,
-    is_in_notice: true,
+    is_serving_notice: true,
   };
 }
+
+/** @deprecated Use mapServingNoticeFollowUpRow */
+export const mapInNoticeFollowUpRow = mapServingNoticeFollowUpRow;
 
 function followUpRowKey(row: ExitSurveyFollowUpRow): string {
   const emp = String(row.emp_id ?? "").trim().toLowerCase();
@@ -222,7 +232,7 @@ function matchesFollowUpType(row: Record<string, unknown>, type: string): boolea
     .toUpperCase() === filter;
 }
 
-export function filterInNoticeFollowUpRows(
+export function filterServingNoticeFollowUpRows(
   onboardRows: Array<Record<string, unknown>>,
   options: {
     search?: string;
@@ -232,9 +242,9 @@ export function filterInNoticeFollowUpRows(
   }
 ): ExitSurveyFollowUpRow[] {
   return onboardRows
-    .filter(isInNoticeEmployee)
+    .filter(isServingNoticeEmployee)
     .filter((row) => matchesFollowUpType(row, options.type ?? ""))
-    .map(mapInNoticeFollowUpRow)
+    .map(mapServingNoticeFollowUpRow)
     .filter((row): row is ExitSurveyFollowUpRow => Boolean(row))
     .filter((row) => {
       const lwd = row.last_working_day?.trim();
@@ -252,9 +262,12 @@ export function filterInNoticeFollowUpRows(
     .filter((row) => matchesFollowUpSearch(row, options.search ?? ""));
 }
 
+/** @deprecated Use filterServingNoticeFollowUpRows */
+export const filterInNoticeFollowUpRows = filterServingNoticeFollowUpRows;
+
 export function mergeExitSurveyFollowUpRows(
   offboardItems: OffboardListItem[],
-  inNoticeItems: ExitSurveyFollowUpRow[]
+  servingNoticeItems: ExitSurveyFollowUpRow[]
 ): ExitSurveyFollowUpRow[] {
   const merged = new Map<string, ExitSurveyFollowUpRow>();
 
@@ -264,12 +277,12 @@ export function mergeExitSurveyFollowUpRows(
     const email = String(row.email ?? "").trim();
     merged.set(key, {
       ...row,
-      is_in_notice: false,
+      is_serving_notice: false,
       lookup_id: row.lookup_id ?? row.emp_id ?? (email && email !== "—" ? email : undefined),
     });
   }
 
-  for (const row of inNoticeItems) {
+  for (const row of servingNoticeItems) {
     const key = followUpRowKey(row);
     if (!key || merged.has(key)) continue;
     merged.set(key, row);

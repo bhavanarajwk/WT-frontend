@@ -1,6 +1,17 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCheckbox,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { DEFAULT_PAGE_SIZE, useClientPagination } from "@/hooks/useClientPagination";
@@ -13,40 +24,42 @@ import {
   type ListSortOption,
 } from "@/utils/listSort";
 import {
-  canResendOnboardInvite,
   invitedEmployeeWorkEmail,
+  isResendableInvitedEmployeeRow,
+  mergeEmailSelection,
 } from "@/utils/dashboard/invitedEmployees";
-import { formatTableColumnHeader, prepareTableForDisplay } from "@/utils/tableDisplay";
-import { BlackLoader } from "@/components/dashboard/shared/BlackLoader";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import {
+  formatTableColumnHeader,
+  prepareTableForDisplay,
+  resolveEmployeeNameFromRow,
+} from "@/utils/tableDisplay";
 
 const DATA_COLUMNS = [
   "emp_id",
   "name",
   "email",
   "personal_email",
-  "status",
   "user_type",
   "department",
-  "created_at",
+  "created_on",
 ] as const;
 
 const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
-    id: "created_at_desc",
+    id: "created_on_desc",
     label: "Created",
-    columnKeys: ["created_at"],
+    columnKeys: ["created_on"],
     direction: "desc",
     type: "date",
-    getValue: (row) => pickRowField(row, ["created_at", "createdAt"]),
+    getValue: (row) => pickRowField(row, ["created_at", "createdAt", "created_on"]),
   },
   {
-    id: "created_at_asc",
+    id: "created_on_asc",
     label: "Created",
-    columnKeys: ["created_at"],
+    columnKeys: ["created_on"],
     direction: "asc",
     type: "date",
-    getValue: (row) => pickRowField(row, ["created_at", "createdAt"]),
+    getValue: (row) => pickRowField(row, ["created_at", "createdAt", "created_on"]),
   },
   {
     id: "name_asc",
@@ -80,22 +93,25 @@ const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
 
 type Props = {
   rows: Array<Record<string, unknown>>;
-  emptyLabel: string;
-  loading?: boolean;
+  searchResetKey?: string;
   actionLoading?: boolean;
   resendingEmail?: string | null;
+  bulkResending?: boolean;
   onResendInvite: (email: string) => void;
+  onBulkResendInvite: (emails: string[]) => void | Promise<void>;
 };
 
 export function InvitedEmployeesTable({
   rows,
-  emptyLabel,
-  loading = false,
+  searchResetKey = "",
   actionLoading = false,
   resendingEmail = null,
+  bulkResending = false,
   onResendInvite,
+  onBulkResendInvite,
 }: Props) {
   const [sortId, setSortId] = useState(SORT_OPTIONS[0]?.id ?? "");
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
 
   const { columns: displayColumns, rows: displaySourceRows } = useMemo(
@@ -110,27 +126,86 @@ export function InvitedEmployeesTable({
 
   const pagination = useClientPagination(sortedRows, {
     pageSize: DEFAULT_PAGE_SIZE,
-    resetKeys: [sortId],
+    resetKeys: [sortId, searchResetKey],
   });
 
-  if (loading && !displaySourceRows.length) {
-    return (
-      <div
-        className="flex min-h-[min(70vh,520px)] items-center justify-center rounded-xl border border-wt-border bg-wt-surface-1"
-        aria-busy="true"
-        aria-live="polite"
-      >
-        <SectionLoading label="Loading Employees…" />
-      </div>
-    );
+  useEffect(() => {
+    setSelectedEmails([]);
+  }, [searchResetKey]);
+
+  const resendableEmailsOnPage = useMemo(
+    () =>
+      pagination.pageItems
+        .filter(isResendableInvitedEmployeeRow)
+        .map((row) => invitedEmployeeWorkEmail(row)),
+    [pagination.pageItems]
+  );
+
+  const selectedResendableCount = selectedEmails.length;
+  const allResendableOnPageSelected =
+    resendableEmailsOnPage.length > 0 &&
+    resendableEmailsOnPage.every((email) => selectedEmails.includes(email));
+  const someResendableOnPageSelected =
+    resendableEmailsOnPage.some((email) => selectedEmails.includes(email)) &&
+    !allResendableOnPageSelected;
+
+  const selectionBusy = actionLoading || bulkResending || Boolean(resendingEmail);
+
+  function toggleRowSelection(email: string, checked: boolean) {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return;
+    setSelectedEmails((prev) => {
+      if (checked) {
+        return mergeEmailSelection(prev, [normalized]);
+      }
+      return prev.filter((value) => value !== normalized);
+    });
   }
 
-  if (!loading && !displaySourceRows.length) {
-    return <p className="text-sm text-wt-text-muted">{emptyLabel}</p>;
+  function toggleSelectAllOnPage(checked: boolean) {
+    if (!checked) {
+      setSelectedEmails((prev) =>
+        prev.filter((email) => !resendableEmailsOnPage.includes(email))
+      );
+      return;
+    }
+    setSelectedEmails((prev) => mergeEmailSelection(prev, resendableEmailsOnPage));
+  }
+
+  async function handleBulkResend() {
+    if (!selectedEmails.length || bulkResending) return;
+    await onBulkResendInvite(selectedEmails);
+    setSelectedEmails([]);
   }
 
   return (
     <div className="space-y-2">
+      {selectedResendableCount > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="brand"
+            size="sm"
+            type="button"
+            className="h-9 px-3 text-sm"
+            disabled={selectionBusy}
+            onClick={() => void handleBulkResend()}
+          >
+            {bulkResending
+              ? "Resending Invites…"
+              : `Resend Invite (${selectedResendableCount})`}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            className="h-9 px-3 text-sm"
+            disabled={selectionBusy}
+            onClick={() => setSelectedEmails([])}
+          >
+            Clear Selection
+          </Button>
+        </div>
+      ) : null}
       <div
         className="relative wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border"
         style={{ overscrollBehaviorY: "auto" }}
@@ -152,28 +227,26 @@ export function InvitedEmployeesTable({
           pageScroller.scrollBy({ top: deltaY, behavior: "auto" });
         }}
       >
-        {loading ? (
-          <div
-            className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-wt-surface-1/85"
-            aria-busy="true"
-            aria-live="polite"
-          >
-            <SectionLoading label="Loading Employees…" />
-          </div>
-        ) : null}
-        <table className="wt-scrollable-table text-sm">
-          <thead className="wt-table-sticky-head text-wt-text-muted">
-            <tr>
+        <WtTable>
+          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-10">
+                <span className="sr-only">Select</span>
+                <TableCheckbox
+                  checked={allResendableOnPageSelected}
+                  indeterminate={someResendableOnPageSelected}
+                  disabled={!resendableEmailsOnPage.length || selectionBusy}
+                  onCheckedChange={(checked) => toggleSelectAllOnPage(checked)}
+                  aria-label="Select all resendable employees on this page"
+                />
+              </TableHead>
               {displayColumns.map((col) => {
                 const columnSortOpts = sortOptionsForColumn(col, SORT_OPTIONS);
                 const activeDir = columnSortOpts.length
                   ? activeSortDirectionForColumn(col, sortId, SORT_OPTIONS)
                   : null;
                 return (
-                  <th
-                    key={col}
-                    className="sticky top-0 z-10 bg-wt-surface-2 text-left px-3 py-2 font-medium whitespace-nowrap"
-                  >
+                  <TableHead key={col}>
                     <TableSortHeader
                       label={formatTableColumnHeader(col)}
                       activeDirection={activeDir}
@@ -184,57 +257,64 @@ export function InvitedEmployeesTable({
                           : undefined
                       }
                     />
-                  </th>
+                  </TableHead>
                 );
               })}
-              <th className="sticky top-0 z-10 bg-wt-surface-2 text-left px-3 py-2 font-medium whitespace-nowrap">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {pagination.pageItems.map((row, idx) => {
               const email = invitedEmployeeWorkEmail(row);
-              const canResend = canResendOnboardInvite(row.status) && Boolean(email);
+              const canResend = isResendableInvitedEmployeeRow(row);
               const isResending = Boolean(email && resendingEmail === email);
+              const isSelected = Boolean(email && selectedEmails.includes(email));
               const rowKey = String(row.emp_id ?? email ?? idx);
+              const employeeName = resolveEmployeeNameFromRow(row);
 
               return (
-                <tr key={rowKey} className="border-t border-wt-border">
-                  {displayColumns.map((col) => (
-                    <td key={col} className="px-3 py-2 whitespace-nowrap">
-                      {row[col] === null || row[col] === undefined ? "—" : String(row[col])}
-                    </td>
-                  ))}
-                  <td className="px-3 py-2 whitespace-nowrap">
+                <TableRow
+                  key={rowKey}
+                  className={isSelected ? "bg-indigo-50/70" : undefined}
+                >
+                  <TableCell className="px-3 py-2">
                     {canResend ? (
-                      <button
+                      <TableCheckbox
+                        checked={isSelected}
+                        disabled={selectionBusy || isResending}
+                        onCheckedChange={(checked) => toggleRowSelection(email, checked)}
+                        aria-label={`Select ${employeeName}`}
+                      />
+                    ) : null}
+                  </TableCell>
+                  {displayColumns.map((col) => (
+                    <TableCell key={col} className="px-3 py-2 whitespace-nowrap">
+                      {row[col] === null || row[col] === undefined ? "—" : String(row[col])}
+                    </TableCell>
+                  ))}
+                  <TableCell className="px-3 py-2 whitespace-nowrap">
+                    {canResend && selectedResendableCount === 0 ? (
+                      <Button
+                        variant="brand"
+                        size="xs"
                         type="button"
-                        className="btn-action px-2.5 py-1 text-xs"
-                        disabled={actionLoading || isResending}
+                        className="px-2.5 py-1 text-xs"
+                        disabled={selectionBusy || isResending}
                         onClick={() => onResendInvite(email)}
                       >
-                        {isResending ? (
-                          <span className="inline-flex items-center gap-2">
-                            <BlackLoader label="Resending Invite" size="sm" />
-                            <span>Resending Invite…</span>
-                          </span>
-                        ) : (
-                          "Resend Invite"
-                        )}
-                      </button>
+                        {isResending ? "Resending Invite…" : "Resend Invite"}
+                      </Button>
                     ) : (
                       <span className="text-xs text-wt-text-muted">—</span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </WtTable>
       </div>
       <ListPagination
-        className="mt-2"
         page={pagination.page}
         totalPages={pagination.totalPages}
         totalItems={pagination.totalItems}

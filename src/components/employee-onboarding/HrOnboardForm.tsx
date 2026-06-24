@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { DatePickerField, DropdownSelectField, InputField } from "@/components/dashboard/ui/forms";
-import { LoadingOverlay } from "@/components/dashboard/shared/BlackLoader";
+import { FormGridSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import {
+  CARD_FORM_ACTIONS_CLASS,
+  CARD_FORM_GRID_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
   bandSelectOptions,
@@ -22,6 +30,7 @@ type HrOnboardFormProps = {
   bands: Array<Record<string, unknown>>;
   hasHrAccess: boolean;
   actionLoading: boolean;
+  optionsLoading?: boolean;
   onSubmitSuccess: () => Promise<void>;
   onError: (message: string) => void;
   runAction: (label: string, fn: () => Promise<void>) => void;
@@ -83,14 +92,11 @@ export function HrOnboardForm({
   options,
   bands,
   actionLoading,
+  optionsLoading = false,
   onSubmitSuccess,
   onError,
   runAction,
 }: HrOnboardFormProps) {
-  const [designationOptions, setDesignationOptions] = useState<Array<{ value: string; label: string }>>(
-    []
-  );
-  const [designationLoading, setDesignationLoading] = useState(false);
   const internBandId = useMemo(() => resolveInternBandId(bands), [bands]);
   const defaultConsultantBandId = useMemo(() => {
     const first = bands[0];
@@ -110,6 +116,40 @@ export function HrOnboardForm({
     return Number(form.band_id);
   }, [defaultConsultantBandId, form.band_id, form.user_type, internBandId]);
 
+  const department = form.department.trim();
+  const designationsQ = useQuery({
+    queryKey: ["masters", "designations", department, designationBandId],
+    enabled: designationBandId > 0 && Boolean(department),
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async () => {
+      const res = await hrmsService.searchDesignations({
+        band_id: designationBandId,
+        department,
+      });
+      return parseDesignationList(res).map((item) => ({
+        value: item.name,
+        label: item.name,
+      }));
+    },
+  });
+
+  const designationOptions = designationsQ.data ?? [];
+  const designationLoading = designationsQ.isLoading || designationsQ.isFetching;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+
+  useEffect(() => {
+    if (!designationsQ.isError) return;
+    onErrorRef.current(
+      designationsQ.error instanceof Error
+        ? designationsQ.error.message
+        : "Could not load designations for this band."
+    );
+  }, [designationsQ.isError, designationsQ.error]);
+
   useEffect(() => {
     if (form.user_type !== "INTERN") return;
     setForm((prev) => (prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }));
@@ -124,36 +164,6 @@ export function HrOnboardForm({
       setForm((prev) => ({ ...prev, band_id: 0, role: "" }));
     }
   }, [departmentBands, form.band_id, form.department, setForm]);
-
-  useEffect(() => {
-    const bandId = designationBandId;
-    const department = form.department.trim();
-    if (bandId <= 0 || !department) {
-      setDesignationOptions([]);
-      return;
-    }
-    const handle = window.setTimeout(() => {
-      void (async () => {
-        setDesignationLoading(true);
-        try {
-          const res = await hrmsService.searchDesignations({ band_id: bandId, department });
-          const next = parseDesignationList(res).map((item) => ({
-            value: item.name,
-            label: item.name,
-          }));
-          setDesignationOptions(next);
-        } catch (error) {
-          setDesignationOptions([]);
-          onError(
-            error instanceof Error ? error.message : "Could not load designations for this band."
-          );
-        } finally {
-          setDesignationLoading(false);
-        }
-      })();
-    }, 200);
-    return () => window.clearTimeout(handle);
-  }, [form.department, designationBandId, onError]);
 
   useEffect(() => {
     if (designationOptions.length !== 1) return;
@@ -214,17 +224,21 @@ export function HrOnboardForm({
   }
 
   return (
-    <div className="relative rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-      {designationLoading ? <LoadingOverlay label="Loading Designations" /> : null}
-      <div className="mb-4 space-y-1">
-        <h3 className="font-semibold">Work Information</h3>
-        <p className="text-sm text-wt-text-muted">
+    <Card className="p-0">
+      <CardHeader>
+        <CardTitle>Information</CardTitle>
+        <CardDescription>
           Complete the required work fields to create and invite the employee. They will complete
           personal details during self-service onboarding.
-        </p>
-      </div>
-
-      <div key={`${formKey}-work`} className="grid gap-3 sm:grid-cols-2">
+        </CardDescription>
+      </CardHeader>
+      <Separator />
+      <CardContent>
+        {optionsLoading ? (
+          <FormGridSkeleton fields={12} />
+        ) : (
+          <>
+            <div key={`${formKey}-work`} className={CARD_FORM_GRID_CLASS}>
         <InputField
           label="Employee ID"
           required
@@ -302,6 +316,8 @@ export function HrOnboardForm({
           label="Designation"
           required
           value={form.role}
+          loading={designationLoading}
+          loadingLabel="Loading designations…"
           placeholder={
             !form.department.trim() || designationBandId <= 0
               ? "Select Department And Band First"
@@ -378,18 +394,22 @@ export function HrOnboardForm({
             onChange={(v) => setForm((p) => ({ ...p, doj: v }))}
           />
         )}
-      </div>
+            </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          disabled={actionLoading}
-          onClick={submit}
-        >
-          Create And Invite Employee
-        </button>
-      </div>
-    </div>
+            <div className={CARD_FORM_ACTIONS_CLASS}>
+              <Button
+                variant="brand"
+                type="button"
+                className="px-3 py-2"
+                disabled={actionLoading}
+                onClick={submit}
+              >
+                Create And Invite Employee
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

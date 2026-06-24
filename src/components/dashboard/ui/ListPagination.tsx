@@ -1,8 +1,10 @@
+import { Button } from "@/components/ui/button";
 import { UI_COPY } from "@/constants/uiCopy";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
-export function ListPagination({  page,
+export function ListPagination({
+  page,
   totalPages,
   totalItems,
   rangeStart: _rangeStart,
@@ -33,30 +35,32 @@ export function ListPagination({  page,
 
   return (
     <div
-      className={`flex flex-wrap items-center justify-between gap-3 border-t border-wt-border pt-3 text-sm text-wt-text-muted ${className}`.trim()}
+      className={`flex flex-wrap items-center justify-between gap-3 mt-3 text-sm text-wt-text-muted ${className}`.trim()}
     >
       <span className="text-xs tabular-nums">
         {page + 1} of {totalPages}
       </span>
       <div className="flex flex-wrap items-center gap-2">
-        <button
+        <Button
           type="button"
-          className="btn-ghost px-3 py-1.5 text-xs"
+          variant="outline"
+          size="sm"
           disabled={isFirstPage}
           aria-disabled={isFirstPage}
           onClick={() => onPageChange(Math.max(0, page - 1))}
         >
           {UI_COPY.previous}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn-ghost px-3 py-1.5 text-xs"
+          variant="outline"
+          size="sm"
           disabled={isLastPage}
           aria-disabled={isLastPage}
           onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
         >
           {UI_COPY.next}
-        </button>
+        </Button>
       </div>
     </div>
   );

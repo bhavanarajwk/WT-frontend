@@ -1,11 +1,23 @@
 "use client";
 
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { Button } from "@/components/ui/button";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { Input } from "@/components/ui/input";
 import { useEmployeeResumes } from "@/hooks/resumes/useEmployeeResumes";
 import { canViewEmployeeResumes } from "@/utils/roles";
 import {
@@ -59,15 +71,7 @@ export function ResumesPageClient() {
     resetKeys: [search, sortId],
   });
 
-  if (authStatus === "loading") {
-    return (
-      <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm"><SectionLoading label="Loading" /></div>
-      </DashboardPageShell>
-    );
-  }
-
-  if (!canView) {
+  if (authStatus !== "loading" && !canView) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
@@ -95,10 +99,10 @@ export function ResumesPageClient() {
             <label className="sr-only" htmlFor="resumes-search">
               Search
             </label>
-            <input
+            <Input
               id="resumes-search"
               type="search"
-              className="input-field min-w-[min(100%,280px)] flex-1 px-3 py-2.5 text-sm"
+              className="h-10 min-w-[min(100%,280px)] flex-1"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search"
@@ -109,39 +113,32 @@ export function ResumesPageClient() {
 
         <div className="space-y-4 p-5 md:p-7">
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="btn-primary px-3 py-2 text-sm"
-              disabled={isLoading}
-              onClick={() => void refetch()}
+            <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" disabled={isLoading} onClick={() => void refetch()}
             >
               Refresh
-            </button>
-            <button
-              type="button"
-              className="btn-ghost px-3 py-2 text-sm"
-              onClick={() => setShowRawJson((v) => !v)}
+            </Button>
+            <Button variant="ghost" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() => setShowRawJson((v) => !v)}
             >
               {showRawJson ? "Hide" : "Show"} API response
-            </button>
+            </Button>
           </div>
 
-          {isLoading ? <SectionLoading label="Loading resumes…" /> : null}
+          {isLoading ? <TableRowsSkeleton rows={6} columns={5} /> : null}
 
           {isError ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               <p>Could not load resumes.{error instanceof Error ? ` ${error.message}` : ""}</p>
-              <button type="button" className="btn-ghost mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
+              <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
                 Retry
-              </button>
+              </Button>
             </div>
           ) : null}
 
           {!isLoading && !isError && filteredRows.length > 0 ? (
-            <div className="wt-scroll-both max-h-[min(65vh,560px)] overflow-auto rounded-xl border border-wt-border">
-              <table className="wt-scrollable-table text-sm">
-                <thead className="wt-table-sticky-head text-wt-text-muted">
-                  <tr>
+            <ScrollableTable maxHeightClass="max-h-[min(65vh,560px)]">
+              <WtTable>
+                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                  <TableRow className="hover:bg-transparent">
                     {columns.map((col) => {
                       const columnSortOpts = sortOptions.length
                         ? sortOptionsForColumn(col, sortOptions)
@@ -150,9 +147,8 @@ export function ResumesPageClient() {
                         ? activeSortDirectionForColumn(col, sortId, sortOptions)
                         : null;
                       return (
-                        <th
+                        <TableHead
                           key={col}
-                          className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold tracking-wide"
                         >
                           <TableSortHeader
                             label={formatTableColumnHeader(col)}
@@ -164,33 +160,31 @@ export function ResumesPageClient() {
                                 : undefined
                             }
                           />
-                        </th>
+                        </TableHead>
                       );
                     })}
-                    <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">
-                      Resume
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-wt-border">
+                    <TableHead>Resume</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {pagination.pageItems.map((row, idx) => {
                     const empId = resumeRowEmpId(row);
                     return (
-                      <tr key={empId || `resume-row-${idx}`}>
+                      <TableRow key={empId || `resume-row-${idx}`}>
                         {columns.map((col) => (
-                          <td key={col} className="whitespace-nowrap px-4 py-3">
+                          <TableCell key={col} className="whitespace-nowrap px-4 py-3">
                             {formatResumeCellValue(row[col])}
-                          </td>
+                          </TableCell>
                         ))}
-                        <td className="whitespace-nowrap px-4 py-3">
+                        <TableCell className="whitespace-nowrap px-4 py-3">
                           <EmployeeResumeLinkFromRow row={row} />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </WtTable>
+            </ScrollableTable>
           ) : null}
 
           {!isLoading && !isError && filteredRows.length > 0 ? (

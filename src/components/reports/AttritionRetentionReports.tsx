@@ -1,5 +1,15 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { SelectField } from "@/components/dashboard/ui/forms";
@@ -110,43 +120,40 @@ function ReportTableCard({
 
   return (
     <section className="rounded-2xl border border-wt-border bg-wt-surface-1 overflow-hidden shadow-sm">
-      <div className="border-b border-wt-border bg-wt-surface-2/80 px-4 py-3 sm:px-5">
+      <div className="border-b border-wt-border bg-wt-surface-1 px-4 py-3 sm:px-5">
         <h4 className="font-semibold text-sm">{title}</h4>
         {description ? <p className="text-xs text-wt-text-muted mt-0.5">{description}</p> : null}
       </div>
       {!displayRows.length ? (
         <p className="px-4 py-8 text-sm text-wt-text-muted text-center sm:px-5">{emptyLabel}</p>
       ) : (
-        <div className="wt-scroll-both max-h-[min(360px,50vh)] overflow-auto">
-          <table className="wt-scrollable-table text-sm">
-            <thead className="wt-table-sticky-head text-wt-text-muted">
-              <tr>
+        <ScrollableTable maxHeightClass="max-h-[min(360px,50vh)]">
+          <WtTable>
+            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+              <TableRow className="hover:bg-transparent">
                 {displayColumns.map((col) => (
-                  <th
-                    key={col}
-                    className="text-left px-4 py-2.5 font-medium whitespace-nowrap text-xs uppercase tracking-wide"
-                  >
+                  <TableHead key={col}>
                     {labelForColumn(col)}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {displayRows.map((row, idx) => (
-                <tr
+                <TableRow
                   key={idx}
-                  className="border-t border-wt-border hover:bg-wt-surface-2/50 transition-colors"
+                  className="hover:bg-wt-page-bg/50 transition-colors"
                 >
                   {displayColumns.map((col) => (
-                    <td key={col} className="px-4 py-2.5 whitespace-nowrap text-wt-text">
+                    <TableCell key={col} className="px-4 py-2.5 whitespace-nowrap">
                       {formatCell(col, row[col])}
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </WtTable>
+        </ScrollableTable>
       )}
     </section>
   );
