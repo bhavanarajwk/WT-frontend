@@ -11,6 +11,7 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { HrEmployeeTimelogWeekModal } from "@/components/dashboard/timelog/HrEmployeeTimelogWeekModal";
 import { HrMonthlyTimelogSummary } from "@/components/dashboard/timelog/HrMonthlyTimelogSummary";
+import { MyWeeklyTimesheet } from "@/components/dashboard/timelog/MyWeeklyTimesheet";
 import { WeeklyTimelogGrid } from "@/components/dashboard/timelog/WeeklyTimelogGrid";
 import { WeekPickerField } from "@/components/dashboard/timelog/WeekPickerField";
 import {
@@ -28,19 +29,10 @@ import { toPagedRows } from "@/utils/apiRows";
 import { isOffboardedUserStatus } from "@/utils/userStatus";
 import { managerTeamEmails } from "@/utils/dashboard/projects";
 import {
-  projectOptionsFromPayload,
-  type TimelogOptionsPayload,
-} from "@/utils/timelog/categories";
-import {
-  createEmptyGridRow,
   gridRowsFromWeekSnapshot,
-  hasSubmittableEntries,
   submittedProjectCodesForDay,
-  type TimelogGridRow,
   type TimelogWeekSnapshot,
-  weekPayloadFromGridRows,
 } from "@/utils/timelog/gridState";
-import { ApiError } from "@/api/error";
 import {
   formatApiDate,
   normalizeWeekStart,
@@ -65,13 +57,10 @@ export function TimelogPageClient() {
   const subTab = pathname.includes("/dashboard/timelog/team") ? "team" : "my";
   const canSeeTeamTab = hasManagerAccess || hasHrAccess || hasAdminAccess;
   const isTeamView = subTab === "team";
-  const canManagerApprove =
-    isTeamView && (hasManagerAccess || hasAdminAccess) && !hasHrAccess;
+  const canManagerApprove = isTeamView && (hasManagerAccess || hasAdminAccess) && !hasHrAccess;
   const isHrTeamView = isTeamView && hasHrAccess && !canManagerApprove;
 
   const [weekStart, setWeekStart] = useState(() => normalizeWeekStart(new Date()));
-  const [options, setOptions] = useState<TimelogOptionsPayload | null>(null);
-  const [rows, setRows] = useState<TimelogGridRow[]>([]);
   const [weekSnapshot, setWeekSnapshot] = useState<TimelogWeekSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [teamEmployeeEmail, setTeamEmployeeEmail] = useState("");
@@ -97,56 +86,43 @@ export function TimelogPageClient() {
     [hrMonthlySummary.rows]
   );
 
-  const { toast, actionLoading, runAction, setToast } = useDashboardAction();
+  const { toast, runAction } = useDashboardAction();
 
   const dayDates = useMemo(() => weekDaysMonSun(weekStart), [weekStart]);
   const dayKeys = useMemo(() => dayDates.map(formatApiDate), [dayDates]);
-  const projectOptions = useMemo(() => projectOptionsFromPayload(options), [options]);
-  const teamGridRows = useMemo(() => {
-    if (!isTeamView || !weekSnapshot?.rows?.length) return [];
-    return gridRowsFromWeekSnapshot(weekSnapshot, dayKeys);
-  }, [isTeamView, weekSnapshot, dayKeys]);
 
-  const targetEmail =
-    isTeamView && teamEmployeeEmail.trim() ? teamEmployeeEmail.trim().toLowerCase() : undefined;
-
-  const loadOptions = useCallback(async () => {
-    const res = await hrmsService.getTimelogOptions();
-    setOptions(unwrapPayload<TimelogOptionsPayload>(res));
-  }, []);
-
-  const loadWeek = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await hrmsService.getTimelogWeek({
-        weekStart: formatApiDate(normalizeWeekStart(weekStart)),
-        employeeEmail: targetEmail,
-      });
-      const snapshot = unwrapPayload<TimelogWeekSnapshot>(res);
-      setWeekSnapshot(snapshot);
-      if (!isTeamView) {
-        setRows(gridRowsFromWeekSnapshot(snapshot, dayKeys));
+  const loadTeamWeek = useCallback(
+    async (overrideEmail?: string) => {
+      if (!isTeamView) return;
+      const email = (overrideEmail ?? teamEmployeeEmail).trim().toLowerCase();
+      if (!email) return;
+      setLoading(true);
+      try {
+        const res = await hrmsService.getTimelogWeek({
+          weekStart: formatApiDate(normalizeWeekStart(weekStart)),
+          employeeEmail: email,
+        });
+        setWeekSnapshot(unwrapPayload<TimelogWeekSnapshot>(res));
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [weekStart, targetEmail, dayKeys, isTeamView]);
+    },
+    [isTeamView, weekStart, teamEmployeeEmail]
+  );
 
   const loadTeamEmployees = useCallback(async () => {
-    if (!canSeeTeamTab) return;
-
-    const sortEmployeeOptions = (items: Array<{ value: string; label: string }>) =>
+    const sortItems = (items: Array<{ value: string; label: string }>) =>
       items.sort((a, b) => a.label.localeCompare(b.label));
 
     if (hasHrAccess || (hasAdminAccess && !hasManagerAccess)) {
-      const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "500" });
-      const onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
+      const res = await hrmsService.getOnboardList({ page: "0", size: "500" });
+      const rows = toPagedRows((res as { data?: unknown }).data ?? res);
       setEmployeeOptions(
-        sortEmployeeOptions(
-          onboardRows
-            .map((row) => {
-              const email = String(row.email ?? "").trim().toLowerCase();
-              const name = String(row.name ?? email).trim();
+        sortItems(
+          rows
+            .map((r) => {
+              const email = String(r.email ?? "").trim().toLowerCase();
+              const name = String(r.name ?? email).trim();
               return email ? { value: email, label: name || email } : null;
             })
             .filter((item): item is { value: string; label: string } => Boolean(item))
@@ -156,8 +132,8 @@ export function TimelogPageClient() {
     }
 
     if (hasManagerAccess) {
-      const portfolioRes = await hrmsService.getManagerProjectsWithRoles();
-      const portfolio = toPagedRows((portfolioRes as { data?: unknown }).data ?? portfolioRes);
+      const res = await hrmsService.getManagerProjectsWithRoles();
+      const portfolio = toPagedRows((res as { data?: unknown }).data ?? res);
       const emails = new Map<string, string>();
       for (const row of portfolio) {
         const nested = Array.isArray(row.employees)
@@ -173,78 +149,19 @@ export function TimelogPageClient() {
         if (!emails.has(email)) emails.set(email, email);
       }
       setEmployeeOptions(
-        sortEmployeeOptions(Array.from(emails.entries()).map(([value, label]) => ({ value, label })))
+        sortItems(Array.from(emails.entries()).map(([value, label]) => ({ value, label })))
       );
     }
-  }, [canSeeTeamTab, hasHrAccess, hasAdminAccess, hasManagerAccess]);
-
-  useEffect(() => {
-    void loadOptions().catch(() => setOptions(null));
-  }, [loadOptions]);
+  }, [hasHrAccess, hasAdminAccess, hasManagerAccess]);
 
   useEffect(() => {
     void loadTeamEmployees().catch(() => setEmployeeOptions([]));
   }, [loadTeamEmployees]);
 
-  useEffect(() => {
-    if (isHrTeamView) return;
-
-    if (isTeamView && !teamEmployeeEmail.trim()) {
-      setWeekSnapshot(null);
-      return;
-    }
-    if (!isTeamView) {
-      void loadWeek().catch((error) => {
-        setWeekSnapshot(null);
-        setRows([createEmptyGridRow(dayKeys)]);
-        setToast({
-          type: "error",
-          message: error instanceof Error ? error.message : "Unable to load timelog week",
-        });
-      });
-      return;
-    }
-    void loadWeek().catch((error) => {
-      setWeekSnapshot(null);
-      setToast({
-        type: "error",
-        message: error instanceof Error ? error.message : "Unable to load timelog week",
-      });
-    });
-  }, [isTeamView, isHrTeamView, subTab, teamEmployeeEmail, loadWeek, dayKeys, setToast]);
-
-  const saveWeek = () =>
-    void runAction("Save timelog draft", async () => {
-      const payloadRows = weekPayloadFromGridRows(rows, dayKeys);
-      if (!payloadRows.length) {
-        throw new Error("Add at least one draft entry before saving.");
-      }
-      await hrmsService.saveTimelogWeek({
-        week_start: formatApiDate(normalizeWeekStart(weekStart)),
-        rows: payloadRows,
-      });
-      await loadWeek();
-    });
-
-  const submitWeek = () =>
-    void runAction("Submit timelog to manager", async () => {
-      const week_start = formatApiDate(normalizeWeekStart(weekStart));
-      const payloadRows = weekPayloadFromGridRows(rows, dayKeys);
-      if (payloadRows.length) {
-        await hrmsService.saveTimelogWeek({ week_start, rows: payloadRows });
-      } else if (!hasSubmittableEntries(rows, dayKeys)) {
-        throw new Error("Save draft hours before submitting to your manager.");
-      }
-      try {
-        await hrmsService.submitTimelogWeek({ week_start });
-      } catch (error) {
-        if (error instanceof ApiError && error.message.includes("NO_DRAFT_ENTRIES")) {
-          throw new Error("Nothing to submit. Save draft hours first.");
-        }
-        throw error;
-      }
-      await loadWeek();
-    });
+  const teamGridRows = useMemo(() => {
+    if (!weekSnapshot?.rows?.length) return [];
+    return gridRowsFromWeekSnapshot(weekSnapshot, dayKeys);
+  }, [weekSnapshot, dayKeys]);
 
   const approveDay = (logDate: string) =>
     void runAction("Approve timelog day", async () => {
@@ -253,38 +170,38 @@ export function TimelogPageClient() {
       const projects = submittedProjectCodesForDay(teamGridRows, logDate);
       if (!projects.length) throw new Error("No submitted entries for this day.");
       await Promise.all(
-        projects.map((project_code) =>
+        projects.map((code) =>
           hrmsService.updateTimelogStatusBatch({
             employee_email: email,
-            project_code,
+            project_code: code,
             log_date: logDate,
             status: "APPROVED",
           })
         )
       );
-      await loadWeek();
+      await loadTeamWeek();
     });
 
   const rejectDay = (logDate: string) => {
-    const manager_comment = window.prompt("Rejection comment (optional):");
-    if (manager_comment === null) return;
+    const comment = window.prompt("Rejection comment (optional):");
+    if (comment === null) return;
     void runAction("Reject timelog day", async () => {
       const email = teamEmployeeEmail.trim().toLowerCase();
       if (!email) throw new Error("Select an employee first.");
       const projects = submittedProjectCodesForDay(teamGridRows, logDate);
       if (!projects.length) throw new Error("No submitted entries for this day.");
       await Promise.all(
-        projects.map((project_code) =>
+        projects.map((code) =>
           hrmsService.updateTimelogStatusBatch({
             employee_email: email,
-            project_code,
+            project_code: code,
             log_date: logDate,
             status: "REJECTED",
-            manager_comment: manager_comment.trim() || undefined,
+            manager_comment: comment.trim() || undefined,
           })
         )
       );
-      await loadWeek();
+      await loadTeamWeek();
     });
   };
 
@@ -323,83 +240,12 @@ export function TimelogPageClient() {
             </div>
           ) : null}
 
-          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-semibold">
-                {isHrTeamView ? "Approved timelog hours" : isTeamView ? "Team timelogs" : "My weekly timesheet"}
-              </h2>
-              <div className="flex flex-wrap items-center gap-2">
-                {!isHrTeamView ? (
-                  <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={loading} />
-                ) : null}
-                {!isHrTeamView ? (
-                  <button
-                    type="button"
-                    className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg"
-                    disabled={loading}
-                    onClick={() => void loadWeek()}
-                  >
-                    Refresh
-                  </button>
-                ) : null}
-                {!isTeamView ? (
-                  <>
-                    <button
-                      type="button"
-                      className="btn-ghost px-4 py-2 text-sm border border-wt-border rounded-lg"
-                      disabled={actionLoading || loading}
-                      onClick={saveWeek}
-                    >
-                      {actionLoading ? "Saving…" : "Save"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-primary px-4 py-2 text-sm"
-                      disabled={actionLoading || loading}
-                      onClick={submitWeek}
-                    >
-                      {actionLoading ? "Submitting…" : "Submit"}
-                    </button>
-                  </>
-                ) : null}
-              </div>
-            </div>
+          {!isTeamView ? (
+            <MyWeeklyTimesheet />
+          ) : null}
 
-            {!isTeamView ? (
-              <p className="text-xs text-wt-text-muted">
-                <span className="font-medium text-wt-text">Save</span> keeps drafts visible only to you.{" "}
-                <span className="font-medium text-wt-text">Submit</span> sends draft and rejected entries to your
-                manager for approval.
-              </p>
-            ) : null}
-
-            {isTeamView && canManagerApprove ? (
-              <p className="text-xs text-wt-text-muted">
-                Review submitted entries below. Approve or reject each day; rejected entries return to the employee
-                as drafts.
-              </p>
-            ) : null}
-
-            {isHrTeamView ? (
-              <p className="text-xs text-wt-text-muted">
-                Approved weekly hours for all employees. Click a row or week hours to view details. Use
-                previous/next month to navigate.
-              </p>
-            ) : null}
-
-            {isTeamView && !isHrTeamView ? (
-              <SelectField
-                label="Employee"
-                required
-                className="max-w-md"
-                value={teamEmployeeEmail}
-                onChange={setTeamEmployeeEmail}
-                placeholder="Select employee"
-                options={employeeOptions}
-              />
-            ) : null}
-
-            {isHrTeamView ? (
+          {isHrTeamView ? (
+            <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
               <HrMonthlyTimelogSummary
                 month={hrMonth}
                 onMonthChange={setHrMonth}
@@ -412,32 +258,68 @@ export function TimelogPageClient() {
                   setHrWeekDetail({ email: row.email, label: row.label, weekStart });
                 }}
               />
-            ) : loading ? (
-              <p className="text-sm text-wt-text-muted py-8 text-center">
-                {isTeamView ? "Loading timelogs…" : "Loading timesheet…"}
-              </p>
-            ) : isTeamView && !teamEmployeeEmail.trim() ? (
-              <p className="text-sm text-wt-text-muted py-8 text-center">
-                Select an employee to view their timelogs.
-              </p>
-            ) : isTeamView && !weekSnapshot?.rows?.length ? (
-              <p className="text-sm text-wt-text-muted py-8 text-center">
-                No submitted timelog entries for this week.
-              </p>
-            ) : (
-              <WeeklyTimelogGrid
-                rows={isTeamView ? teamGridRows : rows}
-                dayDates={dayDates}
-                dayKeys={dayKeys}
-                projectOptions={projectOptions}
-                readOnly={isTeamView}
-                canApprove={canManagerApprove}
-                onApproveDay={canManagerApprove ? approveDay : undefined}
-                onRejectDay={canManagerApprove ? rejectDay : undefined}
-                onRowsChange={isTeamView ? () => {} : setRows}
+            </section>
+          ) : null}
+
+          {isTeamView && !isHrTeamView ? (
+            <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-semibold">Team timelogs</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={loading} />
+                  <button
+                    type="button"
+                    className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg"
+                    disabled={loading}
+                    onClick={() => void loadTeamWeek()}
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              {canManagerApprove ? (
+                <p className="text-xs text-wt-text-muted">
+                  Review submitted entries below. Approve or reject each day; rejected entries return to the employee
+                  as drafts.
+                </p>
+              ) : null}
+
+              <SelectField
+                label="Employee"
+                required
+                className="max-w-md"
+                value={teamEmployeeEmail}
+                onChange={(v) => {
+                  setTeamEmployeeEmail(v);
+                  setWeekSnapshot(null);
+                  void loadTeamWeek(v);
+                }}
+                placeholder="Select employee"
+                options={employeeOptions}
               />
-            )}
-          </section>
+
+              {loading ? (
+                <p className="text-sm text-wt-text-muted py-8 text-center">Loading timelogs\u2026</p>
+              ) : !teamEmployeeEmail.trim() ? (
+                <p className="text-sm text-wt-text-muted py-8 text-center">Select an employee to view their timelogs.</p>
+              ) : !weekSnapshot?.rows?.length ? (
+                <p className="text-sm text-wt-text-muted py-8 text-center">No submitted timelog entries for this week.</p>
+              ) : (
+                <WeeklyTimelogGrid
+                  rows={teamGridRows}
+                  dayDates={dayDates}
+                  dayKeys={dayKeys}
+                  projectOptions={[]}
+                  readOnly
+                  canApprove={canManagerApprove}
+                  onApproveDay={canManagerApprove ? approveDay : undefined}
+                  onRejectDay={canManagerApprove ? rejectDay : undefined}
+                  onRowsChange={() => {}}
+                />
+              )}
+            </section>
+          ) : null}
         </div>
         <DashboardToast toast={toast} />
         {isHrTeamView && hrWeekDetail ? (

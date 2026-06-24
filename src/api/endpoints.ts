@@ -83,6 +83,7 @@ export const endpoints = {
     root: `${api}/timelog`,
     options: `${api}/timelog/options`,
     week: `${api}/timelog/week`,
+    weekTotalsBatch: `${api}/timelog/week/totals/batch`,
     weekSubmit: `${api}/timelog/week/submit`,
     byId: (timelogId: string) => `${api}/timelog/${encodeURIComponent(timelogId)}`,
     legacyGetByDate: (empEmail: string, logDate: string) =>

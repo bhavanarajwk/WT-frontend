@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { InputField, SelectField } from "@/components/dashboard/ui/forms";
+import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
   bandSelectOptions,
   bandsForDepartment,

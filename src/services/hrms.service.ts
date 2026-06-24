@@ -651,6 +651,16 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.week, { query });
   },
 
+  getTimelogWeekTotalsBatch(payload: { weekStarts: string[]; employeeEmails: string[] }) {
+    return apiClient.post<ApiEnvelope<Record<string, Record<string, number>>>>(
+      endpoints.timelog.weekTotalsBatch,
+      {
+        contentType: "application/json",
+        body: JSON.stringify(payload),
+      }
+    );
+  },
+
   saveTimelogWeek(payload: Record<string, unknown>) {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.week, {
       contentType: "application/json",

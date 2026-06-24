@@ -237,16 +237,15 @@ export function WeeklyTimelogGrid({
                         return (
                           <td key={key} className="px-1 py-2 text-center align-top">
                             <input
-                              type="number"
-                              min={0}
-                              max={24}
-                              step={0.01}
+                              type="text"
                               inputMode="decimal"
                               disabled={!cellEditable}
                               className="input-field w-11 max-w-[2.75rem] mx-auto px-0.5 py-1.5 text-xs text-center tabular-nums disabled:opacity-60"
                               value={row.hours_by_date[key] ?? ""}
                               onChange={(e) => {
-                                const hours_by_date = { ...row.hours_by_date, [key]: e.target.value };
+                                const raw = e.target.value;
+                                if (raw !== "" && !/^\d*\.?\d{0,2}$/.test(raw)) return;
+                                const hours_by_date = { ...row.hours_by_date, [key]: raw };
                                 onRowsChange(updateRow(rows, row.clientKey, { hours_by_date }));
                               }}
                             />
