@@ -25,7 +25,6 @@ import { dashboardHref, DASHBOARD_ROUTES, isDashboardNavChildActive } from "@/co
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { SidebarIcon } from "@/constants/sidebarIcons";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
-import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 import { Badge } from "@/components/ui/badge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import {
@@ -38,6 +37,9 @@ import {
   SIDEBAR_NAV_ROW,
   SIDEBAR_PARENT_TEXT,
 } from "@/components/dashboard/ui/sidebarLayout";
+
+const HEADER_ICON_BUTTON_CLASS =
+  "flex cursor-pointer items-center justify-center rounded-lg border border-wt-border bg-wt-surface-1 p-2.5 text-wt-text shadow-sm transition hover:bg-wt-surface-2";
 
 function IconUser({ className = "" }: { className?: string }) {
   return (
@@ -71,10 +73,56 @@ function IconCheck({ className = "" }: { className?: string }) {
   );
 }
 
-function IconSettings({ className = "" }: { className?: string }) {
+function IconMoon({ className = "" }: { className?: string }) {
   return (
-    <svg className={`h-5 w-5 shrink-0 ${className}`} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.52-.4-1.08-.73-1.69-.98l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.61.25-1.17.59-1.69.98l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.52.4 1.08.73 1.69.98l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.61-.25 1.17-.59 1.69-.98l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+    <svg
+      className={`h-5 w-5 ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+    </svg>
+  );
+}
+
+function IconSun({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      className={`h-5 w-5 ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+    </svg>
+  );
+}
+
+function IconLogout({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      className={`h-5 w-5 ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" x2="9" y1="12" y2="12" />
     </svg>
   );
 }
@@ -86,14 +134,19 @@ function extractRoleFromNotificationMessage(message: string): string {
   return roleWordMatch?.[1] ? roleWordMatch[1].trim() : "—";
 }
 
-function applyTheme(nextTheme: "light" | "dark" | "system") {
-  const root = document.documentElement;
-  if (nextTheme === "system") {
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    root.dataset.theme = prefersDark ? "dark" : "light";
-  } else {
-    root.dataset.theme = nextTheme;
+function applyTheme(nextTheme: "light" | "dark") {
+  document.documentElement.dataset.theme = nextTheme;
+}
+
+function readStoredTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  const stored = window.localStorage.getItem("wt-theme");
+  if (stored === "dark") return "dark";
+  if (stored === "light") return "light";
+  if (stored === "system") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
+  return "light";
 }
 
 export function DashboardChrome({ children }: { children: ReactNode }) {
@@ -162,27 +215,21 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const isExitSurveyRoute = pathname.startsWith(DASHBOARD_ROUTES["exit-interview"]);
 
   const [notifications, setNotifications] = useState<Array<Record<string, unknown>>>([]);
-  const [theme, setTheme] = useState<"light" | "dark" | "system">(() => {
-    if (typeof window === "undefined") return "light";
-    const stored = window.localStorage.getItem("wt-theme");
-    if (stored === "dark" || stored === "light" || stored === "system") return stored;
-    return "light";
-  });
+  const [theme, setTheme] = useState<"light" | "dark">(readStoredTheme);
   const [actionLoading, setActionLoading] = useState(false);
   const notificationsPanelRef = useRef<HTMLDetailsElement>(null);
-  const settingsPanelRef = useRef<HTMLDetailsElement>(null);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
+  }, []);
 
   useEffect(() => {
     const onDocMouseDown = (event: MouseEvent) => {
       const target = event.target as Node;
       if (notificationsPanelRef.current?.contains(target)) return;
-      if (settingsPanelRef.current?.contains(target)) return;
 
       if (notificationsPanelRef.current?.open) {
         notificationsPanelRef.current.open = false;
-      }
-      if (settingsPanelRef.current?.open) {
-        settingsPanelRef.current.open = false;
       }
     };
 
@@ -413,20 +460,33 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             return null;
           })}
         </nav>
-        {canAccessProfile && !isOffboarded ? (
+        {user ? (
           <div className="mt-4 shrink-0 border-t border-wt-border pt-4">
-            <Link prefetch={false}
-              href={dashboardHref("profile")}
-              className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} rounded-xl border transition ${
-                activeSection === "profile"
-                  ? "border-wt-border bg-wt-surface-3 text-wt-text"
-                  : "border-transparent bg-wt-surface-2 text-wt-text-muted hover:bg-wt-surface-3 hover:text-wt-text"
-              }`}
-              aria-label="Profile"
-            >
-              <IconUser className={SIDEBAR_ICON_WRAP} />
-              <span className={SIDEBAR_NAV_LABEL}>Profile</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              {canAccessProfile && !isOffboarded ? (
+                <Link
+                  prefetch={false}
+                  href={dashboardHref("profile")}
+                  className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} min-w-0 flex-1 cursor-pointer items-center rounded-xl border transition ${
+                    activeSection === "profile"
+                      ? "border-wt-border bg-wt-surface-3 text-wt-text"
+                      : "border-transparent bg-wt-surface-2 text-wt-text-muted hover:bg-wt-surface-3 hover:text-wt-text"
+                  }`}
+                  aria-label="Profile"
+                >
+                  <IconUser className="shrink-0" />
+                  <span className={SIDEBAR_NAV_LABEL}>Profile</span>
+                </Link>
+              ) : null}
+              <button
+                type="button"
+                className="flex min-h-8 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 px-2.5 py-2 text-wt-text-muted shadow-sm transition hover:bg-wt-surface-3 hover:text-wt-text"
+                onClick={() => void logout()}
+                aria-label="Logout"
+              >
+                <IconLogout />
+              </button>
+            </div>
           </div>
         ) : null}
       </aside>
@@ -493,14 +553,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               onToggle={(e) => {
                 const el = e.currentTarget as HTMLDetailsElement;
                 if (el.open) {
-                  if (settingsPanelRef.current) {
-                    settingsPanelRef.current.open = false;
-                  }
                   void loadNotifications().catch(() => setNotifications([]));
                 }
               }}
             >
-              <summary className="relative flex cursor-pointer list-none items-center justify-center rounded-lg border border-wt-border bg-wt-surface-1 p-2.5 text-wt-text shadow-sm transition hover:bg-wt-surface-2 [&::-webkit-details-marker]:hidden">
+              <summary className={`relative cursor-pointer list-none ${HEADER_ICON_BUTTON_CLASS} [&::-webkit-details-marker]:hidden`}>
                 <IconBell className="text-wt-text-muted" />
                 {unreadNotificationCount ? (
                   <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
@@ -567,48 +624,18 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               </div>
             </details>
             ) : null}
-            <details
-              ref={settingsPanelRef}
-              className="group relative"
-              onToggle={(e) => {
-                const el = e.currentTarget as HTMLDetailsElement;
-                if (el.open && notificationsPanelRef.current) {
-                  notificationsPanelRef.current.open = false;
-                }
-              }}
+            <button
+              type="button"
+              className={HEADER_ICON_BUTTON_CLASS}
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch To Light Mode" : "Switch To Dark Mode"}
             >
-              <summary className="flex cursor-pointer list-none items-center justify-center rounded-lg border border-wt-border bg-wt-surface-1 p-2.5 text-wt-text shadow-sm transition hover:bg-wt-surface-2 [&::-webkit-details-marker]:hidden">
-                <IconSettings className="h-5 w-5 text-wt-text-muted" />
-              </summary>
-              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(100vw-2rem,280px)] space-y-4 rounded-xl border border-wt-border bg-wt-surface-1 p-4 shadow-lg">
-                <div>
-                  <span className="mb-1.5 block text-xs font-medium text-wt-text-muted">Theme</span>
-                  <DropdownSelect
-                    value={theme}
-                    onChange={(nextTheme) => {
-                      const next = nextTheme as "light" | "dark" | "system";
-                      setTheme(next);
-                      applyTheme(next);
-                    }}
-                    options={[
-                      { value: "light", label: "Light" },
-                      { value: "dark", label: "Dark" },
-                      { value: "system", label: "System" },
-                    ]}
-                    aria-label="Theme"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="w-full"
-                  size="lg"
-                  onClick={() => void logout()}
-                >
-                  Logout
-                </Button>
-              </div>
-            </details>
+              {theme === "dark" ? (
+                <IconSun className="text-wt-text-muted" />
+              ) : (
+                <IconMoon className="text-wt-text-muted" />
+              )}
+            </button>
           </div>
         </header>
 
