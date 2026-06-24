@@ -114,7 +114,6 @@ export function TalentPoolPageClient() {
                     {unallocated.items.map((row) => (
                       <TableRow
                         key={`unalloc-${row.user_id}-${row.employee_email}`}
-                       
                       >
                         <TableCell className="px-3 py-2 whitespace-nowrap">
                           {row.employee_name || "—"}

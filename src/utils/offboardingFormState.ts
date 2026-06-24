@@ -94,7 +94,9 @@ export function isOffboardingFormValid(
     const lwd = form.last_working_day.trim();
     return Boolean(lwd && form.resignation_date.trim() === lwd);
   }
+  if (normalizedType === "CONSULTANT") {
+    return Boolean(form.last_working_day.trim());
+  }
   if (!form.resignation_date.trim()) return false;
-  if (normalizedType === "CONSULTANT") return true;
   return Boolean(form.exit_type);
 }

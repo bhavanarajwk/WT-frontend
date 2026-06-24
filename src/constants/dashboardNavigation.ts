@@ -44,7 +44,7 @@ export const dashboardNavigation: NavItem[] = [
     children: [
       {
         id: "employee",
-        label: "Onboard Employee",
+        label: "Onboard",
         roles: ["ROLE_EMPLOYEE", "ROLE_HR", "ROLE_ADMIN"],
         icon: "userPlus",
       },
@@ -62,7 +62,7 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "offboarding",
-        label: "Employee Offboarding",
+        label: "Offboarding",
         roles: ["ROLE_HR"],
         icon: "userMinus",
       },

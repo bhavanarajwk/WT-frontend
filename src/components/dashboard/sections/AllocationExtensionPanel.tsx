@@ -63,7 +63,6 @@ export function AllocationExtensionPanel() {
   const hasManagerRole = userRoles.includes("ROLE_MANAGER");
   const canCreateRequest = hasManagerRole && !hasHrAccess;
 
-  
   // Manager create form
   const [createForm, setCreateForm] = useState(createEmptyAllocationExtensionForm);
   const [creating, setCreating] = useState(false);
@@ -657,4 +656,3 @@ export function AllocationExtensionPanel() {
     </div>
   );
 }
-

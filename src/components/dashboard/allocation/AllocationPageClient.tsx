@@ -3261,7 +3261,7 @@ export function AllocationPageClient() {
         </p>
       )}
       <div className="mt-3">
-        <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
+        <FileField label="Profile Picture (required)" required accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
         <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
@@ -3270,6 +3270,9 @@ export function AllocationPageClient() {
                 .split(",")
                 .map((item) => item.trim())
                 .filter(Boolean);
+              if (!selfProfilePic) {
+                throw new Error("Profile picture is mandatory. Please upload your profile picture.");
+              }
               if (priorEmploymentDocsForProfile) {
                 if (!selfProfileEmploymentFiles.reliving_letter) {
                   throw new Error(
@@ -3853,7 +3856,6 @@ export function AllocationPageClient() {
                                             {pickerEmployeeAllocations.allocations.map((row, idx) => (
                                               <TableRow
                                                 key={`${allocationRowId(row) || "picker-alloc"}-${idx}`}
-                                               
                                               >
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">
                                                   {allocationProjectDisplayName(row)}

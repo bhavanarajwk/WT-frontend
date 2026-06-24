@@ -181,6 +181,8 @@ export function InputField({
   placeholder?: string;
   disabled?: boolean;
 }) {
+  const fieldId = useId();
+
   if (type === "date") {
     return (
       <ApiDateField
@@ -192,8 +194,6 @@ export function InputField({
       />
     );
   }
-
-  const fieldId = useId();
 
   return (
     <Field className={FORM_FIELD_CLASS}>
@@ -531,6 +531,9 @@ export function FileField({
   accept,
   multiple,
   required = false,
+  showDeleteButton = false,
+  currentFileName,
+  onDelete,
 }: {
   label: string;
   accept?: string;
@@ -538,27 +541,48 @@ export function FileField({
   required?: boolean;
   onPick?: (file: File | null) => void;
   onPickFiles?: (files: File[]) => void;
+  showDeleteButton?: boolean;
+  currentFileName?: string;
+  onDelete?: () => void;
 }) {
   const fieldId = useId();
   const isMulti = Boolean(multiple);
+  const hasFile = Boolean(currentFileName);
+
   return (
     <Field className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
-      <Input
-        id={fieldId}
-        className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1 file:text-sm file:font-medium"
-        type="file"
-        accept={accept}
-        multiple={isMulti}
-        required={required}
-        onChange={(e) => {
-          if (isMulti) {
-            onPickFiles?.(e.target.files?.length ? Array.from(e.target.files) : []);
-          } else {
-            onPick?.(e.target.files?.[0] ?? null);
-          }
-        }}
-      />
+      <div className="flex items-center gap-2">
+        <Input
+          id={fieldId}
+          type="file"
+          accept={accept}
+          multiple={isMulti}
+          required={required}
+          className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1 file:text-sm file:font-medium"
+          onChange={(e) => {
+            if (isMulti) {
+              onPickFiles?.(e.target.files?.length ? Array.from(e.target.files) : []);
+            } else {
+              onPick?.(e.target.files?.[0] ?? null);
+            }
+          }}
+        />
+        {showDeleteButton && hasFile && onDelete ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onDelete}
+            className="shrink-0 px-3 py-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            title="Delete current file"
+          >
+            Remove
+          </Button>
+        ) : null}
+      </div>
+      {currentFileName ? (
+        <p className="text-xs text-wt-text-muted mt-1">Current: {currentFileName}</p>
+      ) : null}
     </Field>
   );
 }

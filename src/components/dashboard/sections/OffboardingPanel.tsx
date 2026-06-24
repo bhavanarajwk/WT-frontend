@@ -120,7 +120,7 @@ export function OffboardingPanel() {
   const [bulkResendResults, setBulkResendResults] = useState<ExitSurveyBulkResendItemResult[]>(
     []
   );
-  
+
   const selectedCandidate = useMemo(
     () => offboardCandidates.find((row) => row.emp_id === offboardingForm.emp_id) ?? null,
     [offboardCandidates, offboardingForm.emp_id]
@@ -325,7 +325,7 @@ export function OffboardingPanel() {
     setSubmitting(true);
     try {
       await hrmsService.offboardEmployee(empIdValue, {
-        resignation_date: resignationDate,
+        ...(isConsultantOffboarding ? {} : { resignation_date: resignationDate }),
         exit_type: resolveExitTypeForSubmit(),
         last_working_day: lastWorkingDay || undefined,
         reason: offboardingForm.reason.trim() || null,
@@ -435,7 +435,15 @@ export function OffboardingPanel() {
                 onChange={handleEmployeeChange}
                 options={candidateOptions}
               />
-              {isInternOffboarding ? (
+              {!selectedCandidate ? null : isInternOffboarding ? (
+                <DatePickerField
+                  label="Last Working Day"
+                  required
+                  value={offboardingForm.last_working_day}
+                  onChange={handleLastWorkingDayChange}
+                  disabled={submitting}
+                />
+              ) : isConsultantOffboarding ? (
                 <DatePickerField
                   label="Last Working Day"
                   required
@@ -495,7 +503,7 @@ export function OffboardingPanel() {
                 </div>
               )}
               <TextAreaField
-                label="Reason"
+                label="Details"
                 className="md:col-span-2"
                 rows={5}
                 value={offboardingForm.reason}

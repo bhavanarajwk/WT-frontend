@@ -244,7 +244,7 @@ export const hrmsService = {
   offboardEmployee(
     empId: string,
     payload: {
-      resignation_date: string;
+      resignation_date?: string;
       exit_type: "VOLUNTARY" | "INVOLUNTARY" | "CONTRACTUAL";
       last_working_day?: string;
       reason?: string | null;

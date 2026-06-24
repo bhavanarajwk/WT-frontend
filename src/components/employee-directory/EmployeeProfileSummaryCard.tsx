@@ -57,7 +57,7 @@ export function EmployeeProfileSummaryCard({
         <p className="mt-0.5 text-sm text-wt-text-muted">{roleLine}</p>
       </div>
 
-      {(email || (phone && phone !== "—")) && (
+      {/* {(email || (phone && phone !== "—")) && (
         <div className="border-t border-wt-border px-5 py-4 text-sm space-y-1.5">
           {email ? (
             <a href={`mailto:${email}`} className="block truncate text-wt-text hover:underline">
@@ -70,7 +70,7 @@ export function EmployeeProfileSummaryCard({
             </a>
           ) : null}
         </div>
-      )}
+      )} */}
     </aside>
   );
 }
