@@ -1,11 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
-import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { showErrorToast } from "@/lib/toast";
 import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
@@ -89,7 +88,7 @@ export function TimelogPageClient() {
     [hrMonthlySummary.rows]
   );
 
-  const { toast, runAction } = useDashboardAction();
+  const { runAction } = useDashboardAction();
 
   const dayDates = useMemo(() => weekDaysMonSun(weekStart), [weekStart]);
   const dayKeys = useMemo(() => dayDates.map(formatApiDate), [dayDates]);
@@ -208,10 +207,24 @@ export function TimelogPageClient() {
     });
   };
 
+  useEffect(() => {
+    if (isTeamView && !canSeeTeamTab) {
+      router.replace("/dashboard/timelog");
+    }
+  }, [isTeamView, canSeeTeamTab, router]);
+
   if (isOffboarded) {
     return (
       <DashboardPageShell>
         <p className="text-sm text-wt-text-muted">Timelog access is not available for offboarded users.</p>
+      </DashboardPageShell>
+    );
+  }
+
+  if (isTeamView && !canSeeTeamTab) {
+    return (
+      <DashboardPageShell>
+        <p className="text-sm text-wt-text-muted">Redirecting\u2026</p>
       </DashboardPageShell>
     );
   }
@@ -223,23 +236,13 @@ export function TimelogPageClient() {
           {hasAmRole ? <HrReviewNoticeBanner /> : null}
 
           {canSeeTeamTab ? (
-            <div className="flex flex-wrap gap-2 border-b border-wt-border pb-2">
-              <Link
-                href="/dashboard/timelog"
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  subTab === "my" ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
-                }`}
-              >
-                My timelogs
-              </Link>
-              <Link
-                href="/dashboard/timelog/team"
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                  subTab === "team" ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
-                }`}
-              >
-                Team timelogs
-              </Link>
+            <div className="border-b border-wt-border pb-4">
+              <Tabs value={subTab} onValueChange={(value) => router.push(value === "team" ? "/dashboard/timelog/team" : "/dashboard/timelog")}>
+                <TabsList aria-label="Timelog tabs" className="gap-3 bg-transparent p-0">
+                  <TabsTrigger value="my">My timelogs</TabsTrigger>
+                  <TabsTrigger value="team">Team timelogs</TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           ) : null}
 
@@ -248,80 +251,86 @@ export function TimelogPageClient() {
           ) : null}
 
           {isHrTeamView ? (
-            <section className="rounded-xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-              <HrMonthlyTimelogSummary
-                month={hrMonth}
-                onMonthChange={setHrMonth}
-                weekStarts={hrMonthlySummary.weekStarts}
-                rows={hrMonthlyRows}
-                loading={hrMonthlySummary.loading}
-                error={hrMonthlySummary.error}
-                onRefresh={() => void hrMonthlySummary.reload()}
-                onRowClick={(row: HrMonthlyTimelogRow, weekStart: string) => {
-                  setHrWeekDetail({ email: row.email, label: row.label, weekStart });
-                }}
-              />
-            </section>
+            <Card>
+              <CardContent className="p-5 space-y-4">
+                <HrMonthlyTimelogSummary
+                  month={hrMonth}
+                  onMonthChange={setHrMonth}
+                  weekStarts={hrMonthlySummary.weekStarts}
+                  rows={hrMonthlyRows}
+                  loading={hrMonthlySummary.loading}
+                  error={hrMonthlySummary.error}
+                  onRefresh={() => void hrMonthlySummary.reload()}
+                  onRowClick={(row: HrMonthlyTimelogRow, weekStart: string) => {
+                    setHrWeekDetail({ email: row.email, label: row.label, weekStart });
+                  }}
+                />
+              </CardContent>
+            </Card>
           ) : null}
 
           {isTeamView && !isHrTeamView ? (
-            <section className="rounded-xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="font-semibold">Team timelogs</h2>
-                <div className="flex flex-wrap items-center gap-2">
-                  <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={loading} />
-                  <button
-                    type="button"
-                    className="btn-ghost px-3 py-2 text-sm border border-wt-border rounded-lg"
-                    disabled={loading}
-                    onClick={() => void loadTeamWeek()}
-                  >
-                    Refresh
-                  </button>
+            <Card>
+              <CardContent className="p-5 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="font-semibold">Team timelogs</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={loading} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      className="px-3 py-2 text-sm border border-wt-border rounded-lg"
+                      disabled={loading}
+                      onClick={() => void loadTeamWeek()}
+                    >
+                      {loading ? "Loading\u2026" : "Refresh"}
+                    </Button>
+                  </div>
                 </div>
-              </div>
 
-              {canManagerApprove ? (
-                <p className="text-xs text-wt-text-muted">
-                  Review submitted entries below. Approve or reject each day; rejected entries return to the employee
-                  as drafts.
-                </p>
-              ) : null}
+                {canManagerApprove ? (
+                  <p className="text-xs text-wt-text-muted">
+                    Review submitted entries below. Approve or reject each day; rejected entries return to the employee
+                    as drafts.
+                  </p>
+                ) : null}
 
-              <SelectField
-                label="Employee"
-                required
-                className="max-w-md"
-                value={teamEmployeeEmail}
-                onChange={(v) => {
-                  setTeamEmployeeEmail(v);
-                  setWeekSnapshot(null);
-                  void loadTeamWeek(v);
-                }}
-                placeholder="Select employee"
-                options={employeeOptions}
-              />
-
-              {loading ? (
-                <p className="text-sm text-wt-text-muted py-8 text-center">Loading timelogs\u2026</p>
-              ) : !teamEmployeeEmail.trim() ? (
-                <p className="text-sm text-wt-text-muted py-8 text-center">Select an employee to view their timelogs.</p>
-              ) : !weekSnapshot?.rows?.length ? (
-                <p className="text-sm text-wt-text-muted py-8 text-center">No submitted timelog entries for this week.</p>
-              ) : (
-                <WeeklyTimelogGrid
-                  rows={teamGridRows}
-                  dayDates={dayDates}
-                  dayKeys={dayKeys}
-                  projectOptions={[]}
-                  readOnly
-                  canApprove={canManagerApprove}
-                  onApproveDay={canManagerApprove ? approveDay : undefined}
-                  onRejectDay={canManagerApprove ? rejectDay : undefined}
-                  onRowsChange={() => {}}
+                <SelectField
+                  label="Employee"
+                  required
+                  className="max-w-md"
+                  value={teamEmployeeEmail}
+                  onChange={(v) => {
+                    setTeamEmployeeEmail(v);
+                    setWeekSnapshot(null);
+                    void loadTeamWeek(v);
+                  }}
+                  placeholder="Select employee"
+                  options={employeeOptions}
                 />
-              )}
-            </section>
+
+                {loading ? (
+                  <p className="text-sm text-wt-text-muted py-8 text-center">Loading timelogs\u2026</p>
+                ) : !teamEmployeeEmail.trim() ? (
+                  <p className="text-sm text-wt-text-muted py-8 text-center">Select an employee to view their timelogs.</p>
+                ) : !weekSnapshot?.rows?.length ? (
+                  <p className="text-sm text-wt-text-muted py-8 text-center">No submitted timelog entries for this week.</p>
+                ) : (
+                  <WeeklyTimelogGrid
+                    rows={teamGridRows}
+                    dayDates={dayDates}
+                    dayKeys={dayKeys}
+                    projectOptions={[]}
+                    readOnly
+                    canApprove={canManagerApprove}
+                    onApproveDay={canManagerApprove ? approveDay : undefined}
+                    onRejectDay={canManagerApprove ? rejectDay : undefined}
+                    onRowsChange={() => {}}
+                  />
+                )}
+              </CardContent>
+            </Card>
           ) : null}
         </div>
         {isHrTeamView && hrWeekDetail ? (

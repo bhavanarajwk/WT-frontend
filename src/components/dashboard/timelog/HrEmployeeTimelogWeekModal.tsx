@@ -128,7 +128,7 @@ export function HrEmployeeTimelogWeekModal({
             </h2>
             <p className="mt-1 text-xs text-wt-text-muted">Approved timelog details (read-only)</p>
           </div>
-          <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-1.5 text-sm" onClick={onClose} >
+          <Button variant="outline" size="sm" type="button" onClick={onClose}>
             Close
           </Button>
         </div>
@@ -142,9 +142,8 @@ export function HrEmployeeTimelogWeekModal({
               onChange={onWeekStartChange}
               options={weekOptions}
             />
-            <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-2 text-sm" disabled={loading} onClick={() => void loadWeek()}
-            >
-              Refresh
+            <Button variant="outline" size="sm" type="button" disabled={loading} onClick={() => void loadWeek()}>
+              {loading ? "Loading\u2026" : "Refresh"}
             </Button>
           </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useState } from "react";
 import {
   subCategoriesFor,
@@ -146,14 +147,9 @@ export function TimelogEntrySheet({
           <h2 className="text-lg font-semibold">
             {isNew ? "Add entry" : "Edit entry"}
           </h2>
-          <button
-            type="button"
-            className="btn-ghost rounded-lg border border-wt-border px-3 py-1.5 text-sm"
-            onClick={onClose}
-            disabled={actionLoading}
-          >
+          <Button variant="outline" size="sm" type="button" onClick={onClose} disabled={actionLoading}>
             Close
-          </button>
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-4 px-5 py-4">
@@ -276,22 +272,12 @@ export function TimelogEntrySheet({
         </div>
 
         <div className="flex items-center gap-2 border-t border-wt-border px-5 py-4">
-          <button
-            type="button"
-            className="btn-ghost px-4 py-2 text-sm border border-wt-border rounded-lg"
-            disabled={actionLoading}
-            onClick={() => void handleSave()}
-          >
+          <Button variant="outline" size="sm" type="button" disabled={actionLoading} onClick={() => void handleSave()}>
             {actionLoading ? "Saving\u2026" : "Save Draft"}
-          </button>
-          <button
-            type="button"
-            className="btn-primary px-4 py-2 text-sm"
-            disabled={actionLoading}
-            onClick={() => void handleSubmit()}
-          >
+          </Button>
+          <Button variant="brand" size="sm" type="button" disabled={actionLoading} onClick={() => void handleSubmit()}>
             {actionLoading ? "Submitting\u2026" : "Submit for Approval"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

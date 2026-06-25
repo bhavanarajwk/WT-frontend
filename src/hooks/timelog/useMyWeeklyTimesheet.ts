@@ -22,7 +22,7 @@ import {
 
 export function useMyWeeklyTimesheet() {
   const [weekStart, setWeekStart] = useState(() => normalizeWeekStart(new Date()));
-  const [activeWeekKey, setActiveWeekKey] = useState(() => formatApiDate(normalizeWeekStart(new Date())));
+  const weekKey = useMemo(() => formatApiDate(weekStart), [weekStart]);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<TimelogGridRow | null>(null);
@@ -41,10 +41,10 @@ export function useMyWeeklyTimesheet() {
   });
 
   const weekQuery = useQuery({
-    queryKey: ["my-timelog-week", activeWeekKey],
+    queryKey: ["my-timelog-week", weekKey],
     staleTime: 0,
     queryFn: async () => {
-      const res = await hrmsService.getTimelogWeek({ weekStart: activeWeekKey });
+      const res = await hrmsService.getTimelogWeek({ weekStart: weekKey });
       return ((res as { data?: TimelogWeekSnapshot }).data ?? res) as TimelogWeekSnapshot;
     },
   });
@@ -58,13 +58,6 @@ export function useMyWeeklyTimesheet() {
     () => projectOptionsFromPayload(optionsQuery.data ?? null),
     [optionsQuery.data]
   );
-
-  const load = useCallback(() => {
-    setActionError(null);
-    const key = formatApiDate(normalizeWeekStart(weekStart));
-    setActiveWeekKey(key);
-    void weekQuery.refetch();
-  }, [weekStart, weekQuery]);
 
   const runAction = useCallback(async (fn: () => Promise<unknown>) => {
     setActionLoading(true);
@@ -138,7 +131,6 @@ export function useMyWeeklyTimesheet() {
     loading: weekQuery.isFetching && !weekQuery.isPaused,
     error: weekQuery.error ? (weekQuery.error instanceof Error ? weekQuery.error.message : "Unable to load timelog week") : actionError,
     actionLoading,
-    load,
     editingEntry,
     sheetOpen,
     openAddSheet,

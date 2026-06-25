@@ -123,6 +123,7 @@ export function WeeklyTimelogGrid({
                 </TableHead>
               ))}
               <TableHead className="text-center px-2 py-2 min-w-[3rem]">Total</TableHead>
+              {readOnly && onRowClick ? <TableHead className="text-center px-2 py-2 min-w-[4rem]">Actions</TableHead> : null}
             </tr>
           </thead>
           <TableBody>
@@ -274,6 +275,18 @@ export function WeeklyTimelogGrid({
                     <TableCell className="px-2 py-2 text-center whitespace-nowrap tabular-nums">
                     {formatHoursDisplay(total)}
                   </TableCell>
+                  {readOnly && onRowClick ? (
+                    <TableCell className="px-2 py-2 text-center align-top">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onRowClick(row); }}
+                      >
+                        Edit
+                      </Button>
+                    </TableCell>
+                  ) : null}
                 </tr>
               );
             })}
@@ -297,6 +310,7 @@ export function WeeklyTimelogGrid({
                 );
               })}
               <TableCell className="px-2 py-2 text-center tabular-nums">{formatHoursDisplay(weekSum)}</TableCell>
+              {readOnly && onRowClick ? <TableCell className="px-2 py-2" /> : null}
             </TableRow>
             {canApprove ? (
               <TableRow className="bg-wt-surface-1">
