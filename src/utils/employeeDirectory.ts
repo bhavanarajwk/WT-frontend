@@ -327,6 +327,7 @@ export function buildGroupedProfileSections(
     ),
     profileEntry("Gender", pickProfileField(profile, ["gender"])),
     profileEntry("Marital Status", pickProfileField(profile, ["marital_status", "maritalStatus"])),
+    profileEntry("Nationality", pickProfileField(profile, ["nationality"])),
     profileEntry("Local Address", pickProfileField(profile, ["local_address", "localAddress"]), {
       fullWidth: true,
     }),
@@ -354,6 +355,65 @@ export function buildGroupedProfileSections(
     { title: "Work Information", entries: workInformation },
     { title: "Personal Information", entries: personalInformation },
   ];
+}
+
+const PROFILE_VIEW_WORK_LABELS = new Set([
+  "Band",
+  "Date of Joining",
+  "Reporting Manager",
+  "User Type",
+  "Work Mode",
+  "Work Location",
+  "Category",
+  "Primary Skills",
+  "Secondary Skills",
+  "Total Experience",
+]);
+
+const PROFILE_VIEW_PERSONAL_LABELS = new Set([
+  "Personal Email",
+  "Date of Birth",
+  "Gender",
+  "Marital Status",
+  "Local Address",
+  "Permanent Address",
+]);
+
+const PROFILE_VIEW_LABEL_OVERRIDES: Record<string, string> = {
+  "User Type": "Employment Type",
+  "Local Address": "Current Address",
+  "Total Experience": "Experience",
+};
+
+function filterProfileViewEntries(
+  sectionTitle: string,
+  entries: ProfileDisplayEntry[]
+): ProfileDisplayEntry[] {
+  const allowed =
+    sectionTitle === "Work Information"
+      ? PROFILE_VIEW_WORK_LABELS
+      : sectionTitle === "Personal Information"
+        ? PROFILE_VIEW_PERSONAL_LABELS
+        : null;
+  if (!allowed) return entries;
+
+  return entries
+    .filter((entry) => allowed.has(entry.label))
+    .map((entry) => ({
+      ...entry,
+      label: PROFILE_VIEW_LABEL_OVERRIDES[entry.label] ?? entry.label,
+    }));
+}
+
+/** Profile sections for the directory profile view (omits header-duplicated fields). */
+export function buildProfileViewSections(
+  profile: Record<string, unknown>,
+  resumeShareHref?: string | null
+): ProfileDisplaySection[] {
+  return buildGroupedProfileSections(profile, resumeShareHref).map((section) => ({
+    ...section,
+    entries: filterProfileViewEntries(section.title, section.entries),
+  }));
 }
 
 /** @deprecated Prefer buildGroupedProfileSections for directory profile layout. */
