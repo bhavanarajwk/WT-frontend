@@ -22,7 +22,7 @@ import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
 import {
   DatePickerField,
   DropdownSelectField,
-  TextAreaField,
+  InputField,
 } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
@@ -304,6 +304,14 @@ export function OffboardingPanel() {
     });
   }
 
+  function handleResignationDateChange(value: string) {
+    setOffboardingForm((prev) => ({
+      ...prev,
+      resignation_date: value,
+      last_working_day: value.trim() ? defaultLastWorkingDayFromResignation(value) : "",
+    }));
+  }
+
   function handleLastWorkingDayChange(value: string) {
     setOffboardingForm((prev) => ({
       ...prev,
@@ -317,14 +325,16 @@ export function OffboardingPanel() {
 
     const empIdValue = offboardingForm.emp_id.trim();
     const resignationDate = offboardingForm.resignation_date.trim();
-    const lastWorkingDay = offboardingForm.last_working_day.trim();
+    const lastWorkingDay =
+      offboardingForm.last_working_day.trim() ||
+      defaultLastWorkingDayFromResignation(resignationDate);
 
     setSubmitting(true);
     try {
       await hrmsService.offboardEmployee(empIdValue, {
         exit_type: resolveExitTypeForSubmit(),
         resignation_date: resignationDate,
-        last_working_day: isConsultantOffboarding ? lastWorkingDay : lastWorkingDay || undefined,
+        last_working_day: lastWorkingDay,
         reason: offboardingForm.reason.trim() || null,
         critical_skill: offboardingForm.critical_skill.trim() || null,
         is_regretted: offboardingForm.is_regretted,
@@ -353,7 +363,7 @@ export function OffboardingPanel() {
           <div>
             <CardTitle>Attrition Summary</CardTitle>
             <CardDescription>
-              Financial-year exit metrics (Apr–Mar). Contractual exits are excluded.
+              Financial-year exit metrics (Apr–Mar)
               {attritionExitCount != null && !loadingAttrition
                 ? ` · ${attritionExitCount} exit(s)`
                 : ""}
@@ -431,74 +441,50 @@ export function OffboardingPanel() {
                 onChange={handleEmployeeChange}
                 options={candidateOptions}
               />
-              {!selectedCandidate ? null : isInternOffboarding ? (
-                <DatePickerField
-                  label="Last Working Day"
-                  required
-                  value={offboardingForm.last_working_day}
-                  onChange={handleLastWorkingDayChange}
-                  disabled={submitting}
-                />
-              ) : (
-                <>
-                  <DatePickerField
-                    label="Resignation Date"
-                    required
-                    value={offboardingForm.resignation_date}
-                    onChange={(v) =>
-                      setOffboardingForm((p) => ({
-                        ...p,
-                        resignation_date: v,
-                        last_working_day: v.trim()
-                          ? defaultLastWorkingDayFromResignation(v)
-                          : "",
-                      }))
-                    }
-                    disabled={submitting}
-                  />
-                  <DatePickerField
-                    label="Last Working Day"
-                    required={isConsultantOffboarding}
-                    value={offboardingForm.last_working_day}
-                    onChange={handleLastWorkingDayChange}
-                    disabled={submitting}
-                  />
-                </>
-              )}
-              {!isConsultantOffboarding ? (
-                <DropdownSelectField
-                  label="Exit Type"
-                  required
-                  placeholder="Select Exit Type"
-                  value={offboardingForm.exit_type}
-                  options={EXIT_TYPE_OPTIONS.filter((opt) => opt.value !== CONSULTANT_EXIT_TYPE)}
-                  onChange={(v) =>
-                    setOffboardingForm((p) => ({
-                      ...p,
-                      exit_type:
-                        v === "INVOLUNTARY" || v === "VOLUNTARY"
-                          ? (v as ExitType)
-                          : "",
-                    }))
-                  }
-                  disabled={submitting}
-                />
-              ) : null}
-              <TextAreaField
-                label="Details"
-                className="md:col-span-2"
-                rows={5}
+              <DatePickerField
+                label="Resignation Date"
+                required
+                value={offboardingForm.resignation_date}
+                onChange={handleResignationDateChange}
+                disabled={submitting || isInternOffboarding}
+              />
+              <DatePickerField
+                label="Last Working Day"
+                required={isInternOffboarding || isConsultantOffboarding}
+                value={offboardingForm.last_working_day}
+                onChange={handleLastWorkingDayChange}
+                disabled={submitting || !isInternOffboarding}
+              />
+              <DropdownSelectField
+                label="Exit Type"
+                required
+                placeholder="Select exit type"
+                value={isConsultantOffboarding ? CONSULTANT_EXIT_TYPE : offboardingForm.exit_type}
+                options={EXIT_TYPE_OPTIONS.filter((opt) => opt.value !== CONSULTANT_EXIT_TYPE)}
+                onChange={(v) =>
+                  setOffboardingForm((p) => ({
+                    ...p,
+                    exit_type:
+                      v === "INVOLUNTARY" || v === "VOLUNTARY"
+                        ? (v as ExitType)
+                        : "",
+                  }))
+                }
+                disabled={submitting || isConsultantOffboarding}
+              />
+              <InputField
+                label="Reason"
                 value={offboardingForm.reason}
                 onChange={(v) => setOffboardingForm((p) => ({ ...p, reason: v }))}
-                placeholder="Enter a detailed reason for offboarding"
+                placeholder="Enter reason for offboarding"
+                disabled={submitting}
               />
-              <TextAreaField
+              <InputField
                 label="Critical Skill"
-                className="md:col-span-2"
-                rows={5}
                 value={offboardingForm.critical_skill}
                 onChange={(v) => setOffboardingForm((p) => ({ ...p, critical_skill: v }))}
-                placeholder="Describe critical skills impacted by this exit"
+                placeholder="Describe critical skills impacted"
+                disabled={submitting}
               />
               <Label className="flex items-center gap-2 text-xs font-normal text-wt-text-muted md:col-span-2">
                 <Checkbox
