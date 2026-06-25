@@ -257,9 +257,6 @@ export function OffboardingPanel() {
     if (isInternOffboarding && l) {
       return "Intern offboarding uses a single exit date for resignation and last working day.";
     }
-    if (isConsultantOffboarding) {
-      return "Consultant offboarding is recorded as a Contractual exit and is excluded from attrition metrics.";
-    }
     if (!r) {
       return `Last working day defaults to ${DEFAULT_NOTICE_PERIOD_DAYS} calendar days after resignation when not set.`;
     }
@@ -325,11 +322,10 @@ export function OffboardingPanel() {
     setSubmitting(true);
     try {
       await hrmsService.offboardEmployee(empIdValue, {
-        ...(isConsultantOffboarding ? {} : { resignation_date: resignationDate }),
         exit_type: resolveExitTypeForSubmit(),
-        last_working_day: lastWorkingDay || undefined,
+        resignation_date: resignationDate,
+        last_working_day: isConsultantOffboarding ? lastWorkingDay : lastWorkingDay || undefined,
         reason: offboardingForm.reason.trim() || null,
-        expected_behavior: offboardingForm.expected_behavior.trim() || null,
         critical_skill: offboardingForm.critical_skill.trim() || null,
         is_regretted: offboardingForm.is_regretted,
       });
@@ -443,14 +439,6 @@ export function OffboardingPanel() {
                   onChange={handleLastWorkingDayChange}
                   disabled={submitting}
                 />
-              ) : isConsultantOffboarding ? (
-                <DatePickerField
-                  label="Last Working Day"
-                  required
-                  value={offboardingForm.last_working_day}
-                  onChange={handleLastWorkingDayChange}
-                  disabled={submitting}
-                />
               ) : (
                 <>
                   <DatePickerField
@@ -470,6 +458,7 @@ export function OffboardingPanel() {
                   />
                   <DatePickerField
                     label="Last Working Day"
+                    required={isConsultantOffboarding}
                     value={offboardingForm.last_working_day}
                     onChange={handleLastWorkingDayChange}
                     disabled={submitting}
@@ -482,26 +471,19 @@ export function OffboardingPanel() {
                   required
                   placeholder="Select Exit Type"
                   value={offboardingForm.exit_type}
-                  options={EXIT_TYPE_OPTIONS}
+                  options={EXIT_TYPE_OPTIONS.filter((opt) => opt.value !== CONSULTANT_EXIT_TYPE)}
                   onChange={(v) =>
                     setOffboardingForm((p) => ({
                       ...p,
                       exit_type:
-                        v === "INVOLUNTARY" || v === "VOLUNTARY" || v === "CONTRACTUAL"
+                        v === "INVOLUNTARY" || v === "VOLUNTARY"
                           ? (v as ExitType)
                           : "",
                     }))
                   }
                   disabled={submitting}
                 />
-              ) : (
-                <div className="text-xs text-wt-text-muted flex flex-col gap-1">
-                  <span>Exit Type</span>
-                  <p className="rounded-lg border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm text-wt-text">
-                    Contractual (applied automatically for consultants)
-                  </p>
-                </div>
-              )}
+              ) : null}
               <TextAreaField
                 label="Details"
                 className="md:col-span-2"
@@ -517,14 +499,6 @@ export function OffboardingPanel() {
                 value={offboardingForm.critical_skill}
                 onChange={(v) => setOffboardingForm((p) => ({ ...p, critical_skill: v }))}
                 placeholder="Describe critical skills impacted by this exit"
-              />
-              <TextAreaField
-                label="Expected Behavior"
-                className="md:col-span-2"
-                rows={5}
-                value={offboardingForm.expected_behavior}
-                onChange={(v) => setOffboardingForm((p) => ({ ...p, expected_behavior: v }))}
-                placeholder="Describe expected behavior during notice period"
               />
               <Label className="flex items-center gap-2 text-xs font-normal text-wt-text-muted md:col-span-2">
                 <Checkbox
