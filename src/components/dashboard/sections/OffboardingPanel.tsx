@@ -328,13 +328,17 @@ export function OffboardingPanel() {
     const lastWorkingDay =
       offboardingForm.last_working_day.trim() ||
       defaultLastWorkingDayFromResignation(resignationDate);
+    if (!lastWorkingDay) {
+      showErrorToast("Last working day could not be calculated from resignation date.");
+      return;
+    }
 
     setSubmitting(true);
     try {
       await hrmsService.offboardEmployee(empIdValue, {
         exit_type: resolveExitTypeForSubmit(),
         resignation_date: resignationDate,
-        last_working_day: lastWorkingDay,
+        last_working_day: isInternOffboarding ? lastWorkingDay : undefined,
         reason: offboardingForm.reason.trim() || null,
         critical_skill: offboardingForm.critical_skill.trim() || null,
         is_regretted: offboardingForm.is_regretted,
