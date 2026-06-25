@@ -23,6 +23,7 @@ import {
   DatePickerField,
   DropdownSelectField,
   InputField,
+  TextAreaField,
 } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
@@ -30,13 +31,12 @@ import { ManagementListCard, ManagementListContent } from "@/components/dashboar
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { FormGridSkeleton, MetricCardsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import {
-  CARD_CONTENT_BELOW_TOOLBAR_CLASS,
   CARD_CONTENT_STACK_CLASS,
   CARD_FORM_ACTIONS_CLASS,
   CARD_FORM_GRID_CLASS,
   CARD_STACK_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardToolbar } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
@@ -46,7 +46,6 @@ import {
 } from "@/hooks/offboarding/useOffboardingPanelQueries";
 import {
   CONSULTANT_EXIT_TYPE,
-  DEFAULT_NOTICE_PERIOD_DAYS,
   createEmptyOffboardingForm,
   defaultLastWorkingDayFromResignation,
   EXIT_TYPE_OPTIONS,
@@ -60,6 +59,7 @@ import {
   mergeEmpIdSelection,
   resendableOffboardEmpIds,
 } from "@/utils/exitSurveyFollowUp";
+import { Textarea } from "@/components/ui/textarea";
 
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
@@ -251,36 +251,6 @@ export function OffboardingPanel() {
     [offboardCandidates]
   );
 
-  const offboardingNoticeLabel = useMemo(() => {
-    const r = offboardingForm.resignation_date.trim();
-    const l = offboardingForm.last_working_day.trim();
-    if (isInternOffboarding && l) {
-      return "Intern offboarding uses a single exit date for resignation and last working day.";
-    }
-    if (!r) {
-      return `Last working day defaults to ${DEFAULT_NOTICE_PERIOD_DAYS} calendar days after resignation when not set.`;
-    }
-    if (!l) {
-      const defaultLwd = defaultLastWorkingDayFromResignation(r);
-      if (defaultLwd) {
-        return `Last working day will default to ${DEFAULT_NOTICE_PERIOD_DAYS} calendar days after resignation (${defaultLwd}).`;
-      }
-      return null;
-    }
-    const a = new Date(r);
-    const b = new Date(l);
-    if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) {
-      return "Resignation date must be on or before last working day.";
-    }
-    const days = Math.round((b.getTime() - a.getTime()) / 86400000);
-    return `Notice period (resignation → last working day): ${Math.max(0, days)} calendar day(s).`;
-  }, [
-    offboardingForm.resignation_date,
-    offboardingForm.last_working_day,
-    isInternOffboarding,
-    isConsultantOffboarding,
-  ]);
-
   function resolveExitTypeForSubmit(): ExitType {
     if (isConsultantOffboarding) return CONSULTANT_EXIT_TYPE;
     return offboardingForm.exit_type as ExitType;
@@ -338,7 +308,7 @@ export function OffboardingPanel() {
       await hrmsService.offboardEmployee(empIdValue, {
         exit_type: resolveExitTypeForSubmit(),
         resignation_date: resignationDate,
-        last_working_day: isInternOffboarding ? lastWorkingDay : undefined,
+        last_working_day: lastWorkingDay,
         reason: offboardingForm.reason.trim() || null,
         critical_skill: offboardingForm.critical_skill.trim() || null,
         is_regretted: offboardingForm.is_regretted,
@@ -363,9 +333,9 @@ export function OffboardingPanel() {
   return (
     <section className={CARD_STACK_CLASS}>
       <Card className="p-0">
-        <CardHeader className="flex-row items-end justify-between gap-3 space-y-0">
+        <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 px-6 py-6">
           <div>
-            <CardTitle>Attrition Summary</CardTitle>
+            <CardTitle className="text-lg">Attrition Summary</CardTitle>
             <CardDescription>
               Financial-year exit metrics (Apr–Mar)
               {attritionExitCount != null && !loadingAttrition
@@ -373,9 +343,6 @@ export function OffboardingPanel() {
                 : ""}
             </CardDescription>
           </div>
-        </CardHeader>
-        <Separator />
-        <CardToolbar className="flex justify-end">
           <DropdownSelectField
             label="Financial Year (Start)"
             className="w-[11rem] shrink-0"
@@ -383,8 +350,9 @@ export function OffboardingPanel() {
             onChange={setFyStartYear}
             options={financialYearSelectOptions()}
           />
-        </CardToolbar>
-        <CardContent className={CARD_CONTENT_BELOW_TOOLBAR_CLASS}>
+        </CardHeader>
+        <Separator />
+        <CardContent className="px-6 py-6">
           {loadingAttrition ? (
             <MetricCardsSkeleton count={3} />
           ) : (
@@ -457,7 +425,7 @@ export function OffboardingPanel() {
                 required={isInternOffboarding || isConsultantOffboarding}
                 value={offboardingForm.last_working_day}
                 onChange={handleLastWorkingDayChange}
-                disabled={submitting || !isInternOffboarding}
+                disabled={submitting}
               />
               <DropdownSelectField
                 label="Exit Type"
@@ -476,12 +444,12 @@ export function OffboardingPanel() {
                 }
                 disabled={submitting || isConsultantOffboarding}
               />
-              <InputField
+              <TextAreaField
                 label="Reason"
                 value={offboardingForm.reason}
                 onChange={(v) => setOffboardingForm((p) => ({ ...p, reason: v }))}
                 placeholder="Enter reason for offboarding"
-                disabled={submitting}
+                // disabled={submitting}
               />
               <InputField
                 label="Critical Skill"
@@ -501,9 +469,6 @@ export function OffboardingPanel() {
                 Is Regretted
               </Label>
             </div>
-            {offboardingNoticeLabel ? (
-              <p className="text-sm text-wt-text-muted">{offboardingNoticeLabel}</p>
-            ) : null}
             <div className={CARD_FORM_ACTIONS_CLASS}>
               <Button
                 variant="brand"

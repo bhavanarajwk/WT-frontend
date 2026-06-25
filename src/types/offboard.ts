@@ -38,7 +38,7 @@ export interface OffboardListItem {
 }
 
 export interface OffboardListData {
-  items: OffboardListItem[];
+  items: HrOffboardListItem[];
   total: number;
   page: number;
   size: number;
