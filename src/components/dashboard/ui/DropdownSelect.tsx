@@ -1,23 +1,17 @@
 "use client";
 
 import type { SearchableSelectOption } from "@/components/dashboard/ui/SearchableSelectCombobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
-function ChevronDownIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-      aria-hidden
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
+export function ChevronDownIcon() {
+  return null;
 }
 
 export function DropdownSelect({
@@ -25,9 +19,11 @@ export function DropdownSelect({
   onChange,
   options,
   disabled = false,
+  loading = false,
+  loadingLabel = "Loading…",
   required = false,
   className = "",
-  selectClassName = "input-field appearance-none px-3 py-2 pr-10 text-sm w-full",
+  selectClassName,
   id,
   "aria-label": ariaLabel,
 }: {
@@ -35,36 +31,45 @@ export function DropdownSelect({
   onChange: (value: string) => void;
   options: SearchableSelectOption[];
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
   required?: boolean;
   className?: string;
   selectClassName?: string;
   id?: string;
   "aria-label"?: string;
 }) {
+  const selected = options.find((opt) => opt.value === value) ?? null;
+  const isDisabled = disabled || loading;
+
   return (
-    <div className={`relative ${className}`.trim()}>
-      <select
+    <Select
+      value={selected}
+      onValueChange={(item) => onChange(item?.value ?? "")}
+      disabled={isDisabled}
+      items={options}
+      isItemEqualToValue={(a, b) => a.value === b.value}
+    >
+      <SelectTrigger
         id={id}
-        className={selectClassName}
-        value={value}
-        disabled={disabled}
-        required={required}
-        aria-required={required || undefined}
         aria-label={ariaLabel}
-        onChange={(e) => onChange(e.target.value)}
+        aria-required={required || undefined}
+        aria-busy={loading || undefined}
+        className={cn(selectClassName, className, loading ? "text-wt-text-muted" : undefined)}
       >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <span
-        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-wt-text-muted"
-        aria-hidden
-      >
-        <ChevronDownIcon />
-      </span>
-    </div>
+        <SelectValue placeholder={loading ? loadingLabel : "Select"} />
+      </SelectTrigger>
+      <SelectContent>
+        {loading ? (
+          <div className="px-2 py-2 text-sm text-wt-text-muted">{loadingLabel}</div>
+        ) : (
+          options.map((opt) => (
+            <SelectItem key={opt.value || `opt-${opt.label}`} value={opt}>
+              {opt.label}
+            </SelectItem>
+          ))
+        )}
+      </SelectContent>
+    </Select>
   );
 }

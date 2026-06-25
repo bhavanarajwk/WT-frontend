@@ -1,16 +1,22 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import {
+  ProfileDetailsSkeleton,
+  ProfileHeaderSkeleton,
+} from "@/components/dashboard/ui/SectionSkeleton";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
+import { HARDCODED_DEPARTMENT_OPTIONS } from "@/constants/dashboard";
 import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmployeeDirectoryAccess";
 import {
   useEmployeeProfile,
   useUpdateEmployeeProfile,
 } from "@/hooks/employee-directory/useEmployeeProfile";
 import { hrmsService } from "@/services/hrms.service";
-import { toRows } from "@/utils/apiRows";
+import { toPagedRows, toRows } from "@/utils/apiRows";
 import { useEmployeeResumes } from "@/hooks/resumes/useEmployeeResumes";
 import {
   cleanEmployeeName,
@@ -29,9 +35,10 @@ import {
 } from "@/utils/employeeResume";
 import { canFetchEmployeeResumeApi } from "@/utils/roles";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { InputField, SelectField } from "@/components/dashboard/ui/forms";
+import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
+import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
+import { FormSection, FormSubsection } from "@/components/dashboard/ui/FormSection";
 import { EmployeeProfileSummaryCard } from "@/components/employee-directory/EmployeeProfileSummaryCard";
 import { EmployeeTrainingMarksCard } from "@/components/learning-development/EmployeeTrainingMarksCard";
 import { EmployeeLeaveBalancesCard } from "@/components/employee-directory/EmployeeLeaveBalancesCard";
@@ -41,6 +48,9 @@ import { IconPencil } from "@/components/employee-directory/employeeDirectoryIco
 const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
 const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING"];
+const SKILL_RATINGS = ["1", "2", "3", "4", "5"];
+
+type BandOption = { id: string; label: string };
 
 export function EmployeeProfilePageClient() {
   const params = useParams();
@@ -49,10 +59,12 @@ export function EmployeeProfilePageClient() {
     authStatus,
     canView: canViewProfile,
     canEditProfile,
+    canEditProfileStatusOnly,
+    canOpenProfileEditor,
     queriesEnabled,
     roles,
   } = useEmployeeDirectoryAccess();
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
   const { data: profile, isLoading, isError, error, refetch } = useEmployeeProfile(empId, {
     enabled: queriesEnabled,
   });
@@ -61,10 +73,12 @@ export function EmployeeProfilePageClient() {
   });
   const updateMutation = useUpdateEmployeeProfile(empId);
 
+  const statusOnlyEdit = canEditProfileStatusOnly && !canEditProfile;
+
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<EmployeeProfileEditForm | null>(null);
-  const [bandOptions, setBandOptions] = useState<string[]>([]);
-
+  const [bandOptions, setBandOptions] = useState<BandOption[]>([]);
+  const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const profileRecord = profile ?? {};
   const displayName = cleanEmployeeName(profileRecord) || "Employee";
   const department = String(pickProfileField(profileRecord, ["department"]) ?? "").trim();
@@ -94,19 +108,57 @@ export function EmployeeProfilePageClient() {
     let cancelled = false;
     void (async () => {
       try {
-        const bandsRes = await hrmsService.getBands();
+        const [bandsRes, departmentsRes] = await Promise.all([
+          hrmsService.getBands(),
+          hrmsService.getDepartments(),
+        ]);
         if (cancelled) return;
         const rows = toRows((bandsRes as { data?: unknown }).data ?? bandsRes);
-        const labels = rows
+        const bands = rows
           .map((row) => {
             const id = String(row.id ?? row.band_id ?? row.bandId ?? "").trim();
-            const name = String(row.name ?? row.band_name ?? row.bandName ?? id).trim();
-            return id ? `${name} (${id})` : name;
+            const name = String(row.name ?? row.band_name ?? row.bandName ?? "").trim();
+            if (!id && !name) return null;
+            return { id: id || name, label: name || id };
           })
-          .filter(Boolean);
-        setBandOptions([...new Set(["", ...labels])]);
+          .filter((band): band is BandOption => band !== null);
+        setBandOptions(bands);
+
+        let departments = Array.from(
+          new Set(
+            toPagedRows((departmentsRes as { data?: unknown }).data ?? departmentsRes)
+              .map((row) =>
+                String(
+                  row.department ??
+                    row.department_name ??
+                    row.departmentName ??
+                    row.name ??
+                    row.value ??
+                    ""
+                ).trim()
+              )
+              .filter((value) => Boolean(value))
+          )
+        ).sort();
+
+        if (!departments.length) {
+          departments = Array.from(
+            new Set(
+              rows
+                .map((row) => String(row.stream ?? row.department ?? "").trim())
+                .filter((value) => Boolean(value))
+            )
+          ).sort();
+        }
+
+        setDepartmentOptions(
+          Array.from(new Set([...HARDCODED_DEPARTMENT_OPTIONS, ...departments])).sort()
+        );
       } catch {
-        if (!cancelled) setBandOptions([""]);
+        if (!cancelled) {
+          setBandOptions([]);
+          setDepartmentOptions([...HARDCODED_DEPARTMENT_OPTIONS]);
+        }
       }
     })();
     return () => {
@@ -115,10 +167,25 @@ export function EmployeeProfilePageClient() {
   }, [isEditing, canEditProfile]);
 
   const bandSelectOptions = useMemo(() => {
-    const fallback = editForm?.band_id?.trim() ? ["", editForm.band_id] : [""];
-    const source = bandOptions.length ? bandOptions : fallback;
-    return [...new Set(source)];
-  }, [bandOptions, editForm?.band_id]);
+    const options = [...bandOptions];
+    const currentId = editForm?.band_id?.trim();
+    if (currentId && !options.some((band) => band.id === currentId)) {
+      const bandName = String(
+        pickProfileField(profileRecord, ["band", "band_name", "bandName"]) ?? ""
+      ).trim();
+      options.unshift({ id: currentId, label: bandName || currentId });
+    }
+    return options;
+  }, [bandOptions, editForm?.band_id, profileRecord]);
+
+  const bandSelectValue = editForm?.band_id?.trim() ?? "";
+
+  const departmentSelectOptions = useMemo(() => {
+    const deps = [...departmentOptions];
+    const current = editForm?.department?.trim();
+    if (current && !deps.includes(current)) deps.unshift(current);
+    return deps;
+  }, [departmentOptions, editForm?.department]);
 
   const workModeOptions = useMemo(() => {
     const current = editForm?.work_mode?.trim();
@@ -140,35 +207,32 @@ export function EmployeeProfilePageClient() {
 
   const saveProfile = () => {
     if (!editForm || !empId) return;
-    void runAction("Update employee profile", async () => {
-      const workEmailError = validateWorkEmail(editForm.email);
-      if (workEmailError) throw new Error(workEmailError);
-      const personalError = validatePersonalEmail(editForm.email, editForm.personal_email, {
-        required: false,
-      });
-      if (personalError) throw new Error(personalError);
-      await updateMutation.mutateAsync(editFormToUpdatePayload(editForm));
-      await refetch();
-      setIsEditing(false);
-      setEditForm(null);
-    });
+    void runAction(
+      statusOnlyEdit ? "Update employee status" : "Update employee profile",
+      async () => {
+        if (!statusOnlyEdit) {
+          const workEmailError = validateWorkEmail(editForm.email);
+          if (workEmailError) throw new Error(workEmailError);
+          const personalError = validatePersonalEmail(editForm.email, editForm.personal_email, {
+            required: false,
+          });
+          if (personalError) throw new Error(personalError);
+        }
+        await updateMutation.mutateAsync(
+          editFormToUpdatePayload(editForm, { statusOnly: statusOnlyEdit })
+        );
+        await refetch();
+        setIsEditing(false);
+        setEditForm(null);
+      }
+    );
   };
 
-  if (authStatus === "loading") {
-    return (
-      <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-sm text-wt-text-muted shadow-sm">
-          Loading…
-        </div>
-      </DashboardPageShell>
-    );
-  }
-
-  if (!canViewProfile) {
+  if (authStatus !== "loading" && !canViewProfile) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
-          <h3 className="text-lg font-semibold">Access restricted</h3>
+          <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="mt-2 text-sm text-wt-text-muted">
             Employee profiles in the directory are available to HR and admin users only.
           </p>
@@ -194,11 +258,10 @@ export function EmployeeProfilePageClient() {
   }
 
   return (
-    <DashboardPageShell>
-      <DashboardToast toast={toast} />
+    <DashboardPageShell className="employee-profile-page">
 
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
-        <div className="p-5 md:p-7 lg:p-8">
+      <div className="employee-profile-scroll-root employee-profile-panel rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
+        <div className="employee-profile-panel__header p-5 md:p-7 lg:p-8">
           <Link
             href={DASHBOARD_ROUTES["employee-directory"]}
             className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
@@ -206,30 +269,37 @@ export function EmployeeProfilePageClient() {
             ← Back to directory
           </Link>
           {isLoading ? (
-            <p className="mt-8 text-sm text-wt-text-muted">Loading employee profile…</p>
+            <div className="mt-8 space-y-6">
+              <ProfileHeaderSkeleton />
+            </div>
           ) : null}
 
           {isError ? (
             <div className="mt-8 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               <p>Could not load profile.{error instanceof Error ? ` ${error.message}` : ""}</p>
-              <button type="button" className="btn-ghost mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
+              <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
                 Retry
-              </button>
+              </Button>
             </div>
           ) : null}
 
           {!isLoading && !isError ? (
-            <>
-              <div className="mt-6 flex flex-col gap-4 border-b border-wt-border pb-6 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-2xl font-bold tracking-tight text-wt-text">
-                      {displayName}
-                      {employeeRole ? (
-                        <span className="font-semibold text-wt-text-muted"> | {employeeRole}</span>
-                      ) : null}
-                    </h3>
-                  </div>
+            <div className="mt-6 flex flex-col gap-4 border-b border-wt-border pb-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-3">
+                  {isEditing ? (
+                      <span className="inline-flex rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white">
+                        Edit Mode
+                      </span>
+                  ) : null}
+                  <h3 className="text-2xl font-bold tracking-tight text-wt-text">
+                    {displayName}
+                    {employeeRole ? (
+                      <span className="font-semibold text-wt-text-muted"> | {employeeRole}</span>
+                    ) : null}
+                  </h3>
+                </div>
+                {!isEditing ? (
                   <p className="mt-2 text-sm text-wt-text-muted">
                     Employee ID: {empIdDisplay}
                     {email ? (
@@ -255,135 +325,177 @@ export function EmployeeProfilePageClient() {
                       </>
                     ) : null}
                   </p>
-                </div>
-
-                {canEditProfile && !isEditing ? (
-                  <button
-                    type="button"
-                    className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-blue-600 bg-white px-4 py-2.5 text-sm font-medium text-blue-600 shadow-sm transition hover:bg-blue-50"
-                    onClick={openEditor}
-                  >
-                    <IconPencil />
-                    Edit Profile
-                  </button>
-                ) : null}
+                ) : (
+                  <p className="mt-2 text-sm text-wt-text-muted">
+                    {statusOnlyEdit
+                      ? "Update employee status below and save, or cancel to return to view mode."
+                      : "Update the fields below and save, or cancel to return to view mode."}
+                  </p>
+                )}
               </div>
 
-              {isEditing && editForm ? (
-                <div className="mt-6 space-y-4 rounded-xl border border-wt-border bg-wt-surface-2/60 p-5 md:p-6">
-                  <h4 className="text-base font-semibold">Edit profile</h4>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <InputField label="Name" value={editForm.name} onChange={(v) => setEditForm({ ...editForm, name: v })} />
-                    <InputField
-                      label="Work email"
-                      type="email"
-                      required
-                      value={editForm.email}
-                      onChange={(v) => setEditForm({ ...editForm, email: v })}
-                    />
-                    <InputField
-                      label="Personal mail ID"
-                      type="email"
-                      value={editForm.personal_email}
-                      onChange={(v) => setEditForm({ ...editForm, personal_email: v })}
-                    />
-                    <InputField
-                      label="Department"
-                      value={editForm.department}
-                      onChange={(v) => setEditForm({ ...editForm, department: v })}
-                    />
-                    <SelectField
-                      label="Status"
-                      value={editForm.user_status}
-                      options={USER_STATUSES}
-                      onChange={(v) => setEditForm({ ...editForm, user_status: v })}
-                    />
-                    <SelectField
-                      label="Work mode"
-                      value={editForm.work_mode}
-                      options={workModeOptions}
-                      onChange={(v) => setEditForm({ ...editForm, work_mode: v })}
-                    />
-                    <SelectField
-                      label="Work location"
-                      value={editForm.work_location_type}
-                      options={WORK_LOCATIONS}
-                      onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
-                    />
-                    <SelectField
-                      label="Band"
-                      value={editForm.band_id}
-                      placeholder="Select band"
-                      options={bandSelectOptions.map((opt) => ({
-                        value: opt,
-                        label: opt || "Select band",
-                      }))}
-                      onChange={(raw) => {
-                        const id = raw.match(/\(([^)]+)\)\s*$/)?.[1]?.trim() ?? raw;
-                        setEditForm({ ...editForm, band_id: id });
-                      }}
-                    />
-                    <InputField
-                      label="Primary skills (comma-separated)"
-                      value={editForm.primary_skills}
-                      onChange={(v) => setEditForm({ ...editForm, primary_skills: v })}
-                    />
-                    <InputField
-                      label="Secondary skill"
-                      value={editForm.secondary_skill}
-                      onChange={(v) => setEditForm({ ...editForm, secondary_skill: v })}
-                    />
-                    <InputField
-                      label="Secondary skill rating (1–5)"
-                      value={editForm.secondary_rating}
-                      onChange={(v) => setEditForm({ ...editForm, secondary_rating: v })}
-                    />
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      disabled={actionLoading || updateMutation.isPending}
-                      onClick={saveProfile}
-                    >
-                      Save changes
-                    </button>
-                    <button type="button" className="btn-ghost" disabled={actionLoading} onClick={cancelEditor}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
+              {canOpenProfileEditor && !isEditing ? (
+                <Button variant="brand" size="sm" type="button" className="inline-flex shrink-0 items-center gap-2 px-4 py-2.5 text-sm" onClick={openEditor} >
+                  <IconPencil />
+                  {statusOnlyEdit ? "Edit Status" : "Edit Profile"}
+                </Button>
               ) : null}
+            </div>
+          ) : null}
+        </div>
 
-              <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-                <div className="min-w-0 rounded-xl border border-wt-border p-5 md:p-6">
-                  <FullProfileDetailsGrid
+        {isLoading && !isError ? (
+          <div className="employee-profile-panel__body px-5 pb-5 md:px-7 md:pb-7 lg:px-8 lg:pb-8">
+            <ProfileDetailsSkeleton rows={10} />
+          </div>
+        ) : null}
+
+        {!isLoading && !isError ? (
+          <div className="employee-profile-panel__body px-5 pb-5 md:px-7 md:pb-7 lg:px-8 lg:pb-8">
+            {isEditing && editForm ? (
+              <div className="space-y-6">
+                {statusOnlyEdit ? (
+                  <FormSection
+                    title="Employee Status"
+                    description="Update the employee account status. Other profile fields cannot be changed from this role."
+                  >
+                    <div className="max-w-sm">
+                      <AdaptiveSelectField
+                        label="Status"
+                        value={editForm.user_status}
+                        options={USER_STATUSES}
+                        onChange={(v) => setEditForm({ ...editForm, user_status: v })}
+                      />
+                    </div>
+                  </FormSection>
+                ) : (
+                  <>
+                    <FormSection
+                      title="Work Information"
+                      description="Employment details, department, and work arrangement."
+                    >
+                      <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                        <InputField
+                          label="Name"
+                          value={editForm.name}
+                          onChange={(v) => setEditForm({ ...editForm, name: v })}
+                        />
+                        <InputField
+                          label="Work Email"
+                          type="email"
+                          required
+                          value={editForm.email}
+                          onChange={(v) => setEditForm({ ...editForm, email: v })}
+                        />
+                        <AdaptiveSelectField
+                          label="Department"
+                          value={editForm.department}
+                          placeholder="Select Department"
+                          searchPlaceholder="Search Departments…"
+                          options={departmentSelectOptions}
+                          onChange={(v) => setEditForm({ ...editForm, department: v })}
+                        />
+                        <AdaptiveSelectField
+                          label="Status"
+                          value={editForm.user_status}
+                          options={USER_STATUSES}
+                          onChange={(v) => setEditForm({ ...editForm, user_status: v })}
+                        />
+                        <AdaptiveSelectField
+                          label="Work Mode"
+                          value={editForm.work_mode}
+                          options={workModeOptions}
+                          onChange={(v) => setEditForm({ ...editForm, work_mode: v })}
+                        />
+                        <AdaptiveSelectField
+                          label="Work Location"
+                          value={editForm.work_location_type}
+                          options={WORK_LOCATIONS}
+                          onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
+                        />
+                        <AdaptiveSelectField
+                          label="Band"
+                          value={bandSelectValue}
+                          placeholder="Select Band"
+                          searchPlaceholder="Search Bands…"
+                          options={bandSelectOptions.map((band) => ({
+                            value: band.id,
+                            label: band.label,
+                          }))}
+                          onChange={(id) => setEditForm({ ...editForm, band_id: id })}
+                        />
+                      </div>
+
+                      <FormSubsection title="Skills">
+                        <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
+                          <InputField
+                            label="Primary Skills"
+                            value={editForm.primary_skills}
+                            onChange={(v) => setEditForm({ ...editForm, primary_skills: v })}
+                          />
+                          <InputField
+                            label="Secondary Skill"
+                            value={editForm.secondary_skill}
+                            onChange={(v) => setEditForm({ ...editForm, secondary_skill: v })}
+                          />
+                          <AdaptiveSelectField
+                            label="Secondary Skill Rating"
+                            value={editForm.secondary_rating}
+                            placeholder="Select Rating"
+                            options={SKILL_RATINGS}
+                            onChange={(v) => setEditForm({ ...editForm, secondary_rating: v })}
+                          />
+                        </div>
+                      </FormSubsection>
+                    </FormSection>
+                  </>
+                )}
+
+                <FormActionBar
+                  hint={
+                    statusOnlyEdit
+                      ? "Only the employee status will be updated."
+                      : "Review your updates, then save to apply changes to this profile."
+                  }
+                  saving={actionLoading || updateMutation.isPending}
+                  onCancel={cancelEditor}
+                  onSave={saveProfile}
+                />
+              </div>
+            ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+                    <div className="employee-profile-section min-w-0 rounded-xl border border-wt-border p-5 md:p-6">
+                    <FullProfileDetailsGrid
+                      profile={profileRecord}
+                      resumeShareHref={resumeShareHref}
+                      scrollChain
+                    />
+                  </div>
+
+                  <EmployeeProfileSummaryCard
                     profile={profileRecord}
-                    resumeShareHref={resumeShareHref}
+                    displayName={displayName}
+                    designation={employeeRole}
+                    department=""
+                    email={email}
                   />
                 </div>
 
-                <EmployeeProfileSummaryCard
-                  profile={profileRecord}
-                  displayName={displayName}
-                  designation={employeeRole}
-                  department=""
-                  email={email}
-                />
+                <div className="space-y-6">
+                  <EmployeeTrainingMarksCard
+                    variant="hr"
+                    targetUserId={profileUserId}
+                    targetEmail={email}
+                    enabled={queriesEnabled && Boolean(profileUserId)}
+                    scrollChain
+                  />
+                  <EmployeeLeaveBalancesCard empId={empId} enabled={queriesEnabled} />
+                </div>
               </div>
-
-              <div className="mt-6 space-y-6">
-                <EmployeeLeaveBalancesCard empId={empId} enabled={queriesEnabled} />
-                <EmployeeTrainingMarksCard
-                  variant="hr"
-                  targetUserId={profileUserId}
-                  targetEmail={email}
-                  enabled={queriesEnabled && Boolean(profileUserId)}
-                />
-              </div>
-            </>
-          ) : null}
-        </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </DashboardPageShell>
   );

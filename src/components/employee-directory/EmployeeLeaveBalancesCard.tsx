@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useEmployeeLeaveBalances } from "@/hooks/employee-directory/useEmployeeLeaveBalances";
 
 function BalanceItem({ label, value }: { label: string; value: number | string }) {
@@ -22,29 +24,28 @@ export function EmployeeLeaveBalancesCard({
 
   return (
     <section className="rounded-xl border border-wt-border bg-wt-surface-1 shadow-sm">
-      <div className="border-b border-wt-border px-5 py-4 md:px-6">
-        <h4 className="text-base font-semibold">Leave & comp-off balances</h4>
-        <p className="mt-0.5 text-sm text-wt-text-muted">Current balance snapshot for this employee.</p>
-      </div>
+      <header className="border-b border-wt-border px-5 py-4 md:px-6">
+        <h4 className="text-base font-semibold tracking-tight">Leave & Comp-Off Balances</h4>
+      </header>
 
       <div className="p-5 md:p-6">
         {isLoading ? (
-          <p className="text-sm text-wt-text-muted">Loading balances…</p>
+          <SectionLoading label="Loading balances…" />
         ) : null}
 
         {isError ? (
           <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
             Could not load balances.{error instanceof Error ? ` ${error.message}` : ""}
-            <button type="button" className="btn-ghost mt-2 px-2 py-1 text-xs" onClick={() => void refetch()}>
+            <Button variant="ghost" size="xs" type="button" className="mt-2 px-2 py-1 text-xs" onClick={() => void refetch()}>
               Retry
-            </button>
+            </Button>
           </div>
         ) : null}
 
         {!isLoading && !isError && data ? (
           <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-            <BalanceItem label="Total leave" value={data.leave?.total ?? 0} />
-            <BalanceItem label="Comp-off balance" value={data.comp_off_balance ?? 0} />
+            <BalanceItem label="Total Leave" value={data.leave?.total ?? 0} />
+            <BalanceItem label="Comp-Off Balance" value={data.comp_off_balance ?? 0} />
           </div>
         ) : null}
 

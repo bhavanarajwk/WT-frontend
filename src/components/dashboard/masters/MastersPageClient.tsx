@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -16,7 +19,6 @@ import {
   userRequestActionLabel,
 } from "@/utils/actionToast";
 import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
-import { EmployeeAttendancePanel } from "@/components/dashboard/sections/EmployeeAttendancePanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
@@ -76,7 +78,6 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { createEmptyRoleAssignForm } from "@/utils/roleAssignFormState";
 
 
@@ -93,12 +94,11 @@ export function MastersPageClient() {
     COMP_OFF: ["COMP_OFF", "COMPOFF", "COMP-OFF", "COMP OFF"],
   };
 
-  const { user, signOut, refresh: refreshSession } = useAuth();
+  const { user, refresh: refreshSession } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metrics, loading, refresh } = useOverviewData();
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
@@ -413,11 +413,6 @@ export function MastersPageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfOnboardForm.yoe]);
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 2800);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
     const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
@@ -812,7 +807,7 @@ export function MastersPageClient() {
     setActionLoading(true);
     try {
       await fn();
-      setToast({ type: "success", message: formatActionSuccessMessage(label) });
+      showSuccessToast(formatActionSuccessMessage(label));
     } catch (error) {
       const backendMessage =
         error instanceof ApiError
@@ -820,10 +815,7 @@ export function MastersPageClient() {
           : error instanceof Error
             ? error.message
             : "";
-      setToast({
-        type: "error",
-        message: formatActionErrorMessage(label, backendMessage),
-      });
+      showErrorToast(formatActionErrorMessage(label, backendMessage));
     } finally {
       setActionLoading(false);
     }
@@ -2742,10 +2734,7 @@ export function MastersPageClient() {
         </p>
       )}
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Submit onboarding", async () => {
               if (!user?.email) {
                 throw new Error("Unable to resolve logged-in email.");
@@ -2863,7 +2852,7 @@ export function MastersPageClient() {
           disabled={actionLoading}
         >
           Submit Onboarding Form
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -2909,9 +2898,9 @@ export function MastersPageClient() {
 
   const renderProfileAssignedProjectsSection = () => (
     <div className="mt-8 border-t border-wt-border pt-6">
-      <h4 className="text-sm font-semibold mb-3">Assigned projects</h4>
+      <h4 className="text-sm font-semibold mb-3">Assigned Projects</h4>
       {profileAssignedProjectsLoading ? (
-        <p className="text-sm text-wt-text-muted">Loading assigned projects…</p>
+        <SectionLoading label="Loading assigned projects…" />
       ) : (
         <DataTable
           columns={profileAssignedProjectColumns}
@@ -2956,14 +2945,9 @@ export function MastersPageClient() {
             <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn-primary px-4 py-2.5"
-          onClick={openOwnProfileEditor}
-          disabled={actionLoading}
-        >
+        <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
           Edit Profile
-        </button>
+        </Button>
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
@@ -3008,18 +2992,18 @@ export function MastersPageClient() {
         </p>
       )}
       <div className="mt-3">
-        <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
+        <FileField label="Profile Picture (required)" required accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
                 .map((item) => item.trim())
                 .filter(Boolean);
+              if (!selfProfilePic) {
+                throw new Error("Profile picture is mandatory. Please upload your profile picture.");
+              }
               if (priorEmploymentDocsForProfile) {
                 if (!selfProfileEmploymentFiles.reliving_letter) {
                   throw new Error(
@@ -3114,15 +3098,12 @@ export function MastersPageClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </button>
-        <button
-          type="button"
-          className="btn-ghost ml-2 px-3 py-2"
-          onClick={() => setIsEditingOwnProfile(false)}
+        </Button>
+        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -3136,10 +3117,7 @@ export function MastersPageClient() {
                           <div className="xl:col-span-2 rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
                             <div className="flex items-center justify-between mb-3">
                               <h3 className="font-semibold">KPI Definitions</h3>
-                              <button
-                                type="button"
-                                className="btn-primary px-3 py-2"
-                                onClick={() =>
+                              <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
                                   runAction("Load KPI definitions", async () => {
                                     const res = await hrmsService.getKpis({ limit: "500", offset: "0" });
                                     setKpis(toRows((res as { data?: unknown[] }).data ?? res));
@@ -3148,7 +3126,7 @@ export function MastersPageClient() {
                                 disabled={actionLoading}
                               >
                                 Refresh
-                              </button>
+                              </Button>
                             </div>
                             <DataTable
                               columns={["kpi_name", "designation", "department", "weightage"]}
@@ -3201,11 +3179,7 @@ export function MastersPageClient() {
                                   />
                                 </div>
                                 <div className="flex gap-2">
-                                  <button
-                                    type="button"
-                                    className="btn-primary px-3 py-2 text-sm"
-                                    disabled={actionLoading}
-                                    onClick={() =>
+                                  <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" disabled={actionLoading} onClick={() =>
                                       runAction("Assign role", async () => {
                                         const targetEmail = roleAssignForm.target_email.trim();
                                         if (!targetEmail) throw new Error("Please select an employee.");
@@ -3219,12 +3193,8 @@ export function MastersPageClient() {
                                     }
                                   >
                                     Assign Role
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-ghost px-3 py-2 text-sm"
-                                    disabled={actionLoading}
-                                    onClick={() =>
+                                  </Button>
+                                  <Button variant="ghost" size="sm" type="button" className="px-3 py-2 text-sm" disabled={actionLoading} onClick={() =>
                                       runAction("Refresh employee list", async () => {
                                         const res = await hrmsService.getOnboardList({ page: "0", size: "200" });
                                         const rows = toPagedRows((res as { data?: unknown }).data ?? res);
@@ -3245,7 +3215,7 @@ export function MastersPageClient() {
                                     }
                                   >
                                     Refresh Emails
-                                  </button>
+                                  </Button>
                                 </div>
                               </div>
                             </details>
@@ -3253,21 +3223,6 @@ export function MastersPageClient() {
                         </section>
         </OnboardingGate>
       </DashboardPageShell>
-            {toast ? (
-              <div className="fixed right-5 bottom-5 z-50">
-                <div
-                  className={`rounded-xl px-4 py-3 text-sm shadow-lg border ${
-                    toast.type === "success"
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : "bg-rose-50 text-rose-800 border-rose-200"
-                  }`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {toast.message}
-                </div>
-              </div>
-            ) : null}
     </>
   );
 }

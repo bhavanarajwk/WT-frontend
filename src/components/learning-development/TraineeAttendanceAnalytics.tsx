@@ -1,5 +1,16 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { TraineeTableRow } from "@/utils/learning/participants";
@@ -35,8 +46,9 @@ export function TraineeAttendanceAnalytics({
     queries: sessions.map((session) => {
       const sessionId = String(session.id ?? "").trim();
       return {
-        queryKey: ["learning", "attendance", trainingId, sessionId, "analytics", employeeUserId],
+        queryKey: ["learning", "attendance", trainingId, sessionId],
         enabled: Boolean(trainingId && sessionId && employeeUserId),
+        staleTime: 60_000,
         queryFn: async () => {
           const res = await hrmsService.getAttendance(trainingId, sessionId);
           const rows = toPagedRows(res.data ?? res);
@@ -90,7 +102,7 @@ export function TraineeAttendanceAnalytics({
     <div className="space-y-4">
       <p className="text-sm font-medium">{trainee.name}</p>
       {isLoading ? (
-        <p className="text-sm text-wt-text-muted">Loading attendance analytics…</p>
+        <SectionLoading label="Loading attendance analytics…" />
       ) : totalSessions === 0 ? (
         <p className="text-sm text-wt-text-muted">No sessions scheduled for this training yet.</p>
       ) : (
@@ -129,19 +141,19 @@ export function TraineeAttendanceAnalytics({
               </p>
             </article>
           </div>
-          <div className="wt-scroll-both overflow-x-auto rounded-lg border border-wt-border">
-            <table className="min-w-full text-sm">
-              <thead className="bg-wt-surface-2 text-wt-text-muted">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium">Session date</th>
-                  <th className="text-left px-3 py-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
+          <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+            <WtTable>
+              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Session date</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {sessionRows.map((row) => (
-                  <tr key={row.sessionId} className="border-t border-wt-border">
-                    <td className="px-3 py-2 whitespace-nowrap">{row.sessionDate}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                  <TableRow key={row.sessionId}>
+                    <TableCell className="px-3 py-2 whitespace-nowrap">{row.sessionDate}</TableCell>
+                    <TableCell className="px-3 py-2 whitespace-nowrap">
                       <span
                         className={
                           isPresentStatus(row.status)
@@ -153,12 +165,12 @@ export function TraineeAttendanceAnalytics({
                       >
                         {row.status}
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </WtTable>
+          </ScrollableTable>
         </>
       )}
     </div>

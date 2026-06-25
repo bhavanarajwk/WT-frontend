@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -8,6 +9,7 @@ import {
 } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
+import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 
 const TAGLINE =
   "Workforce visibility and project allocation—aligned in one secure workspace.";
@@ -149,17 +151,8 @@ function LoginPageInner() {
     return (
       <div className="relative flex min-h-screen items-center justify-center px-6">
         <MeshBackground />
-        <div className="relative z-10 flex flex-col items-center gap-8">
-          <WebTrakBrand variant="login" />
-          <div
-            className="h-10 w-10 rounded-full border-2 border-t-transparent"
-            style={{
-              borderColor: "var(--wt-indigo-400)",
-              borderTopColor: "transparent",
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <p className="text-sm text-slate-400">Checking session…</p>
+        <div className="relative z-10">
+          <WtLoaderCentered label="Checking session…" />
         </div>
       </div>
     );
@@ -186,13 +179,7 @@ function LoginPageInner() {
         <div className="mt-12 flex w-full flex-col gap-5 sm:mt-14 sm:gap-6">
           {error ? <ErrorBanner message={error} /> : null}
 
-          <button
-            id="google-signin-btn"
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={googleLoading}
-            className="btn-primary w-full max-w-[380px] self-center rounded-lg py-3.5 text-base sm:py-4"
-          >
+          <Button variant="brand" size="lg" id="google-signin-btn" type="button" onClick={handleGoogleSignIn} disabled={googleLoading} className="w-full max-w-[380px] self-center rounded-lg py-3.5 text-base sm:py-4" >
             {googleLoading ? (
               <>
                 <span className="spinner" />
@@ -204,7 +191,7 @@ function LoginPageInner() {
                 Continue with Google
               </>
             )}
-          </button>
+          </Button>
 
           <p className="max-w-md self-center text-center text-xs leading-relaxed text-slate-400">
             Only registered company accounts can sign in.
@@ -227,7 +214,9 @@ export default function LoginPage() {
       fallback={
         <div className="relative flex min-h-screen items-center justify-center px-6">
           <MeshBackground />
-          <p className="relative z-10 text-sm text-slate-400">Loading…</p>
+          <div className="relative z-10">
+            <WtLoaderCentered label="Loading" />
+          </div>
         </div>
       }
     >

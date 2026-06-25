@@ -1,11 +1,15 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 /* ------------------------------------------------------------------ */
 /* Design Tokens                                                         */
 /* ------------------------------------------------------------------ */
 :root {
   /* Brand palette */
-  --wt-indigo-50:  #eef2ff;
+  --wt-indigo-50: #eef2ff;
   --wt-indigo-100: #e0e7ff;
   --wt-indigo-200: #c7d2fe;
   --wt-indigo-400: #818cf8;
@@ -17,76 +21,166 @@
   --wt-violet-400: #a78bfa;
   --wt-violet-500: #8b5cf6;
 
+  /* Primary action — WebTrak logo blue (muted) */
+  --wt-brand: #355095;
+  --wt-brand-hover: #2d4369;
+  --wt-brand-active: #243754;
+  --wt-brand-text: #ffffff;
+
   /* Surface */
-  --wt-bg:         #f4f7fb;
-  --wt-surface-1:  #ffffff;
-  --wt-surface-2:  #f8fafc;
-  --wt-surface-3:  #eef2f7;
+  --wt-bg: #f4f7fb;
+  --wt-page-bg: #eef3fb;
+  --wt-surface-1: #ffffff;
+  --wt-surface-2: #f8fafc;
+  --wt-surface-3: #eef2f7;
 
   /* Text */
-  --wt-text:       #0f172a;
+  --wt-text: #0f172a;
   --wt-text-muted: #475569;
   --wt-text-faint: #64748b;
 
   /* Border */
-  --wt-border:     rgba(15, 23, 42, 0.08);
-  --wt-border-md:  rgba(15, 23, 42, 0.14);
+  --wt-border: rgba(15, 23, 42, 0.08);
+  --wt-border-md: rgba(15, 23, 42, 0.14);
 
   /* Accent glow */
-  --wt-glow-indigo: 0 8px 24px rgba(99,102,241,0.2);
-  --wt-glow-violet: 0 10px 32px rgba(139,92,246,0.14);
+  --wt-glow-indigo: 0 8px 24px rgba(99, 102, 241, 0.2);
+  --wt-glow-violet: 0 10px 32px rgba(139, 92, 246, 0.14);
 
   /* Radius */
-  --radius-sm:  6px;
-  --radius-md:  12px;
-  --radius-lg:  20px;
-  --radius-xl:  28px;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
   --radius-2xl: 40px;
 
   /* Font */
   --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  /* Sticky table headers below dashboard page title bar */
+  --wt-dashboard-header-offset: 4.75rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: #2469ff;
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 [data-theme="dark"] {
-  --wt-bg:         #0f0e17;
-  --wt-surface-1:  #16151f;
-  --wt-surface-2:  #1d1c2a;
-  --wt-surface-3:  #252436;
+  --wt-bg: #0f0e17;
+  --wt-page-bg: #12111c;
+  --wt-surface-1: #16151f;
+  --wt-surface-2: #1d1c2a;
+  --wt-surface-3: #252436;
 
-  --wt-text:       #f0eeff;
+  --wt-text: #f0eeff;
   --wt-text-muted: #9490b8;
   --wt-text-faint: #504d6e;
 
-  --wt-border:     rgba(255,255,255,0.07);
-  --wt-border-md:  rgba(255,255,255,0.12);
+  --wt-border: rgba(255, 255, 255, 0.07);
+  --wt-border-md: rgba(255, 255, 255, 0.12);
 
-  --wt-glow-indigo: 0 0 40px rgba(99,102,241,0.35);
-  --wt-glow-violet: 0 0 60px rgba(139,92,246,0.25);
+  --wt-glow-indigo: 0 0 40px rgba(99, 102, 241, 0.35);
+  --wt-glow-violet: 0 0 60px rgba(139, 92, 246, 0.25);
+
+  --wt-brand: #4a6fa5;
+  --wt-brand-hover: #3d5f96;
+  --wt-brand-active: #355095;
+  --wt-brand-text: #ffffff;
+
+  --ring: #4d8bff;
 }
 
 /* ------------------------------------------------------------------ */
 /* Tailwind theme integration                                            */
 /* ------------------------------------------------------------------ */
 @theme inline {
-  --color-wt-bg:        var(--wt-bg);
+  --color-wt-bg: var(--wt-bg);
+  --color-wt-page-bg: var(--wt-page-bg);
   --color-wt-surface-1: var(--wt-surface-1);
   --color-wt-surface-2: var(--wt-surface-2);
   --color-wt-surface-3: var(--wt-surface-3);
-  --color-wt-text:      var(--wt-text);
-  --color-wt-text-muted:var(--wt-text-muted);
-  --color-wt-text-faint:var(--wt-text-faint);
+  --color-wt-text: var(--wt-text);
+  --color-wt-text-muted: var(--wt-text-muted);
+  --color-wt-text-faint: var(--wt-text-faint);
   --color-wt-indigo-50: var(--wt-indigo-50);
-  --color-wt-indigo-100:var(--wt-indigo-100);
-  --color-wt-indigo-200:var(--wt-indigo-200);
-  --color-wt-indigo-400:var(--wt-indigo-400);
-  --color-wt-indigo-500:var(--wt-indigo-500);
-  --color-wt-indigo-600:var(--wt-indigo-600);
-  --color-wt-indigo-700:var(--wt-indigo-700);
-  --color-wt-violet-400:var(--wt-violet-400);
-  --color-wt-violet-500:var(--wt-violet-500);
-  --color-wt-border:    var(--wt-border);
+  --color-wt-indigo-100: var(--wt-indigo-100);
+  --color-wt-indigo-200: var(--wt-indigo-200);
+  --color-wt-indigo-400: var(--wt-indigo-400);
+  --color-wt-indigo-500: var(--wt-indigo-500);
+  --color-wt-indigo-600: var(--wt-indigo-600);
+  --color-wt-indigo-700: var(--wt-indigo-700);
+  --color-wt-violet-400: var(--wt-violet-400);
+  --color-wt-violet-500: var(--wt-violet-500);
+  --color-wt-border: var(--wt-border);
   --color-wt-border-md: var(--wt-border-md);
-  --font-sans:          var(--font-sans);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 /* ------------------------------------------------------------------ */
@@ -140,6 +234,124 @@ body::-webkit-scrollbar {
   display: none;
 }
 
+/* Nested scroll: inner region scrolls first, then passes overflow to parent */
+.wt-scroll-chain {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--wt-text-muted) 40%, transparent)
+    transparent;
+}
+
+.wt-scroll-chain::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+}
+
+.wt-scroll-chain::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--wt-text-muted) 35%, transparent);
+  border-radius: 999px;
+}
+
+.wt-scroll-chain::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Horizontal + vertical scroll with parent chaining */
+.wt-scroll-both-chain {
+  overflow: auto;
+  overscroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--wt-text-muted) 40%, transparent)
+    transparent;
+}
+
+.wt-scroll-both-chain::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+  height: 6px;
+}
+
+.wt-scroll-both-chain::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--wt-text-muted) 35%, transparent);
+  border-radius: 999px;
+}
+
+.wt-scroll-both-chain::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Dashboard detail pages — flex scroll hierarchy through shell */
+.wt-detail-page,
+.employee-profile-page {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.wt-detail-scroll-root,
+.employee-profile-scroll-root {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.wt-detail-panel,
+.employee-profile-panel {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.wt-detail-panel__header,
+.employee-profile-panel__header {
+  flex-shrink: 0;
+}
+
+.wt-detail-panel__body,
+.employee-profile-panel__body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.wt-detail-scroll-section,
+.employee-profile-section {
+  min-height: 0;
+}
+
+/* Shared form + section layout */
+.wt-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.wt-field-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--wt-text);
+}
+
+.wt-section-stack > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.5rem;
+}
+
+.wt-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--wt-text);
+}
+
 /* Horizontal + vertical scroll (e.g. wide tables), scrollbar hidden */
 .wt-scroll-both {
   overflow: auto;
@@ -152,13 +364,66 @@ body::-webkit-scrollbar {
   display: none;
 }
 
+/* Sticky headers for all data tables */
+.wt-scrollable-table,
+[data-slot="table"] {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Sticky headers — only inside bounded scroll shells (never on page scroll) */
+.wt-scroll-both .wt-scrollable-table thead th,
+.wt-scroll-both [data-slot="table"] thead th,
+.wt-scroll-both-chain .wt-scrollable-table thead th,
+.wt-scroll-both-chain [data-slot="table"] thead th,
+.wt-scroll-chain .wt-scrollable-table thead th,
+.wt-scroll-chain [data-slot="table"] thead th,
+.wt-table-sticky-head th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--wt-surface-1);
+  background-clip: padding-box;
+  box-shadow: 0 1px 0 var(--wt-border);
+}
+
+/* Profile inline tables — static headers so body rows are not covered while scrolling */
+.wt-profile-table thead th,
+.wt-page-scroll main .wt-profile-table thead th {
+  position: static;
+  top: auto;
+  z-index: auto;
+  box-shadow: none;
+}
+
+[data-slot="table"] [data-slot="table-cell"] {
+  border-color: var(--border);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--wt-text-muted);
+}
+
+[data-slot="table"] [data-slot="table-head"] {
+  border-color: var(--border);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--wt-text-muted);
+}
+
+.wt-profile-table [data-slot="table-cell"] {
+  color: var(--wt-text);
+}
+
 /* Dashboard main pane: always scrollable; thin scrollbar for discoverability */
 .wt-page-scroll {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: auto;
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklab, var(--wt-text-muted) 45%, transparent) transparent;
+  scrollbar-color: color-mix(in oklab, var(--wt-text-muted) 45%, transparent)
+    transparent;
 }
 
 .wt-page-scroll::-webkit-scrollbar {
@@ -198,17 +463,19 @@ body::-webkit-scrollbar {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: #334155;
-  color: #f8fafc;
+  background: var(--wt-brand);
+  color: var(--wt-brand-text);
   font-weight: 600;
   font-size: 0.9375rem;
   letter-spacing: 0.01em;
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
   position: relative;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .btn-primary::after {
@@ -216,24 +483,131 @@ body::-webkit-scrollbar {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1e293b;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16);
+  background: var(--wt-brand-hover);
+  box-shadow: 0 2px 6px rgba(53, 80, 149, 0.18);
 }
 
 .btn-primary:active:not(:disabled) {
-  transform: translateY(0);
-  background: #0f172a;
+  background: var(--wt-brand-active);
 }
 
 .btn-primary:focus-visible {
-  outline: 2px solid #94a3b8;
+  outline: 2px solid #6b8fc4;
   outline-offset: 2px;
 }
 
 .btn-primary:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* Secondary button (outlined, for import/export and secondary actions) */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--wt-surface-1);
+  color: var(--wt-text);
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: 1px solid var(--wt-border-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--wt-surface-2);
+  border-color: color-mix(
+    in oklab,
+    var(--wt-indigo-400) 35%,
+    var(--wt-border-md)
+  );
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--wt-indigo-400);
+  outline-offset: 2px;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Inline row actions (Resend, Edit, etc.) — WebTrak logo blue */
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background: var(--wt-brand);
+  color: var(--wt-brand-text);
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.btn-action:hover:not(:disabled) {
+  background: var(--wt-brand-hover);
+}
+
+.btn-action:active:not(:disabled) {
+  background: var(--wt-brand-active);
+}
+
+.btn-action:focus-visible {
+  outline: 2px solid #6b8fc4;
+  outline-offset: 2px;
+}
+
+.btn-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem;
+  color: var(--wt-brand);
+  border: 1px solid rgba(53, 80, 149, 0.28);
+  background: rgba(53, 80, 149, 0.08);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.btn-action-icon:hover:not(:disabled) {
+  background: rgba(53, 80, 149, 0.14);
+  border-color: rgba(53, 80, 149, 0.42);
+  color: var(--wt-brand-hover);
+}
+
+.btn-action-icon:focus-visible {
+  outline: 2px solid rgba(53, 80, 149, 0.35);
+  outline-offset: 2px;
+}
+
+.btn-action-icon:disabled {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 /* Ghost button */
@@ -249,13 +623,21 @@ body::-webkit-scrollbar {
   border: 1px solid var(--wt-border-md);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .btn-ghost:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.2);
   color: var(--wt-text);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Input */
@@ -266,8 +648,15 @@ body::-webkit-scrollbar {
   border: 1px solid var(--wt-border-md);
   border-radius: var(--radius-sm);
   font-size: 0.9375rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
   outline: none;
+  box-sizing: border-box;
+}
+
+select.input-field {
+  min-height: 2.5rem;
 }
 
 .input-field::placeholder {
@@ -275,8 +664,8 @@ body::-webkit-scrollbar {
 }
 
 .input-field:focus {
-  border-color: var(--wt-indigo-400);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+  border-color: #2469ff;
+  box-shadow: none;
 }
 
 /* Native date input — hide default icon; DatePickerField provides its own */
@@ -308,7 +697,9 @@ body::-webkit-scrollbar {
 
 /* Spinner */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner {
@@ -321,20 +712,36 @@ body::-webkit-scrollbar {
   animation: spin 0.7s linear infinite;
 }
 
-/* Slide-in from right */
-@keyframes slideInRight {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
+.spinner-dark {
+  display: inline-block;
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid color-mix(in oklab, var(--wt-text) 18%, transparent);
+  border-top-color: var(--wt-text);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
 }
 
-.animate-slide-in {
-  animation: slideInRight 0.25s ease-out;
+.spinner-dark-sm {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid color-mix(in oklab, var(--wt-text) 18%, transparent);
+  border-top-color: var(--wt-text);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
 }
 
 /* Fade-in */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .fade-up {
@@ -343,8 +750,13 @@ body::-webkit-scrollbar {
 
 /* Pulse dot */
 @keyframes pulseDot {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.35; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 .pulse-dot {
@@ -353,8 +765,12 @@ body::-webkit-scrollbar {
 
 /* Shimmer loader */
 @keyframes shimmer {
-  0%   { background-position: -400% 0; }
-  100% { background-position: 400% 0; }
+  0% {
+    background-position: -400% 0;
+  }
+  100% {
+    background-position: 400% 0;
+  }
 }
 
 .shimmer {
@@ -368,7 +784,6 @@ body::-webkit-scrollbar {
   animation: shimmer 1.8s ease infinite;
 }
 
-/* Noise overlay for depth */
 .noise::before {
   content: "";
   position: absolute;
@@ -398,4 +813,168 @@ body::-webkit-scrollbar {
   flex: 1;
   height: 1px;
   background: var(--wt-border);
+}
+
+/* Employee status badges (directory + profile) */
+.wt-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.wt-status-badge--active {
+  border-color: #6ee7b7;
+  background-color: #ecfdf5;
+  color: #065f46;
+}
+
+.wt-status-badge--inactive {
+  border-color: #fecaca;
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+.wt-status-badge--invited {
+  border-color: #d4d4d8;
+  background-color: #f4f4f5;
+  color: #52525b;
+}
+
+.wt-status-badge--serving-notice,
+.wt-status-badge--in-notice {
+  border-color: #52525b;
+  background-color: #3f3f46;
+  color: #fafafa;
+}
+
+.wt-status-badge--neutral {
+  border-color: var(--wt-border-md);
+  background-color: var(--wt-surface-2);
+  color: var(--wt-text-muted);
+}
+
+[data-theme="dark"] .wt-status-badge--active {
+  border-color: #047857;
+  background-color: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .wt-status-badge--inactive {
+  border-color: #991b1b;
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .wt-status-badge--invited {
+  border-color: #71717a;
+  background-color: #52525b;
+  color: #e4e4e7;
+}
+
+[data-theme="dark"] .wt-status-badge--serving-notice,
+[data-theme="dark"] .wt-status-badge--in-notice {
+  border-color: #71717a;
+  background-color: #3f3f46;
+  color: #f4f4f5;
+}
+
+/* Black loader (fetch / submit / refresh) */
+.wt-loader {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(15, 23, 42, 0.14);
+  border-top-color: #0f172a;
+  animation: spin 0.7s linear infinite;
+}
+
+.wt-loader--sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+.wt-loader--md {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-width: 2.5px;
+}
+
+.wt-loader--lg {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-width: 3px;
+}
+
+[data-theme="dark"] .wt-loader {
+  border-color: rgba(248, 250, 252, 0.18);
+  border-top-color: #f8fafc;
+}
+
+.wt-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(1px);
+  pointer-events: all;
+}
+
+[data-theme="dark"] .wt-loading-overlay {
+  background: rgba(15, 14, 23, 0.45);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: #4d8bff;
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

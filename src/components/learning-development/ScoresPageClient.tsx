@@ -1,5 +1,18 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCheckbox,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -10,8 +23,8 @@ import {
   useTrainingScores,
 } from "@/hooks/learning/useLearningTrainings";
 import { SelectField } from "@/components/dashboard/ui/forms";
+import { Input } from "@/components/ui/input";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { traineeTableRowsFromParticipants } from "@/utils/learning/participants";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
@@ -41,7 +54,7 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
     Boolean(trainingId.trim()) && hasHrAccess
   );
   const qc = useQueryClient();
-  const { toast, actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
 
   const traineeRows = useMemo(
     () => traineeTableRowsFromParticipants(traineesQ.data ?? []),
@@ -149,7 +162,7 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
       {!embedded ? (
         <>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Scores &amp; completion</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Scores & Completion</h1>
             <p className="text-sm text-wt-text-muted mt-1">
               Select a training and assessment, enter scores for each trainee, then save.
             </p>
@@ -185,7 +198,7 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-wt-border pb-4">
           <div>
-            <h2 className="font-semibold">Trainee scores</h2>
+            <h2 className="font-semibold">Trainee Scores</h2>
             {!marksAlreadyPublished && hasHrAccess ? (
               <p className="text-xs text-wt-text-muted mt-1">
                 Save scores for all trainees, then publish to email marks to each employee.
@@ -193,39 +206,13 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            <button
-              type="button"
-              className="btn-primary px-4 py-2 text-sm"
-              disabled={
-                actionLoading ||
-                !trainingId ||
-                !traineeRows.length ||
-                !assessmentId
-              }
-              onClick={saveScores}
-            >
+            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={ actionLoading || !trainingId || !traineeRows.length || !assessmentId } onClick={saveScores} >
               {actionLoading ? "Saving…" : "Save scores"}
-            </button>
+            </Button>
             {hasHrAccess ? (
-              <button
-                type="button"
-                className="btn-ghost px-4 py-2 text-sm border border-wt-border rounded-lg"
-                disabled={
-                  actionLoading ||
-                  !trainingId ||
-                  !traineeRows.length ||
-                  !assessmentId ||
-                  marksAlreadyPublished
-                }
-                title={
-                  marksAlreadyPublished
-                    ? "Marks for this assessment are already published."
-                    : "Email published scores to all trainees for the selected assessment."
-                }
-                onClick={publishScores}
-              >
+              <Button variant="outline" size="sm" type="button" className="px-4 py-2 text-sm border border-wt-border rounded-lg" disabled={ actionLoading || !trainingId || !traineeRows.length || !assessmentId || marksAlreadyPublished } title={ marksAlreadyPublished ? "Marks for this assessment are already published." : "Email published scores to all trainees for the selected assessment." } onClick={publishScores} >
                 {actionLoading ? "Publishing…" : "Publish"}
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>
@@ -233,23 +220,23 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
         {!trainingId ? (
           <p className="text-sm text-wt-text-muted">Select a training to load trainees.</p>
         ) : traineesQ.isLoading ? (
-          <p className="text-sm text-wt-text-muted">Loading trainees…</p>
+          <SectionLoading label="Loading trainees…" />
         ) : traineeRows.length === 0 ? (
           <p className="text-sm text-wt-text-muted">No trainees enrolled for this training.</p>
         ) : !assessmentId ? (
           <p className="text-sm text-wt-text-muted">Select an assessment before saving scores.</p>
         ) : (
-          <div className="wt-scroll-both overflow-x-auto rounded-xl border border-wt-border">
-            <table className="min-w-full text-sm">
-              <thead className="bg-wt-surface-2 text-wt-text-muted">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium">Trainee</th>
-                  <th className="text-left px-3 py-2 font-medium w-28">Score (%)</th>
-                  <th className="text-left px-3 py-2 font-medium w-28">Overall (%)</th>
-                  <th className="text-left px-3 py-2 font-medium">Completed</th>
-                </tr>
-              </thead>
-              <tbody>
+          <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+            <WtTable>
+              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Trainee</TableHead>
+                  <TableHead className="w-28">Score (%)</TableHead>
+                  <TableHead className="w-28">Overall (%)</TableHead>
+                  <TableHead>Completed</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {traineeRows.map((row) => {
                   const draft = scoresByUser[row.userId] ?? { scorePct: "0", markCompleted: true };
                   const participant = findParticipantScoreForTrainee(
@@ -259,14 +246,14 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
                   );
                   const overall = resolveOverallScorePercent(participant, assessments);
                   return (
-                    <tr key={row.key} className="border-t border-wt-border">
-                      <td className="px-3 py-2 whitespace-nowrap">{row.name}</td>
-                      <td className="px-3 py-2">
-                        <input
+                    <TableRow key={row.key}>
+                      <TableCell className="px-3 py-2 whitespace-nowrap">{row.name}</TableCell>
+                      <TableCell className="px-3 py-2">
+                        <Input
                           type="number"
                           min={0}
                           max={100}
-                          className="input-field px-2 py-1.5 text-sm w-full max-w-[6rem]"
+                          className="h-8 w-full max-w-[6rem] px-2"
                           value={draft.scorePct}
                           onChange={(e) =>
                             setScoresByUser((prev) => ({
@@ -275,36 +262,36 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
                             }))
                           }
                         />
-                      </td>
-                      <td className="px-3 py-2 text-wt-text-muted whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {overall != null ? `${overall}%` : "—"}
-                      </td>
-                      <td className="px-3 py-2">
+                      </TableCell>
+                      <TableCell className="px-3 py-2">
                         <label className="inline-flex items-center gap-2">
-                          <input
-                            type="checkbox"
+                          <TableCheckbox
                             checked={draft.markCompleted}
-                            onChange={(e) =>
+                            stopRowClick={false}
+                            onCheckedChange={(checked) =>
                               setScoresByUser((prev) => ({
                                 ...prev,
-                                [row.userId]: { ...draft, markCompleted: e.target.checked },
+                                [row.userId]: { ...draft, markCompleted: checked },
                               }))
                             }
                           />
                           <span className="text-xs text-wt-text-muted">Mark completed</span>
                         </label>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </WtTable>
+          </ScrollableTable>
         )}
       </section>
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <h2 className="font-semibold">Score analytics</h2>
+        <h2 className="font-semibold">Score Analytics</h2>
         <TraineeScoreAnalytics
           traineeRows={traineeRows}
           assessments={assessments}
@@ -315,7 +302,6 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
         />
       </section>
     </div>
-    <DashboardToast toast={toast} />
     </>
   );
 }

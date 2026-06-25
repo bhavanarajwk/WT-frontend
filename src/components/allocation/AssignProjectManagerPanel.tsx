@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { useAllocationProjectEmployees } from "@/hooks/useAllocationProjectEmployees";
@@ -90,7 +91,7 @@ export function AssignProjectManagerPanel({
 
   return (
     <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-      <h3 className="font-semibold">Assign project manager</h3>
+      <h3 className="font-semibold">Assign Project Manager</h3>
       <div className="grid sm:grid-cols-2 gap-3">
         <SelectField
           label="Project"
@@ -141,20 +142,8 @@ export function AssignProjectManagerPanel({
           Project manager cannot be assigned on BENCH or GLOBAL projects.
         </p>
       ) : null}
-      <button
-        type="button"
-        className="btn-primary px-3 py-2 text-sm"
-        disabled={
-          actionLoading ||
-          !projectKey.trim() ||
-          !submitProjectCode ||
-          !userEmail ||
-          benchOrGlobal ||
-          employeesLoading ||
-          !employeeOptions.length
-        }
-        onClick={() =>
-          runAction("Assign project manager", async () => {
+      <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" disabled={ actionLoading || !projectKey.trim() || !submitProjectCode || !userEmail || benchOrGlobal || employeesLoading || !employeeOptions.length } onClick={() =>
+          runAction("Assign Project Manager", async () => {
             const email = normalizePickerEmail(userEmail);
             const code = submitProjectCode;
             if (!email) throw new Error("Select a valid employee email.");
@@ -166,8 +155,8 @@ export function AssignProjectManagerPanel({
           })
         }
       >
-        Assign project manager
-      </button>
+        Assign Project Manager
+      </Button>
     </div>
   );
 }

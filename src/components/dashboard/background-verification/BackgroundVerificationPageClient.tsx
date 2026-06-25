@@ -1,5 +1,8 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -16,7 +19,6 @@ import {
   userRequestActionLabel,
 } from "@/utils/actionToast";
 import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
-import { EmployeeAttendancePanel } from "@/components/dashboard/sections/EmployeeAttendancePanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
@@ -76,7 +78,6 @@ import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { createEmptyBgvForm } from "@/utils/bgvFormState";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 
 
 
@@ -92,12 +93,11 @@ export function BackgroundVerificationPageClient() {
     COMP_OFF: ["COMP_OFF", "COMPOFF", "COMP-OFF", "COMP OFF"],
   };
 
-  const { user, signOut, refresh: refreshSession } = useAuth();
+  const { user, refresh: refreshSession } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metrics, loading, refresh } = useOverviewData();
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
@@ -403,11 +403,6 @@ export function BackgroundVerificationPageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfOnboardForm.yoe]);
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 2800);
-    return () => window.clearTimeout(id);
-  }, [toast]);
 
   const loadMyProfile = useCallback(async () => {
     const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
@@ -829,7 +824,7 @@ export function BackgroundVerificationPageClient() {
     setActionLoading(true);
     try {
       await fn();
-      setToast({ type: "success", message: formatActionSuccessMessage(label) });
+      showSuccessToast(formatActionSuccessMessage(label));
     } catch (error) {
       const backendMessage =
         error instanceof ApiError
@@ -837,10 +832,7 @@ export function BackgroundVerificationPageClient() {
           : error instanceof Error
             ? error.message
             : "";
-      setToast({
-        type: "error",
-        message: formatActionErrorMessage(label, backendMessage),
-      });
+      showErrorToast(formatActionErrorMessage(label, backendMessage));
     } finally {
       setActionLoading(false);
     }
@@ -2759,10 +2751,7 @@ export function BackgroundVerificationPageClient() {
         </p>
       )}
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Submit onboarding", async () => {
               if (!user?.email) {
                 throw new Error("Unable to resolve logged-in email.");
@@ -2880,7 +2869,7 @@ export function BackgroundVerificationPageClient() {
           disabled={actionLoading}
         >
           Submit Onboarding Form
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -2926,9 +2915,9 @@ export function BackgroundVerificationPageClient() {
 
   const renderProfileAssignedProjectsSection = () => (
     <div className="mt-8 border-t border-wt-border pt-6">
-      <h4 className="text-sm font-semibold mb-3">Assigned projects</h4>
+      <h4 className="text-sm font-semibold mb-3">Assigned Projects</h4>
       {profileAssignedProjectsLoading ? (
-        <p className="text-sm text-wt-text-muted">Loading assigned projects…</p>
+        <SectionLoading label="Loading assigned projects…" />
       ) : (
         <DataTable
           columns={profileAssignedProjectColumns}
@@ -2973,14 +2962,9 @@ export function BackgroundVerificationPageClient() {
             <p className="text-sm text-wt-text-muted">Review your profile details before editing.</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn-primary px-4 py-2.5"
-          onClick={openOwnProfileEditor}
-          disabled={actionLoading}
-        >
+        <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
           Edit Profile
-        </button>
+        </Button>
       </div>
       {renderProfileDetailsGrid()}
       {renderProfileAssignedProjectsSection()}
@@ -3025,18 +3009,18 @@ export function BackgroundVerificationPageClient() {
         </p>
       )}
       <div className="mt-3">
-        <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
+        <FileField label="Profile Picture (required)" required accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
-        <button
-          type="button"
-          className="btn-primary px-3 py-2"
-          onClick={() =>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
                 .map((item) => item.trim())
                 .filter(Boolean);
+              if (!selfProfilePic) {
+                throw new Error("Profile picture is mandatory. Please upload your profile picture.");
+              }
               if (priorEmploymentDocsForProfile) {
                 if (!selfProfileEmploymentFiles.reliving_letter) {
                   throw new Error(
@@ -3131,15 +3115,12 @@ export function BackgroundVerificationPageClient() {
           disabled={actionLoading}
         >
           Save Profile Changes
-        </button>
-        <button
-          type="button"
-          className="btn-ghost ml-2 px-3 py-2"
-          onClick={() => setIsEditingOwnProfile(false)}
+        </Button>
+        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -3243,11 +3224,7 @@ export function BackgroundVerificationPageClient() {
                             />
                           </div>
                           <div className="mt-4">
-                            <button
-                              type="button"
-                              className="btn-primary px-3 py-2"
-                              disabled={actionLoading}
-                              onClick={() =>
+                            <Button variant="brand" type="button" className="px-3 py-2" disabled={actionLoading} onClick={() =>
                                 runAction("Save BGV record", async () => {
                                   const empId = bgvForm.emp_id.trim();
                                   if (!empId) throw new Error("Please select an employee.");
@@ -3299,7 +3276,7 @@ export function BackgroundVerificationPageClient() {
                               }
                             >
                               Save Verification
-                            </button>
+                            </Button>
                           </div>
                           <div className="mt-4">
                             <DataTable
@@ -3326,21 +3303,6 @@ export function BackgroundVerificationPageClient() {
                         </section>
         </OnboardingGate>
       </DashboardPageShell>
-            {toast ? (
-              <div className="fixed right-5 bottom-5 z-50">
-                <div
-                  className={`rounded-xl px-4 py-3 text-sm shadow-lg border ${
-                    toast.type === "success"
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : "bg-rose-50 text-rose-800 border-rose-200"
-                  }`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {toast.message}
-                </div>
-              </div>
-            ) : null}
     </>
   );
 }

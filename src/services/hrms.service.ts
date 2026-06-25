@@ -106,40 +106,17 @@ export interface ActiveNonBenchAllocationsPage {
   allocations: unknown[];
 }
 
-export interface EmployeeAttendanceLeaveDateRow {
-  leave_date: string;
-  value: number;
-}
-
-export interface EmployeeAttendanceLeaveEmployeeRow {
-  user_id: number;
-  emp_id: string | null;
+export interface LeaveManagerOption {
+  email: string;
   name: string;
-  leave_days_taken: number;
-  leave_dates: EmployeeAttendanceLeaveDateRow[];
-  total_attendance_days: number;
-  weekday_days_with_timelog: number;
+  project_code?: string | null;
+  project_name?: string | null;
 }
 
-export interface EmployeeAttendanceLeaveData {
-  from_date: string;
-  to_date: string;
-  working_weekdays_in_range: number;
-  current_page: number;
-  total_page: number;
-  page_size: number;
-  total_element: number;
-  employees: EmployeeAttendanceLeaveEmployeeRow[];
-}
-
-export interface EmployeeAttendanceLeaveQuery {
-  fromDate?: string;
-  toDate?: string;
-  page?: number;
-  size?: number;
-  search?: string;
-  type?: string;
-  band?: string;
+export interface LeaveRecipientOption {
+  email: string;
+  name: string;
+  emp_id?: string | null;
 }
 
 export interface AllocationExtensionRequestRow {
@@ -170,6 +147,32 @@ export interface AnnualCalendarItem {
   created_by_name: string | null;
   created_at: string | null;
   updated_at: string | null;
+}
+
+export interface HolidayCalendarItem {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  holiday_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface HolidayCalendarDetail extends HolidayCalendarItem {
+  holidays: Array<{
+    id: number;
+    holiday_date: string;
+    name: string;
+    is_optional: boolean;
+  }>;
+}
+
+export interface CsvImportResult {
+  processed: number;
+  skipped: number;
+  errors?: string[];
 }
 
 export const hrmsService = {
@@ -241,10 +244,11 @@ export const hrmsService = {
   offboardEmployee(
     empId: string,
     payload: {
-      resignation_date: string;
-      exit_type: "VOLUNTARY" | "INVOLUNTARY";
+      resignation_date?: string;
+      exit_type: "VOLUNTARY" | "INVOLUNTARY" | "CONTRACTUAL";
       last_working_day?: string;
       reason?: string | null;
+      expected_behavior?: string | null;
       critical_skill?: string | null;
       is_regretted?: boolean;
     }
@@ -737,19 +741,18 @@ export const hrmsService = {
     );
   },
 
-  /** GET /employee-attendance-leave — employee-wise attendance and leave in a date range. */
-  getEmployeeAttendanceLeave(params: EmployeeAttendanceLeaveQuery = {}) {
+  getLeaveManagerOptions() {
+    return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
+      endpoints.userRequest.leaveManagerOptions
+    );
+  },
+
+  getLeaveRecipientOptions(params?: { search?: string }) {
     const query: Record<string, string> = {};
-    if (params.fromDate?.trim()) query.fromDate = params.fromDate.trim();
-    if (params.toDate?.trim()) query.toDate = params.toDate.trim();
-    if (params.page != null) query.page = String(params.page);
-    if (params.size != null) query.size = String(params.size);
-    if (params.search?.trim()) query.search = params.search.trim();
-    if (params.type?.trim()) query.type = params.type.trim();
-    if (params.band?.trim()) query.band = params.band.trim();
-    return apiClient.get<ApiEnvelope<EmployeeAttendanceLeaveData>>(
-      endpoints.employeeAttendanceLeave,
-      { query: applyApiDateQuery(query, ["fromDate", "toDate"]) }
+    if (params?.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<{ items: LeaveRecipientOption[] }>>(
+      endpoints.userRequest.leaveRecipientOptions,
+      { query }
     );
   },
 
@@ -1118,6 +1121,51 @@ export const hrmsService = {
 
   getAnnualCalendarByYear(year: number | string) {
     return apiClient.get<ApiEnvelope<AnnualCalendarItem>>(endpoints.annualCalendar.byYear(year));
+  },
+
+  getHolidayCalendars() {
+    return apiClient.get<ApiEnvelope<{ items: HolidayCalendarItem[] }>>(endpoints.holidayCalendar.root);
+  },
+
+  getCompanyHolidayCalendar() {
+    return apiClient.get<ApiEnvelope<HolidayCalendarDetail>>(endpoints.holidayCalendar.company);
+  },
+
+  getHolidayCalendar(id: number | string) {
+    return apiClient.get<ApiEnvelope<HolidayCalendarDetail>>(endpoints.holidayCalendar.byId(id));
+  },
+
+  createHolidayCalendar(payload: { code: string; name: string; description?: string | null }) {
+    return apiClient.post<ApiEnvelope<HolidayCalendarItem>>(endpoints.holidayCalendar.root, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateHolidayCalendar(
+    id: number | string,
+    payload: { name?: string; description?: string | null; is_active?: boolean }
+  ) {
+    return apiClient.put<ApiEnvelope<HolidayCalendarItem>>(endpoints.holidayCalendar.byId(id), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  importHolidayCalendarsCsv(file: File) {
+    return this.uploadFile(endpoints.holidayCalendar.importCsv, file);
+  },
+
+  importEmployeeHolidayAssignmentsCsv(file: File) {
+    return this.uploadFile(endpoints.holidayCalendar.importAssignmentsCsv, file);
+  },
+
+  async downloadHolidayCalendarsCsv(): Promise<Blob> {
+    return apiClient.get<Blob>(endpoints.holidayCalendar.exportCsv, { responseType: "blob" });
+  },
+
+  async downloadEmployeeHolidayAssignmentsCsv(): Promise<Blob> {
+    return apiClient.get<Blob>(endpoints.holidayCalendar.exportAssignmentsCsv, { responseType: "blob" });
   },
 
   // Learning & Development

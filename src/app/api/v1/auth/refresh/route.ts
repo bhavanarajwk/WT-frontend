@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
   const upstream = await fetch(`${getBackendBaseUrl()}/api/v1/auth/refresh`, {
     method: "POST",
     headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
+    signal: AbortSignal.timeout(15000),
   });
 
   const body = await upstream.text();
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
         roles: data.roles ?? [],
         status: data.status ?? "",
         user_type: data.user_type ?? "",
+        session_started_at: (data as { session_started_at?: string }).session_started_at,
       });
     }
   } catch {

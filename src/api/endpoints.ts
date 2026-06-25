@@ -7,6 +7,7 @@ export const endpoints = {
     googleSignIn: `${api}/google-signin`,
     googleCallback: `${api}/auth/google/callback`,
     refresh: `${api}/auth/refresh`,
+    activity: `${api}/auth/activity`,
     logout: `${api}/auth/logout`,
     oauthBypass: (email: string) => `${api}/oauth/bypass/${encodeURIComponent(email)}`,
   },
@@ -94,8 +95,6 @@ export const endpoints = {
     export: `${api}/export/timelogs`,
   },
 
-  employeeAttendanceLeave: `${api}/employee-attendance-leave`,
-
   userRequest: {
     root: `${api}/userRequest`,
     getRange: (fromDate: string, toDate: string, requestType: string) =>
@@ -103,6 +102,8 @@ export const endpoints = {
     getByEmployees: (empEmails: string, fromDate: string, toDate: string, requestType: string) =>
       `${api}/userRequest/get/${encodeURIComponent(empEmails)}/${encodeURIComponent(fromDate)}/${encodeURIComponent(toDate)}/${encodeURIComponent(requestType)}`,
     status: `${api}/userRequest/status`,
+    leaveManagerOptions: `${api}/leave-request/manager-options`,
+    leaveRecipientOptions: `${api}/leave-request/recipient-options`,
     leaveSummary: `${api}/leave-summary`,
     leaveBalances: `${api}/user/leave-balances`,
     managerTeamOnLeaveToday: `${api}/manager-team-on-leave-today`,
@@ -191,14 +192,28 @@ export const endpoints = {
       `${api}/annual-calendar/${encodeURIComponent(String(year))}`,
   },
 
+  holidayCalendar: {
+    root: `${api}/holiday-calendars`,
+    company: `${api}/holiday-calendars/company`,
+    byId: (id: string | number) =>
+      `${api}/holiday-calendars/${encodeURIComponent(String(id))}`,
+    importCsv: `${api}/holiday-calendars/import-csv`,
+    exportCsv: `${api}/holiday-calendars/export-csv`,
+    importAssignmentsCsv: `${api}/holiday-calendars/employee-assignments/import-csv`,
+    exportAssignmentsCsv: `${api}/holiday-calendars/employee-assignments/export-csv`,
+  },
+
   exitInterview: {
     formDefinition: `${api}/exit-interview/form-definition`,
     submit: `${api}/exit-interview`,
     submissions: `${api}/exit-interview/submissions`,
-    submissionByEmpId: (empId: string) =>
-      `${api}/exit-interview/submissions/${encodeURIComponent(empId)}`,
-    minutesOfMeetingByEmpId: (empId: string) =>
-      `${api}/exit-interview/submissions/${encodeURIComponent(empId)}/minutes-of-meeting`,
+    submissionByLookupId: (lookupId: string) =>
+      `${api}/exit-interview/submissions/${encodeURIComponent(lookupId)}`,
+    minutesOfMeetingByLookupId: (lookupId: string) =>
+      `${api}/exit-interview/submissions/${encodeURIComponent(lookupId)}/minutes-of-meeting`,
+    resendBulk: `${api}/exit-interview/resend`,
+    resend: (empId: string) =>
+      `${api}/exit-interview/resend/${encodeURIComponent(empId)}`,
   },
 
   hrReports: {

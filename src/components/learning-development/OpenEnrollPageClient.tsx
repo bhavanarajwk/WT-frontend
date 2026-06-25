@@ -1,9 +1,10 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
-import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { InputField } from "@/components/dashboard/ui/forms";
 import { DataTable } from "@/components/learning-development/ui/forms";
 import { hrmsService } from "@/services/hrms.service";
 
@@ -23,23 +24,19 @@ export function OpenEnrollPageClient() {
 
   return (
     <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4 mt-8">
-      <h2 className="font-semibold">Open trainings (self-enroll)</h2>
+      <h2 className="font-semibold">Open Trainings (Self-Enroll)</h2>
       <DataTable columns={["name", "category", "type", "status", "duration_days"]} rows={openRows} emptyLabel="No open trainings." />
       <div className="flex flex-wrap gap-3 items-end">
-        <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-          <FieldLabel label="Training id to enroll" required />
-          <input
-            className="input-field px-3 py-2 text-sm"
-            required
-            aria-required
-            value={trainingId}
-            onChange={(e) => setTrainingId(e.target.value)}
-            placeholder="e.g. 12"
-          />
-        </label>
-        <button type="button" className="btn-primary px-4 py-2 text-sm" disabled={enrollMut.isPending || !trainingId.trim()} onClick={() => enrollMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
+        <InputField
+          label="Training Id To Enroll"
+          required
+          value={trainingId}
+          onChange={setTrainingId}
+          placeholder="e.g. 12"
+        />
+        <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={enrollMut.isPending || !trainingId.trim()} onClick={() => enrollMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
           Enroll
-        </button>
+        </Button>
       </div>
     </section>
   );

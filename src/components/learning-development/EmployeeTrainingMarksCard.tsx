@@ -1,5 +1,16 @@
 "use client";
 
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useQueries } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo } from "react";
@@ -28,92 +39,50 @@ type HrTrainingMarks = {
   overall: number | null;
 };
 
-function MarksTable({
+function formatTrainingScoresLabel(overall: number | null, hasAssessments: boolean): string {
+  if (overall != null) return `${overall}%`;
+  if (!hasAssessments) return "No assessment scores yet.";
+  return "—";
+}
+
+function TrainingScoresTable({
   rows,
+  scrollChain = false,
 }: {
-  rows: Array<{ name: string; weight: string; score: string; status: string }>;
+  rows: Array<{ trainingId: string; trainingName: string; scoresLabel: string }>;
+  scrollChain?: boolean;
 }) {
-  if (!rows.length) return <p className="text-sm text-wt-text-muted">No assessment scores yet.</p>;
-  return (
-    <div className="wt-scroll-both overflow-x-auto rounded-lg border border-wt-border">
-      <table className="min-w-full text-sm">
-        <thead className="bg-wt-surface-2 text-wt-text-muted">
-          <tr>
-            <th className="text-left px-3 py-2 font-medium">Assessment</th>
-            <th className="text-left px-3 py-2 font-medium">Weight</th>
-            <th className="text-left px-3 py-2 font-medium">Score</th>
-            <th className="text-left px-3 py-2 font-medium">Status</th>
-          </tr>
-        </thead>
-        <tbody>
+    return (
+    <ScrollableTable scrollChain={scrollChain} maxHeightClass={scrollChain ? "max-h-[min(48vh,420px)]" : "max-h-[min(70vh,520px)]"} className="!rounded-lg">
+      <WtTable>
+        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+          <TableRow className="hover:bg-transparent">
+            <TableHead>Training</TableHead>
+            <TableHead>Scores</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((row) => (
-            <tr key={row.name} className="border-t border-wt-border">
-              <td className="px-3 py-2">{row.name}</td>
-              <td className="px-3 py-2 text-wt-text-muted">{row.weight}</td>
-              <td className="px-3 py-2 font-medium">{row.score}</td>
-              <td className="px-3 py-2 text-wt-text-muted">{row.status}</td>
-            </tr>
+            <TableRow key={row.trainingId}>
+              <TableCell className="px-3 py-2">{row.trainingName}</TableCell>
+              <TableCell className="px-3 py-2 tabular-nums">
+                {row.scoresLabel}
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </WtTable>
+    </ScrollableTable>
   );
 }
 
-function EmployeeMarksBlock({ marks }: { marks: MyTrainingMarks }) {
-  const rows = marks.assessments.map((a) => ({
-    name: a.name,
-    weight: a.weightPercent > 0 ? `${a.weightPercent}%` : "—",
-    score: `${a.score}%`,
-    status: "Published",
-  }));
-  return (
-    <article className="rounded-xl border border-wt-border bg-wt-surface-2/40 p-4 space-y-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h4 className="font-semibold text-sm">{marks.trainingName}</h4>
-          <p className="text-xs text-wt-text-muted mt-0.5">Training #{marks.trainingId}</p>
-        </div>
-        <p className="text-lg font-semibold text-indigo-700">
-          {marks.finalScorePercent != null ? `${marks.finalScorePercent}%` : "—"}
-          <span className="text-xs font-normal text-wt-text-muted ml-1">overall</span>
-        </p>
-      </div>
-      <MarksTable rows={rows} />
-    </article>
-  );
-}
-
-function HrMarksBlock({ entry }: { entry: HrTrainingMarks }) {
-  const rows = entry.assessments.map((a) => {
-    const score = entry.participant?.scoresJson[a.id];
-    return {
-      name: a.name,
-      weight: a.weightPercent > 0 ? `${a.weightPercent}%` : "—",
-      score: score != null ? `${score}%` : "—",
-      status: a.published ? "Published" : "Draft",
-    };
-  });
-  return (
-    <article className="rounded-xl border border-wt-border bg-wt-surface-2/40 p-4 space-y-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h4 className="font-semibold text-sm">{entry.trainingName}</h4>
-          <p className="text-xs text-wt-text-muted mt-0.5">
-            Training #{entry.trainingId} · {entry.enrollmentStatus}
-          </p>
-        </div>
-        <p className="text-lg font-semibold text-indigo-700">
-          {entry.overall != null ? `${entry.overall}%` : "—"}
-          <span className="text-xs font-normal text-wt-text-muted ml-1">overall</span>
-        </p>
-      </div>
-      <MarksTable rows={rows} />
-    </article>
-  );
-}
-
-function EmployeeTrainingMarksCardEmployee({ enabled = true }: { enabled?: boolean }) {
+function EmployeeTrainingMarksCardEmployee({
+  enabled = true,
+  scrollChain = false,
+}: {
+  enabled?: boolean;
+  scrollChain?: boolean;
+}) {
   const openTrainingsQ = useOpenTrainingsList(enabled);
 
   const openTrainingIds = useMemo(
@@ -152,28 +121,31 @@ function EmployeeTrainingMarksCardEmployee({ enabled = true }: { enabled?: boole
     [myMarksQueries]
   );
 
+  const tableRows = useMemo(
+    () =>
+      employeeMarks
+        .map((marks) => ({
+          trainingId: marks.trainingId,
+          trainingName: marks.trainingName,
+          scoresLabel: formatTrainingScoresLabel(marks.finalScorePercent, marks.assessments.length > 0),
+        }))
+        .sort((a, b) => a.trainingName.localeCompare(b.trainingName)),
+    [employeeMarks]
+  );
+
   const loading = openTrainingsQ.isLoading || myMarksQueries.some((q) => q.isLoading);
 
   return (
     <section className="rounded-xl border border-wt-border p-5 md:p-6 space-y-4">
-      <div>
-        <h4 className="text-base font-semibold">Training scores</h4>
-        <p className="text-xs text-wt-text-muted mt-1">
-          Published marks for open trainings you enrolled in.
-        </p>
-      </div>
+      <h4 className="text-base font-semibold tracking-tight">Training Scores</h4>
 
-      {loading ? <p className="text-sm text-wt-text-muted">Loading training scores…</p> : null}
+      {loading ? <SectionLoading label="Loading training scores…" /> : null}
 
-      {!loading && employeeMarks.length ? (
-        <div className="space-y-4">
-          {employeeMarks.map((marks) => (
-            <EmployeeMarksBlock key={marks.trainingId} marks={marks} />
-          ))}
-        </div>
+      {!loading && tableRows.length ? (
+        <TrainingScoresTable rows={tableRows} scrollChain={scrollChain} />
       ) : null}
 
-      {!loading && !employeeMarks.length ? (
+      {!loading && !tableRows.length ? (
         <p className="text-sm text-wt-text-muted">
           No published marks yet. Enroll in an open training and check back after HR publishes scores.
         </p>
@@ -186,10 +158,12 @@ function EmployeeTrainingMarksCardHr({
   targetUserId,
   targetEmail,
   enabled = true,
+  scrollChain = false,
 }: {
   targetUserId?: string;
   targetEmail?: string;
   enabled?: boolean;
+  scrollChain?: boolean;
 }) {
   const allTrainingsQ = useHrTrainingsList(enabled);
 
@@ -259,36 +233,38 @@ function EmployeeTrainingMarksCardHr({
     return out.sort((a, b) => a.trainingName.localeCompare(b.trainingName));
   }, [targetUserId, targetEmail, hrScoresQueries, trainingNameById]);
 
+  const tableRows = useMemo(
+    () =>
+      hrMarks.map((entry) => ({
+        trainingId: entry.trainingId,
+        trainingName: entry.trainingName,
+        scoresLabel: formatTrainingScoresLabel(entry.overall, entry.assessments.length > 0),
+      })),
+    [hrMarks]
+  );
+
   const loading = allTrainingsQ.isLoading || hrScoresQueries.some((q) => q.isLoading);
 
   return (
-    <section className="rounded-xl border border-wt-border p-5 md:p-6 space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h4 className="text-base font-semibold">Training scores</h4>
-          <p className="text-xs text-wt-text-muted mt-1">
-            Scores for trainings this employee is enrolled in (from HR scores API).
-          </p>
-        </div>
+    <section className="rounded-xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm md:p-6 space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-wt-border pb-4">
+        <h4 className="text-base font-semibold tracking-tight">Training Scores</h4>
         <Link
           href={`${LEARNING_BASE}/trainings`}
-          className="text-sm font-medium text-indigo-600 hover:underline shrink-0"
+          className="shrink-0 text-sm font-medium hover:underline"
+          style={{ color: "var(--wt-brand)" }}
         >
-          Manage trainings
+          Manage Trainings
         </Link>
-      </div>
+      </header>
 
-      {loading ? <p className="text-sm text-wt-text-muted">Loading training scores…</p> : null}
+      {loading ? <SectionLoading label="Loading training scores…" /> : null}
 
-      {!loading && hrMarks.length ? (
-        <div className="space-y-4">
-          {hrMarks.map((entry) => (
-            <HrMarksBlock key={entry.trainingId} entry={entry} />
-          ))}
-        </div>
+      {!loading && tableRows.length ? (
+        <TrainingScoresTable rows={tableRows} scrollChain={scrollChain} />
       ) : null}
 
-      {!loading && !hrMarks.length ? (
+      {!loading && !tableRows.length ? (
         <p className="text-sm text-wt-text-muted">
           No training scores for this employee. Assign them as a trainee and save scores in Learning
           &amp; Development.
@@ -304,11 +280,13 @@ export function EmployeeTrainingMarksCard({
   targetUserId,
   targetEmail,
   enabled = true,
+  scrollChain = false,
 }: {
   variant: "employee" | "hr";
   targetUserId?: string;
   targetEmail?: string;
   enabled?: boolean;
+  scrollChain?: boolean;
 }) {
   if (variant === "hr") {
     return (
@@ -316,8 +294,9 @@ export function EmployeeTrainingMarksCard({
         targetUserId={targetUserId}
         targetEmail={targetEmail}
         enabled={enabled}
+        scrollChain={scrollChain}
       />
     );
   }
-  return <EmployeeTrainingMarksCardEmployee enabled={enabled} />;
+  return <EmployeeTrainingMarksCardEmployee enabled={enabled} scrollChain={scrollChain} />;
 }

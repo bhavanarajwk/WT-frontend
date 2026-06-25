@@ -1,12 +1,14 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { showErrorToast } from "@/lib/toast";
 import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { HrEmployeeTimelogWeekModal } from "@/components/dashboard/timelog/HrEmployeeTimelogWeekModal";
@@ -45,6 +47,7 @@ function unwrapPayload<T>(response: unknown): T {
 
 export function TimelogPageClient() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
   const roles = user?.roles ?? [];
   const hasManagerAccess = roles.includes("ROLE_MANAGER");
@@ -321,7 +324,6 @@ export function TimelogPageClient() {
             </section>
           ) : null}
         </div>
-        <DashboardToast toast={toast} />
         {isHrTeamView && hrWeekDetail ? (
           <HrEmployeeTimelogWeekModal
             open

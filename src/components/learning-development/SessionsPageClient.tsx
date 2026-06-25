@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -56,7 +57,7 @@ export function SessionsPageClient() {
 
       {hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-          <h2 className="font-semibold">New session</h2>
+          <h2 className="font-semibold">New Session</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             <InputField label="Session date" type="date" required value={sessionForm.session_date} onChange={(v) => setSessionForm((p) => ({ ...p, session_date: v }))} />
             <SelectField
@@ -72,14 +73,10 @@ export function SessionsPageClient() {
             <InputField label="Venue" value={sessionForm.venue} onChange={(v) => setSessionForm((p) => ({ ...p, venue: v }))} />
             <InputField label="Meeting link" value={sessionForm.meeting_link} onChange={(v) => setSessionForm((p) => ({ ...p, meeting_link: v }))} />
           </div>
-          <button
-            type="button"
-            className="btn-primary px-4 py-2 text-sm"
-            disabled={sessionMut.isPending || !trainingId.trim()}
-            onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+          <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={sessionMut.isPending || !trainingId.trim()} onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
           >
-            Add session
-          </button>
+            Add Session
+          </Button>
         </section>
       ) : (
         <p className="text-sm text-wt-text-muted">Session creation is limited to HR/Admin.</p>

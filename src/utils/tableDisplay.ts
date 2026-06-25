@@ -1,4 +1,4 @@
-/** Hide email columns in UI tables; show employee name when email was the only identifier column. */
+import { toTitleCase } from "@/utils/titleCase";
 
 const EMAIL_COLUMN_KEYS = new Set([
   "email",
@@ -140,6 +140,7 @@ const COLUMN_HEADER_LABELS: Record<string, string> = {
   date_of_joining: "Date of joining",
   date_of_birth: "Date of birth",
   phone_number: "Phone number",
+  created_on: "Created on",
   user_type: "User type",
   work_mode: "Work mode",
   log_date: "Log date",
@@ -154,9 +155,7 @@ const COLUMN_HEADER_LABELS: Record<string, string> = {
 export function formatTableColumnHeader(column: string): string {
   const key = normalizeColumnKey(column);
   if (COLUMN_HEADER_LABELS[key]) return COLUMN_HEADER_LABELS[key];
-  return column
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+  return toTitleCase(column.replaceAll("_", " "))
     .replace(/\bUrl\b/g, "URL")
     .replace(/\bId\b/g, "ID");
 }

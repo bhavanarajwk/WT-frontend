@@ -1,5 +1,17 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import Link from "next/link";
 import { type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -29,21 +41,11 @@ export function TalentPoolPageClient() {
     loadUnallocatedPage,
   } = useTalentPoolTables(queriesEnabled);
 
-  if (authStatus === "loading") {
-    return (
-      <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-sm text-wt-text-muted">
-          Loading…
-        </div>
-      </DashboardPageShell>
-    );
-  }
-
-  if (!canView) {
+  if (authStatus !== "loading" && !canView) {
     return (
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
-          <h3 className="text-lg font-semibold">Access restricted</h3>
+          <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="mt-2 text-sm text-wt-text-muted">
             Talent pool is available to HR and admin only.
           </p>
@@ -74,14 +76,10 @@ export function TalentPoolPageClient() {
               placeholder="Search"
               aria-label="Search"
             />
-            <button
-              type="button"
-              className="btn-primary px-4 py-2 text-sm"
-              disabled={loading}
-              onClick={() => void loadDashboard()}
+            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={loading} onClick={() => void loadDashboard()}
             >
               Refresh
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -93,7 +91,7 @@ export function TalentPoolPageClient() {
           ) : null}
 
           {loading && !data ? (
-            <p className="text-sm text-wt-text-muted">Loading talent pool…</p>
+            <TableRowsSkeleton rows={6} columns={4} />
           ) : unallocated ? (
             <TalentPoolSection
               title={unallocated.label}
@@ -103,40 +101,39 @@ export function TalentPoolPageClient() {
               onPageChange={(p) => void loadUnallocatedPage(p)}
             >
               {unallocated.items.length ? (
-                <table className="min-w-full text-sm">
-                  <thead className="bg-wt-surface-2 text-wt-text-muted">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-medium">Name</th>
-                      <th className="text-left px-3 py-2 font-medium">Days without project</th>
-                      <th className="text-left px-3 py-2 font-medium">Previous project</th>
-                      <th className="text-right px-3 py-2 font-medium">Allocate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <WtTable>
+                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Name</TableHead>
+                      <TableHead>Days without project</TableHead>
+                      <TableHead>Previous project</TableHead>
+                      <TableHead className="text-right">Allocate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {unallocated.items.map((row) => (
-                      <tr
+                      <TableRow
                         key={`unalloc-${row.user_id}-${row.employee_email}`}
-                        className="border-t border-wt-border"
                       >
-                        <td className="px-3 py-2 whitespace-nowrap font-medium">
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
                           {row.employee_name || "—"}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
                           {row.days_without_project_allocation ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
                           {formatTalentPoolPreviousProject(
                             row.previous_project_code,
                             row.previous_project_name
                           )}
-                        </td>
-                        <td className="px-3 py-2 text-right">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-right">
                           <AllocateButton item={row} displayName={row.employee_name} />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </WtTable>
               ) : (
                 <EmptyRow label="No employees not allocated to a client project." />
               )}
@@ -175,9 +172,9 @@ function TalentPoolSection({
           onPageChange={onPageChange}
         />
       </div>
-      <div className="wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border">
+      <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
         {children}
-      </div>
+      </ScrollableTable>
     </section>
   );
 }
@@ -199,22 +196,24 @@ function TablePager({
       <span>
         Page {page + 1} of {totalPages}
       </span>
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="xs"
         disabled={page <= 0 || loading}
         onClick={() => onPageChange(page - 1)}
-        className="rounded-lg border border-wt-border bg-wt-surface-2 px-2 py-1 disabled:opacity-50"
       >
         Prev
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="outline"
+        size="xs"
         disabled={page + 1 >= totalPages || loading}
         onClick={() => onPageChange(page + 1)}
-        className="rounded-lg border border-wt-border bg-wt-surface-2 px-2 py-1 disabled:opacity-50"
       >
         Next
-      </button>
+      </Button>
     </div>
   );
 }
@@ -228,14 +227,16 @@ function AllocateButton({
 }) {
   const label = displayName || item.employee_email;
   return (
-    <Link
-      href={buildAllocateHref(item)}
-      className="inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 p-2 text-indigo-700 hover:bg-indigo-100"
+    <Button
+      variant="brand"
+      size="icon-sm"
+      className="inline-flex items-center justify-center p-2"
+      render={<Link href={buildAllocateHref(item)} />}
       title={`Allocate ${label}`}
       aria-label={`Allocate ${label}`}
     >
       <AllocateIcon />
-    </Link>
+    </Button>
   );
 }
 

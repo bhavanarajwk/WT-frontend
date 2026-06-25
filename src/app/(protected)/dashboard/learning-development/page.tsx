@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { EmployeeLearningCatalog } from "@/components/learning-development/EmployeeLearningCatalog";
@@ -29,17 +31,14 @@ function HrLearningDashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Learning overview</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Learning Overview</h1>
           <p className="text-sm text-wt-text-muted mt-1">
             Open a training card to manage sessions, trainers, trainees, attendance, and scores.
           </p>
         </div>
-        <Link
-          href="/dashboard/learning-development/trainings?create=1"
-          className="btn-primary px-4 py-2 text-sm"
-        >
+        <Button variant="brand" size="sm" className="px-4 py-2 text-sm" render={<Link href="/dashboard/learning-development/trainings?create=1" className="px-4 py-2 text-sm" />}>
           New training
-        </Link>
+        </Button>
       </div>
 
       <article className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 max-w-xs">
@@ -50,7 +49,7 @@ function HrLearningDashboard() {
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Trainings</h2>
         {isLoading ? (
-          <p className="text-sm text-wt-text-muted">Loading trainings…</p>
+          <SectionLoading label="Loading trainings…" />
         ) : trainings.length === 0 ? (
           <p className="text-sm text-wt-text-muted">No trainings yet.</p>
         ) : (

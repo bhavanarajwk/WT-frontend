@@ -1,18 +1,19 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTrainingTrainers } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { AssignedTrainersList } from "@/components/learning-development/AssignedTrainersList";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { DashboardToast } from "@/components/dashboard/shared/DashboardToast";
 
 export function TrainersPageClient() {
   const { user } = useAuth();
@@ -23,7 +24,7 @@ export function TrainersPageClient() {
   const [trainerPick, setTrainerPick] = useState("");
   const [removingTrainerId, setRemovingTrainerId] = useState<string | null>(null);
   const qc = useQueryClient();
-  const { toast, runAction } = useDashboardAction();
+  const { runAction } = useDashboardAction();
   const trainersQ = useTrainingTrainers(trainingId, Boolean(trainingId.trim()));
   const onboardQ = useLearningTrainerDirectory();
 
@@ -108,17 +109,12 @@ export function TrainersPageClient() {
                 placeholder="Select trainer"
                 options={trainerOptions.map((o) => ({ value: o.id, label: o.label }))}
               />
-              <button
-                type="button"
-                className="btn-primary px-4 py-2 text-sm shrink-0"
-                disabled={!trainerPick || !trainingId}
-                onClick={assignTrainer}
-              >
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={!trainerPick || !trainingId} onClick={assignTrainer} >
                 Assign
-              </button>
+              </Button>
             </div>
             {onboardQ.isLoading ? (
-              <p className="text-xs text-wt-text-muted">Loading employees from onboard list…</p>
+              <SectionLoading compact label="Loading employees from onboard list…" className="py-2" />
             ) : null}
             {trainingId && !onboardQ.isLoading && trainerOptions.length === 0 ? (
               <p className="text-xs text-wt-text-muted">
@@ -138,7 +134,6 @@ export function TrainersPageClient() {
           <p className="text-sm text-wt-text-muted">Trainer assignment requires HR/Admin.</p>
         )}
       </div>
-      <DashboardToast toast={toast} />
     </>
   );
 }

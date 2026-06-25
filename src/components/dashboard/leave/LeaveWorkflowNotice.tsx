@@ -2,29 +2,30 @@
 
 export function LeaveWorkflowNotice({
   variant,
+  scope = "team",
 }: {
-  variant: "employee" | "manager" | "dm" | "hr" | "hr-dual-required";
+  variant: "employee" | "manager" | "dm" | "hr";
+  scope?: "team" | "org";
 }) {
   const copy: Record<typeof variant, { title: string; body: string }> = {
     employee: {
-      title: "Approval workflow",
-      body: "Your request goes to your project manager first, then HR for final approval. Leave is deducted only after HR approves.",
+      title: "Leave Request",
+      body: "Select one or more managers to notify by email. You can optionally add other employees as notification recipients. Manager approval in Leave Requests is final—there is no HR final approval step.",
     },
     manager: {
-      title: "Approval workflow",
-      body: "Your leave is reviewed by a Delivery Manager first, then HR finalizes and deducts balance.",
+      title: "Leave Request",
+      body: "Select managers to notify when you submit leave. Optional additional recipients receive the same notification email at their work address.",
     },
     dm: {
-      title: "Delivery Manager review",
-      body: "Approve or reject manager leave/WFH requests. HR must approve after you to finalize and deduct leave.",
+      title: "Team Leave Requests",
+      body: "Review and approve or reject leave requests from managers on your team. Manager approval is final for employee leave.",
     },
     hr: {
-      title: "HR final approval",
-      body: "First-line manager or DM must approve before you can finalize leave/WFH. Final approval deducts leave balance.",
-    },
-    "hr-dual-required": {
-      title: "HR employee leave",
-      body: "Your leave requires approval from a user with both HR and Admin roles before it is finalized.",
+      title: scope === "org" ? "All Employee Leave Requests" : "Team Leave Requests",
+      body:
+        scope === "org"
+          ? "Search and filter leave requests across the organization. Managers approve employee leave in Leave Requests; HR does not perform a separate final approval step."
+          : "Review and approve or reject leave requests from employees on your team. Manager approval is final for employee leave.",
     },
   };
 

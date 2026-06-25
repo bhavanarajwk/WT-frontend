@@ -1,18 +1,18 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import { InputField, SelectField, FileField, TextAreaField } from "@/components/dashboard/ui/forms";
+import { Input } from "@/components/ui/input";
+import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { isValidIndiaMobile, isValidPersonName } from "@/utils/dashboard/validation";
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import { validateResumeShareLink } from "@/utils/employeeResume";
 import { createEmptySelfOnboardForm } from "@/utils/selfOnboardFormState";
-import {
-  FALLBACK_ONBOARD_OPTIONS,
-  parseOnboardOptions,
-} from "@/utils/onboardFormOptions";
-import type { OnboardOptionsResponse } from "@/types/onboard-options";
+import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
+import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 
 type OnboardFiles = {
   profile_photo: File | null;
@@ -48,16 +48,10 @@ export function SelfOnboardingPanel({
   const [formKey, setFormKey] = useState(0);
   const [form, setForm] = useState(createEmptySelfOnboardForm);
   const [files, setFiles] = useState<OnboardFiles>(EMPTY_FILES);
-  const [options, setOptions] = useState<OnboardOptionsResponse>(FALLBACK_ONBOARD_OPTIONS);
+  const onboardOptionsQ = useOnboardOptions();
+  const options = onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS;
 
   const email = useMemo(() => workEmail.trim(), [workEmail]);
-
-  useEffect(() => {
-    void hrmsService
-      .getOnboardOptions()
-      .then((res) => setOptions(parseOnboardOptions(res)))
-      .catch(() => setOptions(FALLBACK_ONBOARD_OPTIONS));
-  }, []);
 
   useEffect(() => {
     setForm((prev) => ({
@@ -201,16 +195,16 @@ export function SelfOnboardingPanel({
         Submit your onboarding survey to activate full portal access. Fields marked with * are required.
       </p>
       <div className="grid sm:grid-cols-2 gap-3">
-        <label className="text-xs text-wt-text-muted flex flex-col gap-1">
-          Work email
-          <input
-            className="input-field px-3 py-2 text-sm bg-wt-surface-2 text-wt-text-muted"
+        <div className="flex flex-col gap-1.5">
+          <FieldLabel label="Work Email" />
+          <Input
+            className="h-10 bg-muted text-muted-foreground"
             type="email"
             value={email}
             readOnly
             disabled
           />
-        </label>
+        </div>
         <InputField
           label="Personal mail ID"
           type="email"
@@ -352,9 +346,9 @@ export function SelfOnboardingPanel({
         </p>
       )}
       <div className="mt-4">
-        <button type="button" className="btn-primary px-3 py-2" onClick={submit} disabled={actionLoading}>
+        <Button variant="brand" type="button" className="px-3 py-2" onClick={submit} disabled={actionLoading}>
           Submit Onboarding Form
-        </button>
+        </Button>
       </div>
     </div>
   );
