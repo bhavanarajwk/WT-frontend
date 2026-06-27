@@ -1,7 +1,9 @@
 import { hrmsService } from "@/services/hrms.service";
 import { toPagedRows } from "@/utils/apiRows";
+import { buildProfileAssignedProjects } from "@/utils/dashboard/projects";
 import {
   buildCompOffProjectOptions,
+  buildCompOffProjectOptionsFromAssignedProjects,
   type CompOffProjectOption,
 } from "@/utils/compOffProjects";
 import {
@@ -202,12 +204,13 @@ export async function loadCompOffProjectCatalog(): Promise<CompOffProjectCatalog
     hrmsService.getOnboardList({ page: "0", size: "500" }),
   ]);
 
-  const assignedRows =
-    assignedRes.status === "fulfilled" ? toPagedRows(assignedRes.value.data ?? assignedRes.value) : [];
-  const allocationRows =
-    allocationRes.status === "fulfilled"
-      ? toPagedRows(allocationRes.value.data ?? allocationRes.value)
-      : [];
+  const assignedPayload =
+    assignedRes.status === "fulfilled" ? assignedRes.value.data ?? assignedRes.value : null;
+  const allocationPayload =
+    allocationRes.status === "fulfilled" ? allocationRes.value.data ?? allocationRes.value : null;
+
+  const assignedRows = buildProfileAssignedProjects(assignedPayload, allocationPayload);
+  const allocationRows = toPagedRows(allocationPayload);
   const onboardRows =
     onboardRes.status === "fulfilled"
       ? toPagedRows((onboardRes.value as { data?: unknown }).data ?? onboardRes.value)
@@ -223,9 +226,13 @@ export async function loadCompOffProjectCatalog(): Promise<CompOffProjectCatalog
   }
   userMap = await resolveEmailsForUserIds([...userIdsToResolve], userMap);
 
-  let options = buildCompOffProjectOptions(assignedRows, allocationRows, userMap);
+  // Primary source: GET /api/v1/project-assigned-to-user (current employee's projects).
+  let options = buildCompOffProjectOptionsFromAssignedProjects(assignedRows, userMap);
+  if (!options.length) {
+    options = buildCompOffProjectOptions(assignedRows, allocationRows, userMap);
+  }
 
-  const enriched = await Promise.all(
+  const enriched = await Promise.allSettled(
     options.map(async (opt) => {
       let managerEmail = opt.managerEmail;
       if (!managerEmail) {
@@ -241,7 +248,11 @@ export async function loadCompOffProjectCatalog(): Promise<CompOffProjectCatalog
     })
   );
 
-  return { options: enriched, assignedRows, allocationRows, userIdToEmail: userMap };
+  const resolvedOptions = enriched.map((result, index) =>
+    result.status === "fulfilled" ? result.value : options[index]
+  );
+
+  return { options: resolvedOptions, assignedRows, allocationRows, userIdToEmail: userMap };
 }
 
 export async function resolveCompOffManagerEmail(

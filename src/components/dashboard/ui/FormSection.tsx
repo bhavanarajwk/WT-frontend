@@ -7,6 +7,7 @@ import {
   SECTION_TITLE_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { formatUILabel } from "@/utils/titleCase";
+import { cn } from "@/lib/utils";
 
 export function FormSection({
   title,
@@ -21,7 +22,7 @@ export function FormSection({
 }) {
   return (
     <section
-      className={`rounded-xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm md:p-6 ${className}`.trim()}
+      className={cn("rounded-xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm md:p-6", className)}
     >
       <header className={SECTION_HEADER_CLASS}>
         <h4 className={SECTION_TITLE_CLASS}>{formatUILabel(title)}</h4>
