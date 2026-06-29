@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { getAppBaseUrl } from "@/lib/serverApi";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
   }
 
   const state = randomUUID();
-  const redirectUri = `${request.nextUrl.origin}/api/v1/auth/google/callback`;
+  const redirectUri = `${getAppBaseUrl(request)}/api/v1/auth/google/callback`;
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,

@@ -95,6 +95,8 @@ export const oauthErrorMessages: Record<string, string> = {
     "OAuth redirect is misconfigured. Ask your administrator to add this app URL to Google OAuth and Render.",
   google_token_exchange_failed:
     "Google could not complete sign-in. Try again or contact support if it persists.",
+  backend_unavailable:
+    "The backend service is unavailable. Try again shortly or contact your administrator.",
   oauth_login_failed: "Sign-in failed. Please try again.",
   session_idle_timeout: "You were logged out after 30 minutes of inactivity.",
   session_expired: "Your session has expired after 8 hours. Please sign in again.",

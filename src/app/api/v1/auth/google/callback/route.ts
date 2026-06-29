@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBackendBaseUrl, setAuthCookies, type SessionTokens } from "@/lib/serverApi";
+import {
+  getAppBaseUrl,
+  getBackendBaseUrl,
+  setAuthCookies,
+  type SessionTokens,
+} from "@/lib/serverApi";
 
 export const dynamic = "force-dynamic";
 
 function loginRedirect(request: NextRequest, error?: string) {
-  const url = new URL("/login", request.nextUrl.origin);
+  const url = new URL("/login", getAppBaseUrl(request));
   if (error) url.searchParams.set("error", error);
   return NextResponse.redirect(url);
 }
@@ -27,13 +32,19 @@ export async function GET(request: NextRequest) {
     return loginRedirect(request, "invalid_oauth_state");
   }
 
-  const redirectUri = `${request.nextUrl.origin}/api/v1/auth/google/callback`;
-  const exchangeResponse = await fetch(`${getBackendBaseUrl()}/api/v1/auth/google/exchange`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, redirect_uri: redirectUri, state }),
-    credentials: "include",
-  });
+  const appBaseUrl = getAppBaseUrl(request);
+  const redirectUri = `${appBaseUrl}/api/v1/auth/google/callback`;
+  let exchangeResponse: Response;
+  try {
+    exchangeResponse = await fetch(`${getBackendBaseUrl()}/api/v1/auth/google/exchange`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, redirect_uri: redirectUri, state }),
+      credentials: "include",
+    });
+  } catch {
+    return loginRedirect(request, "backend_unavailable");
+  }
 
   if (!exchangeResponse.ok) {
     const knownErrors = new Set([
@@ -43,6 +54,7 @@ export async function GET(request: NextRequest) {
       "invalid_redirect_uri",
       "google_token_exchange_failed",
       "invalid_oauth_state",
+      "backend_unavailable",
     ]);
     let errorCode = "oauth_login_failed";
     try {
@@ -62,7 +74,7 @@ export async function GET(request: NextRequest) {
   };
   const data = payload.data;
 
-  const response = NextResponse.redirect(new URL("/dashboard", request.nextUrl.origin));
+  const response = NextResponse.redirect(new URL("/dashboard", appBaseUrl));
   setAuthCookies(response, data);
   response.cookies.set("oauthState", "", {
     httpOnly: true,
