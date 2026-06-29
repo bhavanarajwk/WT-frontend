@@ -24,6 +24,7 @@ export const endpoints = {
 
   profile: {
     self: `${api}/profile`,
+    selfBalances: `${api}/profile/balances`,
     employeeById: (empId: string) => `${api}/employee-profile/${encodeURIComponent(empId)}`,
     employeeBalances: (empId: string) =>
       `${api}/employee-profile/${encodeURIComponent(empId)}/balances`,
@@ -101,8 +102,8 @@ export const endpoints = {
     getByEmployees: (empEmails: string, fromDate: string, toDate: string, requestType: string) =>
       `${api}/userRequest/get/${encodeURIComponent(empEmails)}/${encodeURIComponent(fromDate)}/${encodeURIComponent(toDate)}/${encodeURIComponent(requestType)}`,
     status: `${api}/userRequest/status`,
-    leaveManagerOptions: `${api}/leave-request/manager-options`,
-    leaveRecipientOptions: `${api}/leave-request/recipient-options`,
+    leaveManagerOptions: `${api}/leave-request/manager-options`, // @deprecated — use employees.managers
+    leaveRecipientOptions: `${api}/leave-request/recipient-options`, // @deprecated — CC is server-assigned
     leaveSummary: `${api}/leave-summary`,
     leaveBalances: `${api}/user/leave-balances`,
     managerTeamOnLeaveToday: `${api}/manager-team-on-leave-today`,
@@ -117,6 +118,10 @@ export const endpoints = {
     grants: `${api}/comp-off/grants`,
     grantsForEmployee: (empId: string) =>
       `${api}/comp-off/grants/${encodeURIComponent(empId)}`,
+  },
+
+  employees: {
+    managers: `${api}/employees/managers`,
   },
 
   learning: {

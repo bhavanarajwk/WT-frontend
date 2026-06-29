@@ -13,6 +13,8 @@ export type CompOffProjectOption = {
   managerEmail: string;
 };
 
+const COMP_OFF_EXCLUDED_PROJECT_CODES = new Set(["BENCH", "GLOBAL"]);
+
 function isLikelyNumericId(value: string): boolean {
   return /^\d+$/.test(value.trim());
 }
@@ -79,6 +81,18 @@ function displayLabel(code: string, name: string): string {
     return trimmedName ? trimmedName : `Project ${code}`;
   }
   return trimmedName || code;
+}
+
+/** Build comp-off picker options from GET /api/v1/project-assigned-to-user rows. */
+export function buildCompOffProjectOptionsFromAssignedProjects(
+  assignedProjectRows: Array<Record<string, unknown>>,
+  userIdToEmail: Map<string, string> = new Map()
+): CompOffProjectOption[] {
+  const eligible = assignedProjectRows.filter((row) => {
+    const code = projectCodeFromRow(row).trim().toUpperCase();
+    return code && code !== "—" && !COMP_OFF_EXCLUDED_PROJECT_CODES.has(code);
+  });
+  return buildCompOffProjectOptions(eligible, [], userIdToEmail);
 }
 
 /** Merge assigned projects + user allocations into comp-off project picker options. */

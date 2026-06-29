@@ -10,7 +10,7 @@ import type { ApprovalStage } from "@/types/userRequest";
 
 import { applyApiDateQuery, toApiDateParam } from "@/utils/apiDate";
 
-import { toPagedRows } from "@/utils/apiRows";
+import { toPagedRows, extractFirstObjectArray } from "@/utils/apiRows";
 
 import {
 
@@ -22,7 +22,7 @@ import {
 
 } from "@/utils/compOff";
 
-
+import { canPrimaryManagerActOnLeave, hasPrimaryLeaveManagers } from "@/utils/leaveManagerDisplay";
 
 export type UserRequestStatusValue = ApprovalStage;
 
@@ -67,6 +67,12 @@ export function resolveRequestTypesForFetch(requestType: string): string[] {
   return [requestType.trim()];
 }
 
+function extractUserRequestListRows(payload: unknown): Array<Record<string, unknown>> {
+  const paged = toPagedRows(payload);
+  if (paged.length) return paged;
+  return extractFirstObjectArray(payload);
+}
+
 async function fetchUserRequestsFromRoot(params: {
   fromDate: string;
   toDate: string;
@@ -92,7 +98,11 @@ async function fetchUserRequestsFromRoot(params: {
     const res = await apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
       query: applyApiDateQuery(query, ["fromDate", "toDate"]),
     });
-    return dedupeUserRequestRows(toPagedRows(res.data ?? res));
+    const payload =
+      res && typeof res === "object" && "data" in (res as object)
+        ? (res as ApiEnvelope<unknown>).data
+        : res;
+    return dedupeUserRequestRows(extractUserRequestListRows(payload));
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
       return [];
@@ -107,12 +117,14 @@ export async function listScopedUserRequests(params: {
   toDate: string;
   requestType?: string;
   empEmails?: string;
+  size?: number;
 }): Promise<Array<Record<string, unknown>>> {
   return fetchUserRequestsFromRoot({
     fromDate: params.fromDate,
     toDate: params.toDate,
     requestType: params.requestType ?? "ALL",
     empEmails: params.empEmails,
+    size: params.size,
   });
 }
 
@@ -375,8 +387,12 @@ export function hrTeamActionBlockedHint(
 
 export function canManagerActOnRequest(
   row: Record<string, unknown>,
-  options: { hasManagerAccess: boolean; hasDmAccess?: boolean }
+  options: { hasManagerAccess: boolean; hasDmAccess?: boolean; actorEmail?: string | null }
 ): boolean {
+  if (canPrimaryManagerActOnLeave(row, options.actorEmail)) return true;
+
+  if (hasPrimaryLeaveManagers(row)) return false;
+
   if (isLeaveEmailOnlyWorkflow(row)) return false;
   const hasManager = Boolean(options.hasManagerAccess);
   const hasDm = Boolean(options.hasDmAccess);
@@ -400,9 +416,11 @@ export function canManagerRejectRequest(
 
   row: Record<string, unknown>,
 
-  options: { hasManagerAccess: boolean; hasDmAccess?: boolean }
+  options: { hasManagerAccess: boolean; hasDmAccess?: boolean; actorEmail?: string | null }
 
 ): boolean {
+
+  if (canPrimaryManagerActOnLeave(row, options.actorEmail)) return true;
 
   if (!canManagerActOnRequest(row, options)) return false;
 
@@ -645,14 +663,13 @@ export function formatStageRejectionReason(stage: unknown, reason: unknown): str
 
 
 
-/** GET /api/v1/userRequest?...&selfOnly=true — logged-in user's requests with approval fields. */
+/** GET /api/v1/userRequest?... — logged-in user's own requests (session-scoped). */
 export async function listSelfUserRequests(params: {
   fromDate: string;
   toDate: string;
   requestType?: string;
   page?: number;
   size?: number;
-  empEmail?: string;
 }): Promise<Array<Record<string, unknown>>> {
   return fetchUserRequestsFromRoot({
     fromDate: params.fromDate,
@@ -661,7 +678,6 @@ export async function listSelfUserRequests(params: {
     page: params.page,
     size: params.size,
     selfOnly: true,
-    empEmails: params.empEmail,
   });
 }
 

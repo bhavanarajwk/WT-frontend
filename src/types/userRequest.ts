@@ -3,6 +3,7 @@ export type ApprovalStage = "PENDING" | "APPROVED" | "REJECTED";
 export interface UserRequestOut {
   id: number;
   emp_email: string;
+  employee_name?: string | null;
   request_from_date: string;
   request_to_date: string;
   comments: string | null;
@@ -14,6 +15,8 @@ export interface UserRequestOut {
   hr_reason: string | null;
   is_half_day: boolean;
   reference_file_url: string | null;
+  primary_managers?: string[] | null;
+  secondary_managers?: string[] | null;
   created_at: string;
   updated_at: string;
 }

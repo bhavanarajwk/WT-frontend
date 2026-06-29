@@ -76,7 +76,11 @@ export function formatActionSuccessMessage(label: string): string {
   const l = label.trim();
 
   const submitReq = /^Submit (.+) request$/i.exec(l);
-  if (submitReq) return `${titleCasePhrase(submitReq[1])} request submitted.`;
+  if (submitReq) {
+    const phrase = submitReq[1].trim().toLowerCase();
+    if (phrase === "leave") return "Leave request submitted successfully.";
+    return `${titleCasePhrase(submitReq[1])} request submitted.`;
+  }
 
   const updateReq = /^Update (.+) request$/i.exec(l);
   if (updateReq) return `${titleCasePhrase(updateReq[1])} request updated.`;

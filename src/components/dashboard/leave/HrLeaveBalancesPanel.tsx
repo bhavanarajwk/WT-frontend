@@ -31,6 +31,7 @@ export function HrLeaveBalancesPanel({
   const [year, setYear] = useState(String(now.getFullYear()));
   const [month, setMonth] = useState(String(now.getMonth() + 1));
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
   const [rows, setRows] = useState<LeaveBalancesListItem[]>([]);
@@ -46,7 +47,7 @@ export function HrLeaveBalancesPanel({
       const res = await hrmsService.getLeaveBalancesList({
         page,
         size: pageSize,
-        search: search.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         year: Number(year) || undefined,
         month: Number(month) || undefined,
       });
@@ -61,7 +62,15 @@ export function HrLeaveBalancesPanel({
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search, year, month]);
+  }, [page, pageSize, debouncedSearch, year, month]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(0);
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     const id = window.setTimeout(() => {

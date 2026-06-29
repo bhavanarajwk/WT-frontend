@@ -1,3 +1,10 @@
+/** Unwrap `{ message, data: T[] }` from BFF/API responses. */
+export function unwrapApiDataArray<T>(payload: unknown): T[] {
+  if (!payload || typeof payload !== "object") return [];
+  const data = (payload as Record<string, unknown>).data;
+  return Array.isArray(data) ? (data as T[]) : [];
+}
+
 /** Unwrap `{ message, data: { items } }` (and one nested data layer) from BFF/API responses. */
 export function unwrapLeaveOptionItems<T>(payload: unknown): T[] {
   if (!payload || typeof payload !== "object") return [];
