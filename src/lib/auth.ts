@@ -13,6 +13,7 @@ export interface AuthUser {
   roles: string[];
   status: string;
   user_type: string;
+  doj?: string;
   requiresSelfOnboarding?: boolean;
   session_started_at?: string;
   session_max_hours?: number;

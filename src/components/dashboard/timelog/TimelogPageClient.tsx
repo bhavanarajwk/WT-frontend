@@ -10,10 +10,11 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { SelectField } from "@/components/dashboard/ui/forms";
+import { ApprovalRemarkModal } from "@/components/dashboard/timelog/ApprovalRemarkModal/ApprovalRemarkModal";
 import { HrEmployeeTimelogWeekModal } from "@/components/dashboard/timelog/HrEmployeeTimelogWeekModal";
 import { HrMonthlyTimelogSummary } from "@/components/dashboard/timelog/HrMonthlyTimelogSummary";
 import { MyWeeklyTimesheet } from "@/components/dashboard/timelog/MyWeeklyTimesheet";
-import { WeeklyTimelogGrid } from "@/components/dashboard/timelog/WeeklyTimelogGrid";
+import { ProjectTimelogPanel } from "@/components/dashboard/timelog/ProjectTimelogPanel/ProjectTimelogPanel";
 import { WeekPickerField } from "@/components/dashboard/timelog/WeekPickerField";
 import {
   currentMonthRef,
@@ -24,24 +25,32 @@ import {
   type HrTimelogEmployee,
   type HrMonthlyTimelogRow,
 } from "@/hooks/timelog/useHrMonthlyTimelogSummary";
+import { WtLoader, WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
 import { hrmsService } from "@/services/hrms.service";
 import { toPagedRows } from "@/utils/apiRows";
 import { isOffboardedUserStatus } from "@/utils/userStatus";
 import { managerTeamEmails } from "@/utils/dashboard/projects";
-import {
-  gridRowsFromWeekSnapshot,
-  submittedProjectCodesForDay,
-  type TimelogWeekSnapshot,
-} from "@/utils/timelog/gridState";
+import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import {
   formatApiDate,
   normalizeWeekStart,
   weekDaysMonSun,
 } from "@/utils/timelog/weekDates";
+import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
 
 function unwrapPayload<T>(response: unknown): T {
   return ((response as { data?: T }).data ?? response) as T;
+}
+
+function entryStatusClass(status: string): string {
+  const map: Record<string, string> = {
+    DRAFT: "text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded text-xs font-medium",
+    SUBMITTED: "text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-xs font-medium",
+    APPROVED: "text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-xs font-medium",
+    REJECTED: "text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded text-xs font-medium",
+  };
+  return map[status] ?? map.DRAFT;
 }
 
 export function TimelogPageClient() {
@@ -56,15 +65,16 @@ export function TimelogPageClient() {
   const isOffboarded = isOffboardedUserStatus(user?.status);
   const requiresSelfOnboarding = Boolean(user?.requiresSelfOnboarding);
 
-  const subTab = pathname.includes("/dashboard/timelog/team") ? "team" : "my";
+  const subTab = pathname.endsWith("/dashboard/timelog/team") ? "team" : pathname.endsWith("/dashboard/timelog/projects") ? "projects" : "my";
   const canSeeTeamTab = hasManagerAccess || hasHrAccess || hasAdminAccess;
   const isTeamView = subTab === "team";
+  const isProjectView = subTab === "projects";
   const canManagerApprove = isTeamView && (hasManagerAccess || hasAdminAccess) && !hasHrAccess;
   const isHrTeamView = isTeamView && hasHrAccess && !canManagerApprove;
 
   const [weekStart, setWeekStart] = useState(() => normalizeWeekStart(new Date()));
-  const [weekSnapshot, setWeekSnapshot] = useState<TimelogWeekSnapshot | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [employeeEntries, setEmployeeEntries] = useState<DayTimelogEntry[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(false);
   const [teamEmployeeEmail, setTeamEmployeeEmail] = useState("");
   const [employeeOptions, setEmployeeOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [hrMonth, setHrMonth] = useState<MonthRef>(() => currentMonthRef());
@@ -72,6 +82,10 @@ export function TimelogPageClient() {
     email: string;
     label: string;
     weekStart: string;
+  } | null>(null);
+  const [remarkAction, setRemarkAction] = useState<{
+    entryId: number;
+    action: "APPROVED" | "REJECTED";
   } | null>(null);
 
   const hrEmployees = useMemo<HrTimelogEmployee[]>(
@@ -91,25 +105,30 @@ export function TimelogPageClient() {
   const { runAction } = useDashboardAction();
 
   const dayDates = useMemo(() => weekDaysMonSun(weekStart), [weekStart]);
-  const dayKeys = useMemo(() => dayDates.map(formatApiDate), [dayDates]);
 
-  const loadTeamWeek = useCallback(
+  const loadEmployeeEntries = useCallback(
     async (overrideEmail?: string) => {
       if (!isTeamView) return;
       const email = (overrideEmail ?? teamEmployeeEmail).trim().toLowerCase();
       if (!email) return;
-      setLoading(true);
+      const startDate = formatApiDate(dayDates[0]);
+      const endDate = formatApiDate(dayDates[dayDates.length - 1]);
+      setEntriesLoading(true);
       try {
-        const res = await hrmsService.getTimelogWeek({
-          weekStart: formatApiDate(normalizeWeekStart(weekStart)),
+        const res = await hrmsService.getTimelogEmployeeEntries({
           employeeEmail: email,
+          startDate,
+          endDate,
         });
-        setWeekSnapshot(unwrapPayload<TimelogWeekSnapshot>(res));
+        const data = unwrapPayload<DayTimelogEntry[]>(res);
+        setEmployeeEntries(Array.isArray(data) ? data : []);
+      } catch {
+        setEmployeeEntries([]);
       } finally {
-        setLoading(false);
+        setEntriesLoading(false);
       }
     },
-    [isTeamView, weekStart, teamEmployeeEmail]
+    [isTeamView, teamEmployeeEmail, dayDates]
   );
 
   const loadTeamEmployees = useCallback(async () => {
@@ -160,58 +179,25 @@ export function TimelogPageClient() {
     void loadTeamEmployees().catch(() => setEmployeeOptions([]));
   }, [loadTeamEmployees]);
 
-  const teamGridRows = useMemo(() => {
-    if (!weekSnapshot?.rows?.length) return [];
-    return gridRowsFromWeekSnapshot(weekSnapshot, dayKeys);
-  }, [weekSnapshot, dayKeys]);
-
-  const approveDay = (logDate: string) =>
-    void runAction("Approve timelog day", async () => {
-      const email = teamEmployeeEmail.trim().toLowerCase();
-      if (!email) throw new Error("Select an employee first.");
-      const projects = submittedProjectCodesForDay(teamGridRows, logDate);
-      if (!projects.length) throw new Error("No submitted entries for this day.");
-      await Promise.all(
-        projects.map((code) =>
-          hrmsService.updateTimelogStatusBatch({
-            employee_email: email,
-            project_code: code,
-            log_date: logDate,
-            status: "APPROVED",
-          })
-        )
-      );
-      await loadTeamWeek();
-    });
-
-  const rejectDay = (logDate: string) => {
-    const comment = window.prompt("Rejection comment (optional):");
-    if (comment === null) return;
-    void runAction("Reject timelog day", async () => {
-      const email = teamEmployeeEmail.trim().toLowerCase();
-      if (!email) throw new Error("Select an employee first.");
-      const projects = submittedProjectCodesForDay(teamGridRows, logDate);
-      if (!projects.length) throw new Error("No submitted entries for this day.");
-      await Promise.all(
-        projects.map((code) =>
-          hrmsService.updateTimelogStatusBatch({
-            employee_email: email,
-            project_code: code,
-            log_date: logDate,
-            status: "REJECTED",
-            manager_comment: comment.trim() || undefined,
-          })
-        )
-      );
-      await loadTeamWeek();
+  const handleEntryRemarkConfirm = (remark: string) => {
+    const action = remarkAction;
+    if (!action) return;
+    setRemarkAction(null);
+    void runAction(action.action === "APPROVED" ? "Approve timelog" : "Reject timelog", async () => {
+      await hrmsService.updateTimelogStatus({
+        timelog_id: action.entryId,
+        status: action.action,
+        manager_comment: remark || undefined,
+      });
+      await loadEmployeeEntries();
     });
   };
 
   useEffect(() => {
-    if (isTeamView && !canSeeTeamTab) {
+    if ((isTeamView || isProjectView) && !canSeeTeamTab) {
       router.replace("/dashboard/timelog");
     }
-  }, [isTeamView, canSeeTeamTab, router]);
+  }, [isTeamView, isProjectView, canSeeTeamTab, router]);
 
   if (isOffboarded) {
     return (
@@ -221,7 +207,7 @@ export function TimelogPageClient() {
     );
   }
 
-  if (isTeamView && !canSeeTeamTab) {
+  if ((isTeamView || isProjectView) && !canSeeTeamTab) {
     return (
       <DashboardPageShell>
         <p className="text-sm text-wt-text-muted">Redirecting\u2026</p>
@@ -237,17 +223,26 @@ export function TimelogPageClient() {
 
           {canSeeTeamTab ? (
             <div className="border-b border-wt-border pb-4">
-              <Tabs value={subTab} onValueChange={(value) => router.push(value === "team" ? "/dashboard/timelog/team" : "/dashboard/timelog")}>
+              <Tabs value={subTab} onValueChange={(value) => {
+                if (value === "team") router.push("/dashboard/timelog/team");
+                else if (value === "projects") router.push("/dashboard/timelog/projects");
+                else router.push("/dashboard/timelog");
+              }}>
                 <TabsList aria-label="Timelog tabs" className="gap-3 bg-transparent p-0">
                   <TabsTrigger value="my">My timelogs</TabsTrigger>
-                  <TabsTrigger value="team">Team timelogs</TabsTrigger>
+                  {/* <TabsTrigger value="team">Team timelogs</TabsTrigger> */}
+                  <TabsTrigger value="projects">Team timelogs</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
           ) : null}
 
-          {!isTeamView ? (
+          {!isTeamView && !isProjectView ? (
             <MyWeeklyTimesheet />
+          ) : null}
+
+          {isProjectView ? (
+            <ProjectTimelogPanel enabled />
           ) : null}
 
           {isHrTeamView ? (
@@ -275,23 +270,23 @@ export function TimelogPageClient() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="font-semibold">Team timelogs</h2>
                   <div className="flex flex-wrap items-center gap-2">
-                    <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={loading} />
+                    <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={entriesLoading} />
                     <Button
                       variant="outline"
                       size="sm"
                       type="button"
                       className="px-3 py-2 text-sm border border-wt-border rounded-lg"
-                      disabled={loading}
-                      onClick={() => void loadTeamWeek()}
+                      disabled={entriesLoading}
+                      onClick={() => void loadEmployeeEntries()}
                     >
-                      {loading ? "Loading\u2026" : "Refresh"}
+                      {entriesLoading ? <WtLoader size="sm" /> : "Refresh"}
                     </Button>
                   </div>
                 </div>
 
                 {canManagerApprove ? (
                   <p className="text-xs text-wt-text-muted">
-                    Review submitted entries below. Approve or reject each day; rejected entries return to the employee
+                    Review individual entries below. Approve or reject each entry; rejected entries return to the employee
                     as drafts.
                   </p>
                 ) : null}
@@ -303,31 +298,90 @@ export function TimelogPageClient() {
                   value={teamEmployeeEmail}
                   onChange={(v) => {
                     setTeamEmployeeEmail(v);
-                    setWeekSnapshot(null);
-                    void loadTeamWeek(v);
+                    setEmployeeEntries([]);
+                    void loadEmployeeEntries(v);
                   }}
                   placeholder="Select employee"
                   options={employeeOptions}
                 />
 
-                {loading ? (
-                  <p className="text-sm text-wt-text-muted py-8 text-center">Loading timelogs\u2026</p>
+                {entriesLoading ? (
+                  <WtLoaderCentered label="" />
                 ) : !teamEmployeeEmail.trim() ? (
                   <p className="text-sm text-wt-text-muted py-8 text-center">Select an employee to view their timelogs.</p>
-                ) : !weekSnapshot?.rows?.length ? (
-                  <p className="text-sm text-wt-text-muted py-8 text-center">No submitted timelog entries for this week.</p>
+                ) : !employeeEntries.length ? (
+                  <p className="text-sm text-wt-text-muted py-8 text-center">No timelog entries for this week.</p>
                 ) : (
-                  <WeeklyTimelogGrid
-                    rows={teamGridRows}
-                    dayDates={dayDates}
-                    dayKeys={dayKeys}
-                    projectOptions={[]}
-                    readOnly
-                    canApprove={canManagerApprove}
-                    onApproveDay={canManagerApprove ? approveDay : undefined}
-                    onRejectDay={canManagerApprove ? rejectDay : undefined}
-                    onRowsChange={() => {}}
-                  />
+                  <div className="overflow-x-auto rounded-lg border border-wt-border">
+                    <table className="w-full text-sm border-collapse">
+                      <thead className="bg-wt-surface-2 text-wt-text-muted">
+                        <tr>
+                          <th className="text-left px-2 py-2 font-medium whitespace-nowrap">Date</th>
+                          <th className="text-left px-2 py-2 font-medium">Project</th>
+                          <th className="text-left px-2 py-2 font-medium">Task Category</th>
+                          <th className="text-left px-2 py-2 font-medium">Sub Category</th>
+                          <th className="text-left px-2 py-2 font-medium">Description</th>
+                          <th className="text-center px-2 py-2 font-medium">Hours</th>
+                          <th className="text-center px-2 py-2 font-medium">Status</th>
+                          {canManagerApprove ? (
+                            <th className="text-center px-2 py-2 font-medium">Approve / Reject</th>
+                          ) : null}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {employeeEntries.map((entry) => {
+                          const taskLabel = TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category;
+                          const isActionable = entry.status === "SUBMITTED" || entry.status === "REJECTED";
+                          return (
+                            <tr key={entry.id} className="border-t border-wt-border hover:bg-wt-surface-2/50">
+                              <td className="px-2 py-2 whitespace-nowrap tabular-nums">{entry.log_date}</td>
+                              <td className="px-2 py-2 whitespace-nowrap">{entry.project_code}</td>
+                              <td className="px-2 py-2 whitespace-nowrap">{taskLabel}</td>
+                              <td className="px-2 py-2 whitespace-nowrap">{entry.sub_category || "—"}</td>
+                              <td className="px-2 py-2 max-w-[200px] truncate">{entry.description || "—"}</td>
+                              <td className="px-2 py-2 text-center tabular-nums">{entry.hours}h</td>
+                              <td className="px-2 py-2 text-center">
+                                <span className={entryStatusClass(entry.status)}>{entry.status}</span>
+                                {entry.manager_comment ? (
+                                  <div className="text-[10px] text-wt-text-muted mt-0.5 max-w-[120px] truncate" title={entry.manager_comment}>
+                                    Remark: {entry.manager_comment}
+                                  </div>
+                                ) : null}
+                              </td>
+                              {canManagerApprove ? (
+                                <td className="px-2 py-2 text-center whitespace-nowrap">
+                                  {isActionable ? (
+                                    <div className="flex gap-1 justify-center">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="xs"
+                                        className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
+                                        onClick={() => setRemarkAction({ entryId: entry.id, action: "APPROVED" })}
+                                      >
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="xs"
+                                        className="px-1.5 py-0.5 text-[10px]"
+                                        onClick={() => setRemarkAction({ entryId: entry.id, action: "REJECTED" })}
+                                      >
+                                        Reject
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-wt-text-muted">—</span>
+                                  )}
+                                </td>
+                              ) : null}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -346,6 +400,18 @@ export function TimelogPageClient() {
             onClose={() => setHrWeekDetail(null)}
           />
         ) : null}
+        <ApprovalRemarkModal
+          open={remarkAction !== null}
+          title={
+            remarkAction?.action === "APPROVED" ? "Approve timelog entry" : "Reject timelog entry"
+          }
+          actionLabel={
+            remarkAction?.action === "APPROVED" ? "Approve" : "Reject"
+          }
+          actionVariant={remarkAction?.action === "REJECTED" ? "destructive" : "brand"}
+          onConfirm={handleEntryRemarkConfirm}
+          onCancel={() => setRemarkAction(null)}
+        />
       </DashboardPageShell>
     </OnboardingGate>
   );

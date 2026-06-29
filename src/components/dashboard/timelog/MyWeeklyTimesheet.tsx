@@ -1,88 +1,128 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { WeekPickerField } from "@/components/dashboard/timelog/WeekPickerField";
-import { WeeklyTimelogGrid } from "@/components/dashboard/timelog/WeeklyTimelogGrid";
-import { TimelogEntrySheet } from "@/components/dashboard/timelog/TimelogEntrySheet";
-import { useMyWeeklyTimesheet } from "@/hooks/timelog/useMyWeeklyTimesheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TimelogCalendar } from "@/components/dashboard/timelog/TimelogCalendar/TimelogCalendar";
+import { DayEntriesPanel } from "@/components/dashboard/timelog/DayEntriesPanel/DayEntriesPanel";
+import { DayEntryForm } from "@/components/dashboard/timelog/DayEntryForm/DayEntryForm";
+import { TimelogTable } from "@/components/dashboard/timelog/TimelogTable/TimelogTable";
+import { useDayTimelog } from "@/hooks/timelog/useDayTimelog";
+import { useAuth } from "@/context/AuthContext";
 
 export function MyWeeklyTimesheet() {
+  const { user } = useAuth();
+  const [viewMode, setViewMode] = useState<"calendar" | "table">("table");
+
   const {
-    weekStart,
-    setWeekStart,
-    dayDates,
-    dayKeys,
-    rows,
+    calendar,
+    selectedDate,
+    selectedDayEntries,
+    selectedDateTotal,
     projectOptions,
     loading,
     error,
     actionLoading,
     editingEntry,
-    sheetOpen,
-    openAddSheet,
-    editEntry,
-    closeSheet,
-    saveEntry,
-    submitEntry,
-  } = useMyWeeklyTimesheet();
+    showEntryForm,
+    viewYear,
+    viewMonth,
+    navigateMonth,
+    goToToday,
+    goToMonth,
+    selectDate,
+    addEntry,
+    saveAndSubmitEntry,
+    updateEntry,
+    deleteEntry,
+    submitDay,
+    openAddForm,
+    openEditForm,
+    closeForm,
+    closePanel,
+    tableEntries,
+    tableTotal,
+    tablePage,
+    tablePageSize,
+    tableLoading,
+    onTablePageChange,
+    reload,
+  } = useDayTimelog();
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>My weekly timesheet</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <CardTitle>My timelogs</CardTitle>
+        <Button variant="outline" size="sm" type="button" disabled={loading} onClick={() => reload()}>
+          {loading ? "Loading\u2026" : "Refresh"}
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={loading || actionLoading} />
-
-        <p className="text-xs text-wt-text-muted">
-          <span className="font-medium text-wt-text">Add entry</span> opens a panel to log hours.{" "}
-          Click a row to edit.
-        </p>
-
-        {error ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-            {error}
-          </div>
-        ) : null}
-
-        <Button
-          variant="brand"
-          size="sm"
-          type="button"
-          disabled={loading || actionLoading}
-          onClick={openAddSheet}
+        <Tabs
+          value={viewMode}
+          onValueChange={(v) => setViewMode(v as "calendar" | "table")}
         >
-          Add entry
-        </Button>
+          <TabsList aria-label="View mode" className="gap-3 bg-transparent p-0">
+            <TabsTrigger value="table">All entries</TabsTrigger>
+            <TabsTrigger value="calendar">Add timelogs</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        {!loading && !rows.length ? (
-          <p className="py-8 text-center text-sm text-wt-text-muted">
-            No entries for this week. Click <span className="font-medium text-wt-text">Add entry</span> to log hours.
-          </p>
+        {viewMode === "calendar" ? (
+          <>
+            <TimelogCalendar
+              calendar={calendar}
+              selectedDate={selectedDate}
+              loading={loading}
+              viewYear={viewYear}
+              viewMonth={viewMonth}
+              doj={user?.doj}
+              onSelectDate={selectDate}
+              onNavigate={navigateMonth}
+              onGoToToday={goToToday}
+              onGoToMonth={goToMonth}
+            />
+
+            {showEntryForm ? (
+              <DayEntryForm
+                key={editingEntry?.id ?? "new"}
+                entry={editingEntry}
+                projectOptions={projectOptions}
+                actionLoading={actionLoading}
+                dayTotalHours={selectedDateTotal}
+                selectedDate={selectedDate ?? ""}
+                onSave={addEntry}
+                onSaveAndSubmit={saveAndSubmitEntry}
+                onUpdate={updateEntry}
+                onCancel={closeForm}
+              />
+            ) : selectedDate ? (
+              <DayEntriesPanel
+                selectedDate={selectedDate}
+                entries={selectedDayEntries}
+                totalHours={selectedDateTotal}
+                loading={loading}
+                actionLoading={actionLoading}
+                error={error}
+                onAdd={openAddForm}
+                onEdit={openEditForm}
+                onDelete={deleteEntry}
+                onSubmit={submitDay}
+                onClose={closePanel}
+              />
+            ) : null}
+          </>
         ) : (
-          <WeeklyTimelogGrid
-            rows={rows}
-            dayDates={dayDates}
-            dayKeys={dayKeys}
-            projectOptions={projectOptions}
-            readOnly
-            onRowClick={editEntry}
-            onRowsChange={() => {}}
+          <TimelogTable
+            entries={tableEntries}
+            total={tableTotal}
+            page={tablePage}
+            size={tablePageSize}
+            loading={tableLoading}
+            onPageChange={onTablePageChange}
           />
         )}
-
-        <TimelogEntrySheet
-          open={sheetOpen}
-          entry={editingEntry}
-          dayDates={dayDates}
-          dayKeys={dayKeys}
-          projectOptions={projectOptions}
-          actionLoading={actionLoading}
-          onSave={saveEntry}
-          onSubmit={submitEntry}
-          onClose={closeSheet}
-        />
       </CardContent>
     </Card>
   );

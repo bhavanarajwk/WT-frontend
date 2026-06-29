@@ -655,6 +655,21 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.week, { query });
   },
 
+  getTimelogEmployeeEntries(params: { employeeEmail: string; startDate: string; endDate: string }) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.employeeEntries, { query: params });
+  },
+
+  getTimelogProjects() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.projects);
+  },
+
+  getTimelogProjectWeekTotals(projectCode: string, weekStart: string) {
+    return apiClient.get<ApiEnvelope<unknown>>(
+      endpoints.timelog.projectWeekTotals(projectCode),
+      { query: { weekStart } }
+    );
+  },
+
   getTimelogWeekTotalsBatch(payload: { weekStarts: string[]; employeeEmails: string[] }) {
     return apiClient.post<ApiEnvelope<Record<string, Record<string, number>>>>(
       endpoints.timelog.weekTotalsBatch,
@@ -677,6 +692,45 @@ export const hrmsService = {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
+  },
+
+  createTimelogDraft(payload: {
+    project_code: string;
+    log_date: string;
+    hours: number;
+    task_category?: string;
+    sub_category?: string | null;
+    description?: string | null;
+  }) {
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.timelog.draft, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  submitTimelogDate(payload: { log_date: string }) {
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.timelog.submitDate, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateTimelogEntry(timelogId: number, payload: {
+    project_code: string;
+    log_date: string;
+    hours: number;
+    task_category: string;
+    sub_category?: string | null;
+    description?: string | null;
+  }) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.byId(String(timelogId)), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteTimelogEntry(timelogId: number) {
+    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.timelog.byId(String(timelogId)));
   },
 
   updateTimelogStatus(payload: {

@@ -1,0 +1,25 @@
+.project-timelog-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.project-timelog-panel .panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.project-timelog-panel .panel-title {
+  font-weight: 600;
+  font-size: 0.938rem;
+}
+
+.project-timelog-panel .empty-state {
+  text-align: center;
+  padding: 2rem 0;
+  font-size: 0.875rem;
+  color: var(--wt-text-muted);
+}

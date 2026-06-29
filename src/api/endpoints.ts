@@ -80,20 +80,25 @@ export const endpoints = {
     assignedToUser: `${api}/project-assigned-to-user`,
   },
 
-  timelog: {
-    root: `${api}/timelog`,
-    options: `${api}/timelog/options`,
-    week: `${api}/timelog/week`,
-    weekTotalsBatch: `${api}/timelog/week/totals/batch`,
-    weekSubmit: `${api}/timelog/week/submit`,
-    byId: (timelogId: string) => `${api}/timelog/${encodeURIComponent(timelogId)}`,
-    legacyGetByDate: (empEmail: string, logDate: string) =>
-      `${api}/timelog/get/${encodeURIComponent(empEmail)}/${encodeURIComponent(logDate)}`,
-    legacyEntry: `${api}/timelog/entry`,
-    status: `${api}/timelog/status`,
-    statusBatch: `${api}/timelog/status/batch`,
-    export: `${api}/export/timelogs`,
-  },
+    timelog: {
+      root: `${api}/timelog`,
+      options: `${api}/timelog/options`,
+      week: `${api}/timelog/week`,
+      weekTotalsBatch: `${api}/timelog/week/totals/batch`,
+      weekSubmit: `${api}/timelog/week/submit`,
+      byId: (timelogId: string) => `${api}/timelog/${encodeURIComponent(timelogId)}`,
+      draft: `${api}/timelog/draft`,
+      submitDate: `${api}/timelog/submit-date`,
+      legacyGetByDate: (empEmail: string, logDate: string) =>
+        `${api}/timelog/get/${encodeURIComponent(empEmail)}/${encodeURIComponent(logDate)}`,
+      legacyEntry: `${api}/timelog/entry`,
+      status: `${api}/timelog/status`,
+      statusBatch: `${api}/timelog/status/batch`,
+      employeeEntries: `${api}/timelog/employee/entries`,
+      export: `${api}/export/timelogs`,
+      projects: `${api}/timelog/projects`,
+      projectWeekTotals: (projectCode: string) => `${api}/timelog/project/${encodeURIComponent(projectCode)}/week/totals`,
+    },
 
   userRequest: {
     root: `${api}/userRequest`,
