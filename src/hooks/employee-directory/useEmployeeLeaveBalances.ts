@@ -7,7 +7,7 @@ import { hrmsService } from "@/services/hrms.service";
 type Options = { enabled?: boolean };
 
 /**
- * GET /api/v1/employee-profile/{empId}/balances — leave & comp-off balances (HR + AM view).
+ * GET /api/v1/employee-profile/{empId}/balances — leave & comp-off balances (HR / Admin view).
  */
 export function useEmployeeLeaveBalances(empId: string, options?: Options) {
   const enabled = (options?.enabled ?? true) && Boolean(empId?.trim());

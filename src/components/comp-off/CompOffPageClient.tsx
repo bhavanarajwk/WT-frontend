@@ -170,6 +170,8 @@ export function CompOffPageClient({
 
   const [projectOptions, setProjectOptions] = useState<CompOffProjectOption[]>([]);
   const [projectCatalog, setProjectCatalog] = useState<CompOffProjectCatalog | null>(null);
+  const [projectOptionsError, setProjectOptionsError] = useState<string | null>(null);
+  const [projectOptionsLoading, setProjectOptionsLoading] = useState(false);
   const [managerEmailResolving, setManagerEmailResolving] = useState(false);
 
   const [earnForm, setEarnForm] = useState({
@@ -330,10 +332,7 @@ export function CompOffPageClient({
 
   const loadProfileBalanceFallback = useCallback(async () => {
     try {
-      const profile = await fetchSelfProfile(user?.roles ?? []);
-      const empId = String(profile?.emp_id ?? profile?.empId ?? "").trim();
-      if (!empId) return;
-      const balRes = await hrmsService.getEmployeeLeaveBalances(empId);
+      const balRes = await hrmsService.getMyLeaveBalances();
       const units = Number(balRes.data?.comp_off_balance);
       if (Number.isFinite(units) && balanceUnits === null) {
         setBalanceUnits(units);
@@ -341,16 +340,26 @@ export function CompOffPageClient({
     } catch {
       /* optional fallback */
     }
-  }, [balanceUnits, user?.roles]);
+  }, [balanceUnits]);
 
   const loadAssignedProjects = useCallback(async () => {
+    setProjectOptionsLoading(true);
+    setProjectOptionsError(null);
     try {
       const catalog = await loadCompOffProjectCatalog();
       setProjectCatalog(catalog);
       setProjectOptions(catalog.options);
-    } catch {
+      if (!catalog.options.length) {
+        setProjectOptionsError("No allocated projects found for your account.");
+      }
+    } catch (err) {
       setProjectCatalog(null);
       setProjectOptions([]);
+      setProjectOptionsError(
+        err instanceof Error ? err.message : "Unable to load allocated projects. Please try again."
+      );
+    } finally {
+      setProjectOptionsLoading(false);
     }
   }, []);
 
@@ -675,12 +684,25 @@ export function CompOffPageClient({
     await loadTeamRequests();
   }
 
+  const shouldLoadEarnWorkspace = useMemo(() => {
+    if (!userEmail) return false;
+    if (embedded && flowScope === "earn") {
+      return forcedTab === "my";
+    }
+    return canApplyCompOff && (forcedTab === "my" || mainTab === "my");
+  }, [userEmail, embedded, flowScope, forcedTab, canApplyCompOff, mainTab]);
+
   useEffect(() => {
-    if (!canApplyCompOff) return;
+    if (!shouldLoadEarnWorkspace) return;
     void loadBalanceAndGrants();
     void loadAssignedProjects();
     void loadMyRequests();
-  }, [canApplyCompOff, loadBalanceAndGrants, loadAssignedProjects, loadMyRequests]);
+  }, [
+    shouldLoadEarnWorkspace,
+    loadBalanceAndGrants,
+    loadAssignedProjects,
+    loadMyRequests,
+  ]);
 
   useEffect(() => {
     if (balanceUnits === null && grants.length === 0 && !grantsLoading) {
@@ -902,7 +924,23 @@ export function CompOffPageClient({
                         value={earnForm.project_code}
                         options={projectOptions}
                         onChange={onEarnProjectChange}
+                        disabled={projectOptionsLoading || actionLoading}
                       />
+                      {projectOptionsLoading ? (
+                        <p className="text-xs text-wt-text-muted sm:col-span-2">Loading your projects…</p>
+                      ) : null}
+                      {projectOptionsError ? (
+                        <div className="text-xs text-rose-700 sm:col-span-2">
+                          {projectOptionsError}{" "}
+                          <button
+                            type="button"
+                            className="underline"
+                            onClick={() => void loadAssignedProjects()}
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      ) : null}
                       <WeekendMultiDateField
                         label="Worked date"
                         required

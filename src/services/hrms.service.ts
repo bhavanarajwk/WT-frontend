@@ -107,8 +107,11 @@ export interface ActiveNonBenchAllocationsPage {
 }
 
 export interface LeaveManagerOption {
+  employeeId: string | null;
+  employee_id?: string | null;
   email: string;
   name: string;
+  /** @deprecated Legacy project-allocated manager options */
   project_code?: string | null;
   project_name?: string | null;
 }
@@ -282,6 +285,15 @@ export const hrmsService = {
 
   getMyProfile() {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.profile.self);
+  },
+
+  getMyLeaveBalances(params?: { year?: number; month?: number }) {
+    const query: Record<string, string> = {};
+    if (params?.year != null) query.year = String(params.year);
+    if (params?.month != null) query.month = String(params.month);
+    return apiClient.get<ApiEnvelope<EmployeeLeaveBalancesData>>(endpoints.profile.selfBalances, {
+      query,
+    });
   },
 
   updateMyProfile(fd: FormData) {
@@ -731,12 +743,23 @@ export const hrmsService = {
     );
   },
 
+  /** @deprecated Legacy project-scoped picker — use getEmployeeManagers (GET /employees/managers). */
   getLeaveManagerOptions() {
     return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
       endpoints.userRequest.leaveManagerOptions
     );
   },
 
+  /** GET /employees/managers — ACTIVE employees for primary manager multi-select (leave workflow). */
+  getEmployeeManagers(params?: { search?: string }) {
+    const query: Record<string, string> = {};
+    if (params?.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<LeaveManagerOption[]>>(endpoints.employees.managers, {
+      query,
+    });
+  },
+
+  /** @deprecated Additional recipients are server-assigned CC for leave; do not use in employee form. */
   getLeaveRecipientOptions(params?: { search?: string }) {
     const query: Record<string, string> = {};
     if (params?.search?.trim()) query.search = params.search.trim();
