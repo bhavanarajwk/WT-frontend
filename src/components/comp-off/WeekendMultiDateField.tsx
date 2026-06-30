@@ -14,6 +14,7 @@ import {
   inputValueToApiDate,
   maskApiDateInput,
   normalizeToApiDate,
+  todayApiDate,
 } from "@/utils/apiDate";
 import { isWeekendYmd } from "@/utils/compOff";
 
@@ -74,6 +75,10 @@ export function WeekendMultiDateField({
       setError("Only weekends (Saturday or Sunday) can be selected.");
       return false;
     }
+    if (compareApiDates(normalized, todayApiDate()) > 0) {
+      setError("Future dates cannot be selected.");
+      return false;
+    }
     if (value.includes(normalized)) {
       setError("This date is already selected.");
       return false;
@@ -103,60 +108,64 @@ export function WeekendMultiDateField({
   }
 
   const atMax = value.length >= maxDates;
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   return (
     <Field className={cn("flex flex-col gap-1.5", className)}>
       <FieldLabel label={label} required={required} />
       <div className="relative">
-        <Input
-          type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          className="api-date-field h-10 pr-10"
-          value={draft}
-          placeholder={atMax ? "Maximum dates selected" : API_DATE_PLACEHOLDER}
-          disabled={disabled || atMax}
-          aria-required={required || undefined}
-          pattern="\d{2}/\d{2}/\d{4}"
-          title={`Weekends only — ${API_DATE_PLACEHOLDER}`}
-          onChange={(e) => {
-            const next = maskApiDateInput(e.target.value);
-            setDraft(next);
-            if (next.replace(/\D/g, "").length === 8) {
-              tryAddDate(next);
-            } else if (error) {
-              setError("");
-            }
-          }}
-          onBlur={(e) => {
-            const raw = e.target.value.trim();
-            if (!raw) {
-              setDraft("");
-              setError("");
-              return;
-            }
-            tryAddDate(raw);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (draft.trim()) tryAddDate(draft);
-            }
-          }}
-        />
-        <input
-          ref={pickerRef}
-          type="date"
-          tabIndex={-1}
-          aria-hidden
-          className="sr-only"
-          disabled={disabled || atMax}
-          onChange={(e) => {
-            const apiDate = inputValueToApiDate(e.target.value);
-            if (apiDate) tryAddDate(apiDate);
-            e.target.value = "";
-          }}
-        />
+        <div className="relative">
+          <Input
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            className="api-date-field h-10 pr-10"
+            value={draft}
+            placeholder={atMax ? "Maximum dates selected" : API_DATE_PLACEHOLDER}
+            disabled={disabled || atMax}
+            aria-required={required || undefined}
+            pattern="\d{2}/\d{2}/\d{4}"
+            title={`Weekends only — ${API_DATE_PLACEHOLDER}`}
+            onChange={(e) => {
+              const next = maskApiDateInput(e.target.value);
+              setDraft(next);
+              if (next.replace(/\D/g, "").length === 8) {
+                tryAddDate(next);
+              } else if (error) {
+                setError("");
+              }
+            }}
+            onBlur={(e) => {
+              const raw = e.target.value.trim();
+              if (!raw) {
+                setDraft("");
+                setError("");
+                return;
+              }
+              tryAddDate(raw);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (draft.trim()) tryAddDate(draft);
+              }
+            }}
+          />
+          <input
+            ref={pickerRef}
+            type="date"
+            tabIndex={-1}
+            aria-hidden
+            className="absolute inset-0 opacity-0 cursor-pointer"
+            max={todayISO}
+            disabled={disabled || atMax}
+            onChange={(e) => {
+              const apiDate = inputValueToApiDate(e.target.value);
+              if (apiDate) tryAddDate(apiDate);
+              e.target.value = "";
+            }}
+          />
+        </div>
         <Button
           type="button"
           variant="ghost"

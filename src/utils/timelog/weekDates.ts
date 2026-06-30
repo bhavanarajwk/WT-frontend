@@ -61,12 +61,29 @@ export function formatDayHeader(value: Date): string {
   return `${value.getDate()}/${value.getMonth() + 1}`;
 }
 
-/** Team timelog table date cell, e.g. 09/06/26. */
-export function formatTimelogTableDate(value: Date): string {
-  const d = String(value.getDate()).padStart(2, "0");
-  const m = String(value.getMonth() + 1).padStart(2, "0");
-  const y = String(value.getFullYear()).slice(-2);
-  return `${d}/${m}/${y}`;
+/** Team timelog table date cell, e.g. 09/06/26. Accepts Date or dd/mm/yyyy or yyyy-mm-dd string. */
+export function formatTimelogTableDate(value: Date | string): string {
+  if (typeof value === "string") {
+    const dmy = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+    if (dmy) {
+      const d = dmy[1];
+      const m = dmy[2];
+      const y = dmy[3].slice(-2);
+      return `${d}/${m}/${y}`;
+    }
+    const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (iso) {
+      const d = iso[3];
+      const m = iso[2];
+      const y = iso[1].slice(-2);
+      return `${d}/${m}/${y}`;
+    }
+  }
+  const date = typeof value === "string" ? new Date(value) : value;
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yy = String(date.getFullYear()).slice(-2);
+  return `${dd}/${mm}/${yy}`;
 }
 
 export function formatHoursDisplay(value: number): string {

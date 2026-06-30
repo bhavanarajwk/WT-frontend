@@ -40,13 +40,27 @@ async function listRequestsByTypes(params: {
 }
 
 export const compOffService = {
+  getManagerOptions() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.compOff.earnManagerOptions);
+  },
+
+  cancelEarnRequest(userRequestId: number) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.compOff.earnCancel, {
+      query: { userRequestId: String(userRequestId) },
+    });
+  },
+
   createEarnRequest(body: Record<string, unknown>) {
     const payload = applyApiDateFields(body, ["workedDate", "worked_date"]);
-    const normalized = {
+    const normalized: Record<string, unknown> = {
       workedDate: payload.workedDate ?? payload.worked_date,
       projectCode: payload.projectCode ?? payload.project_code,
       workDescription: payload.workDescription ?? payload.work_description,
     };
+    const managers = payload.manager_emails ?? payload.managerEmails;
+    if (Array.isArray(managers) && managers.length) {
+      normalized.managerEmails = managers;
+    }
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.compOff.earn, {
       contentType: "application/json",
       body: JSON.stringify(normalized),

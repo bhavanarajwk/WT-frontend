@@ -1,46 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { hrmsService } from "@/services/hrms.service";
-import type { TimelogWeekSnapshot } from "@/utils/timelog/gridState";
 import {
   currentMonthRef,
-  type MonthRef,
+  shiftMonth,
+  formatMonthYearLabel,
   weekStartsInMonth,
+  type MonthRef,
 } from "@/utils/timelog/monthWeeks";
+import type {
+  HrTimelogEmployee,
+  HrMonthlyTimelogRow,
+} from "./useHrMonthlyTimelogSummary.types";
 
-export type HrTimelogEmployee = {
-  email: string;
-  label: string;
-};
+type BatchTotalsPayload = Record<string, Record<string, number>>;
 
-export type HrMonthlyTimelogRow = {
-  email: string;
-  label: string;
-  hoursByWeek: Record<string, number>;
-};
-
-function unwrapWeek(response: unknown): TimelogWeekSnapshot {
-  return ((response as { data?: TimelogWeekSnapshot }).data ?? response) as TimelogWeekSnapshot;
-}
-
-async function runWithConcurrency<T>(
-  tasks: Array<() => Promise<T>>,
-  limit: number
-): Promise<T[]> {
-  const results: T[] = new Array(tasks.length);
-  let next = 0;
-
-  async function worker() {
-    while (next < tasks.length) {
-      const index = next;
-      next += 1;
-      results[index] = await tasks[index]();
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, () => worker()));
-  return results;
+function unwrapBatchTotals(response: unknown): BatchTotalsPayload {
+  return ((response as { data?: BatchTotalsPayload }).data ?? response) as BatchTotalsPayload;
 }
 
 export function useHrMonthlyTimelogSummary(
@@ -48,65 +26,51 @@ export function useHrMonthlyTimelogSummary(
   month: MonthRef,
   enabled: boolean
 ) {
-  const [rows, setRows] = useState<HrMonthlyTimelogRow[]>([]);
-  const [weekStarts, setWeekStarts] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const weekStarts = useMemo(() => weekStartsInMonth(month), [month]);
 
-  const load = useCallback(async () => {
-    if (!enabled || !employees.length) {
-      setRows([]);
-      setWeekStarts(weekStartsInMonth(month));
-      return;
-    }
+  const queryKey = useMemo(
+    () => [
+      "hr-monthly-timelog-summary",
+      month.year,
+      month.month,
+      ...employees.map((e) => e.email).sort(),
+    ],
+    [month.year, month.month, employees]
+  );
 
-    const weeks = weekStartsInMonth(month);
-    setWeekStarts(weeks);
-    setLoading(true);
-    setError(null);
-
-    try {
-      const hoursMap = new Map<string, Record<string, number>>();
-      for (const emp of employees) {
-        hoursMap.set(emp.email, Object.fromEntries(weeks.map((w) => [w, 0])));
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey,
+    enabled,
+    queryFn: async () => {
+      if (!employees.length) {
+        return { rows: [] as HrMonthlyTimelogRow[], weekStarts };
       }
 
-      const tasks = employees.flatMap((emp) =>
-        weeks.map((weekStart) => async () => {
-          const res = await hrmsService.getTimelogWeek({
-            weekStart,
-            employeeEmail: emp.email,
-          });
-          const snapshot = unwrapWeek(res);
-          const bucket = hoursMap.get(emp.email);
-          if (bucket) {
-            bucket[weekStart] = snapshot.weekly_total ?? 0;
-          }
-        })
-      );
+      const response = await hrmsService.getTimelogWeekTotalsBatch({
+        weekStarts,
+        employeeEmails: employees.map((e) => e.email),
+      });
 
-      await runWithConcurrency(tasks, 12);
+      const totals = unwrapBatchTotals(response);
 
-      setRows(
-        employees.map((emp) => ({
-          email: emp.email,
-          label: emp.label,
-          hoursByWeek: hoursMap.get(emp.email) ?? {},
-        }))
-      );
-    } catch (err) {
-      setRows([]);
-      setError(err instanceof Error ? err.message : "Unable to load monthly timelog summary");
-    } finally {
-      setLoading(false);
-    }
-  }, [employees, enabled, month]);
+      const rows: HrMonthlyTimelogRow[] = employees.map((emp) => ({
+        email: emp.email,
+        label: emp.label,
+        hoursByWeek: totals[emp.email] ?? Object.fromEntries(weekStarts.map((w) => [w, 0])),
+      }));
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+      return { rows, weekStarts };
+    },
+  });
 
-  return { rows, weekStarts, loading, error, reload: load };
+  return {
+    rows: data?.rows ?? [],
+    weekStarts,
+    loading: isLoading,
+    error: error ? (error instanceof Error ? error.message : "Unable to load monthly timelog summary") : null,
+    reload: () => void refetch(),
+  };
 }
 
-export { currentMonthRef, shiftMonth, formatMonthYearLabel } from "@/utils/timelog/monthWeeks";
+export { currentMonthRef, shiftMonth, formatMonthYearLabel };
+export type { HrTimelogEmployee, HrMonthlyTimelogRow, MonthRef };

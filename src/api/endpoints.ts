@@ -24,7 +24,7 @@ export const endpoints = {
 
   profile: {
     self: `${api}/profile`,
-    selfBalances: `${api}/profile/balances`,
+    myBalances: `${api}/profile/balances`,
     employeeById: (empId: string) => `${api}/employee-profile/${encodeURIComponent(empId)}`,
     employeeBalances: (empId: string) =>
       `${api}/employee-profile/${encodeURIComponent(empId)}/balances`,
@@ -81,19 +81,25 @@ export const endpoints = {
     assignedToUser: `${api}/project-assigned-to-user`,
   },
 
-  timelog: {
-    root: `${api}/timelog`,
-    options: `${api}/timelog/options`,
-    week: `${api}/timelog/week`,
-    weekSubmit: `${api}/timelog/week/submit`,
-    byId: (timelogId: string) => `${api}/timelog/${encodeURIComponent(timelogId)}`,
-    legacyGetByDate: (empEmail: string, logDate: string) =>
-      `${api}/timelog/get/${encodeURIComponent(empEmail)}/${encodeURIComponent(logDate)}`,
-    legacyEntry: `${api}/timelog/entry`,
-    status: `${api}/timelog/status`,
-    statusBatch: `${api}/timelog/status/batch`,
-    export: `${api}/export/timelogs`,
-  },
+    timelog: {
+      root: `${api}/timelog`,
+      options: `${api}/timelog/options`,
+      week: `${api}/timelog/week`,
+      weekTotalsBatch: `${api}/timelog/week/totals/batch`,
+      weekSubmit: `${api}/timelog/week/submit`,
+      byId: (timelogId: string) => `${api}/timelog/${encodeURIComponent(timelogId)}`,
+      draft: `${api}/timelog/draft`,
+      submitDate: `${api}/timelog/submit-date`,
+      legacyGetByDate: (empEmail: string, logDate: string) =>
+        `${api}/timelog/get/${encodeURIComponent(empEmail)}/${encodeURIComponent(logDate)}`,
+      legacyEntry: `${api}/timelog/entry`,
+      status: `${api}/timelog/status`,
+      statusBatch: `${api}/timelog/status/batch`,
+      employeeEntries: `${api}/timelog/employee/entries`,
+      export: `${api}/export/timelogs`,
+      projects: `${api}/timelog/projects`,
+      projectWeekTotals: (projectCode: string) => `${api}/timelog/project/${encodeURIComponent(projectCode)}/week/totals`,
+    },
 
   userRequest: {
     root: `${api}/userRequest`,
@@ -109,9 +115,15 @@ export const endpoints = {
     managerTeamOnLeaveToday: `${api}/manager-team-on-leave-today`,
   },
 
+  wfh: {
+    managerOptions: `${api}/wfh/manager-options`,
+  },
+
   compOff: {
     earn: `${api}/comp-off/earn`,
     earnStatus: `${api}/comp-off/earn/status`,
+    earnCancel: `${api}/comp-off/earn/cancel`,
+    earnManagerOptions: `${api}/comp-off/earn/manager-options`,
     /** @deprecated Backend uses expiry for balance; kept for reference only. */
     balance: `${api}/comp-off/expiry`,
     expiry: `${api}/comp-off/expiry`,

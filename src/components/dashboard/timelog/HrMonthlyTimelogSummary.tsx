@@ -53,19 +53,17 @@ export function HrMonthlyTimelogSummary({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-1.5 text-sm" disabled={loading} onClick={() => onMonthChange(shiftMonth(month, -1))}
-          >
+          <Button variant="outline" size="sm" type="button" disabled={loading} onClick={() => onMonthChange(shiftMonth(month, -1))}>
             Previous month
           </Button>
           <span className="min-w-[10rem] text-center text-sm font-semibold tabular-nums">
             {formatMonthYearLabel(month)}
           </span>
-          <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-1.5 text-sm" disabled={loading || isCurrentMonth} onClick={() => onMonthChange(shiftMonth(month, 1))}
-          >
+          <Button variant="outline" size="sm" type="button" disabled={loading || isCurrentMonth} onClick={() => onMonthChange(shiftMonth(month, 1))}>
             Next month
           </Button>
         </div>
-        <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-2 text-sm" disabled={loading} onClick={onRefresh} >
+        <Button variant="outline" size="sm" type="button" disabled={loading} onClick={onRefresh}>
           Refresh
         </Button>
       </div>
@@ -80,7 +78,7 @@ export function HrMonthlyTimelogSummary({
         <SectionLoading className="py-10" label="Loading approved hours…" />
       ) : !rows.length ? (
         <p className="py-10 text-center text-sm text-wt-text-muted">
-          No approved timelog hours for this month.
+          No approved time log hours for this month.
         </p>
       ) : (
         <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">

@@ -1,0 +1,50 @@
+.employee-week-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.employee-week-detail .detail-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.employee-week-detail .detail-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.938rem;
+}
+
+.employee-week-detail .back-btn {
+  font-size: 0.813rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--wt-border);
+  border-radius: 0.375rem;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.employee-week-detail .back-btn:hover {
+  background: var(--wt-surface-2);
+}
+
+.employee-week-detail .detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.employee-week-detail .loading-state {
+  text-align: center;
+  padding: 2rem 0;
+  font-size: 0.875rem;
+  color: var(--wt-text-muted);
+}

@@ -107,11 +107,8 @@ export interface ActiveNonBenchAllocationsPage {
 }
 
 export interface LeaveManagerOption {
-  employeeId: string | null;
-  employee_id?: string | null;
   email: string;
   name: string;
-  /** @deprecated Legacy project-allocated manager options */
   project_code?: string | null;
   project_name?: string | null;
 }
@@ -287,15 +284,6 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.profile.self);
   },
 
-  getMyLeaveBalances(params?: { year?: number; month?: number }) {
-    const query: Record<string, string> = {};
-    if (params?.year != null) query.year = String(params.year);
-    if (params?.month != null) query.month = String(params.month);
-    return apiClient.get<ApiEnvelope<EmployeeLeaveBalancesData>>(endpoints.profile.selfBalances, {
-      query,
-    });
-  },
-
   updateMyProfile(fd: FormData) {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.self, { body: fd });
   },
@@ -309,6 +297,10 @@ export const hrmsService = {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
+  },
+
+  getMyLeaveBalance() {
+    return apiClient.get<ApiEnvelope<EmployeeLeaveBalancesData>>(endpoints.profile.myBalances);
   },
 
   getEmployeeLeaveBalances(empId: string) {
@@ -667,6 +659,31 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.week, { query });
   },
 
+  getTimelogEmployeeEntries(params: { employeeEmail: string; startDate: string; endDate: string }) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.employeeEntries, { query: params });
+  },
+
+  getTimelogProjects() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.projects);
+  },
+
+  getTimelogProjectWeekTotals(projectCode: string, weekStart: string) {
+    return apiClient.get<ApiEnvelope<unknown>>(
+      endpoints.timelog.projectWeekTotals(projectCode),
+      { query: { weekStart } }
+    );
+  },
+
+  getTimelogWeekTotalsBatch(payload: { weekStarts: string[]; employeeEmails: string[] }) {
+    return apiClient.post<ApiEnvelope<Record<string, Record<string, number>>>>(
+      endpoints.timelog.weekTotalsBatch,
+      {
+        contentType: "application/json",
+        body: JSON.stringify(payload),
+      }
+    );
+  },
+
   saveTimelogWeek(payload: Record<string, unknown>) {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.week, {
       contentType: "application/json",
@@ -679,6 +696,45 @@ export const hrmsService = {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
+  },
+
+  createTimelogDraft(payload: {
+    project_code: string;
+    log_date: string;
+    hours: number;
+    task_category?: string;
+    sub_category?: string | null;
+    description?: string | null;
+  }) {
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.timelog.draft, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  submitTimelogDate(payload: { log_date: string }) {
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.timelog.submitDate, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateTimelogEntry(timelogId: number, payload: {
+    project_code: string;
+    log_date: string;
+    hours: number;
+    task_category: string;
+    sub_category?: string | null;
+    description?: string | null;
+  }) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.byId(String(timelogId)), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteTimelogEntry(timelogId: number) {
+    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.timelog.byId(String(timelogId)));
   },
 
   updateTimelogStatus(payload: {
@@ -743,23 +799,18 @@ export const hrmsService = {
     );
   },
 
-  /** @deprecated Legacy project-scoped picker — use getEmployeeManagers (GET /employees/managers). */
   getLeaveManagerOptions() {
     return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
       endpoints.userRequest.leaveManagerOptions
     );
   },
 
-  /** GET /employees/managers — ACTIVE employees for primary manager multi-select (leave workflow). */
-  getEmployeeManagers(params?: { search?: string }) {
-    const query: Record<string, string> = {};
-    if (params?.search?.trim()) query.search = params.search.trim();
-    return apiClient.get<ApiEnvelope<LeaveManagerOption[]>>(endpoints.employees.managers, {
-      query,
-    });
+  getWfhManagerOptions() {
+    return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
+      endpoints.wfh.managerOptions
+    );
   },
 
-  /** @deprecated Additional recipients are server-assigned CC for leave; do not use in employee form. */
   getLeaveRecipientOptions(params?: { search?: string }) {
     const query: Record<string, string> = {};
     if (params?.search?.trim()) query.search = params.search.trim();
