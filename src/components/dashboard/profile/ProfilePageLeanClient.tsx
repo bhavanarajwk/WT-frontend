@@ -37,6 +37,8 @@ import {
 import { buildProfileAssignedProjects } from "@/utils/dashboard/projects";
 import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
 import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
+import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
+
 
 export function ProfilePageLeanClient() {
   const { user, refresh: refreshSession } = useAuth();
@@ -215,7 +217,7 @@ export function ProfilePageLeanClient() {
             </dl>
           </section>
           <section>
-            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Work Information</h5>
+            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Information</h5>
             <dl className="space-y-3 text-sm">
               <ProfileField label="Work Mode" value={readProfileField(employeeProfile, "work_mode", "workMode")} />
               <ProfileField label="Work Location" value={readProfileField(employeeProfile, "work_location_type", "workLocationType")} />
@@ -310,7 +312,7 @@ export function ProfilePageLeanClient() {
         </div>
       ) : null}
       <div className="mt-3">
-        <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
+        <FileField label="Profile Picture (required)" required accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
         <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
@@ -319,6 +321,9 @@ export function ProfilePageLeanClient() {
                 .split(",")
                 .map((item) => item.trim())
                 .filter(Boolean);
+              if (!selfProfilePic) {
+                throw new Error("Profile picture is mandatory. Please upload your profile picture.");
+              }
               if (priorEmploymentDocsForProfile) {
                 if (!selfProfileEmploymentFiles.reliving_letter) {
                   throw new Error("Please upload your relieving letter from the previous company.");
@@ -437,9 +442,20 @@ export function ProfilePageLeanClient() {
                     <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
                     <div className="min-w-0">
                       <h3 className="mb-1 text-lg font-semibold">{profileDisplayName}</h3>
-                      <p className="text-sm text-wt-text-muted">
-                        Review your profile details before editing.
-                      </p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-wt-text-muted">
+                        {(() => {
+                          const status = resolveProfileStatus(employeeProfile, user);
+                          return status ? <EmployeeStatusBadge status={status} /> : null;
+                        })()}
+                        {(() => {
+                          const email = employeeProfile?.email ?? user?.email;
+                          return email ? <span className="text-blue-600">{String(email)}</span> : null;
+                        })()}
+                        {(() => {
+                          const phone = readProfileField(employeeProfile, "phone_number", "phoneNumber");
+                          return phone ? <span>{phone}</span> : null;
+                        })()}
+                      </div>
                     </div>
                   </div>
                   {employeeSelfServeProfile ? (

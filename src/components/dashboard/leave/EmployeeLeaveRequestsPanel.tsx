@@ -9,8 +9,8 @@ import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { InputField, SelectField } from "@/components/dashboard/ui/forms";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
 import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
-import { LeaveCcRecipientsNotice } from "@/components/dashboard/leave/LeaveCcRecipientsNotice";
 import { LeaveReasonField, WfhReasonField } from "@/components/dashboard/leave/LeaveReasonField";
+import { LeaveWorkflowNotice } from "@/components/dashboard/leave/LeaveWorkflowNotice";
 import { LeaveApprovalsPanel } from "@/components/dashboard/leave/LeaveApprovalsPanel";
 import { MyPreviousLeaveRequestsCard } from "@/components/dashboard/leave/MyPreviousLeaveRequestsCard";
 import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
@@ -242,7 +242,7 @@ export function EmployeeLeaveRequestsPanel({
                 />
               ) : null}
 
-              {showLeaveFields ? <LeaveCcRecipientsNotice /> : null}
+              {showLeaveFields ? <LeaveWorkflowNotice variant="employee" /> : null}
 
               {isLeave ? (
                 <LeaveReasonField

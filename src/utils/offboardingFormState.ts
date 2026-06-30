@@ -52,10 +52,40 @@ export function addDaysToDateInput(value: string, days: number): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * If the given date (yyyy-mm-dd) falls on a weekend (Saturday/Sunday),
+ * return the previous Friday. Otherwise return the date unchanged.
+ */
+export function previousWeekdayOrSame(value: string): string {
+  const parsed = parseApiDate(value);
+  if (!parsed) return value;
+  const day = parsed.getDay();
+  if (day === 0) {
+    // Sunday → go back 2 days to Friday
+    const fri = new Date(parsed);
+    fri.setDate(fri.getDate() - 2);
+    const y = fri.getFullYear();
+    const m = String(fri.getMonth() + 1).padStart(2, "0");
+    const d = String(fri.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  if (day === 6) {
+    // Saturday → go back 1 day to Friday
+    const fri = new Date(parsed);
+    fri.setDate(fri.getDate() - 1);
+    const y = fri.getFullYear();
+    const m = String(fri.getMonth() + 1).padStart(2, "0");
+    const d = String(fri.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  return value;
+}
+
 export function defaultLastWorkingDayFromResignation(resignationDate: string): string {
   const trimmed = resignationDate.trim();
   if (!trimmed) return "";
-  return addDaysToDateInput(trimmed, DEFAULT_NOTICE_PERIOD_DAYS);
+  const raw = addDaysToDateInput(trimmed, DEFAULT_NOTICE_PERIOD_DAYS);
+  return previousWeekdayOrSame(raw);
 }
 
 /** Read exit type from API rows (offboard / exit-interview; legacy separation_type supported). */
@@ -95,8 +125,8 @@ export function isOffboardingFormValid(
     return Boolean(lwd && form.resignation_date.trim() === lwd);
   }
   if (normalizedType === "CONSULTANT") {
-    return Boolean(form.resignation_date.trim() && form.last_working_day.trim());
+    return Boolean(form.last_working_day.trim());
   }
-  if (!form.resignation_date.trim()) return false;
+  if (!form.resignation_date.trim() || !form.last_working_day.trim()) return false;
   return Boolean(form.exit_type);
 }

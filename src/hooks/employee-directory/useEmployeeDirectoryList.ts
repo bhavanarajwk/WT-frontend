@@ -9,7 +9,7 @@ import { toPagedRows } from "@/utils/apiRows";
 type Options = { enabled?: boolean };
 
 /**
- * GET /api/v1/user/onboard — onboarded employees for directory list (HR + AM).
+ * GET /api/v1/user/onboard — invited employees for directory list (HR + AM).
  * Response: GenericResponse with `data.items` (OnboardListItem[]).
  * @see endpoints.user.onboard
  */

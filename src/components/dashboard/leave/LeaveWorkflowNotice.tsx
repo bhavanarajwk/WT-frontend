@@ -1,29 +1,40 @@
-import { Info } from "lucide-react";
+"use client";
 
-type LeaveWorkflowNoticeVariant = "employee" | "manager" | "dm" | "hr";
-type LeaveWorkflowNoticeScope = "team" | "org";
+export function LeaveWorkflowNotice({
+  variant,
+  scope = "team",
+}: {
+  variant: "employee" | "manager" | "dm" | "hr";
+  scope?: "team" | "org";
+}) {
+  const copy: Record<typeof variant, { title: string; body: string }> = {
+    employee: {
+      title: "Leave Request",
+      body: "Select one or more managers to notify by email. You can optionally add other employees as notification recipients. Manager approval in Leave Requests is final—there is no HR final approval step.",
+    },
+    manager: {
+      title: "Leave Request",
+      body: "Select managers to notify when you submit leave. Optional additional recipients receive the same notification email at their work address.",
+    },
+    dm: {
+      title: "Team Leave Requests",
+      body: "Review and approve or reject leave requests from managers on your team. Manager approval is final for employee leave.",
+    },
+    hr: {
+      title: scope === "org" ? "All Employee Leave Requests" : "Team Leave Requests",
+      body:
+        scope === "org"
+          ? "Search and filter leave requests across the organization. Managers approve employee leave in Leave Requests; HR does not perform a separate final approval step."
+          : "Review and approve or reject leave requests from employees on your team. Manager approval is final for employee leave.",
+    },
+  };
 
-interface LeaveWorkflowNoticeProps {
-  variant: LeaveWorkflowNoticeVariant;
-  scope?: LeaveWorkflowNoticeScope;
-}
+  const { title, body } = copy[variant];
 
-const messages: Record<LeaveWorkflowNoticeVariant, (scope?: LeaveWorkflowNoticeScope) => string> = {
-  employee: () =>
-    "Your leave request will be submitted to your primary manager for approval. You will be notified once the request is approved or rejected.",
-  manager: () =>
-    "As a manager, your leave request will go through the standard approval workflow. Depending on your department, it may be reviewed by a delivery manager or HR.",
-  dm: () =>
-    "Your leave requests are submitted to your manager for approval. You have department manager access to view and manage team requests.",
-  hr: (scope) =>
-    `You are viewing ${scope === "org" ? "organisation-wide" : "team"} leave requests. Manager approval is required before HR can take final action.`,
-};
-
-export function LeaveWorkflowNotice({ variant, scope }: LeaveWorkflowNoticeProps) {
   return (
-    <p className="flex items-center gap-1.5 text-xs text-wt-text-muted">
-      <Info className="size-3.5 shrink-0" aria-hidden />
-      {messages[variant](scope)}
-    </p>
+    <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+      <p className="font-medium">{title}</p>
+      <p className="mt-1 text-blue-800/90">{body}</p>
+    </div>
   );
 }
