@@ -42,6 +42,7 @@ type WeeklyTimelogGridProps = {
   canApprove?: boolean;
   onApproveDay?: (dayKey: string) => void;
   onRejectDay?: (dayKey: string) => void;
+  onRowClick?: (row: TimelogGridRow) => void;
   onRowsChange: (rows: TimelogGridRow[]) => void;
 };
 
@@ -84,6 +85,7 @@ export function WeeklyTimelogGrid({
   canApprove = false,
   onApproveDay,
   onRejectDay,
+  onRowClick,
   onRowsChange,
 }: WeeklyTimelogGridProps) {
   const totals = dailyTotals(rows, dayKeys);
@@ -107,22 +109,23 @@ export function WeeklyTimelogGrid({
 
   return (
     <div className="space-y-3">
-      <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-        <WtTable className="min-w-[1040px]">
-          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="px-2 py-2 min-w-[120px]">Project</TableHead>
-              <TableHead className="px-2 py-2 min-w-[108px]">Task Category</TableHead>
-              <TableHead className="px-2 py-2 min-w-[120px]">Sub category</TableHead>
-              <TableHead className="px-2 py-2 min-w-[200px]">Description</TableHead>
+      <div className="wt-scroll-both overflow-x-auto rounded-lg border border-wt-border">
+        <table className="min-w-[1040px] w-full text-sm border-collapse">
+          <thead className="bg-wt-surface-2 text-wt-text-muted">
+            <tr>
+              <th className="text-left px-2 py-2 font-medium min-w-[120px]">Project</th>
+              <th className="text-left px-2 py-2 font-medium min-w-[108px]">Task Category</th>
+              <th className="text-left px-2 py-2 font-medium min-w-[120px]">Sub category</th>
+              <th className="text-left px-2 py-2 font-medium min-w-[200px]">Description</th>
               {dayDates.map((d, i) => (
                 <TableHead key={dayKeys[i]} className="text-center px-1 py-2 min-w-[2.75rem] w-11 whitespace-nowrap">
                   {formatDayHeader(d)}
                 </TableHead>
               ))}
               <TableHead className="text-center px-2 py-2 min-w-[3rem]">Total</TableHead>
-            </TableRow>
-          </TableHeader>
+              {readOnly && onRowClick ? <TableHead className="text-center px-2 py-2 min-w-[4rem]">Actions</TableHead> : null}
+            </tr>
+          </thead>
           <TableBody>
             {rows.map((row) => {
               const selectedProject = projectOptions.find(
@@ -140,7 +143,11 @@ export function WeeklyTimelogGrid({
               const metadataEditable = isRowMetadataEditable(row, dayKeys);
 
               return (
-                <TableRow key={row.clientKey} className="align-top">
+                <tr
+                  key={row.clientKey}
+                  className={`border-t border-wt-border align-top ${readOnly && onRowClick ? "cursor-pointer hover:bg-wt-surface-2" : ""}`}
+                  onClick={() => { if (readOnly && onRowClick) onRowClick(row); }}
+                >
                   {readOnly ? (
                     <>
                       <TableCell className="px-2 py-2">{projectLabel(row, projectOptions)}</TableCell>
@@ -248,16 +255,15 @@ export function WeeklyTimelogGrid({
                         return (
                           <TableCell key={key} className="px-1 py-2 text-center align-top">
                             <input
-                              type="number"
-                              min={0}
-                              max={24}
-                              step={0.01}
+                              type="text"
                               inputMode="decimal"
                               disabled={!cellEditable}
                               className="input-field w-11 max-w-[2.75rem] mx-auto px-0.5 py-1.5 text-xs text-center tabular-nums disabled:opacity-60"
                               value={row.hours_by_date[key] ?? ""}
                               onChange={(e) => {
-                                const hours_by_date = { ...row.hours_by_date, [key]: e.target.value };
+                                const raw = e.target.value;
+                                if (raw !== "" && !/^\d*\.?\d{0,2}$/.test(raw)) return;
+                                const hours_by_date = { ...row.hours_by_date, [key]: raw };
                                 onRowsChange(updateRow(rows, row.clientKey, { hours_by_date }));
                               }}
                             />
@@ -266,10 +272,22 @@ export function WeeklyTimelogGrid({
                       })}
                     </>
                   )}
-                  <TableCell className="px-2 py-2 text-center whitespace-nowrap tabular-nums">
+                    <TableCell className="px-2 py-2 text-center whitespace-nowrap tabular-nums">
                     {formatHoursDisplay(total)}
                   </TableCell>
-                </TableRow>
+                  {readOnly && onRowClick ? (
+                    <TableCell className="px-2 py-2 text-center align-top">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onRowClick(row); }}
+                      >
+                        Edit
+                      </Button>
+                    </TableCell>
+                  ) : null}
+                </tr>
               );
             })}
           </TableBody>
@@ -292,6 +310,7 @@ export function WeeklyTimelogGrid({
                 );
               })}
               <TableCell className="px-2 py-2 text-center tabular-nums">{formatHoursDisplay(weekSum)}</TableCell>
+              {readOnly && onRowClick ? <TableCell className="px-2 py-2" /> : null}
             </TableRow>
             {canApprove ? (
               <TableRow className="bg-wt-surface-1">
@@ -333,8 +352,8 @@ export function WeeklyTimelogGrid({
               </TableRow>
             ) : null}
           </tfoot>
-        </WtTable>
-      </ScrollableTable>
+        </table>
+      </div>
       {!readOnly ? (
         <Button variant="outline" size="sm" type="button" className="px-3 py-1.5 text-sm border border-wt-border rounded-lg" onClick={addRow}>
           Add row

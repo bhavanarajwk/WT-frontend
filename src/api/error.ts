@@ -37,6 +37,11 @@ export function parseApiErrorMessage(
   if (typeof body.detail === "string" && body.detail.trim()) return body.detail;
   if (typeof body.message === "string" && body.message.trim()) return body.message;
 
+  if (body.detail && typeof body.detail === "object") {
+    const detail = body.detail as Record<string, unknown>;
+    if (typeof detail.message === "string" && detail.message.trim()) return detail.message.trim();
+  }
+
   const objectDetail = asReadableObject(body.detail);
   if (objectDetail) return objectDetail;
 

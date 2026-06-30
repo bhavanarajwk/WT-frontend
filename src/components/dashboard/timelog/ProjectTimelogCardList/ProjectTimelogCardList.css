@@ -1,0 +1,71 @@
+.project-card {
+  border: 1px solid var(--wt-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.project-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem;
+  cursor: pointer;
+  background: var(--wt-surface-1);
+  transition: background 0.15s;
+}
+
+.project-card-header:hover {
+  background: var(--wt-surface-2);
+}
+
+.project-card-name {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.project-card-code {
+  font-size: 0.75rem;
+  color: var(--wt-text-muted);
+  margin-left: 0.375rem;
+}
+
+.project-card-toggle {
+  font-size: 0.75rem;
+  color: var(--wt-text-muted);
+}
+
+.project-card-body {
+  border-top: 1px solid var(--wt-border);
+}
+
+.employee-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.813rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--wt-border);
+}
+
+.employee-row:last-child {
+  border-bottom: none;
+}
+
+.employee-row:hover {
+  background: var(--wt-surface-2);
+}
+
+.employee-row.selected {
+  background: var(--wt-primary-light, rgba(59, 130, 246, 0.08));
+}
+
+.employee-name {
+  font-weight: 450;
+}
+
+.employee-week-total {
+  font-variant-numeric: tabular-nums;
+  color: var(--wt-text-muted);
+}

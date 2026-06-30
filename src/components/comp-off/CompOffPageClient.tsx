@@ -30,7 +30,6 @@ import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
 import { useManagerPortfolioEmails } from "@/hooks/comp-off/useManagerPortfolioEmails";
 import { requestRowEmail } from "@/utils/learning/onboardOptions";
 import { isAccountManagerEmployeeUser } from "@/utils/roles";
-import { fetchSelfProfile } from "@/utils/selfProfile";
 import type { CompOffProjectOption } from "@/utils/compOffProjects";
 import {
   loadCompOffProjectCatalog,
@@ -170,9 +169,11 @@ export function CompOffPageClient({
 
   const [projectOptions, setProjectOptions] = useState<CompOffProjectOption[]>([]);
   const [projectCatalog, setProjectCatalog] = useState<CompOffProjectCatalog | null>(null);
-  const [projectOptionsError, setProjectOptionsError] = useState<string | null>(null);
-  const [projectOptionsLoading, setProjectOptionsLoading] = useState(false);
   const [managerEmailResolving, setManagerEmailResolving] = useState(false);
+
+  const [managerOptions, setManagerOptions] = useState<Array<{ email: string; name: string; project_code?: string; project_name?: string }>>([]);
+  const [selectedManagerEmails, setSelectedManagerEmails] = useState<string[]>([]);
+  const [managerOptionsLoading, setManagerOptionsLoading] = useState(false);
 
   const [earnForm, setEarnForm] = useState({
     worked_dates: [] as string[],
@@ -332,7 +333,7 @@ export function CompOffPageClient({
 
   const loadProfileBalanceFallback = useCallback(async () => {
     try {
-      const balRes = await hrmsService.getMyLeaveBalances();
+      const balRes = await hrmsService.getMyLeaveBalance();
       const units = Number(balRes.data?.comp_off_balance);
       if (Number.isFinite(units) && balanceUnits === null) {
         setBalanceUnits(units);
@@ -343,23 +344,13 @@ export function CompOffPageClient({
   }, [balanceUnits]);
 
   const loadAssignedProjects = useCallback(async () => {
-    setProjectOptionsLoading(true);
-    setProjectOptionsError(null);
     try {
       const catalog = await loadCompOffProjectCatalog();
       setProjectCatalog(catalog);
       setProjectOptions(catalog.options);
-      if (!catalog.options.length) {
-        setProjectOptionsError("No allocated projects found for your account.");
-      }
-    } catch (err) {
+    } catch {
       setProjectCatalog(null);
       setProjectOptions([]);
-      setProjectOptionsError(
-        err instanceof Error ? err.message : "Unable to load allocated projects. Please try again."
-      );
-    } finally {
-      setProjectOptionsLoading(false);
     }
   }, []);
 
@@ -684,25 +675,12 @@ export function CompOffPageClient({
     await loadTeamRequests();
   }
 
-  const shouldLoadEarnWorkspace = useMemo(() => {
-    if (!userEmail) return false;
-    if (embedded && flowScope === "earn") {
-      return forcedTab === "my";
-    }
-    return canApplyCompOff && (forcedTab === "my" || mainTab === "my");
-  }, [userEmail, embedded, flowScope, forcedTab, canApplyCompOff, mainTab]);
-
   useEffect(() => {
-    if (!shouldLoadEarnWorkspace) return;
+    if (!canApplyCompOff) return;
     void loadBalanceAndGrants();
     void loadAssignedProjects();
     void loadMyRequests();
-  }, [
-    shouldLoadEarnWorkspace,
-    loadBalanceAndGrants,
-    loadAssignedProjects,
-    loadMyRequests,
-  ]);
+  }, [canApplyCompOff, loadBalanceAndGrants, loadAssignedProjects, loadMyRequests]);
 
   useEffect(() => {
     if (balanceUnits === null && grants.length === 0 && !grantsLoading) {
@@ -749,6 +727,15 @@ export function CompOffPageClient({
     if (mainTab !== "my" || !canApplyCompOff) return;
     void loadMyRequests();
     void loadBalanceAndGrants();
+    setManagerOptionsLoading(true);
+    compOffService.getManagerOptions().then((res) => {
+      const data = res.data as { items?: Array<{ email: string; name: string; project_code?: string; project_name?: string }> } | undefined;
+      setManagerOptions(data?.items ?? []);
+    }).catch(() => {
+      setManagerOptions([]);
+    }).finally(() => {
+      setManagerOptionsLoading(false);
+    });
   }, [mainTab, canApplyCompOff, loadMyRequests, loadBalanceAndGrants]);
 
   useEffect(() => {
@@ -771,13 +758,6 @@ export function CompOffPageClient({
   async function submitEarn() {
     const workedDates = earnForm.worked_dates.map((d) => normalizeToApiDate(d.trim())).filter(Boolean);
     const projectCode = earnForm.project_code.trim();
-    let managerEmail = earnForm.manager_comp_off_email.trim().toLowerCase();
-    if (!managerEmail && selectedProject?.managerEmail) {
-      managerEmail = selectedProject.managerEmail;
-    }
-    if (!managerEmail && projectCatalog) {
-      managerEmail = await resolveCompOffManagerEmail(projectCode, projectCatalog);
-    }
     const comments = earnForm.comments.trim();
     if (!projectCode) throw new Error("Project is required.");
     if (!workedDates.length) throw new Error("At least one weekend worked date is required.");
@@ -786,6 +766,7 @@ export function CompOffPageClient({
         throw new Error("Worked dates must be weekends (Saturday or Sunday).");
       }
     }
+    if (!selectedManagerEmails.length) throw new Error("At least one primary manager must be selected.");
     if (!comments) throw new Error("Comments are required.");
     if (comments.length > 2000) throw new Error("Comments must be 2000 characters or less.");
     if (editingRequestId) {
@@ -799,9 +780,12 @@ export function CompOffPageClient({
         projectCode,
         work_description: comments,
         workDescription: comments,
+        manager_emails: selectedManagerEmails,
+        managerEmails: selectedManagerEmails,
       });
     }
     setEarnForm({ worked_dates: [], project_code: "", manager_comp_off_email: "", comments: "" });
+    setSelectedManagerEmails([]);
     setEditingRequestId("");
     await Promise.all([loadMyRequests(), loadBalanceAndGrants()]);
   }
@@ -912,8 +896,42 @@ export function CompOffPageClient({
                   </div>
                 </div>
 
+                {grants.length ? (
+                  <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4 space-y-2">
+                    <h3 className="font-semibold text-sm">Credit Breakdown</h3>
+                    <ScrollableTable maxHeightClass="max-h-48">
+                      <WtTable>
+                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead>Worked</TableHead>
+                            <TableHead>Expires</TableHead>
+                            <TableHead>Remaining</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {grants.map((grant, idx) => {
+                            const expiry = normalizeToApiDate(grantExpiryDate(grant)) || grantExpiryDate(grant);
+                            const worked = normalizeToApiDate(grant.worked_date ?? grant.workedDate ?? "") || (grant.worked_date ?? grant.workedDate);
+                            const status = grantStatus(grant);
+                            const remaining = grantRemainingUnits(grant);
+                            return (
+                              <TableRow key={grant.grant_id ?? grant.grantId ?? idx}>
+                                <TableCell className="px-3 py-1.5 text-sm">{worked ? formatApiDateDisplay(worked) : "—"}</TableCell>
+                                <TableCell className="px-3 py-1.5 text-sm">{expiry ? formatApiDateDisplay(expiry) : "—"}</TableCell>
+                                <TableCell className="px-3 py-1.5 text-sm">{Number.isFinite(remaining) ? remaining : "—"}</TableCell>
+                                <TableCell className="px-3 py-1.5 text-sm">{status}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </WtTable>
+                    </ScrollableTable>
+                  </div>
+                ) : null}
+
                 <div className={`grid gap-4 ${earnOnly ? "lg:grid-cols-1" : "lg:grid-cols-2"}`}>
-                  <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
+                    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
                     <div>
                       <h3 className="font-semibold">Earn Credit</h3>
                     </div>
@@ -924,23 +942,7 @@ export function CompOffPageClient({
                         value={earnForm.project_code}
                         options={projectOptions}
                         onChange={onEarnProjectChange}
-                        disabled={projectOptionsLoading || actionLoading}
                       />
-                      {projectOptionsLoading ? (
-                        <p className="text-xs text-wt-text-muted sm:col-span-2">Loading your projects…</p>
-                      ) : null}
-                      {projectOptionsError ? (
-                        <div className="text-xs text-rose-700 sm:col-span-2">
-                          {projectOptionsError}{" "}
-                          <button
-                            type="button"
-                            className="underline"
-                            onClick={() => void loadAssignedProjects()}
-                          >
-                            Retry
-                          </button>
-                        </div>
-                      ) : null}
                       <WeekendMultiDateField
                         label="Worked date"
                         required
@@ -949,13 +951,48 @@ export function CompOffPageClient({
                         maxDates={2}
                       />
                     </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-wt-text">Primary manager(s)</label>
+                      {managerOptionsLoading ? (
+                        <p className="text-xs text-wt-text-muted">Loading managers...</p>
+                      ) : managerOptions.length ? (
+                        <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto border border-wt-border rounded-lg p-2">
+                          {managerOptions.map((mgr) => {
+                            const isSelected = selectedManagerEmails.includes(mgr.email);
+                            return (
+                              <label key={mgr.email} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-wt-surface-2 px-2 py-1 rounded">
+                                <input
+                                  type="checkbox"
+                                  className="accent-wt-brand size-4"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    setSelectedManagerEmails((prev) =>
+                                      isSelected ? prev.filter((e) => e !== mgr.email) : [...prev, mgr.email]
+                                    );
+                                  }}
+                                />
+                                <span>{mgr.name}</span>
+                                {mgr.project_code ? (
+                                  <span className="text-xs text-wt-text-muted">({mgr.project_code})</span>
+                                ) : null}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-wt-text-muted">No managers available for your projects.</p>
+                      )}
+                      {!selectedManagerEmails.length ? (
+                        <p className="text-xs text-wt-error">Select at least one manager.</p>
+                      ) : null}
+                    </div>
                     <TextAreaField
-                      label="Comments"
+                      label="Comments / Work description"
                       required
                       value={earnForm.comments}
                       onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
                     />
-                    <Button variant="brand" type="button" className="px-3 py-2" disabled={ actionLoading || !earnForm.project_code.trim() || !earnForm.worked_dates.length || !earnForm.comments.trim() || managerEmailResolving } onClick={() =>
+                    <Button variant="brand" type="button" className="px-3 py-2" disabled={ actionLoading || !earnForm.project_code.trim() || !earnForm.worked_dates.length || !selectedManagerEmails.length || !earnForm.comments.trim() } onClick={() =>
                         runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
                       }
                     >
@@ -1149,14 +1186,18 @@ export function CompOffPageClient({
                                               ? compOffEarnActionLabel("revoke")
                                               : compOffUsageActionLabel("revoke"),
                                             async () => {
-                                              await compOffService.deleteRequest(Number(id));
+                                              if (flow === "COMP_OFF_EARN") {
+                                                await compOffService.cancelEarnRequest(Number(id));
+                                              } else {
+                                                await compOffService.deleteRequest(Number(id));
+                                              }
                                               if (editingRequestId === id) setEditingRequestId("");
                                               await loadMyRequests();
                                             }
                                           )
                                         }
                                       >
-                                        Revoke
+                                        Cancel
                                       </Button>
                                     </div>
                                   ) : (

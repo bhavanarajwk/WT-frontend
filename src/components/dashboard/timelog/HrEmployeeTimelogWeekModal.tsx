@@ -86,7 +86,7 @@ export function HrEmployeeTimelogWeekModal({
       setSnapshot(unwrapPayload<TimelogWeekSnapshot>(weekRes));
     } catch (err) {
       setSnapshot(null);
-      setError(err instanceof Error ? err.message : "Unable to load timelog details");
+      setError(err instanceof Error ? err.message : "Unable to load time log details");
     } finally {
       setLoading(false);
     }
@@ -118,7 +118,7 @@ export function HrEmployeeTimelogWeekModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="hr-timelog-week-title"
-        className="flex max-h-[min(92vh,900px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 shadow-xl"
+        className="flex max-h-[min(92vh,900px)] w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-wt-border bg-wt-surface-1 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-wt-border px-5 py-4 md:px-6">
@@ -126,9 +126,9 @@ export function HrEmployeeTimelogWeekModal({
             <h2 id="hr-timelog-week-title" className="text-lg font-semibold">
               {employeeLabel}
             </h2>
-            <p className="mt-1 text-xs text-wt-text-muted">Approved timelog details (read-only)</p>
+            <p className="mt-1 text-xs text-wt-text-muted">Approved time log details (read-only)</p>
           </div>
-          <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-1.5 text-sm" onClick={onClose} >
+          <Button variant="outline" size="sm" type="button" onClick={onClose}>
             Close
           </Button>
         </div>
@@ -142,9 +142,8 @@ export function HrEmployeeTimelogWeekModal({
               onChange={onWeekStartChange}
               options={weekOptions}
             />
-            <Button variant="outline" size="sm" type="button" className="rounded-lg border border-wt-border px-3 py-2 text-sm" disabled={loading} onClick={() => void loadWeek()}
-            >
-              Refresh
+            <Button variant="outline" size="sm" type="button" disabled={loading} onClick={() => void loadWeek()}>
+              {loading ? "Loading\u2026" : "Refresh"}
             </Button>
           </div>
 
@@ -155,10 +154,10 @@ export function HrEmployeeTimelogWeekModal({
           ) : null}
 
           {loading ? (
-            <SectionLoading className="py-10" label="Loading timelog details…" />
+            <SectionLoading className="py-10" label="Loading time log details…" />
           ) : !gridRows.length ? (
             <p className="py-10 text-center text-sm text-wt-text-muted">
-              No approved timelog entries for this week.
+              No approved time log entries for this week.
             </p>
           ) : (
             <WeeklyTimelogGrid

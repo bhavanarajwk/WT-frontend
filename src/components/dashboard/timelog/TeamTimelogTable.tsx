@@ -127,7 +127,7 @@ export function TeamTimelogTable({ snapshot, dayDates, dayKeys }: TeamTimelogTab
         </WtTable>
       </ScrollableTable>
 
-      <div className="rounded-xl border border-wt-border bg-wt-surface-2/60 px-4 py-3 text-sm text-right">
+      <div className="rounded-xl border border-wt-border bg-wt-surface-2/60 px-4 py-3 text-right text-sm">
         <span className="text-wt-text-muted">Week total:</span>{" "}
         <span className="font-semibold tabular-nums">{formatHoursDisplay(weeklyTotal)}</span>
       </div>

@@ -8,6 +8,7 @@ export type TimelogGridRow = {
   hours_by_date: Record<string, string>;
   entry_ids_by_date?: Record<string, number>;
   status_by_date?: Record<string, string>;
+  manager_comment_by_date?: Record<string, string | null>;
 };
 
 export type TimelogWeekSnapshot = {
@@ -24,6 +25,7 @@ export type TimelogWeekSnapshot = {
     hours_by_date: Record<string, number>;
     entry_ids_by_date?: Record<string, number>;
     status_by_date?: Record<string, string>;
+    manager_comment_by_date?: Record<string, string | null>;
   }>;
   daily_totals: Record<string, number>;
   weekly_total: number;
@@ -43,7 +45,7 @@ export function createEmptyGridRow(dayKeys: string[]): TimelogGridRow {
 }
 
 export function gridRowsFromWeekSnapshot(snapshot: TimelogWeekSnapshot | null, dayKeys: string[]): TimelogGridRow[] {
-  if (!snapshot?.rows?.length) return [createEmptyGridRow(dayKeys)];
+  if (!snapshot?.rows?.length) return [];
   return snapshot.rows.map((row, index) => {
     const hours_by_date: Record<string, string> = {};
     for (const key of dayKeys) {
@@ -60,6 +62,7 @@ export function gridRowsFromWeekSnapshot(snapshot: TimelogWeekSnapshot | null, d
       hours_by_date,
       entry_ids_by_date: row.entry_ids_by_date,
       status_by_date: row.status_by_date,
+      manager_comment_by_date: row.manager_comment_by_date,
     };
   });
 }
