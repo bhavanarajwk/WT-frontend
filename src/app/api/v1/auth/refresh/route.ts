@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  backendUnavailableResponse,
   clearAuthCookies,
   getBackendBaseUrl,
   setAuthCookies,
@@ -15,11 +16,16 @@ export async function POST(request: NextRequest) {
     .filter(Boolean)
     .join("; ");
 
-  const upstream = await fetch(`${getBackendBaseUrl()}/api/v1/auth/refresh`, {
-    method: "POST",
-    headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
-    signal: AbortSignal.timeout(15000),
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${getBackendBaseUrl()}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    return backendUnavailableResponse();
+  }
 
   const body = await upstream.text();
   const response = new NextResponse(body, {

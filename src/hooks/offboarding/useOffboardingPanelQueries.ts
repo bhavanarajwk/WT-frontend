@@ -14,6 +14,7 @@ export type OffboardCandidate = {
   name: string;
   email: string;
   user_type: string;
+  band: string;
 };
 
 export const OFFBOARDING_LIST_PAGE_SIZE = 10;
@@ -66,7 +67,10 @@ function buildOffboardCandidates(
           const name = String(row.name ?? "—").trim() || "—";
           const email = String(row.email ?? "—").trim() || "—";
           const user_type = String(row.user_type ?? row.userType ?? "").trim().toUpperCase();
-          return [emp_id.toLowerCase(), { emp_id, name, email, user_type }] as const;
+          const band =
+            String(row.band ?? row.band_name ?? row.bandName ?? row.band_id ?? row.bandId ?? "")
+              .trim() || "—";
+          return [emp_id.toLowerCase(), { emp_id, name, email, user_type, band }] as const;
         })
         .filter((entry): entry is readonly [string, OffboardCandidate] => Boolean(entry))
     ).values()

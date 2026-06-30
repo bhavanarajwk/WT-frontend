@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -11,6 +18,7 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { TrainingStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { useQueries } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo } from "react";
@@ -48,26 +56,48 @@ function formatTrainingScoresLabel(overall: number | null, hasAssessments: boole
 function TrainingScoresTable({
   rows,
   scrollChain = false,
+  detailed = false,
 }: {
-  rows: Array<{ trainingId: string; trainingName: string; scoresLabel: string }>;
+  rows: Array<{
+    trainingId: string;
+    trainingName: string;
+    scoresLabel: string;
+    completionDate?: string;
+    status?: string;
+  }>;
   scrollChain?: boolean;
+  detailed?: boolean;
 }) {
-    return (
-    <ScrollableTable scrollChain={scrollChain} maxHeightClass={scrollChain ? "max-h-[min(48vh,420px)]" : "max-h-[min(70vh,520px)]"} className="!rounded-lg">
+  return (
+    <ScrollableTable
+      scrollChain={scrollChain}
+      maxHeightClass={scrollChain ? "max-h-[min(48vh,420px)]" : "max-h-[min(70vh,520px)]"}
+      className="!rounded-lg"
+    >
       <WtTable>
         <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
           <TableRow className="hover:bg-transparent">
             <TableHead>Training</TableHead>
-            <TableHead>Scores</TableHead>
+            <TableHead>{detailed ? "Score" : "Scores"}</TableHead>
+            {detailed ? <TableHead>Status</TableHead> : null}
+            {detailed ? <TableHead>Completion Date</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.trainingId}>
               <TableCell className="px-3 py-2">{row.trainingName}</TableCell>
-              <TableCell className="px-3 py-2 tabular-nums">
-                {row.scoresLabel}
-              </TableCell>
+              <TableCell className="px-3 py-2 tabular-nums">{row.scoresLabel}</TableCell>
+              {detailed ? (
+                <TableCell className="px-3 py-2 whitespace-nowrap">
+                  {row.status ? <TrainingStatusBadge status={row.status} /> : "—"}
+                </TableCell>
+              ) : null}
+              {detailed ? (
+                <TableCell className="px-3 py-2 whitespace-nowrap">
+                  {row.completionDate ?? "—"}
+                </TableCell>
+              ) : null}
             </TableRow>
           ))}
         </TableBody>
@@ -239,6 +269,8 @@ function EmployeeTrainingMarksCardHr({
         trainingId: entry.trainingId,
         trainingName: entry.trainingName,
         scoresLabel: formatTrainingScoresLabel(entry.overall, entry.assessments.length > 0),
+        completionDate: undefined,
+        status: entry.enrollmentStatus,
       })),
     [hrMarks]
   );
@@ -246,9 +278,9 @@ function EmployeeTrainingMarksCardHr({
   const loading = allTrainingsQ.isLoading || hrScoresQueries.some((q) => q.isLoading);
 
   return (
-    <section className="rounded-xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm md:p-6 space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-wt-border pb-4">
-        <h4 className="text-base font-semibold tracking-tight">Training Scores</h4>
+    <Card className="w-full p-0">
+      <CardHeader className="flex-row items-center justify-between space-y-0 px-5 py-3 sm:px-6">
+        <CardTitle className="text-base">Training Scores</CardTitle>
         <Link
           href={`${LEARNING_BASE}/trainings`}
           className="shrink-0 text-sm font-medium hover:underline"
@@ -256,21 +288,23 @@ function EmployeeTrainingMarksCardHr({
         >
           Manage Trainings
         </Link>
-      </header>
+      </CardHeader>
+      <Separator />
+      <CardContent className="space-y-3 px-5 py-3 sm:px-6">
+        {loading ? <SectionLoading label="Loading training scores…" /> : null}
 
-      {loading ? <SectionLoading label="Loading training scores…" /> : null}
+        {!loading && tableRows.length ? (
+          <TrainingScoresTable rows={tableRows} scrollChain={scrollChain} detailed />
+        ) : null}
 
-      {!loading && tableRows.length ? (
-        <TrainingScoresTable rows={tableRows} scrollChain={scrollChain} />
-      ) : null}
-
-      {!loading && !tableRows.length ? (
-        <p className="text-sm text-wt-text-muted">
-          No training scores for this employee. Assign them as a trainee and save scores in Learning
-          &amp; Development.
-        </p>
-      ) : null}
-    </section>
+        {!loading && !tableRows.length ? (
+          <p className="text-sm text-wt-text-muted">
+            No training scores for this employee. Assign them as a trainee and save scores in
+            Learning &amp; Development.
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildUpstreamAuthHeaders, getBackendBaseUrl } from "@/lib/serverApi";
+import {
+  backendUnavailableResponse,
+  buildUpstreamAuthHeaders,
+  getBackendBaseUrl,
+} from "@/lib/serverApi";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,7 +23,12 @@ async function proxyRequest(request: NextRequest, pathSegments: string[]) {
     init.duplex = "half";
   }
 
-  const upstream = await fetch(backendUrl, init);
+  let upstream: Response;
+  try {
+    upstream = await fetch(backendUrl, init);
+  } catch {
+    return backendUnavailableResponse();
+  }
   // Buffer body so Node fetch decompresses gzip; piping upstream.body with
   // content-encoding stripped corrupts JSON on the browser.
   const body = await upstream.arrayBuffer();

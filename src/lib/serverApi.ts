@@ -1,6 +1,6 @@
 import { normalizeApiBaseUrl } from "@/api/httpClient";
 import type { NextRequest } from "next/server";
-import type { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 /** Upstream FastAPI base URL (server-side only). */
 export function getBackendBaseUrl(): string {
@@ -9,6 +9,26 @@ export function getBackendBaseUrl(): string {
       process.env.NEXT_PUBLIC_API_BASE_URL ??
       "http://localhost:8080"
   );
+}
+
+export function backendUnavailableResponse(): NextResponse {
+  return NextResponse.json({ detail: "backend_unavailable" }, { status: 503 });
+}
+
+/** Public frontend origin used for OAuth redirects and absolute app redirects. */
+export function getAppBaseUrl(request: NextRequest): string {
+  const configured = process.env.APP_URL?.trim();
+  if (configured) return normalizeApiBaseUrl(configured);
+
+  const forwardedHost = request.headers.get("x-forwarded-host")?.trim();
+  const host = forwardedHost || request.headers.get("host")?.trim();
+  if (host) {
+    const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+    const protocol = forwardedProto || request.nextUrl.protocol.replace(":", "") || "https";
+    return `${protocol}://${host}`;
+  }
+
+  return request.nextUrl.origin;
 }
 
 export interface SessionTokens {
