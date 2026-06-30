@@ -24,6 +24,7 @@ export const endpoints = {
 
   profile: {
     self: `${api}/profile`,
+    myBalances: `${api}/profile/balances`,
     employeeById: (empId: string) => `${api}/employee-profile/${encodeURIComponent(empId)}`,
     employeeBalances: (empId: string) =>
       `${api}/employee-profile/${encodeURIComponent(empId)}/balances`,
@@ -114,9 +115,15 @@ export const endpoints = {
     managerTeamOnLeaveToday: `${api}/manager-team-on-leave-today`,
   },
 
+  wfh: {
+    managerOptions: `${api}/wfh/manager-options`,
+  },
+
   compOff: {
     earn: `${api}/comp-off/earn`,
     earnStatus: `${api}/comp-off/earn/status`,
+    earnCancel: `${api}/comp-off/earn/cancel`,
+    earnManagerOptions: `${api}/comp-off/earn/manager-options`,
     /** @deprecated Backend uses expiry for balance; kept for reference only. */
     balance: `${api}/comp-off/expiry`,
     expiry: `${api}/comp-off/expiry`,

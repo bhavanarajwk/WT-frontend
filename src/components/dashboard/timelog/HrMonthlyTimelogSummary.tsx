@@ -78,7 +78,7 @@ export function HrMonthlyTimelogSummary({
         <SectionLoading className="py-10" label="Loading approved hours…" />
       ) : !rows.length ? (
         <p className="py-10 text-center text-sm text-wt-text-muted">
-          No approved timelog hours for this month.
+          No approved time log hours for this month.
         </p>
       ) : (
         <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">

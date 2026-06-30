@@ -53,7 +53,7 @@ export function MyWeeklyTimesheet() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>My timelogs</CardTitle>
+        <CardTitle>My Time Logs</CardTitle>
         <Button variant="outline" size="sm" type="button" disabled={loading} onClick={() => reload()}>
           {loading ? "Loading\u2026" : "Refresh"}
         </Button>
@@ -65,7 +65,7 @@ export function MyWeeklyTimesheet() {
         >
           <TabsList aria-label="View mode" className="gap-3 bg-transparent p-0">
             <TabsTrigger value="table">All entries</TabsTrigger>
-            <TabsTrigger value="calendar">Add timelogs</TabsTrigger>
+            <TabsTrigger value="calendar">Add Time Logs</TabsTrigger>
           </TabsList>
         </Tabs>
 

@@ -135,10 +135,10 @@ export function HrEmployeeTimelogPageClient() {
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
           <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="mt-2 text-sm text-wt-text-muted">
-            Employee timelog lookup is available to HR and admin only.
+            Employee time log lookup is available to HR and admin only.
           </p>
           <Link href={DASHBOARD_ROUTES.timelog} className="mt-4 inline-block text-sm text-blue-600 hover:underline">
-            Back to timelog
+            Back to Time Log
           </Link>
         </div>
       </DashboardPageShell>
@@ -150,9 +150,9 @@ export function HrEmployeeTimelogPageClient() {
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
         <div className="border-b border-wt-border bg-gradient-to-r from-sky-50/80 via-white to-blue-50/50 px-5 py-6 md:px-7">
-          <h3 className="text-lg font-semibold">All Employee Timelogs</h3>
+          <h3 className="text-lg font-semibold">All Employee Time Logs</h3>
           <p className="mt-1 max-w-2xl text-sm text-wt-text-muted">
-            View timelog entries for any employee on a given date (
+            View time log entries for any employee on a given date (
             <code className="text-xs">GET /api/v1/timelog/get/&#123;email&#125;/&#123;date&#125;</code>).
           </p>
         </div>
@@ -180,9 +180,9 @@ export function HrEmployeeTimelogPageClient() {
                 ...employeeOptions.map((opt) => ({ value: opt.email, label: opt.label })),
               ]}
             />
-            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={actionLoading} onClick={() => void runAction("Load employee timelogs", loadTimelogs)}
+            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={actionLoading} onClick={() => void runAction("Load employee time logs", loadTimelogs)}
             >
-              Load timelogs
+              Load Time Logs
             </Button>
           </div>
 
@@ -249,7 +249,7 @@ export function HrEmployeeTimelogPageClient() {
             </>
           ) : (
             <p className="rounded-xl border border-dashed border-wt-border bg-wt-surface-2/40 px-6 py-10 text-center text-sm text-wt-text-muted">
-              Select a date and click <strong>Load timelogs</strong> to fetch entries.
+              Select a date and click <strong>Load Time Logs</strong> to fetch entries.
             </p>
           )}
         </div>

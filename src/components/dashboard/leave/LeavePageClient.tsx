@@ -21,7 +21,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
-import { hrmsService } from "@/services/hrms.service";
+import { hrmsService, type LeaveManagerOption } from "@/services/hrms.service";
 import { useMyLeaveRequests } from "@/hooks/leave/useMyLeaveRequests";
 import { ApiError } from "@/api/error";
 import { toRows, toPagedRows } from "@/utils/apiRows";
@@ -346,6 +346,8 @@ export function LeavePageClient() {
 
   const [leaveRequestForm, setLeaveRequestForm] = useState(createDefaultLeaveRequestForm);
   const [selectedLeaveManagerEmails, setSelectedLeaveManagerEmails] = useState<string[]>([]);
+  const [selectedWfhManagerEmails, setSelectedWfhManagerEmails] = useState<string[]>([]);
+  const [wfhManagerOptions, setWfhManagerOptions] = useState<LeaveManagerOption[]>([]);
   const [selectedAdditionalRecipientEmails, setSelectedAdditionalRecipientEmails] = useState<string[]>([]);
   const [editingLeaveRequestId, setEditingLeaveRequestId] = useState<string>("");
   const [employeeRequestFilters, setEmployeeRequestFilters] = useState({
@@ -576,6 +578,23 @@ export function LeavePageClient() {
       setLeaveSubTab("my");
     }
   }, [canViewTeamLeave, leaveSubTab]);
+
+  useEffect(() => {
+    if (leaveSubTab !== "wfh") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await hrmsService.getWfhManagerOptions();
+        const items: LeaveManagerOption[] = [];
+        const data = res?.data as { items?: LeaveManagerOption[] } | undefined;
+        if (data?.items) items.push(...data.items);
+        if (!cancelled) setWfhManagerOptions(items);
+      } catch {
+        if (!cancelled) setWfhManagerOptions([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [leaveSubTab]);
 
   const loadManagerData = useCallback(
     async (force = false) => {
@@ -1158,6 +1177,67 @@ export function LeavePageClient() {
                                     disabled={actionLoading}
                                   />
                                 ) : null}
+                                {leaveSubTab === "wfh" ? (
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium">
+                                      Select Managers <span className="text-rose-600">*</span>
+                                    </p>
+                                    <p className="text-xs text-wt-text-muted">
+                                      Selected managers receive a notification and can approve or reject the request.
+                                    </p>
+                                    {wfhManagerOptions.length > 0 ? (
+                                      <div className="max-h-48 space-y-2 overflow-auto rounded-xl border border-wt-border bg-wt-surface-2/30 p-3">
+                                        {wfhManagerOptions.map((option) => {
+                                          const email = String(option.email ?? "").trim();
+                                          if (!email) return null;
+                                          const checked = selectedWfhManagerEmails
+                                            .map((e) => e.toLowerCase())
+                                            .includes(email.toLowerCase());
+                                          return (
+                                            <label
+                                              key={email}
+                                              className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-wt-surface-2"
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                className="mt-0.5"
+                                                checked={checked}
+                                                disabled={actionLoading}
+                                                onChange={() => {
+                                                  const nextSet = new Set(
+                                                    selectedWfhManagerEmails.map((e) => e.toLowerCase())
+                                                  );
+                                                  if (nextSet.has(email.toLowerCase())) {
+                                                    nextSet.delete(email.toLowerCase());
+                                                  } else {
+                                                    nextSet.add(email.toLowerCase());
+                                                  }
+                                                  const ordered = wfhManagerOptions
+                                                    .map((row) => String(row.email ?? "").trim().toLowerCase())
+                                                    .filter((v) => nextSet.has(v));
+                                                  setSelectedWfhManagerEmails(ordered);
+                                                }}
+                                              />
+                                              <span className="text-sm">
+                                                <span className="font-medium">{option.name || email}</span>
+                                                {option.project_name ? (
+                                                  <span className="block text-xs text-wt-text-muted">
+                                                    {option.project_name}
+                                                  </span>
+                                                ) : null}
+                                                <span className="block text-xs text-wt-text-muted">{email}</span>
+                                              </span>
+                                            </label>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-wt-text-muted">
+                                        Loading managers…
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : null}
                                 <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                               </div>
                               <div className="mt-4 flex gap-2">
@@ -1211,6 +1291,12 @@ export function LeavePageClient() {
                                       ) {
                                         throw new Error("Select at least one manager to notify.");
                                       }
+                                      if (
+                                        leaveSubTab === "wfh" &&
+                                        !selectedWfhManagerEmails.length
+                                      ) {
+                                        throw new Error("Select at least one manager to notify.");
+                                      }
                                       const isCompOffUsage =
                                         normalizeCompOffRequestType(requestType) === "COMP_OFF";
                                       if (isCompOffUsage) {
@@ -1243,6 +1329,7 @@ export function LeavePageClient() {
                                         });
                                         setLeaveRequestForm(createDefaultLeaveRequestForm());
                                         setSelectedLeaveManagerEmails([]);
+                                        setSelectedWfhManagerEmails([]);
                                         setSelectedAdditionalRecipientEmails([]);
                                         setEditingLeaveRequestId("");
                                         try {
@@ -1266,7 +1353,9 @@ export function LeavePageClient() {
                                             leaveSubTab === "my" &&
                                             normalizeUserRequestType(requestType) === "LEAVE"
                                               ? selectedLeaveManagerEmails
-                                              : undefined,
+                                              : leaveSubTab === "wfh"
+                                                ? selectedWfhManagerEmails
+                                                : undefined,
                                           additional_recipient_emails:
                                             leaveSubTab === "my" &&
                                             normalizeUserRequestType(requestType) === "LEAVE" &&
@@ -1291,6 +1380,7 @@ export function LeavePageClient() {
                                       }
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
                                       setSelectedLeaveManagerEmails([]);
+                                      setSelectedWfhManagerEmails([]);
                                       setSelectedAdditionalRecipientEmails([]);
                                       setEditingLeaveRequestId("");
                                       try {

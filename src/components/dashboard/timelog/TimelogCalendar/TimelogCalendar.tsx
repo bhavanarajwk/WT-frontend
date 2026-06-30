@@ -58,7 +58,7 @@ export function TimelogCalendar({
   const handleSelectDate = useCallback(
     (dateKey: string, isFuture: boolean) => {
       if (isFuture) {
-        showErrorToast("You cannot add timelogs for future dates");
+        showErrorToast("You cannot add time logs for future dates");
         return;
       }
       onSelectDate(dateKey);

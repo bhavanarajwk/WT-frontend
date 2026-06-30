@@ -299,6 +299,10 @@ export const hrmsService = {
     });
   },
 
+  getMyLeaveBalance() {
+    return apiClient.get<ApiEnvelope<EmployeeLeaveBalancesData>>(endpoints.profile.myBalances);
+  },
+
   getEmployeeLeaveBalances(empId: string) {
     return apiClient.get<ApiEnvelope<EmployeeLeaveBalancesData>>(
       endpoints.profile.employeeBalances(empId)
@@ -798,6 +802,12 @@ export const hrmsService = {
   getLeaveManagerOptions() {
     return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
       endpoints.userRequest.leaveManagerOptions
+    );
+  },
+
+  getWfhManagerOptions() {
+    return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
+      endpoints.wfh.managerOptions
     );
   },
 

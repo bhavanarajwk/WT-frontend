@@ -54,7 +54,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
     async (row: TimelogGridRow, status: "APPROVED" | "REJECTED", remark: string) => {
       if (!selectedEmployee) return;
       setActionLoading(true);
-      await runAction(status === "APPROVED" ? "Approve timelog" : "Reject timelog", async () => {
+      await runAction(status === "APPROVED" ? "Approve Time Log" : "Reject Time Log", async () => {
         const email = selectedEmployee.trim().toLowerCase();
         const submittedDays = dayKeys.filter(
           (key) => {
@@ -124,7 +124,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>Project timelogs</CardTitle>
+        <CardTitle>Project Time Logs</CardTitle>
         <div className="flex items-center gap-2">
           <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} />
           <Button variant="outline" size="sm" type="button" disabled={projectsLoading} onClick={() => queryClient.invalidateQueries({ queryKey: ["project-timelogs-projects"] })}>

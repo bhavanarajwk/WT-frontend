@@ -119,7 +119,7 @@ export function mapEarnListRow(row: Record<string, unknown>): Record<string, unk
       pickRowField(row, "work_description", "workDescription", "comments", "comment") ?? "",
     emp_email: pickRowField(row, "emp_email", "empEmail") ?? "",
     status: pickRowField(row, "status") ?? "PENDING",
-    manager_status: pickRowField(row, "manager_status", "managerStatus") ?? "PENDING",
+    manager_status: pickRowField(row, "manager_status", "managerStatus") ?? String(pickRowField(row, "status") ?? "PENDING"),
     manager_reason: pickRowField(row, "manager_reason", "managerReason") ?? null,
   };
 }

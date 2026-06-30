@@ -183,7 +183,7 @@ export function TimelogPageClient() {
     const action = remarkAction;
     if (!action) return;
     setRemarkAction(null);
-    void runAction(action.action === "APPROVED" ? "Approve timelog" : "Reject timelog", async () => {
+    void runAction(action.action === "APPROVED" ? "Approve Time Log" : "Reject Time Log", async () => {
       await hrmsService.updateTimelogStatus({
         timelog_id: action.entryId,
         status: action.action,
@@ -202,7 +202,7 @@ export function TimelogPageClient() {
   if (isOffboarded) {
     return (
       <DashboardPageShell>
-        <p className="text-sm text-wt-text-muted">Timelog access is not available for offboarded users.</p>
+        <p className="text-sm text-wt-text-muted">Time Log access is not available for offboarded users.</p>
       </DashboardPageShell>
     );
   }
@@ -228,10 +228,10 @@ export function TimelogPageClient() {
                 else if (value === "projects") router.push("/dashboard/timelog/projects");
                 else router.push("/dashboard/timelog");
               }}>
-                <TabsList aria-label="Timelog tabs" className="gap-3 bg-transparent p-0">
-                  <TabsTrigger value="my">My timelogs</TabsTrigger>
-                  {/* <TabsTrigger value="team">Team timelogs</TabsTrigger> */}
-                  <TabsTrigger value="projects">Team timelogs</TabsTrigger>
+                <TabsList aria-label="Time Log tabs" className="gap-3 bg-transparent p-0">
+                  <TabsTrigger value="my">My Time Logs</TabsTrigger>
+                  {/* <TabsTrigger value="team">Team Time Logs</TabsTrigger> */}
+                  <TabsTrigger value="projects">Team Time Logs</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -268,7 +268,7 @@ export function TimelogPageClient() {
             <Card>
               <CardContent className="p-5 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="font-semibold">Team timelogs</h2>
+                  <h2 className="font-semibold">Team Time Logs</h2>
                   <div className="flex flex-wrap items-center gap-2">
                     <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={entriesLoading} />
                     <Button
@@ -308,9 +308,9 @@ export function TimelogPageClient() {
                 {entriesLoading ? (
                   <WtLoaderCentered label="" />
                 ) : !teamEmployeeEmail.trim() ? (
-                  <p className="text-sm text-wt-text-muted py-8 text-center">Select an employee to view their timelogs.</p>
+                  <p className="text-sm text-wt-text-muted py-8 text-center">Select an employee to view their time logs.</p>
                 ) : !employeeEntries.length ? (
-                  <p className="text-sm text-wt-text-muted py-8 text-center">No timelog entries for this week.</p>
+                  <p className="text-sm text-wt-text-muted py-8 text-center">No time log entries for this week.</p>
                 ) : (
                   <div className="overflow-x-auto rounded-lg border border-wt-border">
                     <table className="w-full text-sm border-collapse">
@@ -403,7 +403,7 @@ export function TimelogPageClient() {
         <ApprovalRemarkModal
           open={remarkAction !== null}
           title={
-            remarkAction?.action === "APPROVED" ? "Approve timelog entry" : "Reject timelog entry"
+            remarkAction?.action === "APPROVED" ? "Approve Time Log entry" : "Reject Time Log entry"
           }
           actionLabel={
             remarkAction?.action === "APPROVED" ? "Approve" : "Reject"
