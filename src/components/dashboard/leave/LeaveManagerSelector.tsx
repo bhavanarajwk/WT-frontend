@@ -17,11 +17,9 @@ function optionLabel(option: LeaveManagerOption): string {
 function matchesQuery(option: LeaveManagerOption, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  const empId = String(option.employeeId ?? option.employee_id ?? "").trim();
   return (
     option.email.toLowerCase().includes(q) ||
-    (option.name ?? "").toLowerCase().includes(q) ||
-    empId.toLowerCase().includes(q)
+    (option.name ?? "").toLowerCase().includes(q)
   );
 }
 
