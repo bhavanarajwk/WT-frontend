@@ -799,9 +799,12 @@ export const hrmsService = {
     );
   },
 
-  getLeaveManagerOptions() {
+  getLeaveManagerOptions(params?: { search?: string }) {
+    const query: Record<string, string> = {};
+    if (params?.search?.trim()) query.search = params.search.trim();
     return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
-      endpoints.userRequest.leaveManagerOptions
+      endpoints.employees.managers,
+      { query }
     );
   },
 

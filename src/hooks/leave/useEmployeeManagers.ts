@@ -22,7 +22,7 @@ export function useEmployeeManagers(search?: string, enabled = true) {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     queryFn: async (): Promise<LeaveManagerOption[]> => {
-      const res = await hrmsService.getEmployeeManagers(
+      const res = await hrmsService.getLeaveManagerOptions(
         normalizedSearch ? { search: normalizedSearch } : undefined
       );
       return unwrapApiDataArray<LeaveManagerOption>(res);
