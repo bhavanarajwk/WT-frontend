@@ -47,7 +47,7 @@ function ExitSurveyDetailsSkeleton() {
   );
 }
 
-/** Exit survey (employee self-serve, including offboarded users in notice). */
+/** Exit survey (employee self-serve, including offboarded users serving notice). */
 export function ExitInterviewSurveyPanel({
   className = "",
 }: {

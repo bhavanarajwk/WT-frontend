@@ -277,7 +277,7 @@ export function buildGroupedProfileSections(
     "manager",
   ]);
 
-  const workInformation: ProfileDisplayEntry[] = [
+  const information: ProfileDisplayEntry[] = [
     profileEntry("Name", cleanEmployeeName(profile) || pickProfileField(profile, ["name"])),
     profileEntry("Employee ID", pickProfileField(profile, ["emp_id", "empId", "employee_id"])),
     profileEntry(
@@ -352,7 +352,7 @@ export function buildGroupedProfileSections(
   ];
 
   return [
-    { title: "Work Information", entries: workInformation },
+    { title: "Information", entries: information },
     { title: "Personal Information", entries: personalInformation },
   ];
 }
@@ -390,7 +390,7 @@ function filterProfileViewEntries(
   entries: ProfileDisplayEntry[]
 ): ProfileDisplayEntry[] {
   const allowed =
-    sectionTitle === "Work Information"
+    sectionTitle === "Information"
       ? PROFILE_VIEW_WORK_LABELS
       : sectionTitle === "Personal Information"
         ? PROFILE_VIEW_PERSONAL_LABELS

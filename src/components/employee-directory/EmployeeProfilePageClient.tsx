@@ -318,7 +318,7 @@ export function EmployeeProfilePageClient() {
                   </FormSection>
                 ) : (
                   <FormSection
-                    title="Work Information"
+                    title="Information"
                     description="Employment details, department, and work arrangement."
                   >
                     <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">

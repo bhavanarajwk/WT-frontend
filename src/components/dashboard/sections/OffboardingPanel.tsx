@@ -22,7 +22,6 @@ import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
 import {
   DatePickerField,
   DropdownSelectField,
-  InputField,
   TextAreaField,
 } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
@@ -31,12 +30,13 @@ import { ManagementListCard, ManagementListContent } from "@/components/dashboar
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { FormGridSkeleton, MetricCardsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import {
+  CARD_CONTENT_BELOW_TOOLBAR_CLASS,
   CARD_CONTENT_STACK_CLASS,
   CARD_FORM_ACTIONS_CLASS,
   CARD_FORM_GRID_CLASS,
   CARD_STACK_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardToolbar } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
@@ -46,12 +46,14 @@ import {
 } from "@/hooks/offboarding/useOffboardingPanelQueries";
 import {
   CONSULTANT_EXIT_TYPE,
+  DEFAULT_NOTICE_PERIOD_DAYS,
   createEmptyOffboardingForm,
   defaultLastWorkingDayFromResignation,
   EXIT_TYPE_OPTIONS,
   formatExitTypeLabel,
   formatUserTypeLabel,
   isOffboardingFormValid,
+  previousWeekdayOrSame,
   type ExitType,
 } from "@/utils/offboardingFormState";
 import {
@@ -59,7 +61,6 @@ import {
   mergeEmpIdSelection,
   resendableOffboardEmpIds,
 } from "@/utils/exitSurveyFollowUp";
-import { Textarea } from "@/components/ui/textarea";
 
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
@@ -251,6 +252,39 @@ export function OffboardingPanel() {
     [offboardCandidates]
   );
 
+  const offboardingNoticeLabel = useMemo(() => {
+    const r = offboardingForm.resignation_date.trim();
+    const l = offboardingForm.last_working_day.trim();
+    if (isInternOffboarding && l) {
+      return "Intern offboarding uses a single exit date for resignation and last working day.";
+    }
+    if (isConsultantOffboarding) {
+      return "Consultant offboarding is recorded as a Contractual exit and is excluded from attrition metrics.";
+    }
+    if (!r) {
+      return `Last working day defaults to ${DEFAULT_NOTICE_PERIOD_DAYS} calendar days after resignation when not set.`;
+    }
+    if (!l) {
+      const defaultLwd = defaultLastWorkingDayFromResignation(r);
+      if (defaultLwd) {
+        return `Last working day will default to ${DEFAULT_NOTICE_PERIOD_DAYS} calendar days after resignation (${defaultLwd}).`;
+      }
+      return null;
+    }
+    const a = new Date(r);
+    const b = new Date(l);
+    if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) {
+      return "Resignation date must be on or before last working day.";
+    }
+    const days = Math.round((b.getTime() - a.getTime()) / 86400000);
+    return `Notice period (resignation → last working day): ${Math.max(0, days)} calendar day(s).`;
+  }, [
+    offboardingForm.resignation_date,
+    offboardingForm.last_working_day,
+    isInternOffboarding,
+    isConsultantOffboarding,
+  ]);
+
   function resolveExitTypeForSubmit(): ExitType {
     if (isConsultantOffboarding) return CONSULTANT_EXIT_TYPE;
     return offboardingForm.exit_type as ExitType;
@@ -274,19 +308,12 @@ export function OffboardingPanel() {
     });
   }
 
-  function handleResignationDateChange(value: string) {
-    setOffboardingForm((prev) => ({
-      ...prev,
-      resignation_date: value,
-      last_working_day: value.trim() ? defaultLastWorkingDayFromResignation(value) : "",
-    }));
-  }
-
   function handleLastWorkingDayChange(value: string) {
+    const adjusted = previousWeekdayOrSame(value);
     setOffboardingForm((prev) => ({
       ...prev,
-      last_working_day: value,
-      ...(isInternOffboarding ? { resignation_date: value } : {}),
+      last_working_day: adjusted,
+      ...(isInternOffboarding ? { resignation_date: adjusted } : {}),
     }));
   }
 
@@ -295,21 +322,16 @@ export function OffboardingPanel() {
 
     const empIdValue = offboardingForm.emp_id.trim();
     const resignationDate = offboardingForm.resignation_date.trim();
-    const lastWorkingDay =
-      offboardingForm.last_working_day.trim() ||
-      defaultLastWorkingDayFromResignation(resignationDate);
-    if (!lastWorkingDay) {
-      showErrorToast("Last working day could not be calculated from resignation date.");
-      return;
-    }
+    const lastWorkingDay = offboardingForm.last_working_day.trim();
 
     setSubmitting(true);
     try {
       await hrmsService.offboardEmployee(empIdValue, {
+        ...(isConsultantOffboarding ? {} : { resignation_date: resignationDate }),
         exit_type: resolveExitTypeForSubmit(),
-        resignation_date: resignationDate,
-        last_working_day: lastWorkingDay,
+        last_working_day: lastWorkingDay || undefined,
         reason: offboardingForm.reason.trim() || null,
+        expected_behavior: offboardingForm.expected_behavior.trim() || null,
         critical_skill: offboardingForm.critical_skill.trim() || null,
         is_regretted: offboardingForm.is_regretted,
       });
@@ -333,16 +355,19 @@ export function OffboardingPanel() {
   return (
     <section className={CARD_STACK_CLASS}>
       <Card className="p-0">
-        <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 px-6 py-6">
+        <CardHeader className="flex-row items-end justify-between gap-3 space-y-0">
           <div>
-            <CardTitle className="text-lg">Attrition Summary</CardTitle>
+            <CardTitle>Attrition Summary</CardTitle>
             <CardDescription>
-              Financial-year exit metrics (Apr–Mar)
+              Financial-year exit metrics (Apr–Mar). Contractual exits are excluded.
               {attritionExitCount != null && !loadingAttrition
                 ? ` · ${attritionExitCount} exit(s)`
                 : ""}
             </CardDescription>
           </div>
+        </CardHeader>
+        <Separator />
+        <CardToolbar className="flex justify-end">
           <DropdownSelectField
             label="Financial Year (Start)"
             className="w-[11rem] shrink-0"
@@ -350,9 +375,8 @@ export function OffboardingPanel() {
             onChange={setFyStartYear}
             options={financialYearSelectOptions()}
           />
-        </CardHeader>
-        <Separator />
-        <CardContent className="px-6 py-6">
+        </CardToolbar>
+        <CardContent className={CARD_CONTENT_BELOW_TOOLBAR_CLASS}>
           {loadingAttrition ? (
             <MetricCardsSkeleton count={3} />
           ) : (
@@ -413,50 +437,96 @@ export function OffboardingPanel() {
                 onChange={handleEmployeeChange}
                 options={candidateOptions}
               />
-              <DatePickerField
-                label="Resignation Date"
-                required
-                value={offboardingForm.resignation_date}
-                onChange={handleResignationDateChange}
-                disabled={submitting || isInternOffboarding}
-              />
-              <DatePickerField
-                label="Last Working Day"
-                required={isInternOffboarding || isConsultantOffboarding}
-                value={offboardingForm.last_working_day}
-                onChange={handleLastWorkingDayChange}
-                disabled={submitting}
-              />
-              <DropdownSelectField
-                label="Exit Type"
-                required
-                placeholder="Select exit type"
-                value={isConsultantOffboarding ? CONSULTANT_EXIT_TYPE : offboardingForm.exit_type}
-                options={EXIT_TYPE_OPTIONS.filter((opt) => opt.value !== CONSULTANT_EXIT_TYPE)}
-                onChange={(v) =>
-                  setOffboardingForm((p) => ({
-                    ...p,
-                    exit_type:
-                      v === "INVOLUNTARY" || v === "VOLUNTARY"
-                        ? (v as ExitType)
-                        : "",
-                  }))
-                }
-                disabled={submitting || isConsultantOffboarding}
-              />
+              {!selectedCandidate ? null : isInternOffboarding ? (
+                <DatePickerField
+                  label="Last Working Day"
+                  required
+                  value={offboardingForm.last_working_day}
+                  onChange={handleLastWorkingDayChange}
+                  disabled={submitting}
+                />
+              ) : isConsultantOffboarding ? (
+                <DatePickerField
+                  label="Last Working Day"
+                  required
+                  value={offboardingForm.last_working_day}
+                  onChange={handleLastWorkingDayChange}
+                  disabled={submitting}
+                />
+              ) : (
+                <>
+                  <DatePickerField
+                    label="Resignation Date"
+                    required
+                    value={offboardingForm.resignation_date}
+                    onChange={(v) =>
+                      setOffboardingForm((p) => ({
+                        ...p,
+                        resignation_date: v,
+                        last_working_day: v.trim()
+                          ? defaultLastWorkingDayFromResignation(v)
+                          : "",
+                      }))
+                    }
+                    disabled={submitting}
+                  />
+                  <DatePickerField
+                    label="Last Working Day"
+                    value={offboardingForm.last_working_day}
+                    onChange={handleLastWorkingDayChange}
+                    disabled={submitting}
+                  />
+                </>
+              )}
+              {!isConsultantOffboarding ? (
+                <DropdownSelectField
+                  label="Exit Type"
+                  required
+                  placeholder="Select Exit Type"
+                  value={offboardingForm.exit_type}
+                  options={EXIT_TYPE_OPTIONS}
+                  onChange={(v) =>
+                    setOffboardingForm((p) => ({
+                      ...p,
+                      exit_type:
+                        v === "INVOLUNTARY" || v === "VOLUNTARY" || v === "CONTRACTUAL"
+                          ? (v as ExitType)
+                          : "",
+                    }))
+                  }
+                  disabled={submitting}
+                />
+              ) : (
+                <div className="text-xs text-wt-text-muted flex flex-col gap-1">
+                  <span>Exit Type</span>
+                  <p className="rounded-lg border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm text-wt-text">
+                    Contractual (applied automatically for consultants)
+                  </p>
+                </div>
+              )}
               <TextAreaField
-                label="Reason"
+                label="Details"
+                className="md:col-span-2"
+                rows={5}
                 value={offboardingForm.reason}
                 onChange={(v) => setOffboardingForm((p) => ({ ...p, reason: v }))}
-                placeholder="Enter reason for offboarding"
-                // disabled={submitting}
+                placeholder="Enter a detailed reason for offboarding"
               />
-              <InputField
+              <TextAreaField
                 label="Critical Skill"
+                className="md:col-span-2"
+                rows={5}
                 value={offboardingForm.critical_skill}
                 onChange={(v) => setOffboardingForm((p) => ({ ...p, critical_skill: v }))}
-                placeholder="Describe critical skills impacted"
-                disabled={submitting}
+                placeholder="Describe critical skills impacted by this exit"
+              />
+              <TextAreaField
+                label="Expected Behavior"
+                className="md:col-span-2"
+                rows={5}
+                value={offboardingForm.expected_behavior}
+                onChange={(v) => setOffboardingForm((p) => ({ ...p, expected_behavior: v }))}
+                placeholder="Describe expected behavior during notice period"
               />
               <Label className="flex items-center gap-2 text-xs font-normal text-wt-text-muted md:col-span-2">
                 <Checkbox
@@ -469,6 +539,9 @@ export function OffboardingPanel() {
                 Is Regretted
               </Label>
             </div>
+            {offboardingNoticeLabel ? (
+              <p className="text-sm text-wt-text-muted">{offboardingNoticeLabel}</p>
+            ) : null}
             <div className={CARD_FORM_ACTIONS_CLASS}>
               <Button
                 variant="brand"

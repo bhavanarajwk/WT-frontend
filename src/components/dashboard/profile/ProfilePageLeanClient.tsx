@@ -14,12 +14,8 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboardingPanel";
 import { InputField, SelectField, FileField } from "@/components/dashboard/ui/forms";
 import {
-  ProfilePhotoAvatar,
-  ProfileField,
-  formatSecondarySkillsForProfile,
   readProfileField,
 } from "@/components/dashboard/ui/profile";
-import { formatApiDateDisplay } from "@/utils/apiDate";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
@@ -37,6 +33,9 @@ import {
 import { buildProfileAssignedProjects } from "@/utils/dashboard/projects";
 import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
 import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
+import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
+import { ProfileSectionsView } from "@/components/employee-directory/ProfileSectionsView";
+
 
 export function ProfilePageLeanClient() {
   const { user, refresh: refreshSession } = useAuth();
@@ -183,102 +182,8 @@ export function ProfilePageLeanClient() {
     setIsEditingOwnProfile(true);
   };
 
-  const profileCategory =
-    readProfileField(employeeProfile, "category") ||
-    readProfileField(employeeProfile, "delivery_status", "deliveryStatus");
-
   const profileDisplayName =
     String(employeeProfile?.name ?? user?.name ?? "").trim() || "Profile";
-
-  const renderProfileDetails = () => (
-    <div className="space-y-7">
-      <div>
-        <h4 className="mb-3 text-sm font-semibold text-wt-text">Personal &amp; Employment Information</h4>
-        <div className="space-y-10 md:space-y-12 rounded-xl border border-wt-border bg-wt-surface-2/50 p-6 md:p-8">
-          <section>
-            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Basic Information</h5>
-            <dl className="space-y-3 text-sm">
-              <ProfileField label="Status" value={employeeProfile?.status ?? user?.status} />
-              <ProfileField label="User Type" value={readProfileField(employeeProfile, "user_type", "userType") ?? user?.user_type} />
-              <ProfileField label="Department" value={readProfileField(employeeProfile, "department")} />
-              <ProfileField label="Designation" value={readProfileField(employeeProfile, "role")} />
-              <ProfileField label="Band" value={readProfileField(employeeProfile, "band_name", "bandName")} />
-              <ProfileField label="Category" value={profileCategory} />
-            </dl>
-          </section>
-          <section>
-            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Contact Information</h5>
-            <dl className="space-y-3 text-sm">
-              <ProfileField label="Work Email" value={employeeProfile?.email ?? user?.email} />
-              <ProfileField label="Personal Email" value={readProfileField(employeeProfile, "personal_email", "personalEmail")} />
-              <ProfileField label="Phone Number" value={readProfileField(employeeProfile, "phone_number", "phoneNumber")} />
-            </dl>
-          </section>
-          <section>
-            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Work Information</h5>
-            <dl className="space-y-3 text-sm">
-              <ProfileField label="Work Mode" value={readProfileField(employeeProfile, "work_mode", "workMode")} />
-              <ProfileField label="Work Location" value={readProfileField(employeeProfile, "work_location_type", "workLocationType")} />
-              <ProfileField label="Date of Joining" value={formatApiDateDisplay(readProfileField(employeeProfile, "doj"))} />
-            </dl>
-          </section>
-          <section>
-            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Personal Information</h5>
-            <dl className="space-y-3 text-sm">
-              <ProfileField label="Date of Birth" value={formatApiDateDisplay(readProfileField(employeeProfile, "date_of_birth", "dateOfBirth"))} />
-              <ProfileField label="Gender" value={readProfileField(employeeProfile, "gender")} />
-              <ProfileField label="Marital Status" value={readProfileField(employeeProfile, "marital_status", "maritalStatus")} />
-              <ProfileField label="Blood Group" value={readProfileField(employeeProfile, "blood_group", "bloodGroup")} />
-            </dl>
-          </section>
-          <section>
-            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Emergency Contact Information</h5>
-            <dl className="space-y-3 text-sm">
-              <ProfileField label="Emergency Contact" value={readProfileField(employeeProfile, "emergency_contact_name", "emergencyContactName")} />
-              <ProfileField label="Emergency Number" value={readProfileField(employeeProfile, "emergency_contact_number", "emergencyContactNumber")} />
-            </dl>
-          </section>
-          <section>
-            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Address Information</h5>
-            <dl className="space-y-3 text-sm">
-              <ProfileField label="Local Address" value={readProfileField(employeeProfile, "local_address", "localAddress")} fullWidth />
-              <ProfileField label="Permanent Address" value={readProfileField(employeeProfile, "permanent_address", "permanentAddress")} fullWidth />
-            </dl>
-          </section>
-          <section>
-            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Skills &amp; Experience</h5>
-            <dl className="space-y-3 text-sm">
-              <ProfileField
-                label="Primary Skills"
-                value={
-                  Array.isArray(employeeProfile?.primary_skills)
-                    ? (employeeProfile?.primary_skills as Array<unknown>).map((s) => String(s)).join(", ")
-                    : employeeProfile?.primary_skills
-                }
-              />
-              <ProfileField label="Secondary Skills" value={formatSecondarySkillsForProfile(employeeProfile)} />
-              <ProfileField label="Years of Experience" value={employeeProfile?.yoe} />
-              <ProfileField label="Webknot Experience" value={readProfileField(employeeProfile, "webknot_experience", "webknotExperience")} />
-              <ProfileField label="Total Experience" value={readProfileField(employeeProfile, "total_experience", "totalExperience")} />
-            </dl>
-          </section>
-          <section>
-            <h5 className="mb-3 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">Documents</h5>
-            <dl className="space-y-3 text-sm">
-              <ProfileField label="Resume Link" value={readProfileField(employeeProfile, "resume_share_link", "resumeShareLink")} fullWidth link />
-            </dl>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderAssignedProjects = () => (
-    <ProfileAssignedProjectsSection
-      rows={profileAssignedProjects}
-      loading={profileAssignedProjectsLoading}
-    />
-  );
 
   const renderEditPanel = () => (
     <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
@@ -310,7 +215,7 @@ export function ProfilePageLeanClient() {
         </div>
       ) : null}
       <div className="mt-3">
-        <FileField label="Profile Picture (optional)" accept="image/*" onPick={setSelfProfilePic} />
+        <FileField label="Profile Picture (required)" required accept="image/*" onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
         <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
@@ -319,6 +224,9 @@ export function ProfilePageLeanClient() {
                 .split(",")
                 .map((item) => item.trim())
                 .filter(Boolean);
+              if (!selfProfilePic) {
+                throw new Error("Profile picture is mandatory. Please upload your profile picture.");
+              }
               if (priorEmploymentDocsForProfile) {
                 if (!selfProfileEmploymentFiles.reliving_letter) {
                   throw new Error("Please upload your relieving letter from the previous company.");
@@ -431,27 +339,36 @@ export function ProfilePageLeanClient() {
                     </div>
                   </>
                 ) : (
-                  <>
-                <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex min-w-0 flex-1 items-start gap-5">
-                    <ProfilePhotoAvatar profile={employeeProfile} fallbackName={user?.name} />
-                    <div className="min-w-0">
-                      <h3 className="mb-1 text-lg font-semibold">{profileDisplayName}</h3>
-                      <p className="text-sm text-wt-text-muted">
-                        Review your profile details before editing.
-                      </p>
-                    </div>
+                  <div className="w-full space-y-4">
+                    <EmployeeProfileHeaderCard
+                      profile={employeeProfile ?? {}}
+                      displayName={profileDisplayName}
+                      designation={String(readProfileField(employeeProfile, "role") ?? "")}
+                      department={String(readProfileField(employeeProfile, "department") ?? "")}
+                      empId={String(readProfileField(employeeProfile, "emp_id", "empId") ?? "")}
+                      email={String(employeeProfile?.email ?? user?.email ?? "")}
+                      phone={String(readProfileField(employeeProfile, "phone_number", "phoneNumber") ?? "")}
+                      resumeShareHref={readProfileField(employeeProfile, "resume_share_link", "resumeShareLink") || null}
+                      headerAction={
+                        employeeSelfServeProfile ? (
+                          <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading}>
+                            Edit Profile
+                          </Button>
+                        ) : undefined
+                      }
+                    />
+                    <ProfileSectionsView
+                      profile={employeeProfile ?? {}}
+                      resumeShareHref={readProfileField(employeeProfile, "resume_share_link", "resumeShareLink") || null}
+                    />
+                    {!requiresSelfOnboarding ? (
+                      <ProfileAssignedProjectsSection
+                        rows={profileAssignedProjects}
+                        loading={profileAssignedProjectsLoading}
+                      />
+                    ) : null}
+                    {!requiresSelfOnboarding ? <ProfileEmployeeTrainingsSection enabled /> : null}
                   </div>
-                  {employeeSelfServeProfile ? (
-                    <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading} >
-                      Edit Profile
-                    </Button>
-                  ) : null}
-                </div>
-                {renderProfileDetails()}
-                {!requiresSelfOnboarding ? renderAssignedProjects() : null}
-                {!requiresSelfOnboarding ? <ProfileEmployeeTrainingsSection enabled /> : null}
-                  </>
                 )}
               </div>
             )

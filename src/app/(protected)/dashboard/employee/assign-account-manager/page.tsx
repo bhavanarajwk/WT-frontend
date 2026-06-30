@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 
-/** Legacy assign route — redirect to Onboarded Employees. */
+/** Legacy assign route — redirect to Invited Employees. */
 export default function AssignAccountManagerRedirectPage() {
   const router = useRouter();
 
