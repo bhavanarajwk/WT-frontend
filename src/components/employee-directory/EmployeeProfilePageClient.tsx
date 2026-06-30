@@ -39,11 +39,8 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
 import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
 import { FormSection, FormSubsection } from "@/components/dashboard/ui/FormSection";
-import { EmployeeProfileSummaryCard } from "@/components/employee-directory/EmployeeProfileSummaryCard";
-import { EmployeeTrainingMarksCard } from "@/components/learning-development/EmployeeTrainingMarksCard";
-import { EmployeeLeaveBalancesCard } from "@/components/employee-directory/EmployeeLeaveBalancesCard";
-import { FullProfileDetailsGrid } from "@/components/employee-directory/FullProfileDetailsGrid";
-import { EmployeeResumeLink } from "@/components/resumes/EmployeeResumeLink";
+import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
+import { EmployeeProfileView } from "@/components/employee-directory/EmployeeProfileView";
 import { IconPencil } from "@/components/employee-directory/employeeDirectoryIcons";
 const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
@@ -259,101 +256,52 @@ export function EmployeeProfilePageClient() {
 
   return (
     <DashboardPageShell className="employee-profile-page">
+      <div className="employee-profile-scroll-root w-full">
+        <Link
+          href={DASHBOARD_ROUTES["employee-directory"]}
+          className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+        >
+          ← Back to directory
+        </Link>
 
-      <div className="employee-profile-scroll-root employee-profile-panel rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
-        <div className="employee-profile-panel__header p-5 md:p-7 lg:p-8">
-          <Link
-            href={DASHBOARD_ROUTES["employee-directory"]}
-            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
-          >
-            ← Back to directory
-          </Link>
-          {isLoading ? (
-            <div className="mt-8 space-y-6">
-              <ProfileHeaderSkeleton />
-            </div>
-          ) : null}
-
-          {isError ? (
-            <div className="mt-8 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-              <p>Could not load profile.{error instanceof Error ? ` ${error.message}` : ""}</p>
-              <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
-                Retry
-              </Button>
-            </div>
-          ) : null}
-
-          {!isLoading && !isError ? (
-            <div className="mt-6 flex flex-col gap-4 border-b border-wt-border pb-6 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-3">
-                  {isEditing ? (
-                      <span className="inline-flex rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white">
-                        Edit Mode
-                      </span>
-                  ) : null}
-                  <h3 className="text-2xl font-bold tracking-tight text-wt-text">
-                    {displayName}
-                    {employeeRole ? (
-                      <span className="font-semibold text-wt-text-muted"> | {employeeRole}</span>
-                    ) : null}
-                  </h3>
-                </div>
-                {!isEditing ? (
-                  <p className="mt-2 text-sm text-wt-text-muted">
-                    Employee ID: {empIdDisplay}
-                    {email ? (
-                      <>
-                        <span className="mx-2 text-wt-border-md" aria-hidden>
-                          •
-                        </span>
-                        <span className="text-blue-600">{email}</span>
-                      </>
-                    ) : null}
-                    <span className="mx-2 text-wt-border-md" aria-hidden>
-                      •
-                    </span>
-                    <span className="text-wt-text-muted">Resume: </span>
-                    <EmployeeResumeLink href={resumeShareHref} />
-                    {phone && phone !== "—" ? (
-                      <>
-                        <span className="mx-2 text-wt-border-md" aria-hidden>
-                          •
-                        </span>
-                        <span className="text-wt-text-muted">Phone: </span>
-                        <span className="text-wt-text">{phone}</span>
-                      </>
-                    ) : null}
-                  </p>
-                ) : (
-                  <p className="mt-2 text-sm text-wt-text-muted">
-                    {statusOnlyEdit
-                      ? "Update employee status below and save, or cancel to return to view mode."
-                      : "Update the fields below and save, or cancel to return to view mode."}
-                  </p>
-                )}
-              </div>
-
-              {canOpenProfileEditor && !isEditing ? (
-                <Button variant="brand" size="sm" type="button" className="inline-flex shrink-0 items-center gap-2 px-4 py-2.5 text-sm" onClick={openEditor} >
-                  <IconPencil />
-                  {statusOnlyEdit ? "Edit Status" : "Edit Profile"}
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-
-        {isLoading && !isError ? (
-          <div className="employee-profile-panel__body px-5 pb-5 md:px-7 md:pb-7 lg:px-8 lg:pb-8">
+        {isLoading ? (
+          <div className="mt-6 space-y-4">
+            <ProfileHeaderSkeleton />
             <ProfileDetailsSkeleton rows={10} />
           </div>
         ) : null}
 
+        {isError ? (
+          <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <p>Could not load profile.{error instanceof Error ? ` ${error.message}` : ""}</p>
+            <Button
+              variant="ghost"
+              size="xs"
+              type="button"
+              className="mt-3 px-3 py-1.5 text-xs"
+              onClick={() => void refetch()}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : null}
+
         {!isLoading && !isError ? (
-          <div className="employee-profile-panel__body px-5 pb-5 md:px-7 md:pb-7 lg:px-8 lg:pb-8">
+          <div className="mt-6 space-y-4">
             {isEditing && editForm ? (
               <div className="space-y-6">
+                <EmployeeProfileHeaderCard
+                  profile={profileRecord}
+                  displayName={displayName}
+                  designation={employeeRole}
+                  department={department}
+                  empId={empIdDisplay}
+                  email={email}
+                  phone={phone}
+                  resumeShareHref={resumeShareHref}
+                  editModeLabel="Edit Mode"
+                />
+
                 {statusOnlyEdit ? (
                   <FormSection
                     title="Employee Status"
@@ -369,86 +317,84 @@ export function EmployeeProfilePageClient() {
                     </div>
                   </FormSection>
                 ) : (
-                  <>
-                    <FormSection
-                      title="Information"
-                      description="Employment details, department, and work arrangement."
-                    >
-                      <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                  <FormSection
+                    title="Information"
+                    description="Employment details, department, and work arrangement."
+                  >
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                      <InputField
+                        label="Name"
+                        value={editForm.name}
+                        onChange={(v) => setEditForm({ ...editForm, name: v })}
+                      />
+                      <InputField
+                        label="Work Email"
+                        type="email"
+                        required
+                        value={editForm.email}
+                        onChange={(v) => setEditForm({ ...editForm, email: v })}
+                      />
+                      <AdaptiveSelectField
+                        label="Department"
+                        value={editForm.department}
+                        placeholder="Select Department"
+                        searchPlaceholder="Search Departments…"
+                        options={departmentSelectOptions}
+                        onChange={(v) => setEditForm({ ...editForm, department: v })}
+                      />
+                      <AdaptiveSelectField
+                        label="Status"
+                        value={editForm.user_status}
+                        options={USER_STATUSES}
+                        onChange={(v) => setEditForm({ ...editForm, user_status: v })}
+                      />
+                      <AdaptiveSelectField
+                        label="Work Mode"
+                        value={editForm.work_mode}
+                        options={workModeOptions}
+                        onChange={(v) => setEditForm({ ...editForm, work_mode: v })}
+                      />
+                      <AdaptiveSelectField
+                        label="Work Location"
+                        value={editForm.work_location_type}
+                        options={WORK_LOCATIONS}
+                        onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
+                      />
+                      <AdaptiveSelectField
+                        label="Band"
+                        value={bandSelectValue}
+                        placeholder="Select Band"
+                        searchPlaceholder="Search Bands…"
+                        options={bandSelectOptions.map((band) => ({
+                          value: band.id,
+                          label: band.label,
+                        }))}
+                        onChange={(id) => setEditForm({ ...editForm, band_id: id })}
+                      />
+                    </div>
+
+                    <FormSubsection title="Skills">
+                      <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
                         <InputField
-                          label="Name"
-                          value={editForm.name}
-                          onChange={(v) => setEditForm({ ...editForm, name: v })}
+                          label="Primary Skills"
+                          value={editForm.primary_skills}
+                          onChange={(v) => setEditForm({ ...editForm, primary_skills: v })}
                         />
                         <InputField
-                          label="Work Email"
-                          type="email"
-                          required
-                          value={editForm.email}
-                          onChange={(v) => setEditForm({ ...editForm, email: v })}
+                          label="Secondary Skill"
+                          value={editForm.secondary_skill}
+                          onChange={(v) => setEditForm({ ...editForm, secondary_skill: v })}
                         />
                         <AdaptiveSelectField
-                          label="Department"
-                          value={editForm.department}
-                          placeholder="Select Department"
-                          searchPlaceholder="Search Departments…"
-                          options={departmentSelectOptions}
-                          onChange={(v) => setEditForm({ ...editForm, department: v })}
-                        />
-                        <AdaptiveSelectField
-                          label="Status"
-                          value={editForm.user_status}
-                          options={USER_STATUSES}
-                          onChange={(v) => setEditForm({ ...editForm, user_status: v })}
-                        />
-                        <AdaptiveSelectField
-                          label="Work Mode"
-                          value={editForm.work_mode}
-                          options={workModeOptions}
-                          onChange={(v) => setEditForm({ ...editForm, work_mode: v })}
-                        />
-                        <AdaptiveSelectField
-                          label="Work Location"
-                          value={editForm.work_location_type}
-                          options={WORK_LOCATIONS}
-                          onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
-                        />
-                        <AdaptiveSelectField
-                          label="Band"
-                          value={bandSelectValue}
-                          placeholder="Select Band"
-                          searchPlaceholder="Search Bands…"
-                          options={bandSelectOptions.map((band) => ({
-                            value: band.id,
-                            label: band.label,
-                          }))}
-                          onChange={(id) => setEditForm({ ...editForm, band_id: id })}
+                          label="Secondary Skill Rating"
+                          value={editForm.secondary_rating}
+                          placeholder="Select Rating"
+                          options={SKILL_RATINGS}
+                          onChange={(v) => setEditForm({ ...editForm, secondary_rating: v })}
                         />
                       </div>
-
-                      <FormSubsection title="Skills">
-                        <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
-                          <InputField
-                            label="Primary Skills"
-                            value={editForm.primary_skills}
-                            onChange={(v) => setEditForm({ ...editForm, primary_skills: v })}
-                          />
-                          <InputField
-                            label="Secondary Skill"
-                            value={editForm.secondary_skill}
-                            onChange={(v) => setEditForm({ ...editForm, secondary_skill: v })}
-                          />
-                          <AdaptiveSelectField
-                            label="Secondary Skill Rating"
-                            value={editForm.secondary_rating}
-                            placeholder="Select Rating"
-                            options={SKILL_RATINGS}
-                            onChange={(v) => setEditForm({ ...editForm, secondary_rating: v })}
-                          />
-                        </div>
-                      </FormSubsection>
-                    </FormSection>
-                  </>
+                    </FormSubsection>
+                  </FormSection>
                 )}
 
                 <FormActionBar
@@ -463,36 +409,33 @@ export function EmployeeProfilePageClient() {
                 />
               </div>
             ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-                    <div className="employee-profile-section min-w-0 rounded-xl border border-wt-border p-5 md:p-6">
-                    <FullProfileDetailsGrid
-                      profile={profileRecord}
-                      resumeShareHref={resumeShareHref}
-                      scrollChain
-                    />
-                  </div>
-
-                  <EmployeeProfileSummaryCard
-                    profile={profileRecord}
-                    displayName={displayName}
-                    designation={employeeRole}
-                    department=""
-                    email={email}
-                  />
-                </div>
-
-                <div className="space-y-6">
-                  <EmployeeTrainingMarksCard
-                    variant="hr"
-                    targetUserId={profileUserId}
-                    targetEmail={email}
-                    enabled={queriesEnabled && Boolean(profileUserId)}
-                    scrollChain
-                  />
-                  <EmployeeLeaveBalancesCard empId={empId} enabled={queriesEnabled} />
-                </div>
-              </div>
+              <EmployeeProfileView
+                profile={profileRecord}
+                displayName={displayName}
+                designation={employeeRole}
+                department={department}
+                empId={empId}
+                empIdDisplay={empIdDisplay}
+                email={email}
+                phone={phone}
+                profileUserId={profileUserId}
+                resumeShareHref={resumeShareHref}
+                queriesEnabled={queriesEnabled}
+                headerAction={
+                  canOpenProfileEditor ? (
+                    <Button
+                      variant="brand"
+                      size="sm"
+                      type="button"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+                      onClick={openEditor}
+                    >
+                      <IconPencil />
+                      {statusOnlyEdit ? "Edit Status" : "Edit Profile"}
+                    </Button>
+                  ) : null
+                }
+              />
             )}
           </div>
         ) : null}
