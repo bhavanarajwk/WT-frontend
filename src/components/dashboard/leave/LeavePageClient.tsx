@@ -1408,8 +1408,8 @@ export function LeavePageClient() {
                             </div>
           
                             <div className="space-y-3">
+                              <h3 className="font-semibold">My Previous Requests</h3>
                               <div className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-0.5">
-                                <h3 className="font-semibold shrink-0 mr-auto">My Previous Requests</h3>
                                 <label className="sr-only" htmlFor="my-leave-search">
                                   Search my requests
                                 </label>
