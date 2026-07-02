@@ -73,20 +73,6 @@
 }
 
 .timelog-table-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 0.75rem 1rem;
   border-top: 1px solid var(--wt-border, #e5e7eb);
-}
-
-.timelog-table-footer-info {
-  font-size: 0.8125rem;
-  color: var(--wt-text-muted, #888);
-}
-
-.timelog-table-footer-actions {
-  display: flex;
-  gap: 0.25rem;
-  align-items: center;
 }

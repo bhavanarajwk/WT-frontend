@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { formatTimelogTableDate } from "@/utils/timelog/weekDates";
@@ -99,41 +99,17 @@ export function TimelogTable({
 
       {total > size ? (
         <div className="timelog-table-footer">
-          <span className="timelog-table-footer-info">
-            Showing {startItem}\u2013{endItem} of {total}
-          </span>
-          <div className="timelog-table-footer-actions">
-            <Button
-              variant="outline"
-              size="xs"
-              type="button"
-              disabled={page === 0 || loading}
-              onClick={() => onPageChange(page - 1)}
-            >
-              Prev
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <Button
-                key={i}
-                variant={i === page ? "brand" : "outline"}
-                size="xs"
-                type="button"
-                disabled={loading}
-                onClick={() => onPageChange(i)}
-              >
-                {i + 1}
-              </Button>
-            ))}
-            <Button
-              variant="outline"
-              size="xs"
-              type="button"
-              disabled={page >= totalPages - 1 || loading}
-              onClick={() => onPageChange(page + 1)}
-            >
-              Next
-            </Button>
-          </div>
+          <ListPagination
+            className="mt-0 w-full"
+            page={page}
+            totalPages={totalPages}
+            totalItems={total}
+            rangeStart={startItem}
+            rangeEnd={endItem}
+            pageSize={size}
+            loading={loading}
+            onPageChange={onPageChange}
+          />
         </div>
       ) : null}
     </div>

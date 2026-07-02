@@ -378,11 +378,13 @@ export function EmployeeDirectoryPageClient() {
             </div>
               <ListPagination
                 page={pagination.page}
-              totalPages={pagination.totalPages}
-              totalItems={pagination.totalItems}
-              pageSize={pagination.pageSize}
-              onPageChange={pagination.setPage}
-            />
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                pageSize={pagination.pageSize}
+                onPageChange={pagination.setPage}
+              />
           </>
         </ManagementListContent>
       </ManagementListCard>

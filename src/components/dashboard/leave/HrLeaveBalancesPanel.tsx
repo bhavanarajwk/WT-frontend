@@ -179,14 +179,14 @@ export function HrLeaveBalancesPanel({
 
       {totalElements > 0 ? (
         <ListPagination
-          page={page + 1}
+          page={page}
           totalPages={totalPages}
           totalItems={totalElements}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
           pageSize={pageSize}
           pageSizeOptions={[25, 50, 100]}
-          onPageChange={(p) => setPage(Math.max(0, p - 1))}
+          onPageChange={setPage}
           onPageSizeChange={(size) => {
             setPageSize(size);
             setPage(0);

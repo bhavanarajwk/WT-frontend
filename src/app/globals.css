@@ -933,6 +933,32 @@ select.input-field {
   background: rgba(15, 14, 23, 0.45);
 }
 
+.wt-sidebar {
+  background: linear-gradient(
+    180deg,
+    var(--wt-surface-1) 0%,
+    color-mix(in oklch, var(--wt-surface-2) 45%, var(--wt-surface-1)) 100%
+  );
+}
+
+.wt-sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--wt-text-muted) 28%, transparent) transparent;
+}
+
+.wt-sidebar-nav::-webkit-scrollbar {
+  width: 5px;
+}
+
+.wt-sidebar-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--wt-text-muted) 28%, transparent);
+}
+
+.wt-sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);

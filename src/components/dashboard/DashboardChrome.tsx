@@ -25,29 +25,29 @@ import { dashboardHref, DASHBOARD_ROUTES, isDashboardNavChildActive } from "@/co
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { SidebarIcon } from "@/constants/sidebarIcons";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
+import { UserAvatar } from "@/components/dashboard/ui/profile";
 import { Badge } from "@/components/ui/badge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import {
-  SIDEBAR_CHILD_BLOCK,
+  SIDEBAR_BRAND_WRAP_CLASS,
   SIDEBAR_CHILD_ICON_WRAP,
-  SIDEBAR_CHILD_ROW,
-  SIDEBAR_CHILD_TEXT,
+  SIDEBAR_CHILDREN_WRAP_CLASS,
+  SIDEBAR_FOOTER_CARD_CLASS,
+  SIDEBAR_FOOTER_CLASS,
+  SIDEBAR_GROUP_STACK_CLASS,
   SIDEBAR_ICON_WRAP,
+  SIDEBAR_NAV_CLASS,
   SIDEBAR_NAV_LABEL,
-  SIDEBAR_NAV_ROW,
-  SIDEBAR_PARENT_TEXT,
+  SIDEBAR_SHELL_CLASS,
+  sidebarChildBlockClass,
+  sidebarChildNavClass,
+  sidebarLogoutButtonClass,
+  sidebarParentNavClass,
+  sidebarProfileLinkClass,
 } from "@/components/dashboard/ui/sidebarLayout";
 
 const HEADER_ICON_BUTTON_CLASS =
   "flex cursor-pointer items-center justify-center rounded-lg border border-wt-border bg-wt-surface-1 p-2.5 text-wt-text shadow-sm transition hover:bg-wt-surface-2";
-
-function IconUser({ className = "" }: { className?: string }) {
-  return (
-    <svg className={`h-5 w-5 ${className}`} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.33 0-8 1.67-8 5v1h16v-1c0-3.33-4.67-5-8-5z" />
-    </svg>
-  );
-}
 
 function IconBell({ className = "" }: { className?: string }) {
   return (
@@ -175,7 +175,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const isHrPortalUser =
     (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN")) &&
     !userRoles.includes("ROLE_EMPLOYEE");
-  const { isOffboarded } = useDashboardAccess();
+  const { isOffboarded, profile } = useDashboardAccess();
   const shouldLoadExitInterviewProfile = useMemo(() => {
     if (!user) return false;
     if (pathname.startsWith(DASHBOARD_ROUTES["exit-interview"])) return true;
@@ -296,48 +296,45 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     return hit?.label ?? "Learning & Development";
   }, [pathname]);
 
+  const sidebarDisplayName = useMemo(() => {
+    const name = String(profile?.name ?? user?.name ?? user?.email ?? "").trim();
+    return name || "Profile";
+  }, [profile?.name, user?.email, user?.name]);
+
   return (
     <div className="wt-page-scroll h-dvh overflow-y-auto text-wt-text">
       <div className="flex min-h-full max-lg:flex-col lg:flex-row">
-      <aside className="sticky top-0 z-20 flex max-h-[min(36vh,260px)] shrink-0 flex-col overflow-x-hidden border-b border-wt-border bg-wt-surface-1 p-4 max-lg:relative max-lg:min-h-0 lg:h-dvh lg:max-h-dvh lg:w-[250px] lg:min-w-0 lg:border-b-0 lg:border-r lg:p-5">
-        <div className="mb-4 min-w-0 shrink-0">
+      <aside className={SIDEBAR_SHELL_CLASS}>
+        <div className={SIDEBAR_BRAND_WRAP_CLASS}>
           <WebTrakBrand variant="sidebar" className="min-w-0" />
         </div>
-        <nav className="min-h-0 min-w-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto">
+        <nav className={SIDEBAR_NAV_CLASS}>
           {visibleNavigation.map((item) => {
             if (item.kind === "group") {
               const isExpanded = expandedSection === item.id;
               const groupActive = item.children.some((child) => isNavChildActive(child.id));
               return (
-                <div key={item.id} className="space-y-0.5">
+                <div key={item.id} className={SIDEBAR_GROUP_STACK_CLASS}>
                   <Button
                     type="button"
                     variant="ghost"
-                    className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} ${
-                      !isLearningRoute && groupActive
-                        ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                        : "text-wt-text-muted hover:bg-wt-surface-2"
-                    }`}
+                    className={sidebarParentNavClass(!isLearningRoute && groupActive, "justify-start hover:!bg-wt-surface-2")}
                     onClick={() => toggleExpandedSection(item.id)}
                   >
                     <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
                     <span className={SIDEBAR_NAV_LABEL}>{item.label}</span>
                     <SidebarIcon
                       name={isExpanded ? "chevronDown" : "chevronRight"}
-                      className={`${SIDEBAR_ICON_WRAP} opacity-60`}
+                      className={`${SIDEBAR_ICON_WRAP} ml-auto opacity-50`}
                     />
                   </Button>
                   {isExpanded ? (
-                    <div className="ml-3 min-w-0 space-y-0.5 border-l border-wt-border pl-2">
+                    <div className={SIDEBAR_CHILDREN_WRAP_CLASS}>
                       {item.children.map((child) => (
                         <Link prefetch={false}
                           key={child.id}
                           href={dashboardHref(child.id)}
-                          className={`${SIDEBAR_CHILD_ROW} ${SIDEBAR_CHILD_TEXT} ${
-                            !isLearningRoute && isNavChildActive(child.id)
-                              ? "bg-wt-surface-3 text-wt-text"
-                              : "text-wt-text-muted hover:bg-wt-surface-2"
-                          }`}
+                          className={sidebarChildNavClass(!isLearningRoute && isNavChildActive(child.id))}
                         >
                           <SidebarIcon name={child.icon} className={SIDEBAR_CHILD_ICON_WRAP} />
                           <span className={SIDEBAR_NAV_LABEL}>{child.label}</span>
@@ -354,35 +351,27 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               const isExpanded = expandedSection === "reports";
               const groupActive = activeSection.startsWith("reports-");
               return (
-                <div key={item.id} className="space-y-0.5">
+                <div key={item.id} className={SIDEBAR_GROUP_STACK_CLASS}>
                   <Button
                     type="button"
                     variant="ghost"
-                    className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} ${
-                      !isLearningRoute && groupActive
-                        ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text"
-                        : "text-wt-text-muted hover:bg-wt-surface-2"
-                    }`}
+                    className={sidebarParentNavClass(!isLearningRoute && groupActive, "justify-start hover:!bg-wt-surface-2")}
                     onClick={() => toggleExpandedSection("reports")}
                   >
                     <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
                     <span className={SIDEBAR_NAV_LABEL}>{item.label}</span>
                     <SidebarIcon
                       name={isExpanded ? "chevronDown" : "chevronRight"}
-                      className={`${SIDEBAR_ICON_WRAP} opacity-60`}
+                      className={`${SIDEBAR_ICON_WRAP} ml-auto opacity-50`}
                     />
                   </Button>
                   {isExpanded ? (
-                    <div className="ml-3 min-w-0 space-y-0.5 border-l border-wt-border pl-2">
+                    <div className={SIDEBAR_CHILDREN_WRAP_CLASS}>
                       {children.map((child) => (
                         <Link prefetch={false}
                           key={child.id}
                           href={dashboardHref(child.id)}
-                          className={`${SIDEBAR_CHILD_BLOCK} ${SIDEBAR_CHILD_TEXT} ${
-                            !isLearningRoute && activeSection === child.id
-                              ? "bg-wt-surface-3 text-wt-text"
-                              : "text-wt-text-muted hover:bg-wt-surface-2"
-                          }`}
+                          className={sidebarChildBlockClass(!isLearningRoute && activeSection === child.id)}
                         >
                           {child.label}
                         </Link>
@@ -396,24 +385,22 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             if (item.kind === "expandable" && item.id === "learning") {
               const isExpanded = expandedSection === "learning";
               return (
-                <div key={item.id} className="space-y-0.5">
+                <div key={item.id} className={SIDEBAR_GROUP_STACK_CLASS}>
                   <Button
                     type="button"
                     variant="ghost"
-                    className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} ${
-                      isLearningRoute ? "bg-wt-surface-3 text-wt-text hover:bg-wt-surface-3 hover:text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
-                    }`}
+                    className={sidebarParentNavClass(isLearningRoute, "justify-start hover:!bg-wt-surface-2")}
                     onClick={() => toggleExpandedSection("learning")}
                   >
                     <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
                     <span className={SIDEBAR_NAV_LABEL}>{item.label}</span>
                     <SidebarIcon
                       name={isExpanded ? "chevronDown" : "chevronRight"}
-                      className={`${SIDEBAR_ICON_WRAP} opacity-60`}
+                      className={`${SIDEBAR_ICON_WRAP} ml-auto opacity-50`}
                     />
                   </Button>
                   {isExpanded ? (
-                    <div className="ml-3 min-w-0 space-y-0.5 border-l border-wt-border pl-2">
+                    <div className={SIDEBAR_CHILDREN_WRAP_CLASS}>
                       {learningSubNav.map((link) => {
                         const active =
                           pathname === link.href ||
@@ -426,9 +413,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                           <Link prefetch={false}
                             key={link.href}
                             href={link.href}
-                            className={`${SIDEBAR_CHILD_BLOCK} ${SIDEBAR_CHILD_TEXT} ${
-                              active ? "bg-wt-surface-3 text-wt-text" : "text-wt-text-muted hover:bg-wt-surface-2"
-                            }`}
+                            className={sidebarChildBlockClass(active)}
                           >
                             {link.label}
                           </Link>
@@ -445,11 +430,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 <Link prefetch={false}
                   key={item.id}
                   href={dashboardHref(item.id)}
-                  className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} ${
-                    !isLearningRoute && activeSection === item.id
-                      ? "bg-wt-surface-3 text-wt-text"
-                      : "text-wt-text-muted hover:bg-wt-surface-2"
-                  }`}
+                  className={sidebarParentNavClass(!isLearningRoute && activeSection === item.id)}
                 >
                   <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
                   <span className={SIDEBAR_NAV_LABEL}>{item.label}</span>
@@ -461,31 +442,31 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           })}
         </nav>
         {user ? (
-          <div className="mt-4 shrink-0 border-t border-wt-border pt-4">
-            <div className="flex items-center gap-2">
+          <div className={SIDEBAR_FOOTER_CLASS}>
+            <div className={SIDEBAR_FOOTER_CARD_CLASS}>
+              <div className="flex items-center gap-1.5">
               {canAccessProfile && !isOffboarded ? (
                 <Link
                   prefetch={false}
                   href={dashboardHref("profile")}
-                  className={`${SIDEBAR_NAV_ROW} ${SIDEBAR_PARENT_TEXT} min-w-0 flex-1 cursor-pointer items-center rounded-xl border transition ${
-                    activeSection === "profile"
-                      ? "border-wt-border bg-wt-surface-3 text-wt-text"
-                      : "border-transparent bg-wt-surface-2 text-wt-text-muted hover:bg-wt-surface-3 hover:text-wt-text"
-                  }`}
-                  aria-label="Profile"
+                  className={sidebarProfileLinkClass(activeSection === "profile")}
+                  aria-label={`View profile for ${sidebarDisplayName}`}
                 >
-                  <IconUser className="shrink-0" />
-                  <span className={SIDEBAR_NAV_LABEL}>Profile</span>
+                  <UserAvatar profile={profile} fallbackName={user?.name ?? user?.email} size="sm" />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium leading-snug">
+                    {sidebarDisplayName}
+                  </span>
                 </Link>
               ) : null}
               <button
                 type="button"
-                className="flex min-h-8 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 px-2.5 py-2 text-wt-text-muted shadow-sm transition hover:bg-wt-surface-3 hover:text-wt-text"
+                className={sidebarLogoutButtonClass()}
                 onClick={() => void logout()}
                 aria-label="Logout"
               >
                 <IconLogout />
               </button>
+              </div>
             </div>
           </div>
         ) : null}

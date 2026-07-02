@@ -30,13 +30,12 @@ import { ManagementListCard, ManagementListContent } from "@/components/dashboar
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { FormGridSkeleton, MetricCardsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import {
-  CARD_CONTENT_BELOW_TOOLBAR_CLASS,
   CARD_CONTENT_STACK_CLASS,
   CARD_FORM_ACTIONS_CLASS,
   CARD_FORM_GRID_CLASS,
   CARD_STACK_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardToolbar } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
@@ -356,7 +355,7 @@ export function OffboardingPanel() {
     <section className={CARD_STACK_CLASS}>
       <Card className="p-0">
         <CardHeader className="flex-row items-end justify-between gap-3 space-y-0">
-          <div>
+          <div className="min-w-0 flex-1">
             <CardTitle>Attrition Summary</CardTitle>
             <CardDescription>
               Financial-year exit metrics (Apr–Mar). Contractual exits are excluded.
@@ -365,9 +364,6 @@ export function OffboardingPanel() {
                 : ""}
             </CardDescription>
           </div>
-        </CardHeader>
-        <Separator />
-        <CardToolbar className="flex justify-end">
           <DropdownSelectField
             label="Financial Year (Start)"
             className="w-[11rem] shrink-0"
@@ -375,8 +371,9 @@ export function OffboardingPanel() {
             onChange={setFyStartYear}
             options={financialYearSelectOptions()}
           />
-        </CardToolbar>
-        <CardContent className={CARD_CONTENT_BELOW_TOOLBAR_CLASS}>
+        </CardHeader>
+        <Separator />
+        <CardContent>
           {loadingAttrition ? (
             <MetricCardsSkeleton count={3} />
           ) : (

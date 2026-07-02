@@ -17,6 +17,7 @@ import { hrmsService, type AllocationExtensionRequestRow, type AllocationExtensi
 import { useAuth } from "@/context/AuthContext";
 import { ApiDateField, SelectField } from "@/components/dashboard/ui/forms";
 import { Button } from "@/components/ui/button";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import {
   HrLeaveStatusToggle,
   type HrToggleStatus,
@@ -355,8 +356,8 @@ export function AllocationExtensionPanel() {
     void updateStatus(requestId, next);
   }
 
-  const canPrev = page > 0;
-  const canNext = page + 1 < totalPages;
+  const rangeStart = totalElements === 0 ? 0 : page * size + 1;
+  const rangeEnd = Math.min(totalElements, (page + 1) * size);
 
   if (!hasHrAccess && !hasManagerRole) {
     return (
@@ -627,31 +628,17 @@ export function AllocationExtensionPanel() {
           <p className="text-sm text-wt-text-muted">{loading ? "Loading…" : "No extension requests found."}</p>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-wt-text-muted">
-            Page {page + 1} of {Math.max(1, totalPages)}
-          </p>
-          <div className="inline-flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!canPrev}
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-            >
-              Prev
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!canNext}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <ListPagination
+          className="pt-1"
+          page={page}
+          totalPages={Math.max(1, totalPages)}
+          totalItems={totalElements}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          pageSize={size}
+          loading={loading}
+          onPageChange={setPage}
+        />
       </section>
     </div>
   );

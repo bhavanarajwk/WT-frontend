@@ -30,7 +30,7 @@ export function WebTrakBrand({
         height={wordmark.height}
         priority={variant === "login"}
         unoptimized
-        className={`${imgClass} object-contain object-center mix-blend-multiply`}
+        className={`${imgClass} object-contain object-left mix-blend-multiply dark:mix-blend-normal`}
       />
     </div>
   );

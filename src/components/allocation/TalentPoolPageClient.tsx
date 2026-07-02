@@ -17,6 +17,7 @@ import { type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useTalentPoolTables } from "@/hooks/allocation/useTalentPool";
 import {
   buildAllocateHref,
@@ -98,6 +99,8 @@ export function TalentPoolPageClient() {
               loading={loading}
               page={pages.unallocated}
               totalPages={unallocated.total_pages}
+              totalItems={unallocated.total_elements}
+              pageSize={unallocated.page_size}
               onPageChange={(p) => void loadUnallocatedPage(p)}
             >
               {unallocated.items.length ? (
@@ -150,6 +153,8 @@ function TalentPoolSection({
   loading,
   page,
   totalPages,
+  totalItems,
+  pageSize,
   onPageChange,
   children,
 }: {
@@ -157,64 +162,32 @@ function TalentPoolSection({
   loading: boolean;
   page: number;
   totalPages: number;
+  totalItems: number;
+  pageSize: number;
   onPageChange: (page: number) => void;
   children: ReactNode;
 }) {
   const safeTotal = Math.max(1, totalPages);
+  const rangeStart = totalItems === 0 ? 0 : page * pageSize + 1;
+  const rangeEnd = Math.min(totalItems, (page + 1) * pageSize);
+
   return (
-    <section className="space-y-2">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h4 className="text-sm font-semibold">{title}</h4>
-        <TablePager
-          page={page}
-          totalPages={safeTotal}
-          loading={loading}
-          onPageChange={onPageChange}
-        />
-      </div>
+    <section className="space-y-3">
+      <h4 className="text-sm font-semibold">{title}</h4>
       <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
         {children}
       </ScrollableTable>
+      <ListPagination
+        page={page}
+        totalPages={safeTotal}
+        totalItems={totalItems}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        pageSize={pageSize}
+        loading={loading}
+        onPageChange={onPageChange}
+      />
     </section>
-  );
-}
-
-function TablePager({
-  page,
-  totalPages,
-  loading,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  loading: boolean;
-  onPageChange: (page: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-  return (
-    <div className="inline-flex items-center gap-2 text-xs text-wt-text-muted">
-      <span>
-        Page {page + 1} of {totalPages}
-      </span>
-      <Button
-        type="button"
-        variant="outline"
-        size="xs"
-        disabled={page <= 0 || loading}
-        onClick={() => onPageChange(page - 1)}
-      >
-        Prev
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="xs"
-        disabled={page + 1 >= totalPages || loading}
-        onClick={() => onPageChange(page + 1)}
-      >
-        Next
-      </Button>
-    </div>
   );
 }
 

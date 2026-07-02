@@ -83,6 +83,43 @@ async function downloadImage(src: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+export function UserAvatar({
+  profile,
+  fallbackName,
+  size = "sm",
+  className = "",
+}: {
+  profile: Record<string, unknown> | null | undefined;
+  fallbackName?: string | null;
+  size?: "sm" | "md";
+  className?: string;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const src = resolveProfilePhotoSrc(profile);
+  const displayName = String(profile?.name ?? fallbackName ?? "User").trim();
+  const initial = (displayName.charAt(0) || "?").toUpperCase();
+  const sizeClass = size === "sm" ? "h-8 w-8" : "h-10 w-10";
+  const textClass = size === "sm" ? "text-xs" : "text-sm";
+
+  return (
+    <div
+      className={`${sizeClass} flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-wt-border bg-wt-surface-2 ${className}`.trim()}
+      aria-hidden
+    >
+      {src && !imageFailed ? (
+        <img
+          src={src}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <span className={`${textClass} font-semibold text-wt-text-muted`}>{initial}</span>
+      )}
+    </div>
+  );
+}
+
 export function ProfilePhotoAvatar({
   profile,
   fallbackName,
