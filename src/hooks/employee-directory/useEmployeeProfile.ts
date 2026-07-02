@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { endpoints } from "@/api/endpoints";
 import { hrmsService } from "@/services/hrms.service";
+import { normalizeSelfProfile } from "@/utils/selfProfile";
 
 type Options = { enabled?: boolean };
 
@@ -27,7 +28,7 @@ export function useEmployeeProfile(empId: string, options?: Options) {
     enabled,
     queryFn: async () => {
       const res = await hrmsService.getEmployeeProfile(empId);
-      return unwrapProfile(res);
+      return normalizeSelfProfile(unwrapProfile(res)) ?? {};
     },
   });
 }

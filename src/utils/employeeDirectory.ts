@@ -2,11 +2,64 @@ import { formatSecondarySkillsForProfile } from "@/components/dashboard/ui/profi
 import type { OnboardListItem } from "@/types/onboard";
 import { pickResumeShareLink } from "@/utils/employeeResume";
 import { formatApiDateDisplay } from "@/utils/apiDate";
+import { formatUserTypeLabel } from "@/utils/offboardingFormState";
 import {
   defaultPhoneCountryIso,
   formatPhoneNumberForApi,
   splitPhoneNumber,
 } from "@/utils/phoneCountries";
+
+function formatWorkModeLabel(value: unknown): string {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (!normalized) return "—";
+  if (normalized === "HYBRID") return "Hybrid";
+  if (normalized === "REMOTE") return "Remote";
+  if (normalized === "ONSITE" || normalized === "ON_SITE") return "Onsite";
+  return String(value ?? "").trim() || "—";
+}
+
+function formatWorkLocationLabel(value: unknown): string {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (!normalized) return "—";
+  if (normalized === "REMOTE") return "Remote";
+  if (normalized === "ONSITE" || normalized === "ON_SITE") return "Onsite";
+  return String(value ?? "").trim() || "—";
+}
+
+function formatCategoryLabel(value: unknown): string {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (!normalized) return "—";
+  if (normalized === "DELIVERY") return "Delivery";
+  if (normalized === "NON_DELIVERY" || normalized === "NONDELIVERY") return "Non-Delivery";
+  return String(value ?? "").trim() || "—";
+}
+
+function formatBandForProfile(profile: Record<string, unknown>): string {
+  const label = pickProfileField(profile, ["band_name", "bandName", "band"]);
+  if (label != null) {
+    const text = String(label).trim();
+    if (text && !/^\d+$/.test(text)) return text;
+  }
+  const bandId = pickProfileField(profile, ["band_id", "bandId"]);
+  return bandId != null ? `Band ${String(bandId).trim()}` : "—";
+}
+
+function formatReportingManagerForProfile(profile: Record<string, unknown>): string {
+  const manager = pickProfileField(profile, [
+    "reporting_manager",
+    "reportingManager",
+    "manager_name",
+    "managerName",
+    "manager",
+  ]);
+  return manager != null ? String(manager).trim() || "—" : "—";
+}
+
+function isInternProfile(profile: Record<string, unknown>): boolean {
+  return String(pickProfileField(profile, ["user_type", "userType"]) ?? "")
+    .trim()
+    .toUpperCase() === "INTERN";
+}
 
 function formatDirectoryDate(value: unknown): string {
   const s = String(value ?? "").trim();
@@ -285,13 +338,10 @@ export function buildGroupedProfileSections(
     pickProfileField(profile, ["category"]) ??
     pickProfileField(profile, ["delivery_status", "deliveryStatus"]);
 
-  const reportingManager = pickProfileField(profile, [
-    "reporting_manager",
-    "reportingManager",
-    "manager_name",
-    "managerName",
-    "manager",
-  ]);
+  const internProfile = isInternProfile(profile);
+  const holidayCalendar =
+    pickProfileField(profile, ["holiday_calendar_name", "holidayCalendarName"]) ??
+    pickProfileField(profile, ["holiday_calendar_id", "holidayCalendarId"]);
 
   const information: ProfileDisplayEntry[] = [
     profileEntry("Name", cleanEmployeeName(profile) || pickProfileField(profile, ["name"])),
@@ -304,24 +354,45 @@ export function buildGroupedProfileSections(
     profileEntry("Work Email", pickProfileField(profile, ["email"])),
     profileEntry("Department", pickProfileField(profile, ["department"])),
     profileEntry("Designation / Role", pickEmployeeRole(profile) || null),
+    profileEntry("Band", formatBandForProfile(profile)),
     profileEntry(
-      "Band",
-      pickProfileField(profile, ["band", "band_name", "bandName", "band_id", "bandId"])
+      "User Type",
+      formatUserTypeLabel(String(pickProfileField(profile, ["user_type", "userType"]) ?? ""))
     ),
-    profileEntry("User Type", pickProfileField(profile, ["user_type", "userType"])),
-    profileEntry("Category", category),
-    profileEntry("Work Mode", pickProfileField(profile, ["work_mode", "workMode"])),
+    profileEntry("Category", formatCategoryLabel(category)),
+    profileEntry(
+      "Work Mode",
+      formatWorkModeLabel(pickProfileField(profile, ["work_mode", "workMode"]))
+    ),
     profileEntry(
       "Work Location",
-      pickProfileField(profile, ["work_location", "work_location_type", "workLocationType"])
-    ),
-    profileEntry(
-      "Date of Joining",
-      formatDirectoryDate(
-        pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate"])
+      formatWorkLocationLabel(
+        pickProfileField(profile, ["work_location", "work_location_type", "workLocationType"])
       )
     ),
-    profileEntry("Reporting Manager", reportingManager),
+    ...(internProfile
+      ? [
+          profileEntry(
+            "Date of Internship",
+            formatDirectoryDate(
+              pickProfileField(profile, ["doi", "date_of_internship", "dateOfInternship"])
+            )
+          ),
+          profileEntry(
+            "Internship Duration (Months)",
+            pickProfileField(profile, ["internship_duration", "internshipDuration"])
+          ),
+        ]
+      : [
+          profileEntry(
+            "Date of Joining",
+            formatDirectoryDate(
+              pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate"])
+            )
+          ),
+        ]),
+    profileEntry("Reporting Manager", formatReportingManagerForProfile(profile)),
+    profileEntry("Holiday Calendar", holidayCalendar),
     profileEntry("Primary Skills", formatPrimarySkills(profile)),
     profileEntry("Secondary Skills", formatSecondarySkills(profile)),
     profileEntry(
@@ -376,7 +447,10 @@ export function buildGroupedProfileSections(
 const PROFILE_VIEW_WORK_LABELS = new Set([
   "Band",
   "Date of Joining",
+  "Date of Internship",
+  "Internship Duration (Months)",
   "Reporting Manager",
+  "Holiday Calendar",
   "User Type",
   "Work Mode",
   "Work Location",

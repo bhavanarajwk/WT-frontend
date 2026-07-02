@@ -24,13 +24,33 @@ export async function fetchSelfProfile(
   }
   try {
     const res = await hrmsService.getMyProfile();
-    return (res.data ?? null) as Record<string, unknown> | null;
+    const profile = (res.data ?? null) as Record<string, unknown> | null;
+    return normalizeSelfProfile(profile);
   } catch (err) {
     if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
       return null;
     }
     throw err;
   }
+}
+
+/** Align API aliases so employee/manager profile views show HR-populated work fields. */
+export function normalizeSelfProfile(
+  profile: Record<string, unknown> | null
+): Record<string, unknown> | null {
+  if (!profile) return null;
+  return {
+    ...profile,
+    band: profile.band_name ?? profile.band,
+    band_name: profile.band_name ?? profile.band,
+    reporting_manager:
+      profile.reporting_manager ?? profile.reporting_manager_name ?? profile.manager_name,
+    category: profile.category ?? profile.delivery_status ?? profile.deliveryStatus,
+    work_location_type:
+      profile.work_location_type ?? profile.work_location ?? profile.workLocationType,
+    holiday_calendar_name:
+      profile.holiday_calendar_name ?? profile.holidayCalendarName ?? null,
+  };
 }
 
 export async function loadSelfProfileState(

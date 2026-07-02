@@ -915,6 +915,12 @@ export function LeavePageClient() {
     [loadEmployeeRequestsForApprover]
   );
 
+  useEffect(() => {
+    if (!canViewTeamLeave) return;
+    if (leaveSubTab !== "team" && leaveSubTab !== "org") return;
+    void fetchTeamRequests(leaveSubTab === "org" ? "org" : "team");
+  }, [canViewTeamLeave, leaveSubTab, fetchTeamRequests]);
+
   async function updateEmployeeRequestStatus(
     requestId: string,
     status: UserRequestStatusValue,
