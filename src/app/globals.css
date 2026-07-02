@@ -54,8 +54,8 @@
   --radius-xl: 28px;
   --radius-2xl: 40px;
 
-  /* Font */
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  /* Font — Plus Jakarta Sans (webtrak brand family) */
+  --font-sans: var(--font-plus-jakarta), system-ui, sans-serif;
 
   /* Sticky table headers below dashboard page title bar */
   --wt-dashboard-header-offset: 4.75rem;
@@ -978,7 +978,194 @@ select.input-field {
 }
 
 .wt-brand-wordmark {
-  font-family: var(--font-brand), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------ */
+/* Sonner toasts — smooth motion + webtrak surface styling               */
+/* ------------------------------------------------------------------ */
+.wt-toaster,
+[data-sonner-toaster] {
+  font-family: var(--font-sans) !important;
+  --wt-toast-duration: 3.6s;
+}
+
+[data-sonner-toast].wt-toast {
+  position: relative;
+  overflow: hidden;
+  width: min(22rem, calc(100vw - 2rem));
+  border-radius: 14px !important;
+  border: 1px solid color-mix(in oklch, var(--wt-border-md) 88%, transparent) !important;
+  background: color-mix(in oklch, var(--wt-surface-1) 92%, transparent) !important;
+  color: var(--wt-text) !important;
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.1),
+    0 4px 12px rgba(15, 23, 42, 0.05) !important;
+  backdrop-filter: blur(14px);
+  padding: 0.875rem 1rem 0.95rem 1rem !important;
+  gap: 0.75rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+  letter-spacing: -0.01em;
+  animation: wt-toast-enter 0.48s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s ease,
+    border-color 0.32s ease;
+}
+
+:is(.dark, [data-theme="dark"]) [data-sonner-toast].wt-toast {
+  background: color-mix(in oklch, var(--wt-surface-2) 94%, transparent) !important;
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+}
+
+[data-sonner-toast].wt-toast:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 22px 46px rgba(15, 23, 42, 0.12),
+    0 6px 16px rgba(15, 23, 42, 0.06) !important;
+}
+
+[data-sonner-toast].wt-toast::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: 14px 0 0 14px;
+  background: var(--wt-toast-accent, var(--wt-brand));
+}
+
+[data-sonner-toast].wt-toast::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    var(--wt-toast-accent, var(--wt-brand)),
+    color-mix(in oklch, var(--wt-toast-accent, var(--wt-brand)) 35%, transparent)
+  );
+  opacity: 0.7;
+  animation: wt-toast-progress var(--duration, var(--wt-toast-duration)) linear forwards;
+}
+
+[data-sonner-toast].wt-toast[data-removed="true"] {
+  animation: wt-toast-exit 0.36s cubic-bezier(0.4, 0, 0.8, 0.35) both !important;
+}
+
+[data-sonner-toast].wt-toast--success {
+  --wt-toast-accent: #059669;
+}
+
+[data-sonner-toast].wt-toast--error {
+  --wt-toast-accent: #e11d48;
+}
+
+[data-sonner-toast].wt-toast--info {
+  --wt-toast-accent: #0284c7;
+}
+
+[data-sonner-toast].wt-toast--warning {
+  --wt-toast-accent: #d97706;
+}
+
+[data-sonner-toast].wt-toast--loading {
+  --wt-toast-accent: var(--wt-brand);
+}
+
+[data-sonner-toast] .wt-toast__title {
+  font-weight: 500 !important;
+  color: var(--wt-text) !important;
+}
+
+[data-sonner-toast] .wt-toast__description {
+  color: var(--wt-text-muted) !important;
+  font-weight: 400 !important;
+}
+
+[data-sonner-toast] .wt-toast__content {
+  gap: 0.2rem !important;
+}
+
+[data-sonner-toast] .wt-toast__close {
+  position: absolute !important;
+  top: 0.55rem !important;
+  right: 0.55rem !important;
+  left: auto !important;
+  transform: none !important;
+  width: 1.65rem !important;
+  height: 1.65rem !important;
+  border-radius: 999px !important;
+  border: 1px solid color-mix(in oklch, var(--wt-border-md) 90%, transparent) !important;
+  background: color-mix(in oklch, var(--wt-surface-2) 88%, transparent) !important;
+  color: var(--wt-text-muted) !important;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+[data-sonner-toast]:hover .wt-toast__close,
+[data-sonner-toast]:focus-within .wt-toast__close {
+  opacity: 1;
+}
+
+[data-sonner-toast] .wt-toast__close:hover {
+  background: var(--wt-surface-3) !important;
+  color: var(--wt-text) !important;
+  transform: scale(1.04) !important;
+}
+
+@keyframes wt-toast-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(calc(100% + 14px), 0, 0) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes wt-toast-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(calc(100% + 10px), 0, 0) scale(0.97);
+  }
+}
+
+@keyframes wt-toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toast].wt-toast,
+  [data-sonner-toast].wt-toast[data-removed="true"] {
+    animation: none !important;
+  }
+
+  [data-sonner-toast].wt-toast::after {
+    animation: none !important;
+    opacity: 0.35;
+  }
 }
 
 .wt-sidebar-nav {

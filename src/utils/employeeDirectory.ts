@@ -3,6 +3,7 @@ import type { OnboardListItem } from "@/types/onboard";
 import { pickResumeShareLink } from "@/utils/employeeResume";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { formatUserTypeLabel } from "@/utils/offboardingFormState";
+import { formatRoleDisplayValue } from "@/utils/roles";
 import {
   defaultPhoneCountryIso,
   formatPhoneNumberForApi,
@@ -98,7 +99,7 @@ export function cleanEmployeeName(row: Record<string, unknown>): string {
 
 /** Employee role from profile API (`role` field, e.g. HR Manager). */
 export function pickEmployeeRole(profile: Record<string, unknown>): string {
-  return String(pickProfileField(profile, ["role"]) ?? "").trim();
+  return formatRoleDisplayValue(pickProfileField(profile, ["role"]));
 }
 
 /** @deprecated Use pickEmployeeRole — kept for existing imports. */
@@ -148,13 +149,15 @@ export function formatProfileDisplayValue(value: unknown): string {
             ? `${skill} (${String(rating)}/5)`
             : skill;
         }
-        return String(item ?? "").trim();
+        const text = String(item ?? "").trim();
+        return text ? formatRoleDisplayValue(text) : "";
       })
       .filter(Boolean);
     return parts.length ? parts.join(", ") : "—";
   }
   const text = String(value).trim();
-  return text || "—";
+  if (!text) return "—";
+  return formatRoleDisplayValue(text);
 }
 
 export function formatPrimarySkills(profile: Record<string, unknown>): string {
@@ -174,14 +177,14 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
     name: cleanEmployeeName(record),
     email: rowEmail(record) || "—",
     department: String(record.department ?? "").trim() || "—",
-    role: String(record.role ?? "").trim() || "—",
+    role: formatRoleDisplayValue(record.role),
     band: String(record.band ?? record.band_name ?? record.bandName ?? "").trim() || "—",
     date_of_joining: formatDirectoryDate(
       record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate
     ),
     date_of_birth: formatDirectoryDate(record.date_of_birth ?? record.dob),
     status: normalizeStatusLabel(record.user_status ?? record.userStatus ?? record.status),
-    user_type: String(record.user_type ?? record.userType ?? "").trim() || "—",
+    user_type: formatUserTypeLabel(String(record.user_type ?? record.userType ?? "")),
     work_mode: String(record.work_mode ?? record.workMode ?? "").trim() || "—",
     work_location: String(
       record.work_location ?? record.work_location_type ?? record.workLocationType ?? ""

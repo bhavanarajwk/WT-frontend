@@ -1,4 +1,5 @@
 import { formatAllocatedHoursPercentLabel } from "@/utils/dashboard/validation";
+import { formatRoleDisplayValue } from "@/utils/roles";
 
 export function isManagerFlagTruthy(value: unknown): boolean {
   if (typeof value === "boolean") return value;
@@ -187,7 +188,9 @@ export function normalizeForecastRows(
       project_name: projectName || "—",
       employee_name: employeeName || "—",
       employee_email: email || "—",
-      role: String(row.role ?? row.project_role ?? row.projectRole ?? row.designation ?? "—").trim() || "—",
+      role: formatRoleDisplayValue(
+        row.role ?? row.project_role ?? row.projectRole ?? row.designation ?? "—"
+      ),
       billing_status: String(row.billing_status ?? row.billingStatus ?? "—").trim() || "—",
       end_date: String(row.end_date ?? row.endDate ?? "—").trim() || "—",
     } as Record<string, unknown>;

@@ -43,6 +43,7 @@ import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner
 import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
 import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
 import { ProfileSectionsView } from "@/components/employee-directory/ProfileSectionsView";
+import { pickEmployeeRole } from "@/utils/employeeDirectory";
 
 
 export function ProfilePageLeanClient() {
@@ -380,7 +381,7 @@ export function ProfilePageLeanClient() {
                     <EmployeeProfileHeaderCard
                       profile={employeeProfile ?? {}}
                       displayName={profileDisplayName}
-                      designation={String(readProfileField(employeeProfile, "role") ?? "")}
+                      designation={pickEmployeeRole(employeeProfile ?? {})}
                       department={String(readProfileField(employeeProfile, "department") ?? "")}
                       empId={String(readProfileField(employeeProfile, "emp_id", "empId") ?? "")}
                       email={String(employeeProfile?.email ?? user?.email ?? "")}

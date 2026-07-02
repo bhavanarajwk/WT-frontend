@@ -9,6 +9,7 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { formatApiDateDisplay } from "@/utils/apiDate";
+import { formatRoleDisplayValue } from "@/utils/roles";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import {
   PROFILE_TABLE_BODY_CELL,
@@ -27,7 +28,7 @@ function readProjectName(row: Record<string, unknown>): string {
 }
 
 function readProjectRole(row: Record<string, unknown>): string {
-  return displayValue(row.role ?? row.designation);
+  return formatRoleDisplayValue(row.role ?? row.designation);
 }
 
 function readProjectStartDate(row: Record<string, unknown>): string {

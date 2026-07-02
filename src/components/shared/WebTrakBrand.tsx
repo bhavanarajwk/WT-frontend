@@ -25,10 +25,10 @@ function logoFrameClass(variant: Variant, compact: boolean) {
 
 function wordmarkClass(variant: Variant) {
   return cn(
-    "wt-brand-wordmark lowercase text-wt-text",
-    variant === "login" && "text-2xl font-bold tracking-[-0.045em] text-white",
-    variant === "sidebar" && "truncate text-[1.125rem] font-semibold tracking-[-0.04em]",
-    variant === "header" && "text-lg font-semibold tracking-[-0.035em]"
+    "wt-brand-wordmark lowercase font-bold text-wt-text",
+    variant === "login" && "text-2xl tracking-[-0.045em] text-white",
+    variant === "sidebar" && "truncate text-[1.125rem] tracking-[-0.04em]",
+    variant === "header" && "text-lg tracking-[-0.035em]"
   );
 }
 

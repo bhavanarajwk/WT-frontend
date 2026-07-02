@@ -29,6 +29,7 @@ import {
   mergeEmailSelection,
 } from "@/utils/dashboard/invitedEmployees";
 import {
+  formatTableCellValue,
   formatTableColumnHeader,
   prepareTableForDisplay,
   resolveEmployeeNameFromRow,
@@ -270,7 +271,7 @@ export function InvitedEmployeesTable({
                   </TableCell>
                   {displayColumns.map((col) => (
                     <TableCell key={col} className="px-3 py-2 whitespace-nowrap">
-                      {row[col] === null || row[col] === undefined ? "—" : String(row[col])}
+                      {formatTableCellValue(col, row[col])}
                     </TableCell>
                   ))}
                   <TableCell className="px-3 py-2 whitespace-nowrap">

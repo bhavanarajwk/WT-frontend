@@ -1,3 +1,16 @@
+import { toTitleCase } from "@/utils/titleCase";
+
+/** User-facing labels for canonical session roles (matches Masters role assignment). */
+const SESSION_ROLE_LABELS: Record<string, string> = {
+  ROLE_EMPLOYEE: "Employee",
+  ROLE_HR: "HR",
+  ROLE_MANAGER: "Manager",
+  ROLE_ADMIN: "Admin",
+  ROLE_FINANCE: "Finance",
+  ROLE_AM: "Account Manager",
+  ROLE_DM: "Delivery Manager",
+};
+
 /** Canonical ROLE_* names for auth/session (matches backend resolve_session_roles). */
 export function normalizeRoleName(role: string): string {
   const token = role.trim().toUpperCase();
@@ -12,6 +25,36 @@ export function normalizeRoles(roles: string[]): string[] {
     if (normalized) out.add(normalized);
   }
   return Array.from(out).sort();
+}
+
+/** True when a value is a backend session role token (e.g. ROLE_EMPLOYEE), not a job designation. */
+export function isSessionRoleValue(value: string): boolean {
+  const token = value.trim().toUpperCase();
+  if (!token) return false;
+  if (SESSION_ROLE_LABELS[token]) return true;
+  return Boolean(SESSION_ROLE_LABELS[normalizeRoleName(token)]);
+}
+
+/** Format a session role for display; leaves job designations unchanged. */
+export function formatRoleLabel(value: string): string {
+  const token = value.trim();
+  if (!token) return "—";
+  const upper = token.toUpperCase();
+  const normalized = normalizeRoleName(upper);
+  const mapped = SESSION_ROLE_LABELS[normalized] ?? SESSION_ROLE_LABELS[upper];
+  if (mapped) return mapped;
+  if (/^ROLE_[A-Z0-9_]+$/.test(upper)) {
+    return toTitleCase(upper.slice(5).replace(/_/g, " "));
+  }
+  return token;
+}
+
+export function formatRoleDisplayValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  const text = String(value).trim();
+  if (!text || text === "—") return "—";
+  if (isSessionRoleValue(text)) return formatRoleLabel(text);
+  return text;
 }
 
 export function hasHrRole(roles: string[]): boolean {
