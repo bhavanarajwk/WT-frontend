@@ -146,7 +146,9 @@ export class HttpClient {
         throw new ApiError(
           parseApiErrorMessage(
             payload,
-            `Request failed: ${response.status} ${response.statusText}`
+            response.status === 502 || response.status === 503 || response.status === 504
+              ? "Unable to reach the server. Please try again later."
+              : `Request failed: ${response.status} ${response.statusText}`
           ),
           response.status,
           payload
@@ -156,6 +158,15 @@ export class HttpClient {
       return (await this.readBody<T>(response, responseType)) as T;
     } catch (error) {
       let nextError: unknown = error;
+      if (error instanceof TypeError) {
+        const message = error.message.toLowerCase();
+        if (message.includes("fetch") || message.includes("network")) {
+          nextError = new ApiError(
+            "No internet connection. Please check your network and try again.",
+            0
+          );
+        }
+      }
       for (const interceptor of this.errorInterceptors) {
         nextError = await interceptor(nextError);
       }

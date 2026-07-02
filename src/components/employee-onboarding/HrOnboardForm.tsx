@@ -11,10 +11,11 @@ import { CARD_FORM_GRID_CLASS, CARD_FORM_ACTIONS_CLASS } from "@/components/dash
 import { FormGridSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
-  bandSelectOptions,
+  bandSelectOptionsForUserType,
   bandsForDepartment,
   resolveInternBandId,
 } from "@/utils/dashboard/validation";
+import { parseApiDate } from "@/utils/apiDate";
 import { parseDesignationList } from "@/utils/masters";
 import type { OnboardFormState } from "@/utils/onboardFormState";
 import type { OnboardOptionsResponse } from "@/types/onboard-options";
@@ -43,13 +44,18 @@ function validateWorkStep(form: OnboardFormState, internBandId: number, defaultC
 
   if (!empId) throw new Error("Employee ID is required.");
   if (empId.length > 50) throw new Error("Employee ID must be at most 50 characters.");
+  if (!/^[A-Za-z0-9]+$/.test(empId)) {
+    throw new Error("Employee ID must contain only letters and numbers (no spaces or special characters).");
+  }
   if (!email || !name) throw new Error("Work Email and Name are required.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error("Please enter a valid Work Email.");
   }
   if (!form.user_type) throw new Error("User Type is required.");
   if (!department) throw new Error("Department is required.");
-  if (!role) throw new Error("Designation is required.");
+  if (!role) {
+    throw new Error("Designation is required.");
+  }
   if (!form.work_mode) throw new Error("Work Mode is required.");
   if (!form.work_location_type) throw new Error("Work Location is required.");
   if (!form.category) throw new Error("Category is required.");
@@ -72,8 +78,19 @@ function validateWorkStep(form: OnboardFormState, internBandId: number, defaultC
 
   if (form.user_type === "INTERN") {
     if (!form.doi.trim()) throw new Error("Date of Internship is required for interns.");
-    if (!form.internship_duration.trim()) {
+    if (!parseApiDate(form.doi)) {
+      throw new Error("Please enter a valid internship date in DD/MM/YYYY format.");
+    }
+    const durationRaw = form.internship_duration.trim();
+    if (!durationRaw) {
       throw new Error("Internship Duration is required for interns.");
+    }
+    if (!/^\d+$/.test(durationRaw)) {
+      throw new Error("Internship Duration must be a whole number. Only numeric values are allowed.");
+    }
+    const durationMonths = Number(durationRaw);
+    if (durationMonths < 1 || durationMonths > 60) {
+      throw new Error("Please enter a valid internship duration in months (1–60).");
     }
   } else if (!form.doj.trim()) {
     throw new Error("Date of Joining is required.");
@@ -101,11 +118,15 @@ export function HrOnboardForm({
     return Number.isFinite(id) && id > 0 ? id : 0;
   }, [bands]);
 
+  const bandOptions = useMemo(
+    () => bandSelectOptionsForUserType(bands, form.department, form.user_type, internBandId),
+    [bands, form.department, form.user_type, internBandId]
+  );
+
   const departmentBands = useMemo(
     () => bandsForDepartment(bands, form.department),
     [bands, form.department]
   );
-  const bandOptions = useMemo(() => bandSelectOptions(departmentBands), [departmentBands]);
 
   const designationBandId = useMemo(() => {
     if (form.user_type === "CONSULTANT") return defaultConsultantBandId;
@@ -148,12 +169,13 @@ export function HrOnboardForm({
   }, [designationsQ.isError, designationsQ.error]);
 
   useEffect(() => {
-    if (form.user_type !== "INTERN") return;
+    if (form.user_type !== "INTERN" || internBandId <= 0) return;
     setForm((prev) => (prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }));
-  }, [form.user_type, internBandId, setForm]);
+  }, [form.user_type, internBandId, form.department, setForm]);
 
   useEffect(() => {
     if (!form.department.trim()) return;
+    if (form.user_type === "INTERN") return;
     const currentBandId = Number(form.band_id);
     if (!currentBandId) return;
     const stillValid = departmentBands.some((row) => Number(row.id) === currentBandId);
@@ -163,13 +185,24 @@ export function HrOnboardForm({
   }, [departmentBands, form.band_id, form.department, setForm]);
 
   useEffect(() => {
-    if (designationOptions.length !== 1) return;
+    if (designationLoading || designationOptions.length !== 1) return;
     const onlyRole = designationOptions[0]?.value ?? "";
     if (!onlyRole) return;
     setForm((prev) => (prev.role === onlyRole ? prev : { ...prev, role: onlyRole }));
-  }, [designationOptions, setForm]);
+  }, [designationOptions, designationLoading, setForm]);
 
   function submit() {
+    if (designationLoading) {
+      onError("Designations are still loading. Please wait a moment.");
+      return;
+    }
+    if (!designationOptions.length) {
+      onError(
+        "No designation is configured for the selected band. Please choose a different department or band."
+      );
+      return;
+    }
+
     void runAction("Create And Invite Employee", async () => {
       const { empId, email, name, department, role, bandId, reportingManagerId } = validateWorkStep(
         form,
@@ -281,7 +314,7 @@ export function HrOnboardForm({
             setForm((p) => ({
               ...p,
               department: v,
-              band_id: 0,
+              band_id: p.user_type === "INTERN" ? internBandId : 0,
               role: "",
             }))
           }

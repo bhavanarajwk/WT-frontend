@@ -25,16 +25,45 @@ function asReadableObject(value: unknown): string | null {
   }
 }
 
+function isHtmlErrorBody(text: string): boolean {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes("<html") ||
+    lower.includes("<!doctype") ||
+    lower.includes("bad gateway") ||
+    lower.includes("nginx")
+  );
+}
 
 export function parseApiErrorMessage(
   payload: unknown,
   fallback: string
 ): string {
-  if (typeof payload === "string" && payload.trim()) return payload.trim();
+  if (typeof payload === "string" && payload.trim()) {
+    const trimmed = payload.trim();
+    if (isHtmlErrorBody(trimmed)) {
+      return "Unable to reach the server. Please try again later.";
+    }
+    return trimmed;
+  }
   if (!payload || typeof payload !== "object") return fallback;
   const body = payload as ApiErrorPayload;
 
-  if (typeof body.detail === "string" && body.detail.trim()) return body.detail;
+  if (Array.isArray(body.detail)) {
+    for (const item of body.detail) {
+      if (item && typeof item === "object" && "msg" in item) {
+        const msg = String((item as { msg?: unknown }).msg ?? "").trim();
+        if (msg) return msg;
+      }
+    }
+  }
+
+  if (typeof body.detail === "string" && body.detail.trim()) {
+    if (isHtmlErrorBody(body.detail)) {
+      return "Unable to reach the server. Please try again later.";
+    }
+    return body.detail;
+  }
   if (typeof body.message === "string" && body.message.trim()) return body.message;
 
   if (body.detail && typeof body.detail === "object") {
@@ -43,7 +72,7 @@ export function parseApiErrorMessage(
   }
 
   const objectDetail = asReadableObject(body.detail);
-  if (objectDetail) return objectDetail;
+  if (objectDetail && !objectDetail.startsWith("[")) return objectDetail;
 
   const objectErrors = asReadableObject(body.errors);
   if (objectErrors) return objectErrors;

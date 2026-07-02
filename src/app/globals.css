@@ -1008,6 +1008,11 @@ select.input-field {
   color: var(--wt-text);
 }
 
+:is(.dark, [data-theme="dark"]) .wt-sidebar-nav .wt-sidebar-nav-item:hover {
+  background: var(--wt-surface-3);
+  color: var(--wt-text);
+}
+
 :is(.dark, [data-theme="dark"]) [data-slot="table-head"] {
   color: var(--wt-text-muted);
 }

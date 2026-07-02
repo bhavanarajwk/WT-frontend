@@ -333,13 +333,17 @@ export function DropdownSelectField({
         <SelectTrigger id={fieldId} aria-busy={loading || undefined}>
           <SelectValue placeholder={loading ? loadingLabel : placeholder} />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-w-[min(calc(100vw-2rem),28rem)]">
           {loading ? (
             <div className="px-2 py-2 text-sm text-wt-text-muted">{loadingLabel}</div>
           ) : (
             items.map((option) => (
-              <SelectItem key={`${option.value}-${option.label}`} value={option}>
-                {option.label}
+              <SelectItem
+                key={`${option.value}-${option.label}`}
+                value={option}
+                className="max-w-full truncate"
+              >
+                <span className="block truncate">{option.label}</span>
               </SelectItem>
             ))
           )}

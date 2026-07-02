@@ -77,7 +77,6 @@ const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
 type Props = {
   rows: Array<Record<string, unknown>>;
   searchResetKey?: string;
-  actionLoading?: boolean;
   resendingEmail?: string | null;
   bulkResending?: boolean;
   onResendInvite: (email: string) => void;
@@ -87,7 +86,6 @@ type Props = {
 export function InvitedEmployeesTable({
   rows,
   searchResetKey = "",
-  actionLoading = false,
   resendingEmail = null,
   bulkResending = false,
   onResendInvite,
@@ -132,7 +130,7 @@ export function InvitedEmployeesTable({
     resendableEmailsOnPage.some((email) => selectedEmails.includes(email)) &&
     !allResendableOnPageSelected;
 
-  const selectionBusy = actionLoading || bulkResending || Boolean(resendingEmail);
+  const selectionBusy = bulkResending || Boolean(resendingEmail);
 
   function toggleRowSelection(email: string, checked: boolean) {
     const normalized = email.trim().toLowerCase();
@@ -190,7 +188,7 @@ export function InvitedEmployeesTable({
         </div>
       ) : null}
       <div
-        className="relative wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border"
+        className="relative wt-scroll-both-chain max-h-[min(70vh,520px)] rounded-xl border border-wt-border"
         style={{ overscrollBehaviorY: "auto" }}
         ref={tableScrollRef}
         onWheel={(event) => {
@@ -210,7 +208,7 @@ export function InvitedEmployeesTable({
           pageScroller.scrollBy({ top: deltaY, behavior: "auto" });
         }}
       >
-        <WtTable>
+        <WtTable className="min-w-max">
           <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10">

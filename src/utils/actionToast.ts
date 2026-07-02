@@ -102,6 +102,9 @@ export function formatActionSuccessMessage(label: string): string {
     const rest = l.replace(/^refresh /i, "").trim();
     return `${titleCasePhrase(rest)} refreshed.`;
   }
+  if (/^create and invite employee$/i.test(l)) {
+    return "Employee created successfully. An invitation has been sent.";
+  }
   if (/^create /i.test(l)) {
     const rest = l.replace(/^create /i, "").trim();
     return `${titleCasePhrase(rest)} created.`;
@@ -152,7 +155,13 @@ export function formatActionSuccessMessage(label: string): string {
 }
 
 export function formatActionErrorMessage(label: string, backendMessage?: string): string {
-  if (backendMessage?.trim()) return backendMessage.trim();
+  if (backendMessage?.trim()) {
+    const message = backendMessage.trim();
+    if (message.startsWith("[") && message.includes("value_error")) {
+      return "Please check the form fields and try again.";
+    }
+    return message;
+  }
 
   const l = label.trim();
 

@@ -48,7 +48,7 @@ export function TableSortHeader({
       <SortIcon
         className={cn(
           "size-3.5 shrink-0",
-          activeDirection ? "text-foreground" : "text-muted-foreground"
+          activeDirection ? "text-wt-text" : "text-wt-text-muted"
         )}
         aria-hidden
       />

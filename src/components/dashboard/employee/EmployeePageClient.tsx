@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
-import { ApiError } from "@/api/error";
 import { toPagedRows } from "@/utils/apiRows";
 import {
   formatActionErrorMessage,
@@ -21,6 +20,7 @@ import {
 } from "@/utils/dashboard/invitedEmployees";
 import { compareApiDates, formatApiDateDisplay } from "@/utils/apiDate";
 import { createEmptyOnboardForm } from "@/utils/onboardFormState";
+import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { CARD_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { HrOnboardForm } from "@/components/employee-onboarding/HrOnboardForm";
@@ -38,13 +38,25 @@ import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { parseBandsList } from "@/utils/masters";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 
+function invitedDateRangeError(from: string, to: string): string | null {
+  const fromTrimmed = from.trim();
+  const toTrimmed = to.trim();
+  if (!fromTrimmed || !toTrimmed) {
+    return "From date and To date are required.";
+  }
+  if (compareApiDates(fromTrimmed, toTrimmed) > 0) {
+    return "From date must be on or before To date.";
+  }
+  return null;
+}
+
 export function EmployeePageClient() {
   const { user } = useAuth();
   const router = useRouter();
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
 
-  const [actionLoading, setActionLoading] = useState(false);
+  const [formSubmitting, setFormSubmitting] = useState(false);
   const [onboardForm, setOnboardForm] = useState(createEmptyOnboardForm);
   const [onboardFormKey, setOnboardFormKey] = useState(0);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<
@@ -94,7 +106,10 @@ export function EmployeePageClient() {
     if (!hasHrAccess || bandsQ.isLoading) return;
     if (bandsQ.isError) {
       showErrorToast(
-        bandsQ.error instanceof Error ? bandsQ.error.message : "Could not load bands."
+        toUserFriendlyApiErrorMessage(
+          bandsQ.error,
+          bandsQ.error instanceof Error ? bandsQ.error.message : "Could not load bands."
+        )
       );
       return;
     }
@@ -112,21 +127,17 @@ export function EmployeePageClient() {
     }
   }, [user, hasHrAccess, userRoles, router]);
 
-  async function runAction(label: string, fn: () => Promise<unknown>) {
-    setActionLoading(true);
+  async function runFormAction(label: string, fn: () => Promise<void>) {
+    setFormSubmitting(true);
     try {
       await fn();
       showSuccessToast(formatActionSuccessMessage(label));
     } catch (error) {
-      const backendMessage =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "";
-      showErrorToast(formatActionErrorMessage(label, backendMessage));
+      showErrorToast(
+        toUserFriendlyApiErrorMessage(error, formatActionErrorMessage(label))
+      );
     } finally {
-      setActionLoading(false);
+      setFormSubmitting(false);
     }
   }
 
@@ -134,11 +145,9 @@ export function EmployeePageClient() {
     async (range?: { from?: string; to?: string }) => {
       const from = (range?.from ?? invitedListFromDateRef.current).trim();
       const to = (range?.to ?? invitedListToDateRef.current).trim();
-      if (!from || !to) {
-        throw new Error("From date and To date are required.");
-      }
-      if (compareApiDates(from, to) > 0) {
-        throw new Error("From date must be on or before To date.");
+      const rangeError = invitedDateRangeError(from, to);
+      if (rangeError) {
+        throw new Error(rangeError);
       }
 
       setInvitedListLoading(true);
@@ -167,6 +176,17 @@ export function EmployeePageClient() {
     []
   );
 
+  const refreshInvitedList = useCallback(
+    async (range?: { from?: string; to?: string }) => {
+      try {
+        await loadInviteOnboardingPreview(range);
+      } catch (error) {
+        showErrorToast(toUserFriendlyApiErrorMessage(error));
+      }
+    },
+    [loadInviteOnboardingPreview]
+  );
+
   const resetOnboardForm = useCallback(() => {
     setOnboardForm(createEmptyOnboardForm());
     setOnboardFormKey((key) => key + 1);
@@ -176,22 +196,24 @@ export function EmployeePageClient() {
     showErrorToast(message);
   }, []);
 
-  const resendOnboardInvite = useCallback(
-    (email: string) => {
-      const normalized = email.trim().toLowerCase();
-      if (!normalized) return;
-      void runAction("Resend onboarding invite", async () => {
-        setResendingInviteEmail(normalized);
-        try {
-          await hrmsService.resendOnboardInvite({ email: normalized });
-          showSuccessToast(`Onboarding invite resent to ${normalized}.`);
-        } finally {
-          setResendingInviteEmail(null);
-        }
-      });
-    },
-    []
-  );
+  const resendOnboardInvite = useCallback((email: string) => {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return;
+
+    void (async () => {
+      setResendingInviteEmail(normalized);
+      try {
+        await hrmsService.resendOnboardInvite({ email: normalized });
+        showSuccessToast(`Onboarding invite resent to ${normalized}.`);
+      } catch (error) {
+        showErrorToast(
+          toUserFriendlyApiErrorMessage(error, "Failed to resend onboarding invite.")
+        );
+      } finally {
+        setResendingInviteEmail(null);
+      }
+    })();
+  }, []);
 
   const resendOnboardInvitesBulk = useCallback(async (emails: string[]) => {
     const unique = [
@@ -243,8 +265,6 @@ export function EmployeePageClient() {
     });
   }, [hasHrAccess, inviteOnboardingRows.length, loadInviteOnboardingPreview]);
 
-  const onboardingBusy = invitedListLoading || actionLoading;
-
   const filteredInviteRows = useMemo(
     () => filterInvitedRowsByName(inviteOnboardingRows, debouncedInvitedNameSearch),
     [inviteOnboardingRows, debouncedInvitedNameSearch]
@@ -266,13 +286,17 @@ export function EmployeePageClient() {
                 options={onboardOptions}
                 bands={onboardBands}
                 hasHrAccess={hasHrAccess}
-                actionLoading={actionLoading}
+                actionLoading={formSubmitting}
                 optionsLoading={optionsLoading}
-                runAction={runAction}
+                runAction={runFormAction}
                 onError={handleOnboardFormError}
                 onSubmitSuccess={async () => {
-                  await loadInviteOnboardingPreview();
                   resetOnboardForm();
+                  try {
+                    await loadInviteOnboardingPreview();
+                  } catch {
+                    // Employee was created; list refresh failures should not hide success.
+                  }
                 }}
               />
 
@@ -284,13 +308,8 @@ export function EmployeePageClient() {
                     variant="ghost"
                     type="button"
                     className="px-3 py-2"
-                    onClick={() =>
-                      runAction("Refresh Employees", async () => {
-                        await loadInviteOnboardingPreview();
-                        resetOnboardForm();
-                      })
-                    }
-                    disabled={actionLoading || invitedListLoading}
+                    onClick={() => void refreshInvitedList()}
+                    disabled={invitedListLoading}
                   >
                     Refresh Employees
                   </Button>
@@ -324,32 +343,26 @@ export function EmployeePageClient() {
                       type="button"
                       className="h-10 shrink-0 px-3 text-sm"
                       onClick={() =>
-                        runAction("Load invited employees", async () => {
-                          await loadInviteOnboardingPreview({
-                            from: invitedListFromDateRef.current,
-                            to: invitedListToDateRef.current,
-                          });
-                          resetOnboardForm();
+                        void refreshInvitedList({
+                          from: invitedListFromDateRef.current,
+                          to: invitedListToDateRef.current,
                         })
                       }
-                      disabled={actionLoading}
+                      disabled={invitedListLoading}
                     >
                       Apply Dates
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       type="button"
-                      className="h-10 shrink-0 px-3 text-sm"
-                      onClick={() =>
-                        runAction("Reset invited date range", async () => {
-                          const { from, to } = defaultInvitedEmployeesDateRange();
-                          setInvitedListFromDate(from);
-                          setInvitedListToDate(to);
-                          await loadInviteOnboardingPreview({ from, to });
-                          resetOnboardForm();
-                        })
-                      }
-                      disabled={actionLoading}
+                      className="h-10 shrink-0 border border-wt-border bg-wt-surface-2 px-3 text-sm text-wt-text hover:bg-wt-surface-3"
+                      onClick={() => {
+                        const { from, to } = defaultInvitedEmployeesDateRange();
+                        setInvitedListFromDate(from);
+                        setInvitedListToDate(to);
+                        void refreshInvitedList({ from, to });
+                      }}
+                      disabled={invitedListLoading}
                     >
                       Last 7 Days
                     </Button>
@@ -388,7 +401,6 @@ export function EmployeePageClient() {
                   <InvitedEmployeesTable
                     rows={filteredInviteRows}
                     searchResetKey={debouncedInvitedNameSearch}
-                    actionLoading={actionLoading || onboardingBusy}
                     resendingEmail={resendingInviteEmail}
                     bulkResending={bulkResendingInvites}
                     onResendInvite={resendOnboardInvite}
