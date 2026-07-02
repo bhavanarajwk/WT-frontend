@@ -197,6 +197,7 @@ export const endpoints = {
 
   roleAdmin: {
     assignRole: `${api}/roles/assign`,
+    setPortalRole: `${api}/roles/set-portal-role`,
     assignRoleLegacy: `${api}/assign-role`,
     assignProjectManager: `${api}/roles/assign-project-manager`,
     schedulerRunAll: `${api}/scheduler/run-all`,

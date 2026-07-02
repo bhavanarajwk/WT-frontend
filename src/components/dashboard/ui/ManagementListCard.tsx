@@ -15,8 +15,15 @@ import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import {
   CARD_CONTENT_BELOW_TOOLBAR_CLASS,
+  CARD_CONTENT_COMPACT_CLASS,
   CARD_CONTENT_STACK_CLASS,
+  CARD_CONTENT_STACK_COMPACT_CLASS,
+  CARD_HEADER_CLASS,
+  CARD_HEADER_COMPACT_CLASS,
+  CARD_TOOLBAR_CLASS,
+  CARD_TOOLBAR_COMPACT_CLASS,
   CARD_TOOLBAR_INNER_CLASS,
+  CARD_TOOLBAR_INNER_COMPACT_CLASS,
   CONTENT_CARD_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { UI_COPY } from "@/constants/uiCopy";
@@ -31,6 +38,8 @@ type ManagementListCardProps = {
   filters?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Tighter padding and vertical rhythm for data-heavy list pages. */
+  density?: "default" | "compact";
 };
 
 export function ManagementListCard({
@@ -42,15 +51,25 @@ export function ManagementListCard({
   filters,
   children,
   className,
+  density = "default",
 }: ManagementListCardProps) {
   const hasToolbar = Boolean(toolbar || search || filters);
+  const compact = density === "compact";
 
   return (
     <Card className={cn("p-0", CONTENT_CARD_CLASS, className)}>
-      <CardHeader className="flex flex-col gap-3 space-y-0 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:py-5">
+      <CardHeader
+        className={cn(
+          "flex flex-col space-y-0 sm:flex-row sm:items-start sm:justify-between",
+          compact ? "gap-2" : "gap-3",
+          compact ? CARD_HEADER_COMPACT_CLASS : CARD_HEADER_CLASS
+        )}
+      >
         <div className="min-w-0 flex-1">
           <CardTitle>{title}</CardTitle>
-          {description ? <CardDescription>{description}</CardDescription> : null}
+          {description ? (
+            <CardDescription className={compact ? "mt-0.5" : undefined}>{description}</CardDescription>
+          ) : null}
         </div>
         {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
       </CardHeader>
@@ -58,12 +77,17 @@ export function ManagementListCard({
       <Separator />
 
       {hasToolbar ? (
-        <CardToolbar>
+        <CardToolbar className={compact ? CARD_TOOLBAR_COMPACT_CLASS : undefined}>
           {toolbar ?? (
-            <div className={CARD_TOOLBAR_INNER_CLASS}>
+            <div className={compact ? CARD_TOOLBAR_INNER_COMPACT_CLASS : CARD_TOOLBAR_INNER_CLASS}>
               {search ? <div className="min-w-0 flex-1">{search}</div> : null}
               {filters ? (
-                <div className="flex flex-wrap items-end justify-start gap-3 sm:justify-end">
+                <div
+                  className={cn(
+                    "flex flex-wrap items-center justify-start sm:justify-end",
+                    compact ? "gap-2" : "gap-3"
+                  )}
+                >
                   {filters}
                 </div>
               ) : null}
@@ -72,8 +96,18 @@ export function ManagementListCard({
         </CardToolbar>
       ) : null}
 
-      <CardContent className={hasToolbar ? CARD_CONTENT_BELOW_TOOLBAR_CLASS : undefined}>
-        <div className={CARD_CONTENT_STACK_CLASS}>{children}</div>
+      <CardContent
+        className={
+          hasToolbar
+            ? compact
+              ? CARD_CONTENT_COMPACT_CLASS
+              : CARD_CONTENT_BELOW_TOOLBAR_CLASS
+            : undefined
+        }
+      >
+        <div className={compact ? CARD_CONTENT_STACK_COMPACT_CLASS : CARD_CONTENT_STACK_CLASS}>
+          {children}
+        </div>
       </CardContent>
     </Card>
   );

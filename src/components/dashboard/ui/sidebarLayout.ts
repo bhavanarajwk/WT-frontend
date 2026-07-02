@@ -65,7 +65,7 @@ export const SIDEBAR_FLYOUT_CLASS =
   "absolute left-full top-0 z-[60] ml-2.5 w-60 rounded-xl border border-wt-border bg-wt-surface-1 p-2 shadow-2xl ring-1 ring-black/10";
 
 export const SIDEBAR_FLYOUT_TITLE_CLASS =
-  "border-b border-wt-border px-2.5 py-2 text-[11px] font-bold uppercase tracking-wide text-wt-text-muted";
+  "border-b border-wt-border px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wide text-wt-text-muted";
 
 export const SIDEBAR_FOOTER_CLASS = "mt-3 shrink-0";
 
@@ -104,7 +104,7 @@ export const DASHBOARD_HEADER_MENU_BUTTON_CLASS =
   "flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text shadow-sm transition-colors duration-150 hover:bg-wt-surface-3 lg:hidden";
 
 const SIDEBAR_PARENT_BASE =
-  "wt-sidebar-nav-item relative flex h-auto min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 font-bold whitespace-normal transition-all duration-150 ease-out";
+  "wt-sidebar-nav-item relative flex h-auto min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 font-normal whitespace-normal transition-all duration-150 ease-out";
 
 const SIDEBAR_CHILD_BASE =
   "wt-sidebar-nav-item relative flex w-full min-w-0 items-center gap-2 rounded-lg px-2.5 py-2 font-normal whitespace-normal transition-all duration-150 ease-out";

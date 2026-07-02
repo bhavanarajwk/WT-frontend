@@ -39,7 +39,7 @@ import {
   buildResumeShareLinkIndex,
   lookupResumeShareLink,
 } from "@/utils/employeeResume";
-import { canFetchEmployeeResumeApi } from "@/utils/roles";
+import { canFetchEmployeeResumeApi, pickPortalRoles } from "@/utils/roles";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
@@ -47,6 +47,7 @@ import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
 import { FormSection, FormSubsection } from "@/components/dashboard/ui/FormSection";
 import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
 import { EmployeeProfileView } from "@/components/employee-directory/EmployeeProfileView";
+import { EmployeePortalRoleSelect } from "@/components/employee-directory/EmployeePortalRoleSelect";
 import { IconPencil } from "@/components/employee-directory/employeeDirectoryIcons";
 const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
@@ -62,6 +63,7 @@ export function EmployeeProfilePageClient() {
     authStatus,
     canView: canViewProfile,
     canEditProfile,
+    canEdit: canEditDirectory,
     canEditProfileStatusOnly,
     canOpenProfileEditor,
     queriesEnabled,
@@ -434,6 +436,7 @@ export function EmployeeProfilePageClient() {
                 />
               </div>
             ) : (
+              <>
               <EmployeeProfileView
                 profile={profileRecord}
                 displayName={displayName}
@@ -461,6 +464,19 @@ export function EmployeeProfilePageClient() {
                   ) : null
                 }
               />
+              {canEditDirectory && email ? (
+                <FormSection
+                  title="Portal Role"
+                  description="Set this employee's portal access role from user_roles."
+                >
+                  <EmployeePortalRoleSelect
+                    email={email}
+                    portalRoles={pickPortalRoles(profileRecord)}
+                    canEdit
+                  />
+                </FormSection>
+              ) : null}
+              </>
             )}
           </div>
         ) : null}

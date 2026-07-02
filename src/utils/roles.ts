@@ -57,6 +57,58 @@ export function formatRoleDisplayValue(value: unknown): string {
   return text;
 }
 
+/** Portal roles HR can set for an employee (user_roles, GLOBAL scope). */
+export const PORTAL_ROLE_SELECT_OPTIONS = [
+  { value: "ROLE_EMPLOYEE", label: "Employee" },
+  { value: "ROLE_HR", label: "HR" },
+  { value: "ROLE_ADMIN", label: "Admin" },
+  { value: "ROLE_FINANCE", label: "Finance" },
+  { value: "ROLE_AM", label: "Account Manager" },
+  { value: "ROLE_DM", label: "Delivery Manager" },
+  { value: "ROLE_MANAGER", label: "Manager" },
+] as const;
+
+const PORTAL_ROLE_PRIORITY = [
+  "ROLE_ADMIN",
+  "ROLE_HR",
+  "ROLE_FINANCE",
+  "ROLE_DM",
+  "ROLE_AM",
+  "ROLE_MANAGER",
+] as const;
+
+export function normalizePortalRoles(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return normalizeRoles(value.map((role) => String(role).trim()).filter(Boolean));
+}
+
+export function pickPrimaryPortalRole(roles: string[]): string {
+  const normalized = normalizeRoles(roles);
+  for (const role of PORTAL_ROLE_PRIORITY) {
+    if (normalized.includes(role)) return role;
+  }
+  return "ROLE_EMPLOYEE";
+}
+
+export function formatPrimaryPortalRoleLabel(roles: unknown): string {
+  return formatRoleLabel(pickPrimaryPortalRole(normalizePortalRoles(roles)));
+}
+
+export function pickPortalRoles(profile: Record<string, unknown>): string[] {
+  return normalizePortalRoles(profile.portal_roles ?? profile.portalRoles);
+}
+
+export function formatPortalRolesDisplay(roles: string[]): string {
+  const elevated = normalizePortalRoles(roles).filter((role) => role !== "ROLE_EMPLOYEE");
+  if (!elevated.length) return "Employee";
+  return elevated.map((role) => formatRoleLabel(role)).join(", ");
+}
+
+/** @deprecated Use PORTAL_ROLE_SELECT_OPTIONS */
+export const PORTAL_ROLE_ASSIGN_OPTIONS = PORTAL_ROLE_SELECT_OPTIONS.filter(
+  (option) => option.value !== "ROLE_EMPLOYEE"
+);
+
 export function hasHrRole(roles: string[]): boolean {
   const normalized = normalizeRoles(roles);
   return normalized.includes("ROLE_HR") || normalized.includes("ROLE_ADMIN");

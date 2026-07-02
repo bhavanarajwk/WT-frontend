@@ -36,6 +36,14 @@ export const CARD_STACK_CLASS = "space-y-6";
 export const CARD_TOOLBAR_INNER_CLASS =
   "flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between";
 export const CARD_CONTENT_STACK_CLASS = "space-y-6";
+
+/** Dense management list cards — matches UAT directory spacing. */
+export const CARD_HEADER_COMPACT_CLASS = "px-4 py-3 sm:px-5";
+export const CARD_TOOLBAR_COMPACT_CLASS = "px-4 py-3 sm:px-5";
+export const CARD_CONTENT_COMPACT_CLASS = "px-4 pb-4 pt-0 sm:px-5 sm:pb-4";
+export const CARD_TOOLBAR_INNER_COMPACT_CLASS =
+  "flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between";
+export const CARD_CONTENT_STACK_COMPACT_CLASS = "space-y-3";
 export const CARD_FORM_GRID_CLASS = "grid gap-3 sm:grid-cols-2";
 export const CARD_FORM_ACTIONS_CLASS = "flex flex-wrap gap-3 pt-6";
 

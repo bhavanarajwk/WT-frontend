@@ -3,7 +3,7 @@ import type { OnboardListItem } from "@/types/onboard";
 import { pickResumeShareLink } from "@/utils/employeeResume";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { formatUserTypeLabel } from "@/utils/offboardingFormState";
-import { formatRoleDisplayValue } from "@/utils/roles";
+import { formatPrimaryPortalRoleLabel, formatRoleDisplayValue, isSessionRoleValue, formatRoleLabel } from "@/utils/roles";
 import {
   defaultPhoneCountryIso,
   formatPhoneNumberForApi,
@@ -97,9 +97,12 @@ export function cleanEmployeeName(row: Record<string, unknown>): string {
   return raw.replace(/\s*\([^()@\s]+@[^()@\s]+\.[^()@\s]+\)\s*$/, "").trim() || raw || "Employee";
 }
 
-/** Employee role from profile API (`role` field, e.g. HR Manager). */
+/** Employee role from profile API (`role` field, e.g. UI Developer). */
 export function pickEmployeeRole(profile: Record<string, unknown>): string {
-  return formatRoleDisplayValue(pickProfileField(profile, ["role"]));
+  const raw = String(pickProfileField(profile, ["role"]) ?? "").trim();
+  if (!raw) return "";
+  if (isSessionRoleValue(raw)) return formatRoleLabel(raw);
+  return raw;
 }
 
 /** @deprecated Use pickEmployeeRole — kept for existing imports. */
@@ -177,7 +180,8 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
     name: cleanEmployeeName(record),
     email: rowEmail(record) || "—",
     department: String(record.department ?? "").trim() || "—",
-    role: formatRoleDisplayValue(record.role),
+    role: String(record.role ?? "").trim() || "—",
+    portal_role: formatPrimaryPortalRoleLabel(record.portal_roles ?? record.portalRoles),
     band: String(record.band ?? record.band_name ?? record.bandName ?? "").trim() || "—",
     date_of_joining: formatDirectoryDate(
       record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate
@@ -242,7 +246,7 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
       pickProfileField(profile, ["work_location_type", "workLocationType", "work_location"]) ?? ""
     ).trim(),
     band_id: String(
-      pickProfileField(profile, ["band_id", "bandId", "band"]) ?? ""
+      pickProfileField(profile, ["band_id", "bandId"]) ?? ""
     ).trim(),
     primary_skills: primarySkills,
     secondary_skill: String(firstSecondary?.skill ?? "").trim(),

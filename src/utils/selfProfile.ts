@@ -50,6 +50,7 @@ export function normalizeSelfProfile(
       profile.work_location_type ?? profile.work_location ?? profile.workLocationType,
     holiday_calendar_name:
       profile.holiday_calendar_name ?? profile.holidayCalendarName ?? null,
+    portal_roles: profile.portal_roles ?? profile.portalRoles ?? [],
   };
 }
 

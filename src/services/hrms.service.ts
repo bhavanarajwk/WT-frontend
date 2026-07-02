@@ -904,6 +904,24 @@ export const hrmsService = {
     });
   },
 
+  setPortalRole(payload: {
+    target_email?: string;
+    role?: string;
+    userEmail?: string;
+    roleName?: string;
+  }) {
+    const body = {
+      userEmail: payload.userEmail ?? payload.target_email,
+      roleName: payload.roleName ?? payload.role,
+      target_email: payload.target_email ?? payload.userEmail,
+      role: payload.role ?? payload.roleName,
+    };
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.roleAdmin.setPortalRole, {
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  },
+
   /** POST /roles/assign-project-manager — ROLE_HR | ROLE_ADMIN */
   assignProjectManager(payload: { userEmail: string; projectCode: string }) {
     return apiClient.post<unknown>(endpoints.roleAdmin.assignProjectManager, {

@@ -34,6 +34,7 @@ import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { applyResolvedTheme, readStoredTheme } from "@/utils/dashboard/theme";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "@/utils/dashboard/sidebarPrefs";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import {
   DASHBOARD_HEADER_CLASS,
   DASHBOARD_HEADER_MENU_BUTTON_CLASS,
@@ -366,6 +367,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             >
               <IconMenu />
             </button>
+            <WebTrakBrand variant="header" compact className="shrink-0 lg:hidden" />
             <div className="min-w-0">
             <h2 className="truncate text-lg font-semibold tracking-tight text-wt-text sm:text-xl">{pageTitle}</h2>
             {isEmployeeDirectoryRoute && !isLearningRoute ? (

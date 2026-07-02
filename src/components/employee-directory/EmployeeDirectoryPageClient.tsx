@@ -10,6 +10,10 @@ import {
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
+import {
+  WT_TABLE_CELL_COMPACT_CLASS,
+  WT_TABLE_HEAD_COMPACT_CLASS,
+} from "@/components/dashboard/ui/tableLayout";
 import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -17,6 +21,7 @@ import { useMemo, useState, useCallback } from "react";
 import { DASHBOARD_ROUTES, employeeDirectoryProfilePath } from "@/constants/routes";
 import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmployeeDirectoryAccess";
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
+import { EmployeePortalRoleSelect } from "@/components/employee-directory/EmployeePortalRoleSelect";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
@@ -45,6 +50,7 @@ import {
   sortOptionsForColumn,
   toggleColumnSort,
 } from "@/utils/listSort";
+import { cn } from "@/lib/utils";
 
 const USER_TYPE_FILTER_OPTIONS = [
   { value: "FULLTIME", label: "Full Time" },
@@ -65,7 +71,7 @@ const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "name", label: "Employee Name" },
   { key: "email", label: "Email" },
   { key: "phone_number", label: "Phone" },
-  { key: "role", label: "Designation" },
+  { key: "portal_role", label: "Role" },
   { key: "band", label: "Band" },
   { key: "user_type", label: "User Type" },
   { key: "work_mode", label: "Work Mode" },
@@ -123,7 +129,7 @@ function CopyValueButton({
       type="button"
       variant="ghost"
       size="icon-sm"
-      className="inline-flex shrink-0 rounded p-1 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
+      className="inline-flex size-7 shrink-0 rounded p-0 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
       aria-label={`Copy ${label}`}
       onClick={(e) => {
         e.stopPropagation();
@@ -141,7 +147,7 @@ export function EmployeeDirectoryPageClient() {
   const debouncedSearch = useDebouncedValue(search, 300);
   const [userTypeFilter, setUserTypeFilter] = useState<UserTypeFilterValue>("");
   const [sortId, setSortId] = useState("doj_desc");
-  const { authStatus, canView: canViewDirectory, queriesEnabled } =
+  const { authStatus, canView: canViewDirectory, canEdit: canEditDirectory, queriesEnabled } =
     useEmployeeDirectoryAccess();
   const { data: rows = [], isLoading, isError, error, refetch } = useEmployeeDirectoryList({
     enabled: queriesEnabled,
@@ -166,6 +172,7 @@ export function EmployeeDirectoryPageClient() {
           display.email,
           display.phone_number,
           display.role,
+          display.portal_role,
           display.band,
           display.user_type,
           display.work_mode,
@@ -215,8 +222,9 @@ export function EmployeeDirectoryPageClient() {
   }
 
   return (
-    <DashboardPageShell className="wt-detail-page">
+    <DashboardPageShell className="wt-detail-page p-3 sm:p-4">
       <ManagementListCard
+        density="compact"
         title="All Employees"
         description="Browse and manage employee profiles across the organization."
         search={
@@ -226,10 +234,11 @@ export function EmployeeDirectoryPageClient() {
             onChange={setSearch}
             placeholder="Search"
             aria-label="Search employees"
+            className="h-9"
           />
         }
         filters={
-          <div className="w-44 shrink-0">
+          <div className="w-40 shrink-0">
             <label className="sr-only" htmlFor="employee-directory-user-type">
               User Type
             </label>
@@ -238,7 +247,12 @@ export function EmployeeDirectoryPageClient() {
               onValueChange={(next) => setUserTypeFilter((next ?? "ALL") as UserTypeFilterValue)}
               items={USER_TYPE_SELECT_OPTIONS}
             >
-              <SelectTrigger id="employee-directory-user-type" aria-label="User Type">
+              <SelectTrigger
+                id="employee-directory-user-type"
+                aria-label="User Type"
+                size="sm"
+                className="h-9 w-full shadow-none"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -275,8 +289,8 @@ export function EmployeeDirectoryPageClient() {
         >
           <>
             <div className="wt-detail-scroll-section min-h-0">
-              <ScrollableTable scrollChain maxHeightClass="max-h-[min(58vh,560px)]">
-                <WtTable>
+              <ScrollableTable scrollChain maxHeightClass="max-h-[min(68vh,640px)]">
+                <WtTable className="text-xs">
                   <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                     <TableRow className="hover:bg-transparent">
                       {LIST_COLUMNS.map((col) => {
@@ -292,11 +306,12 @@ export function EmployeeDirectoryPageClient() {
                             )
                           : null;
                         return (
-                          <TableHead key={col.key}>
+                          <TableHead key={col.key} className={WT_TABLE_HEAD_COMPACT_CLASS}>
                             <TableSortHeader
                               label={col.label}
                               activeDirection={activeDir}
                               sortable={columnSortOpts.length > 0}
+                              className="h-7 px-1.5 text-xs"
                               onSort={
                                 columnSortOpts.length
                                   ? () =>
@@ -316,7 +331,7 @@ export function EmployeeDirectoryPageClient() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pagination.pageItems.map(({ empId, display }) => {
+                    {pagination.pageItems.map(({ empId, display, record }) => {
                       return (
                         <TableRow
                           key={empId}
@@ -335,7 +350,7 @@ export function EmployeeDirectoryPageClient() {
                           {LIST_COLUMNS.map((col) => (
                             <TableCell
                               key={col.key}
-                              className="max-w-[14rem] px-3 py-2"
+                              className={cn(WT_TABLE_CELL_COMPACT_CLASS, "max-w-[12rem]")}
                               title={
                                 col.key === "status"
                                   ? undefined
@@ -364,6 +379,13 @@ export function EmployeeDirectoryPageClient() {
                                     onCopy={(value, message) => void handleCopyField(value, message)}
                                   />
                                 </div>
+                              ) : col.key === "portal_role" ? (
+                                <EmployeePortalRoleSelect
+                                  email={String(record.email ?? display.email ?? "")}
+                                  portalRoles={record.portal_roles ?? record.portalRoles}
+                                  canEdit={canEditDirectory}
+                                  compact
+                                />
                               ) : (
                                 <span className="block truncate text-wt-text">{display[col.key] ?? "—"}</span>
                               )}
@@ -377,6 +399,7 @@ export function EmployeeDirectoryPageClient() {
               </ScrollableTable>
             </div>
               <ListPagination
+                className="mt-2"
                 page={pagination.page}
                 totalPages={pagination.totalPages}
                 totalItems={pagination.totalItems}
