@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+/** Files served from /public must stay public so next/image can read them server-side. */
+const PUBLIC_STATIC_FILE = /\.(?:png|jpg|jpeg|gif|webp|svg|ico)$/i;
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -8,7 +11,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
-    pathname === "/favicon.ico";
+    pathname === "/favicon.ico" ||
+    PUBLIC_STATIC_FILE.test(pathname);
 
   if (isPublic) {
     return NextResponse.next();

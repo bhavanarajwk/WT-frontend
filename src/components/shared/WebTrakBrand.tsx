@@ -51,6 +51,7 @@ export function WebTrakBrand({
         width={logoSize}
         height={logoSize}
         priority={variant === "login"}
+        unoptimized
         className="size-full object-contain dark:brightness-125 dark:contrast-125 dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.28)]"
       />
     </span>
