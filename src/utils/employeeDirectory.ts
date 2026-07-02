@@ -2,6 +2,11 @@ import { formatSecondarySkillsForProfile } from "@/components/dashboard/ui/profi
 import type { OnboardListItem } from "@/types/onboard";
 import { pickResumeShareLink } from "@/utils/employeeResume";
 import { formatApiDateDisplay } from "@/utils/apiDate";
+import {
+  defaultPhoneCountryIso,
+  formatPhoneNumberForApi,
+  splitPhoneNumber,
+} from "@/utils/phoneCountries";
 
 function formatDirectoryDate(value: unknown): string {
   const s = String(value ?? "").trim();
@@ -138,6 +143,8 @@ export type EmployeeProfileEditForm = {
   name: string;
   email: string;
   personal_email: string;
+  phone_country?: string;
+  phone_number: string;
   department: string;
   user_status: string;
   work_mode: string;
@@ -160,11 +167,16 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     (profile.secondarySkills as Array<Record<string, unknown>> | undefined) ??
     [];
   const firstSecondary = Array.isArray(secondarySkillsRaw) ? secondarySkillsRaw[0] : undefined;
+  const phoneParts = splitPhoneNumber(
+    String(pickProfileField(profile, ["phone_number", "phoneNumber"]) ?? "").trim()
+  );
 
   return {
     name: String(pickProfileField(profile, ["name"]) ?? "").trim(),
     email: String(pickProfileField(profile, ["email"]) ?? "").trim(),
     personal_email: String(pickProfileField(profile, ["personal_email"]) ?? "").trim(),
+    phone_country: phoneParts.countryIso,
+    phone_number: phoneParts.nationalNumber,
     department: String(pickProfileField(profile, ["department"]) ?? "").trim(),
     user_status: String(
       pickProfileField(profile, ["user_status", "status", "userStatus"]) ?? ""
@@ -206,6 +218,10 @@ export function editFormToUpdatePayload(
   const payload: Record<string, unknown> = {
     name: form.name.trim(),
     email: form.email.trim().toLowerCase(),
+    phone_number: formatPhoneNumberForApi(
+      form.phone_country ?? defaultPhoneCountryIso(),
+      form.phone_number
+    ),
     department: form.department.trim(),
     user_status: form.user_status.trim(),
     work_mode: form.work_mode.trim(),

@@ -10,6 +10,14 @@ import { ApiError } from "@/api/error";
 import { formatActionErrorMessage, formatActionSuccessMessage } from "@/utils/actionToast";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import { createEmptySelfProfileForm } from "@/utils/profileFormState";
+import {
+  PHONE_COUNTRY_OPTIONS,
+  defaultPhoneCountryIso,
+  digitsOnly,
+  formatPhoneNumberForApi,
+  splitPhoneNumber,
+  validatePhoneNumber,
+} from "@/utils/phoneCountries";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboardingPanel";
 import { InputField, SelectField, FileField } from "@/components/dashboard/ui/forms";
@@ -170,8 +178,11 @@ export function ProfilePageLeanClient() {
       [];
     const firstSecondary = Array.isArray(secondarySkillsRaw) ? secondarySkillsRaw[0] : undefined;
 
+    const phoneParts = splitPhoneNumber(String(profile.phone_number ?? profile.phoneNumber ?? "").trim());
+
     setSelfProfileForm({
-      phone_number: String(profile.phone_number ?? profile.phoneNumber ?? "").trim(),
+      phone_country: phoneParts.countryIso,
+      phone_number: phoneParts.nationalNumber,
       primary_skills: primarySkills,
       secondary_skill: String(firstSecondary?.skill ?? "").trim(),
       secondary_rating: String(firstSecondary?.rating ?? "").trim(),
@@ -190,7 +201,20 @@ export function ProfilePageLeanClient() {
       <h3 className="mb-1 font-semibold">Edit Profile</h3>
       <p className="mb-4 text-sm text-wt-text-muted">You are onboarded. Update your profile details anytime.</p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <InputField label="Phone Number" value={selfProfileForm.phone_number} onChange={(v) => setSelfProfileForm((p) => ({ ...p, phone_number: v }))} />
+        <SelectField
+          label="Country Code"
+          value={selfProfileForm.phone_country ?? defaultPhoneCountryIso()}
+          options={PHONE_COUNTRY_OPTIONS}
+          onChange={(v) => setSelfProfileForm((p) => ({ ...p, phone_country: v }))}
+          placeholder="Search Country Code"
+        />
+        <InputField
+          label="Phone Number"
+          type="tel"
+          value={selfProfileForm.phone_number}
+          onChange={(v) => setSelfProfileForm((p) => ({ ...p, phone_number: digitsOnly(v) }))}
+          placeholder="Enter phone number"
+        />
         <InputField label="Primary Skills (comma separated)" value={selfProfileForm.primary_skills} onChange={(v) => setSelfProfileForm((p) => ({ ...p, primary_skills: v }))} />
         <InputField label="Secondary Skill" value={selfProfileForm.secondary_skill} onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_skill: v }))} />
         <SelectField
@@ -224,6 +248,19 @@ export function ProfilePageLeanClient() {
                 .split(",")
                 .map((item) => item.trim())
                 .filter(Boolean);
+              const selectedPhoneCountry =
+                selfProfileForm.phone_country ?? defaultPhoneCountryIso();
+              const phoneValidationError = validatePhoneNumber(
+                selectedPhoneCountry,
+                selfProfileForm.phone_number
+              );
+              if (phoneValidationError) {
+                throw new Error(phoneValidationError);
+              }
+              const formattedPhoneNumber = formatPhoneNumberForApi(
+                selectedPhoneCountry,
+                selfProfileForm.phone_number
+              );
               if (!selfProfilePic) {
                 throw new Error("Profile picture is mandatory. Please upload your profile picture.");
               }
@@ -254,7 +291,7 @@ export function ProfilePageLeanClient() {
               fd.append(
                 "body",
                 JSON.stringify({
-                  phone_number: selfProfileForm.phone_number || null,
+                  phone_number: formattedPhoneNumber,
                   primary_skills: primarySkills.length ? primarySkills : null,
                   secondary_skills: selfProfileForm.secondary_skill
                     ? [

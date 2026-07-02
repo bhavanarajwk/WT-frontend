@@ -30,6 +30,12 @@ import {
 } from "@/utils/employeeDirectory";
 import { validatePersonalEmail, validateWorkEmail } from "@/utils/personalEmail";
 import {
+  PHONE_COUNTRY_OPTIONS,
+  defaultPhoneCountryIso,
+  digitsOnly,
+  validatePhoneNumber,
+} from "@/utils/phoneCountries";
+import {
   buildResumeShareLinkIndex,
   lookupResumeShareLink,
 } from "@/utils/employeeResume";
@@ -214,6 +220,11 @@ export function EmployeeProfilePageClient() {
             required: false,
           });
           if (personalError) throw new Error(personalError);
+          const phoneError = validatePhoneNumber(
+            editForm.phone_country ?? defaultPhoneCountryIso(),
+            editForm.phone_number
+          );
+          if (phoneError) throw new Error(phoneError);
         }
         await updateMutation.mutateAsync(
           editFormToUpdatePayload(editForm, { statusOnly: statusOnlyEdit })
@@ -333,6 +344,20 @@ export function EmployeeProfilePageClient() {
                         required
                         value={editForm.email}
                         onChange={(v) => setEditForm({ ...editForm, email: v })}
+                      />
+                      <AdaptiveSelectField
+                        label="Country Code"
+                        value={editForm.phone_country ?? defaultPhoneCountryIso()}
+                        placeholder="Select Country Code"
+                        searchPlaceholder="Search Country Code…"
+                        options={PHONE_COUNTRY_OPTIONS}
+                        onChange={(v) => setEditForm({ ...editForm, phone_country: v })}
+                      />
+                      <InputField
+                        label="Phone Number"
+                        type="tel"
+                        value={editForm.phone_number}
+                        onChange={(v) => setEditForm({ ...editForm, phone_number: digitsOnly(v) })}
                       />
                       <AdaptiveSelectField
                         label="Department"

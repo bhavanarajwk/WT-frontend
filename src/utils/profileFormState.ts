@@ -1,4 +1,5 @@
 export type SelfProfileFormState = {
+  phone_country?: string;
   phone_number: string;
   primary_skills: string;
   secondary_skill: string;
@@ -8,6 +9,7 @@ export type SelfProfileFormState = {
 
 export function createEmptySelfProfileForm(): SelfProfileFormState {
   return {
+    phone_country: "IN",
     phone_number: "",
     primary_skills: "",
     secondary_skill: "",

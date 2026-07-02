@@ -520,14 +520,6 @@ export function OffboardingPanel() {
                 onChange={(v) => setOffboardingForm((p) => ({ ...p, critical_skill: v }))}
                 placeholder="Describe critical skills impacted by this exit"
               />
-              <TextAreaField
-                label="Expected Behavior"
-                className="md:col-span-2"
-                rows={5}
-                value={offboardingForm.expected_behavior}
-                onChange={(v) => setOffboardingForm((p) => ({ ...p, expected_behavior: v }))}
-                placeholder="Describe expected behavior during notice period"
-              />
               <Label className="flex items-center gap-2 text-xs font-normal text-wt-text-muted md:col-span-2">
                 <Checkbox
                   checked={offboardingForm.is_regretted}

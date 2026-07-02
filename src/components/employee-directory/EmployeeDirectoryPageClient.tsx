@@ -333,14 +333,22 @@ export function EmployeeDirectoryPageClient() {
                           aria-label={`View profile for ${display.name}`}
                         >
                           {LIST_COLUMNS.map((col) => (
-                            <TableCell key={col.key} className="px-3 py-2 whitespace-nowrap">
+                            <TableCell
+                              key={col.key}
+                              className="max-w-[14rem] px-3 py-2"
+                              title={
+                                col.key === "status"
+                                  ? undefined
+                                  : String(display[col.key] ?? "—")
+                              }
+                            >
                               {col.key === "status" ? (
                                 <EmployeeStatusBadge status={display.status} />
                               ) : col.key === "name" ? (
-                                <span className="font-medium text-blue-600">{display[col.key]}</span>
+                                <span className="block truncate font-medium text-blue-600">{display[col.key]}</span>
                               ) : col.key === "email" ? (
-                                <div className="inline-flex items-center gap-1.5">
-                                  <span className="text-wt-text">{display.email}</span>
+                                <div className="flex w-full min-w-0 items-center gap-1.5">
+                                  <span className="block min-w-0 flex-1 truncate text-wt-text">{display.email}</span>
                                   <CopyValueButton
                                     value={display.email}
                                     label="Email"
@@ -348,8 +356,8 @@ export function EmployeeDirectoryPageClient() {
                                   />
                                 </div>
                               ) : col.key === "phone_number" ? (
-                                <div className="inline-flex items-center gap-1.5">
-                                  <span className="text-wt-text">{display.phone_number}</span>
+                                <div className="flex w-full min-w-0 items-center gap-1.5">
+                                  <span className="block min-w-0 flex-1 truncate text-wt-text">{display.phone_number}</span>
                                   <CopyValueButton
                                     value={display.phone_number}
                                     label="Phone Number"
@@ -357,7 +365,7 @@ export function EmployeeDirectoryPageClient() {
                                   />
                                 </div>
                               ) : (
-                                display[col.key] ?? "—"
+                                <span className="block truncate text-wt-text">{display[col.key] ?? "—"}</span>
                               )}
                             </TableCell>
                           ))}
