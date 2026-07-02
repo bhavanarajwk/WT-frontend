@@ -14,6 +14,11 @@ import {
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { ContentCard } from "@/components/dashboard/ui/ContentCard";
+import { EmptyState } from "@/components/dashboard/ui/EmptyState";
+import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
+import { CARD_CONTENT_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { UI_COPY } from "@/constants/uiCopy";
 import { InputField } from "@/components/dashboard/ui/forms";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -102,11 +107,14 @@ export function AnnualCalendarPageClient() {
   return (
     <>
       <DashboardPageShell>
-        <div className="space-y-5">
-          {hasHrAccess ? (
-            <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-              <h4 className="font-semibold">Upload / Replace Calendar</h4>
-              <div className="grid gap-3 sm:grid-cols-2">
+        {hasHrAccess ? (
+          <ContentCard>
+            <div className={CARD_CONTENT_CLASS}>
+              <PageSectionHeader
+                title="Upload / Replace Calendar"
+                description="Add or update annual calendar documents for the organization."
+              />
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <InputField
                   label="Year"
                   required
@@ -135,15 +143,18 @@ export function AnnualCalendarPageClient() {
                   })
                 }
               >
-                Upload calendar
+                Upload Calendar
               </Button>
-            </section>
-          ) : null}
+            </div>
+          </ContentCard>
+        ) : null}
 
-          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h4 className="font-semibold">Available Calendars</h4>
-              <Button variant="ghost" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() =>
+        <ContentCard>
+          <div className={CARD_CONTENT_CLASS}>
+            <PageSectionHeader
+              title="Available Calendars"
+              action={
+                <Button variant="ghost" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() =>
                   runAction("Refresh annual calendar list", async () => {
                     await loadCalendars();
                   })
@@ -151,11 +162,13 @@ export function AnnualCalendarPageClient() {
               >
                 Refresh
               </Button>
-            </div>
+              }
+            />
+            <div className="mt-6">
             {isLoading ? (
               <TableRowsSkeleton rows={4} columns={4} />
             ) : sortedRows.length === 0 ? (
-              <p className="text-sm text-wt-text-muted">No annual calendars uploaded yet.</p>
+              <EmptyState title={UI_COPY.noRecordsFound} description="No annual calendars uploaded yet." />
             ) : (
               <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
                 <WtTable>
@@ -200,8 +213,9 @@ export function AnnualCalendarPageClient() {
                 </WtTable>
               </ScrollableTable>
             )}
-          </section>
-        </div>
+            </div>
+          </div>
+        </ContentCard>
       </DashboardPageShell>
     </>
   );

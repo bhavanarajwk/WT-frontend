@@ -10,13 +10,17 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
+import { applyResolvedTheme } from "@/utils/dashboard/theme";
 
 const TAGLINE =
   "Workforce visibility and project allocation—aligned in one secure workspace.";
 
-/* ------------------------------------------------------------------ */
-/* Google G SVG icon                                                     */
-/* ------------------------------------------------------------------ */
+const HIGHLIGHTS = [
+  "Employee directory & profiles",
+  "Leave, allocation & time logs",
+  "Role-based HR & manager workflows",
+] as const;
+
 function GoogleIcon({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
@@ -40,69 +44,68 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Background                                                           */
-/* ------------------------------------------------------------------ */
-function MeshBackground() {
+function LoginBackdrop() {
   return (
-    <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-      <div className="absolute inset-0 bg-[#070612]" />
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 60% at 50% 20%, rgba(99,102,241,0.18), transparent 55%)",
-        }}
-      />
-      <div
-        className="absolute -top-40 -left-32 h-[620px] w-[620px] rounded-full opacity-[0.38]"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(99,102,241,0.85) 0%, transparent 68%)",
-          filter: "blur(58px)",
-        }}
-      />
-      <div
-        className="absolute top-[28%] -right-28 h-[540px] w-[540px] rounded-full opacity-[0.28]"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(167,139,250,0.9) 0%, transparent 70%)",
-          filter: "blur(72px)",
-        }}
-      />
-      <div
-        className="absolute inset-0 opacity-[0.045]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
-          backgroundSize: "52px 52px",
-        }}
-      />
-      <div
-        className="absolute inset-x-0 bottom-0 h-2/5"
-        style={{
-          background: "linear-gradient(to top, rgba(7,6,18,0.92), transparent)",
-        }}
-      />
+    <div className="pointer-events-none fixed inset-0 bg-black" aria-hidden="true">
+      <div className="absolute -left-24 top-0 h-[420px] w-[420px] rounded-full bg-[#355095]/20 blur-[100px]" />
+      <div className="absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-[#4a6fa5]/10 blur-[90px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.04),transparent_55%)]" />
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <p
+    <div
       role="alert"
-      className="fade-up border-l-2 border-red-400/90 pl-4 text-left text-sm leading-relaxed text-red-200/95"
+      className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm leading-relaxed text-red-100"
     >
       {message}
-    </p>
+    </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Main page                                                             */
-/* ------------------------------------------------------------------ */
+function LoginShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative min-h-dvh bg-black text-wt-text">
+      <LoginBackdrop />
+      <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-6xl grid-cols-1 lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="hidden flex-col justify-between border-r border-white/[0.06] px-10 py-12 lg:flex xl:px-14">
+          <WebTrakBrand variant="login" className="!justify-start" />
+          <div className="max-w-md space-y-8">
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-[var(--wt-brand)]">Workforce Tracker</p>
+              <h1 className="text-3xl font-semibold leading-tight tracking-tight text-white xl:text-4xl">
+                One workspace for your entire workforce.
+              </h1>
+              <p className="text-base leading-relaxed text-wt-text-muted">{TAGLINE}</p>
+            </div>
+            <ul className="space-y-3">
+              {HIGHLIGHTS.map((item) => (
+                <li key={item} className="flex items-center gap-3 text-sm text-wt-text-muted">
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--wt-brand)]/20 text-[10px] text-[var(--wt-brand)]">
+                    ✓
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="text-xs text-wt-text-faint">
+            © {new Date().getFullYear()} WebTrak. All rights reserved.
+          </p>
+        </section>
+
+        <section className="flex flex-col justify-center px-5 py-10 sm:px-8 lg:px-10 xl:px-14">
+          <div className="mx-auto w-full max-w-[400px]">{children}</div>
+          <p className="mx-auto mt-10 w-full max-w-[400px] text-center text-xs text-wt-text-faint lg:hidden">
+            © {new Date().getFullYear()} WebTrak. All rights reserved.
+          </p>
+        </section>
+      </div>
+    </div>
+  );
+}
 
 function LoginPageInner() {
   const searchParams = useSearchParams();
@@ -111,6 +114,10 @@ function LoginPageInner() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const didRedirect = useRef(false);
   const didPostLoginRefresh = useRef(false);
+
+  useEffect(() => {
+    applyResolvedTheme("dark");
+  }, []);
 
   useEffect(() => {
     const rawError = searchParams.get("error");
@@ -122,13 +129,10 @@ function LoginPageInner() {
   useEffect(() => {
     if (status === "authenticated" && !didRedirect.current) {
       didRedirect.current = true;
-      // Full navigation so middleware receives HttpOnly cookies set by /auth/refresh.
       window.location.replace("/dashboard");
     }
   }, [status]);
 
-  // On login page, if session becomes valid right after OAuth callback/cookie set,
-  // re-check once so roles are populated immediately from /auth/refresh.
   useEffect(() => {
     if (status !== "unauthenticated" || didPostLoginRefresh.current) return;
     didPostLoginRefresh.current = true;
@@ -149,62 +153,67 @@ function LoginPageInner() {
 
   if (status === "loading") {
     return (
-      <div className="relative flex min-h-screen items-center justify-center px-6">
-        <MeshBackground />
-        <div className="relative z-10">
-          <WtLoaderCentered label="Checking session…" />
-        </div>
-      </div>
+      <LoginShell>
+        <WtLoaderCentered label="Checking session…" />
+      </LoginShell>
     );
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col px-6 pb-8 sm:px-8 sm:pb-10">
-      <MeshBackground />
-
-      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col justify-center fade-up">
-        <section className="flex flex-col items-center gap-5 text-center sm:gap-6">
-          <h1 className="sr-only">WebTrak</h1>
+    <LoginShell>
+      <div className="fade-up space-y-8">
+        <div className="space-y-6 lg:hidden">
           <WebTrakBrand variant="login" />
-          <div className="flex max-w-md flex-col gap-2 px-1">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-indigo-200/90">
-              Workforce Tracker
-            </p>
-            <p className="text-[15px] leading-relaxed text-slate-400 sm:text-base">
-              {TAGLINE}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-[var(--wt-brand)]">Workforce Tracker</p>
+            <p className="text-sm leading-relaxed text-wt-text-muted">{TAGLINE}</p>
+          </div>
+        </div>
+
+        <div
+          className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-8"
+          aria-labelledby="login-heading"
+        >
+          <div className="space-y-2 text-center lg:text-left">
+            <h2 id="login-heading" className="text-2xl font-semibold tracking-tight text-white">
+              Welcome Back
+            </h2>
+            <p className="text-sm leading-relaxed text-wt-text-muted">
+              Sign in with your company Google account to continue.
             </p>
           </div>
-        </section>
 
-        <div className="mt-12 flex w-full flex-col gap-5 sm:mt-14 sm:gap-6">
-          {error ? <ErrorBanner message={error} /> : null}
+          <div className="mt-8 space-y-4">
+            {error ? <ErrorBanner message={error} /> : null}
 
-          <Button variant="brand" size="lg" id="google-signin-btn" type="button" onClick={handleGoogleSignIn} disabled={googleLoading} className="w-full max-w-[380px] self-center rounded-lg py-3.5 text-base sm:py-4" >
-            {googleLoading ? (
-              <>
-                <span className="spinner" />
-                Redirecting to Google…
-              </>
-            ) : (
-              <>
-                <GoogleIcon size={22} />
-                Continue with Google
-              </>
-            )}
-          </Button>
+            <Button
+              id="google-signin-btn"
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
+              className="h-12 w-full rounded-xl border border-white/[0.12] bg-white text-[15px] font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 disabled:opacity-70"
+            >
+              {googleLoading ? (
+                <>
+                  <span className="spinner" />
+                  Redirecting to Google…
+                </>
+              ) : (
+                <>
+                  <GoogleIcon size={20} />
+                  Continue with Google
+                </>
+              )}
+            </Button>
 
-          <p className="max-w-md self-center text-center text-xs leading-relaxed text-slate-400">
-            Only registered company accounts can sign in.
-            <br />
-            Contact your administrator if you need access.
-          </p>
+            <p className="text-center text-xs leading-relaxed text-wt-text-faint lg:text-left">
+              Only registered company accounts can sign in. Contact your administrator if you need
+              access.
+            </p>
+          </div>
         </div>
       </div>
-
-      <p className="relative z-10 shrink-0 pt-6 text-center text-[11px] tracking-wide text-slate-500">
-        © {new Date().getFullYear()} WebTrak. All rights reserved.
-      </p>
-    </main>
+    </LoginShell>
   );
 }
 
@@ -212,12 +221,9 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="relative flex min-h-screen items-center justify-center px-6">
-          <MeshBackground />
-          <div className="relative z-10">
-            <WtLoaderCentered label="Loading" />
-          </div>
-        </div>
+        <LoginShell>
+          <WtLoaderCentered label="Loading" />
+        </LoginShell>
       }
     >
       <LoginPageInner />

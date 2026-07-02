@@ -1,5 +1,5 @@
-import { UploadsPageClient } from "@/components/dashboard/uploads/UploadsPageClient";
+import { LazyUploadsPageClient } from "@/components/dashboard/lazyPages";
 
 export default function DashboardUploadsPage() {
-  return <UploadsPageClient />;
+  return <LazyUploadsPageClient />;
 }

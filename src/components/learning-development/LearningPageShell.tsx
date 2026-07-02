@@ -1,10 +1,25 @@
 import type { ReactNode } from "react";
 
-/** Consistent horizontal padding so L&D content is not flush against the sidebar. */
-export function LearningPageShell({ children }: { children: ReactNode }) {
+import { PAGE_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { cn } from "@/lib/utils";
+
+/** Dashboard-aligned shell for Learning & Development routes. */
+export function LearningPageShell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-6 md:px-8 lg:px-10 py-6 md:py-8">
-      {children}
-    </div>
+    <main
+      className={cn(
+        "min-h-0 w-full min-w-0 flex-1 bg-wt-page-bg p-3 sm:p-4 md:p-6",
+        PAGE_STACK_CLASS,
+        className
+      )}
+    >
+      <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+    </main>
   );
 }

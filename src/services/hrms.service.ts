@@ -833,6 +833,10 @@ export const hrmsService = {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.notifications.readAll);
   },
 
+  markNotificationRead(notificationId: string) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.notifications.readById(notificationId));
+  },
+
   uploadFile(url: string, file: File) {
     const fd = new FormData();
     fd.append("file", file);

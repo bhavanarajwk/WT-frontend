@@ -12,4 +12,8 @@ export const UI_COPY = {
   editMyProfile: "Edit My Profile",
   createProject: "Create Project",
   updateProject: "Update Project",
+  noRecordsFound: "No Records Found",
+  noSearchResults: "No Results Match Your Search",
+  adjustFilters: "Try adjusting your search or filters.",
+  loading: "Loading…",
 } as const;

@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { hrmsService, type LeaveBalancesListItem } from "@/services/hrms.service";
 import { InputField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { UI_COPY } from "@/constants/uiCopy";
 
 const BALANCES_TABLE_MIN_HEIGHT = "min-h-[320px]";
 const BALANCES_TABLE_COL_COUNT = 6;
@@ -169,7 +170,7 @@ export function HrLeaveBalancesPanel({
                   colSpan={BALANCES_TABLE_COL_COUNT}
                   className="h-[280px] text-center align-middle text-sm text-wt-text-muted"
                 >
-                  No Data
+                  {UI_COPY.noRecordsFound}
                 </TableCell>
               </TableRow>
             )}

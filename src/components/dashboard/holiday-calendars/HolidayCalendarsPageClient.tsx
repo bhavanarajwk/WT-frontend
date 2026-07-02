@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { UI_COPY } from "@/constants/uiCopy";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
@@ -166,20 +168,22 @@ export function HolidayCalendarsPageClient() {
             <Button
               variant="brand"
               type="button"
-              className="h-10 shrink-0 px-4"
+              className="h-10 shrink-0 gap-2 px-4"
               disabled={loading}
               onClick={() => fileInputRef.current?.click()}
             >
-              Upload
+              <ArrowDownToLine className="size-4" aria-hidden />
+              Import
             </Button>
             <Button
               variant="outline"
               type="button"
-              className="h-10 shrink-0 px-4"
+              className="h-10 shrink-0 gap-2 px-4"
               disabled={loading || !filteredRows.length}
               onClick={handleDownload}
             >
-              Download
+              <ArrowUpFromLine className="size-4" aria-hidden />
+              Export
             </Button>
             <div className="w-32 shrink-0">
               <label className="sr-only" htmlFor="holiday-calendar-year">
@@ -248,7 +252,7 @@ export function HolidayCalendarsPageClient() {
                     colSpan={HOLIDAY_TABLE_COLUMN_COUNT}
                     className="py-16 text-center text-sm text-wt-text-muted"
                   >
-                    No Data
+                    {UI_COPY.noRecordsFound}
                   </TableCell>
                 </TableRow>
               )}

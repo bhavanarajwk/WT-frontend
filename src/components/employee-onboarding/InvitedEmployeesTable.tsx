@@ -41,26 +41,9 @@ const DATA_COLUMNS = [
   "personal_email",
   "user_type",
   "department",
-  "created_on",
 ] as const;
 
 const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
-  {
-    id: "created_on_desc",
-    label: "Created",
-    columnKeys: ["created_on"],
-    direction: "desc",
-    type: "date",
-    getValue: (row) => pickRowField(row, ["created_at", "createdAt", "created_on"]),
-  },
-  {
-    id: "created_on_asc",
-    label: "Created",
-    columnKeys: ["created_on"],
-    direction: "asc",
-    type: "date",
-    getValue: (row) => pickRowField(row, ["created_at", "createdAt", "created_on"]),
-  },
   {
     id: "name_asc",
     label: "Name",

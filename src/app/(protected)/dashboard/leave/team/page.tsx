@@ -1,5 +1,5 @@
-import { LeavePageClient } from "@/components/dashboard/leave/LeavePageClient";
+import { LazyLeavePageClient } from "@/components/dashboard/lazyPages";
 
 export default function DashboardLeaveTeamPage() {
-  return <LeavePageClient />;
+  return <LazyLeavePageClient />;
 }

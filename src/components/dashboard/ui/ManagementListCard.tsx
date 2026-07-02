@@ -17,7 +17,9 @@ import {
   CARD_CONTENT_BELOW_TOOLBAR_CLASS,
   CARD_CONTENT_STACK_CLASS,
   CARD_TOOLBAR_INNER_CLASS,
+  CONTENT_CARD_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
+import { UI_COPY } from "@/constants/uiCopy";
 import { cn } from "@/lib/utils";
 
 type ManagementListCardProps = {
@@ -44,8 +46,8 @@ export function ManagementListCard({
   const hasToolbar = Boolean(toolbar || search || filters);
 
   return (
-    <Card className={cn("p-0", className)}>
-      <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
+    <Card className={cn("p-0", CONTENT_CARD_CLASS, className)}>
+      <CardHeader className="flex flex-col gap-3 space-y-0 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:py-5">
         <div className="min-w-0 flex-1">
           <CardTitle>{title}</CardTitle>
           {description ? <CardDescription>{description}</CardDescription> : null}
@@ -91,8 +93,8 @@ type ManagementListContentProps = {
 export function ManagementListContent({
   isLoading,
   isEmpty,
-  emptyTitle = "No Records Found",
-  emptyDescription = "Try adjusting your search or filters.",
+  emptyTitle = UI_COPY.noRecordsFound,
+  emptyDescription = UI_COPY.adjustFilters,
   emptyIcon,
   skeletonRows = 8,
   skeletonColumns = 4,

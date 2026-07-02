@@ -65,6 +65,9 @@ import {
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
 import { MetricCard } from "@/components/dashboard/ui/MetricCard";
+import { ContentCard } from "@/components/dashboard/ui/ContentCard";
+import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
+import { CARD_CONTENT_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { InputField, SelectField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
 import {
   ProfilePhotoAvatar,
@@ -3150,11 +3153,24 @@ export function OverviewPageClient() {
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <div className="space-y-4">
-                          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                            <MetricCard label="Total Onboarded" value={metrics.totalOnboarded} loading={loading} />
-                          </div>
-                        </div>
+          <ContentCard>
+            <div className={CARD_CONTENT_CLASS}>
+              <PageSectionHeader
+                title="Overview"
+                description="Key metrics and activity across your workspace."
+              />
+              <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <MetricCard label="Total Onboarded" value={metrics.totalOnboarded} loading={loading} />
+                <MetricCard
+                  label="Unread Notifications"
+                  value={metrics.unreadNotifications}
+                  loading={loading}
+                />
+                <MetricCard label="Time Log Entries" value={metrics.timelogItems} loading={loading} />
+                <MetricCard label="Leave Records" value={metrics.leaveRecords} loading={loading} />
+              </div>
+            </div>
+          </ContentCard>
         </OnboardingGate>
       </DashboardPageShell>
     </>

@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { ContentCard } from "@/components/dashboard/ui/ContentCard";
+import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
@@ -141,6 +143,7 @@ import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalanc
 import { ManagerTeamOnLeavePanel } from "@/components/dashboard/leave/ManagerTeamOnLeavePanel";
 import { LeaveWorkflowNotice } from "@/components/dashboard/leave/LeaveWorkflowNotice";
 import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
+import { LeaveHrCcNotice } from "@/components/dashboard/leave/LeaveHrCcNotice";
 import { LeaveAdditionalRecipientsSelector } from "@/components/dashboard/leave/LeaveAdditionalRecipientsSelector";
 
 import {
@@ -151,6 +154,7 @@ import {
 import { compOffService } from "@/services/compOff.service";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import { CompOffPageClient } from "@/components/comp-off/CompOffPageClient";
+import { UI_COPY } from "@/constants/uiCopy";
 
 const LEAVE_REQUESTS_TABLE_MIN_HEIGHT = "min-h-[320px]";
 const MY_LEAVE_TABLE_COL_COUNT = 8;
@@ -1040,7 +1044,7 @@ export function LeavePageClient() {
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
+          <ContentCard>
                           {showLeaveSubTabBar ? (
                             <PageTabs
                               embedded
@@ -1079,9 +1083,9 @@ export function LeavePageClient() {
                             ) : null}
                             <LeaveWorkflowNotice variant={leaveWorkflowVariant} />
                             <div className="space-y-3">
-                              <h3 className="font-semibold mb-3">
-                                {leaveSubTab === "wfh" ? "Work from home" : "Time off/comp off"}
-                              </h3>
+                            <PageSectionHeader
+                              title={leaveSubTab === "wfh" ? "Work from Home" : "Time Off / Comp Off"}
+                            />
                               <div className="space-y-3">
                                 <div
                                   className={`grid grid-cols-1 gap-3 ${
@@ -1160,6 +1164,10 @@ export function LeavePageClient() {
                                       projects).
                                     </span>
                                   </Label>
+                                ) : null}
+                                {leaveSubTab === "my" &&
+                                normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
+                                  <LeaveHrCcNotice />
                                 ) : null}
                                 {leaveSubTab === "my" &&
                                 normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
@@ -1587,7 +1595,7 @@ export function LeavePageClient() {
                                             : filteredLeaveTabRequests
                                           ).length
                                             ? "No requests match your search."
-                                            : "No Data"}
+                                            : UI_COPY.noRecordsFound}
                                         </TableCell>
                                       </TableRow>
                                     )}
@@ -1948,7 +1956,7 @@ export function LeavePageClient() {
                                     >
                                       {employeeRequests.length
                                         ? "No requests match your search."
-                                        : "No Data"}
+                                        : UI_COPY.noRecordsFound}
                                     </TableCell>
                                   </TableRow>
                                 )}
@@ -1972,7 +1980,7 @@ export function LeavePageClient() {
                         </div>
                           ) : null}
                           </div>
-                        </section>
+                        </ContentCard>
         </OnboardingGate>
       </DashboardPageShell>
             <UserRequestRejectDialog

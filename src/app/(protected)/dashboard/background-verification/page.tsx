@@ -1,5 +1,5 @@
-import { BackgroundVerificationPageClient } from "@/components/dashboard/background-verification/BackgroundVerificationPageClient";
+import { LazyBackgroundVerificationPageClient } from "@/components/dashboard/lazyPages";
 
 export default function DashboardBackgroundVerificationPage() {
-  return <BackgroundVerificationPageClient />;
+  return <LazyBackgroundVerificationPageClient />;
 }

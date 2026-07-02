@@ -14,6 +14,7 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { UI_COPY } from "@/constants/uiCopy";
 import { LeaveRequestStatusBadge } from "@/components/dashboard/leave/LeaveRequestStatusBadge";
 import { LeaveManagerEmailsCell } from "@/components/dashboard/leave/LeaveManagerEmailsCell";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
@@ -237,7 +238,7 @@ export function MyPreviousLeaveRequestsCard({
                     colSpan={TABLE_COL_COUNT}
                     className="h-[240px] text-center align-middle text-sm text-wt-text-muted"
                   >
-                    {totalFilteredCount ? "No requests match your search." : "No Data"}
+                    {totalFilteredCount ? UI_COPY.noSearchResults : UI_COPY.noRecordsFound}
                   </TableCell>
                 </TableRow>
               )}

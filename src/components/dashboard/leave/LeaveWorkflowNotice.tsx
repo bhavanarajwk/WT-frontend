@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  INFO_BANNER_BODY_CLASS,
+  INFO_BANNER_CLASS,
+  INFO_BANNER_TITLE_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
+
 export function LeaveWorkflowNotice({
   variant,
   scope = "team",
@@ -32,9 +38,9 @@ export function LeaveWorkflowNotice({
   const { title, body } = copy[variant];
 
   return (
-    <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-      <p className="font-medium">{title}</p>
-      <p className="mt-1 text-blue-800/90">{body}</p>
+    <div className={INFO_BANNER_CLASS}>
+      <p className={INFO_BANNER_TITLE_CLASS}>{title}</p>
+      <p className={INFO_BANNER_BODY_CLASS}>{body}</p>
     </div>
   );
 }

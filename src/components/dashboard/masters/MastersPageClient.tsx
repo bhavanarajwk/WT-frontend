@@ -75,6 +75,9 @@ import {
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { ContentCard } from "@/components/dashboard/ui/ContentCard";
+import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
+import { CARD_CONTENT_CLASS, INNER_PANEL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -3113,11 +3116,13 @@ export function MastersPageClient() {
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <section className="grid xl:grid-cols-2 gap-4">
-                          <div className="xl:col-span-2 rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                            <div className="flex items-center justify-between mb-3">
-                              <h3 className="font-semibold">KPI Definitions</h3>
-                              <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+          <section className="grid gap-6 xl:grid-cols-2">
+            <ContentCard className="xl:col-span-2">
+              <div className={CARD_CONTENT_CLASS}>
+                <PageSectionHeader
+                  title="KPI Definitions"
+                  action={
+                    <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
                                   runAction("Load KPI definitions", async () => {
                                     const res = await hrmsService.getKpis({ limit: "500", offset: "0" });
                                     setKpis(toRows((res as { data?: unknown[] }).data ?? res));
@@ -3127,17 +3132,24 @@ export function MastersPageClient() {
                               >
                                 Refresh
                               </Button>
-                            </div>
+                  }
+                />
+                <div className="mt-6">
                             <DataTable
                               columns={["kpi_name", "designation", "department", "weightage"]}
                               rows={filteredKpis}
                               emptyLabel={canViewAllKpis ? "No KPI data loaded." : "No designated KPI data found for your profile."}
                             />
-                          </div>
-                          <div className="xl:col-span-2 rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                            <details>
-                              <summary className="cursor-pointer list-none font-semibold text-wt-text">Assign Role</summary>
-                              <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4 space-y-3">
+                </div>
+              </div>
+            </ContentCard>
+            <ContentCard className="xl:col-span-2">
+              <div className={CARD_CONTENT_CLASS}>
+                <details>
+                  <summary className="cursor-pointer list-none text-base font-semibold tracking-tight text-wt-text">
+                    Assign Role
+                  </summary>
+                              <div className={`mt-4 ${INNER_PANEL_CLASS} space-y-3`}>
                                 <p className="text-sm text-wt-text-muted">Select an employee and assign the required role.</p>
                                 <div className="grid sm:grid-cols-2 gap-3">
                                   <SelectField
@@ -3219,8 +3231,9 @@ export function MastersPageClient() {
                                 </div>
                               </div>
                             </details>
-                          </div>
-                        </section>
+              </div>
+            </ContentCard>
+          </section>
         </OnboardingGate>
       </DashboardPageShell>
     </>

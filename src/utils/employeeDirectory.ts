@@ -127,7 +127,7 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
       record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate
     ),
     date_of_birth: formatDirectoryDate(record.date_of_birth ?? record.dob),
-    status: normalizeStatusLabel(record.status),
+    status: normalizeStatusLabel(record.user_status ?? record.userStatus ?? record.status),
     user_type: String(record.user_type ?? record.userType ?? "").trim() || "—",
     work_mode: String(record.work_mode ?? record.workMode ?? "").trim() || "—",
     work_location: String(
@@ -368,7 +368,7 @@ export function buildGroupedProfileSections(
   ];
 
   return [
-    { title: "Information", entries: information },
+    { title: "Work Information", entries: information },
     { title: "Personal Information", entries: personalInformation },
   ];
 }
@@ -406,7 +406,7 @@ function filterProfileViewEntries(
   entries: ProfileDisplayEntry[]
 ): ProfileDisplayEntry[] {
   const allowed =
-    sectionTitle === "Information"
+    sectionTitle === "Work Information"
       ? PROFILE_VIEW_WORK_LABELS
       : sectionTitle === "Personal Information"
         ? PROFILE_VIEW_PERSONAL_LABELS

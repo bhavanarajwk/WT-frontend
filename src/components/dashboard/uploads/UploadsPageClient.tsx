@@ -74,6 +74,9 @@ import {
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { ContentCard } from "@/components/dashboard/ui/ContentCard";
+import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
+import { CARD_CONTENT_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -3141,11 +3144,13 @@ export function UploadsPageClient() {
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <section>
-                          <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                            <h3 className="font-semibold mb-1">Bulk Upload Center</h3>
-                            <p className="text-sm text-wt-text-muted mb-3">Upload HR files in supported Excel formats.</p>
-                            <div className="grid md:grid-cols-2 gap-3">
+          <ContentCard>
+            <div className={CARD_CONTENT_CLASS}>
+              <PageSectionHeader
+                title="Bulk Upload Center"
+                description="Upload HR files in supported Excel formats."
+              />
+              <div className="mt-6 grid gap-3 md:grid-cols-2">
                               <UploadTile
                                 label="Leave Upload"
                                 file={uploadFiles.leave}
@@ -3175,8 +3180,8 @@ export function UploadsPageClient() {
                                 loading={actionLoading}
                               />
                             </div>
-                          </div>
-                        </section>
+            </div>
+          </ContentCard>
         </OnboardingGate>
       </DashboardPageShell>
     </>

@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, [data-theme="dark"] *));
 
 /* ------------------------------------------------------------------ */
 /* Design Tokens                                                         */
@@ -93,29 +93,60 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-[data-theme="dark"] {
-  --wt-bg: #0f0e17;
-  --wt-page-bg: #12111c;
-  --wt-surface-1: #16151f;
-  --wt-surface-2: #1d1c2a;
-  --wt-surface-3: #252436;
+:is(.dark, [data-theme="dark"]) {
+  --wt-bg: #000000;
+  --wt-page-bg: #000000;
+  --wt-surface-1: #0a0a0a;
+  --wt-surface-2: #111111;
+  --wt-surface-3: #1a1a1a;
 
-  --wt-text: #f0eeff;
-  --wt-text-muted: #9490b8;
-  --wt-text-faint: #504d6e;
+  --wt-text: #fafafa;
+  --wt-text-muted: #b3b3b3;
+  --wt-text-faint: #8a8a8a;
 
-  --wt-border: rgba(255, 255, 255, 0.07);
-  --wt-border-md: rgba(255, 255, 255, 0.12);
+  --wt-border: rgba(255, 255, 255, 0.08);
+  --wt-border-md: rgba(255, 255, 255, 0.14);
 
-  --wt-glow-indigo: 0 0 40px rgba(99, 102, 241, 0.35);
-  --wt-glow-violet: 0 0 60px rgba(139, 92, 246, 0.25);
+  --wt-glow-indigo: 0 0 32px rgba(53, 80, 149, 0.22);
+  --wt-glow-violet: 0 0 40px rgba(53, 80, 149, 0.12);
 
   --wt-brand: #4a6fa5;
-  --wt-brand-hover: #3d5f96;
-  --wt-brand-active: #355095;
+  --wt-brand-hover: #5a7fb5;
+  --wt-brand-active: #3d5f96;
   --wt-brand-text: #ffffff;
 
   --ring: #4d8bff;
+
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.1 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.1 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.1 0 0);
+  --secondary: oklch(0.16 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.16 0 0);
+  --muted-foreground: oklch(0.72 0 0);
+  --accent: oklch(0.16 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.08 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.12 250);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.16 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 /* ------------------------------------------------------------------ */
@@ -211,6 +242,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
 }
 
 body::-webkit-scrollbar {
@@ -417,6 +451,12 @@ body::-webkit-scrollbar {
 }
 
 /* Dashboard main pane: always scrollable; thin scrollbar for discoverability */
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
 .wt-page-scroll {
   overflow-x: hidden;
   overflow-y: auto;
@@ -930,15 +970,15 @@ select.input-field {
 }
 
 [data-theme="dark"] .wt-loading-overlay {
-  background: rgba(15, 14, 23, 0.45);
+  background: rgba(0, 0, 0, 0.72);
 }
 
 .wt-sidebar {
-  background: linear-gradient(
-    180deg,
-    var(--wt-surface-1) 0%,
-    color-mix(in oklch, var(--wt-surface-2) 45%, var(--wt-surface-1)) 100%
-  );
+  background: var(--wt-surface-1);
+}
+
+.wt-brand-wordmark {
+  font-family: var(--font-brand), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 .wt-sidebar-nav {
@@ -959,38 +999,49 @@ select.input-field {
   background: transparent;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: #4d8bff;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* Sidebar nav — keep label colors in dark mode (no ghost-button bleed) */
+.wt-sidebar-nav .wt-sidebar-nav-item {
+  color: var(--wt-text-muted);
+}
+
+.wt-sidebar-nav .wt-sidebar-nav-item:hover {
+  color: var(--wt-text);
+}
+
+:is(.dark, [data-theme="dark"]) [data-slot="table-head"] {
+  color: var(--wt-text-muted);
+}
+
+:is(.dark, [data-theme="dark"]) [data-slot="table-cell"] {
+  color: var(--wt-text);
+}
+
+:is(.dark, [data-theme="dark"]) .wt-profile-table [data-slot="table-cell"] {
+  color: var(--wt-text);
+}
+
+:is(.dark, [data-theme="dark"]) [data-slot="tabs-trigger"] {
+  color: var(--wt-text-muted);
+}
+
+:is(.dark, [data-theme="dark"]) [data-slot="tabs-trigger"][data-active] {
+  color: var(--wt-text);
+}
+
+:is(.dark, [data-theme="dark"]) input::placeholder,
+:is(.dark, [data-theme="dark"]) textarea::placeholder {
+  color: var(--wt-text-faint);
+}
+
+/* Consistent focus ring for keyboard navigation */
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--wt-brand) 65%, white);
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
 }
 
 @layer base {

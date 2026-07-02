@@ -14,6 +14,7 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { UI_COPY } from "@/constants/uiCopy";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { ApiDateField, InputField, SelectField } from "@/components/dashboard/ui/forms";
 import { LeaveRequestStatusBadge } from "@/components/dashboard/leave/LeaveRequestStatusBadge";
@@ -217,7 +218,7 @@ export function HrWfhRequestsPanel({
                     colSpan={TABLE_COL_COUNT}
                     className="px-3 py-10 text-center text-sm text-wt-text-muted"
                   >
-                    {rows.length ? "No matching WFH requests." : "No Data"}
+                    {rows.length ? UI_COPY.noSearchResults : UI_COPY.noRecordsFound}
                   </TableCell>
                 </TableRow>
               )}

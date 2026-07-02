@@ -81,6 +81,9 @@ import {
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { ContentCard } from "@/components/dashboard/ui/ContentCard";
+import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
+import { CARD_CONTENT_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -3218,50 +3221,68 @@ export function ReportsPageClient() {
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <section className="space-y-4">
-                          <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-                            <div className="flex items-center justify-between gap-3">
-                              <h3 className="font-semibold">HR Reports</h3>
-                              <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
-                                  runAction("Refresh reports", async () => {
-                                    if (activeSection === "reports-section-2") {
-                                      await Promise.all([
-                                        loadUtilizationReports(),
-                                        loadAllocationsForHr().catch(() => setAllocations([])),
-                                      ]);
-                                      return;
-                                    }
-                                    if (activeSection === "reports-bench") {
-                                      await Promise.all([
-                                        loadBenchAgingReport(),
-                                        loadAllocationsForHr().catch(() => setAllocations([])),
-                                      ]);
-                                      return;
-                                    }
-                                    if (activeSection === "reports-section-3") {
-                                      await loadAttritionReports();
-                                      return;
-                                    }
-                                    if (activeSection === "reports-section-4") {
-                                      await loadSkillInventoryReport();
-                                      return;
-                                    }
-                                    if (activeSection === "reports-section-6") {
-                                      await loadContractDistributionReport();
-                                      return;
-                                    }
-                                    if (activeSection === "reports-section-7") {
-                                      await loadBgvDashboardReport();
-                                      return;
-                                    }
-                                    await loadWorkforceOverviewReports();
-                                  })
-                                }
-                                disabled={actionLoading || !(activeSection === "reports-workforce" || activeSection === "reports-section-2" || activeSection === "reports-bench" || activeSection === "reports-section-3" || activeSection === "reports-section-4" || activeSection === "reports-section-6" || activeSection === "reports-section-7")}
-                              >
-                                Refresh
-                              </Button>
-                            </div>
+          <ContentCard>
+            <div className={CARD_CONTENT_CLASS}>
+              <PageSectionHeader
+                title="HR Reports"
+                action={
+                  <Button
+                    variant="brand"
+                    type="button"
+                    className="px-3 py-2"
+                    disabled={
+                      actionLoading ||
+                      !(
+                        activeSection === "reports-workforce" ||
+                        activeSection === "reports-section-2" ||
+                        activeSection === "reports-bench" ||
+                        activeSection === "reports-section-3" ||
+                        activeSection === "reports-section-4" ||
+                        activeSection === "reports-section-6" ||
+                        activeSection === "reports-section-7"
+                      )
+                    }
+                    onClick={() => {
+                      void runAction("Refresh reports", async () => {
+                        if (activeSection === "reports-section-2") {
+                          await Promise.all([
+                            loadUtilizationReports(),
+                            loadAllocationsForHr().catch(() => setAllocations([])),
+                          ]);
+                          return;
+                        }
+                        if (activeSection === "reports-bench") {
+                          await Promise.all([
+                            loadBenchAgingReport(),
+                            loadAllocationsForHr().catch(() => setAllocations([])),
+                          ]);
+                          return;
+                        }
+                        if (activeSection === "reports-section-3") {
+                          await loadAttritionReports();
+                          return;
+                        }
+                        if (activeSection === "reports-section-4") {
+                          await loadSkillInventoryReport();
+                          return;
+                        }
+                        if (activeSection === "reports-section-6") {
+                          await loadContractDistributionReport();
+                          return;
+                        }
+                        if (activeSection === "reports-section-7") {
+                          await loadBgvDashboardReport();
+                          return;
+                        }
+                        await loadWorkforceOverviewReports();
+                      });
+                    }}
+                  >
+                    Refresh
+                  </Button>
+                }
+              />
+              <div className="mt-6 space-y-4">
                             {activeSection === "reports-workforce" ? (
                               <div className="space-y-4">
                                 <DataTable
@@ -3417,8 +3438,9 @@ export function ReportsPageClient() {
                                 Placeholder for {activeSection.replace("reports-", "section ")}. Share requirements and I will implement it.
                               </div>
                             )}
-                          </div>
-                        </section>
+              </div>
+            </div>
+          </ContentCard>
         </OnboardingGate>
       </DashboardPageShell>
     </>

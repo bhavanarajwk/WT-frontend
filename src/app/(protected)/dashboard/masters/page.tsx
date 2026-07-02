@@ -1,5 +1,5 @@
-import { MastersPageClient } from "@/components/dashboard/masters/MastersPageClient";
+import { LazyMastersPageClient } from "@/components/dashboard/lazyPages";
 
 export default function DashboardMastersPage() {
-  return <MastersPageClient />;
+  return <LazyMastersPageClient />;
 }

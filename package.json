@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm exec next dev --webpack",
+    "dev": "pnpm exec next dev --turbopack",
     "build": "pnpm exec next build",
     "start": "pnpm exec next start",
     "lint": "eslint"

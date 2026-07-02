@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
@@ -3384,7 +3385,7 @@ export function AllocationPageClient() {
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <>
                           {hasHrAccess ? (
-                            <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
+                            <ContentCard>
                               <PageTabs
                                 embedded
                                 aria-label="Allocation views"
@@ -4474,13 +4475,15 @@ export function AllocationPageClient() {
                                 </>
                               ) : null}
                               </div>
-                            </section>
+                            </ContentCard>
                           ) : (
-                            <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-                              <p className="text-sm text-wt-text-muted">
-                                Allocation management is available for HR/Admin. Use Allocation &amp; Projects to manage assignments.
-                              </p>
-                            </section>
+                            <ContentCard>
+                              <div className="p-5">
+                                <p className="text-sm text-wt-text-muted">
+                                  Allocation management is available for HR/Admin. Use Allocation &amp; Projects to manage assignments.
+                                </p>
+                              </div>
+                            </ContentCard>
                           )}
                         </>
         </OnboardingGate>

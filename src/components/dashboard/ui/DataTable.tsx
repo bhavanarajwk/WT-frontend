@@ -1,6 +1,8 @@
 "use client";
 
 import { isValidElement, type ReactNode, useMemo, useState } from "react";
+import { EmptyState } from "@/components/dashboard/ui/EmptyState";
+import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import {
@@ -82,16 +84,16 @@ export function DataTable({
 
   if (!displaySourceRows.length) {
     return (
-      <div className="space-y-1">
-        {title ? <p className="text-sm font-medium">{title}</p> : null}
-        <p className="text-sm text-wt-text-muted">{emptyLabel}</p>
+      <div className="space-y-3">
+        {title ? <PageSectionHeader title={title} titleAs="h4" /> : null}
+        <EmptyState title={emptyLabel} description="There is nothing to show in this table yet." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {title ? <p className="text-sm font-medium">{title}</p> : null}
+    <div className="space-y-3">
+      {title ? <PageSectionHeader title={title} titleAs="h4" /> : null}
       <ScrollableTable maxHeightClass={maxHeightClass} scrollChain={scrollChain}>
         <WtTable>
           <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>

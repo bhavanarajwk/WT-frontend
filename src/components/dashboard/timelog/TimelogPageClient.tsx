@@ -1,12 +1,15 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { EmptyState } from "@/components/dashboard/ui/EmptyState";
+import { ContentCard } from "@/components/dashboard/ui/ContentCard";
+import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
+import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
+import { INNER_PANEL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { SelectField } from "@/components/dashboard/ui/forms";
@@ -45,10 +48,10 @@ function unwrapPayload<T>(response: unknown): T {
 
 function entryStatusClass(status: string): string {
   const map: Record<string, string> = {
-    DRAFT: "text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded text-xs font-medium",
-    SUBMITTED: "text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-xs font-medium",
-    APPROVED: "text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-xs font-medium",
-    REJECTED: "text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded text-xs font-medium",
+    DRAFT: "rounded-md bg-wt-surface-3 px-2 py-0.5 text-xs font-medium text-wt-text-muted",
+    SUBMITTED: "rounded-md bg-sky-500/15 px-2 py-0.5 text-xs font-medium text-sky-300",
+    APPROVED: "rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300",
+    REJECTED: "rounded-md bg-rose-500/15 px-2 py-0.5 text-xs font-medium text-rose-300",
   };
   return map[status] ?? map.DRAFT;
 }
@@ -199,6 +202,14 @@ export function TimelogPageClient() {
     }
   }, [isTeamView, isProjectView, canSeeTeamTab, router]);
 
+  const timelogTabItems = useMemo(
+    () => [
+      { value: "my", label: "My Time Logs" },
+      { value: "projects", label: "Team Time Logs" },
+    ],
+    []
+  );
+
   if (isOffboarded) {
     return (
       <DashboardPageShell>
@@ -218,24 +229,23 @@ export function TimelogPageClient() {
   return (
     <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
       <DashboardPageShell>
-        <div className="space-y-6">
-          {hasAmRole ? <HrReviewNoticeBanner /> : null}
-
+        <ContentCard>
           {canSeeTeamTab ? (
-            <div className="border-b border-wt-border pb-4">
-              <Tabs value={subTab} onValueChange={(value) => {
+            <PageTabs
+              embedded
+              aria-label="Time Log tabs"
+              value={subTab}
+              onValueChange={(value) => {
                 if (value === "team") router.push("/dashboard/timelog/team");
                 else if (value === "projects") router.push("/dashboard/timelog/projects");
                 else router.push("/dashboard/timelog");
-              }}>
-                <TabsList aria-label="Time Log tabs" className="gap-3 bg-transparent p-0">
-                  <TabsTrigger value="my">My Time Logs</TabsTrigger>
-                  {/* <TabsTrigger value="team">Team Time Logs</TabsTrigger> */}
-                  <TabsTrigger value="projects">Team Time Logs</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
+              }}
+              items={timelogTabItems}
+            />
           ) : null}
+
+          <div className={canSeeTeamTab ? PAGE_TAB_BODY_CLASS : "space-y-6 p-4 sm:p-6"}>
+          {hasAmRole ? <HrReviewNoticeBanner /> : null}
 
           {!isTeamView && !isProjectView ? (
             <MyWeeklyTimesheet />
@@ -246,8 +256,7 @@ export function TimelogPageClient() {
           ) : null}
 
           {isHrTeamView ? (
-            <Card>
-              <CardContent className="p-5 space-y-4">
+            <div className={INNER_PANEL_CLASS}>
                 <HrMonthlyTimelogSummary
                   month={hrMonth}
                   onMonthChange={setHrMonth}
@@ -260,29 +269,28 @@ export function TimelogPageClient() {
                     setHrWeekDetail({ email: row.email, label: row.label, weekStart });
                   }}
                 />
-              </CardContent>
-            </Card>
+            </div>
           ) : null}
 
           {isTeamView && !isHrTeamView ? (
-            <Card>
-              <CardContent className="p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="font-semibold">Team Time Logs</h2>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={entriesLoading} />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      className="px-3 py-2 text-sm border border-wt-border rounded-lg"
-                      disabled={entriesLoading}
-                      onClick={() => void loadEmployeeEntries()}
-                    >
-                      {entriesLoading ? <WtLoader size="sm" /> : "Refresh"}
-                    </Button>
-                  </div>
-                </div>
+            <div className={INNER_PANEL_CLASS}>
+                <PageSectionHeader
+                  title="Team Time Logs"
+                  action={
+                    <div className="flex flex-wrap items-center gap-2">
+                      <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={entriesLoading} />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        disabled={entriesLoading}
+                        onClick={() => void loadEmployeeEntries()}
+                      >
+                        {entriesLoading ? <WtLoader size="sm" /> : "Refresh"}
+                      </Button>
+                    </div>
+                  }
+                />
 
                 {canManagerApprove ? (
                   <p className="text-xs text-wt-text-muted">
@@ -308,9 +316,17 @@ export function TimelogPageClient() {
                 {entriesLoading ? (
                   <WtLoaderCentered label="" />
                 ) : !teamEmployeeEmail.trim() ? (
-                  <p className="text-sm text-wt-text-muted py-8 text-center">Select an employee to view their time logs.</p>
+                  <EmptyState
+                    title="Select an Employee"
+                    description="Choose a team member to review their time log entries for the selected week."
+                    className="py-10"
+                  />
                 ) : !employeeEntries.length ? (
-                  <p className="text-sm text-wt-text-muted py-8 text-center">No time log entries for this week.</p>
+                  <EmptyState
+                    title="No Time Log Entries"
+                    description="There are no entries for this employee during the selected week."
+                    className="py-10"
+                  />
                 ) : (
                   <div className="overflow-x-auto rounded-lg border border-wt-border">
                     <table className="w-full text-sm border-collapse">
@@ -383,10 +399,10 @@ export function TimelogPageClient() {
                     </table>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </div>
           ) : null}
-        </div>
+          </div>
+        </ContentCard>
         {isHrTeamView && hrWeekDetail ? (
           <HrEmployeeTimelogWeekModal
             open

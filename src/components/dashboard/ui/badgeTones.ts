@@ -8,7 +8,7 @@ export const BADGE_TONE = {
   warning: "bg-amber-500/15 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300",
   info: "bg-sky-500/15 text-sky-800 dark:bg-sky-500/20 dark:text-sky-300",
   violet: "bg-violet-500/15 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300",
-  neutral: "bg-muted text-muted-foreground",
+  neutral: "bg-muted text-wt-text-muted dark:bg-wt-surface-3 dark:text-wt-text-muted",
   slate: "bg-slate-500/15 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
 } as const;
 

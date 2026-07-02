@@ -1,5 +1,5 @@
-import { ReportsPageClient } from "@/components/dashboard/reports/ReportsPageClient";
+import { LazyReportsPageClient } from "@/components/dashboard/lazyPages";
 
-export default function DashboardReportsEngagementPage() {
-  return <ReportsPageClient />;
+export default function DashboardReportsPage() {
+  return <LazyReportsPageClient />;
 }

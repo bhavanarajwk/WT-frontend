@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import {
+  CONTENT_CARD_CLASS,
   SECTION_DESCRIPTION_CLASS,
   SECTION_HEADER_CLASS,
   SECTION_TITLE_CLASS,
@@ -21,9 +22,7 @@ export function FormSection({
   className?: string;
 }) {
   return (
-    <section
-      className={cn("rounded-xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm md:p-6", className)}
-    >
+    <section className={cn(CONTENT_CARD_CLASS, "rounded-xl p-5 md:p-6", className)}>
       <header className={SECTION_HEADER_CLASS}>
         <h4 className={SECTION_TITLE_CLASS}>{formatUILabel(title)}</h4>
         {description ? <p className={SECTION_DESCRIPTION_CLASS}>{description}</p> : null}

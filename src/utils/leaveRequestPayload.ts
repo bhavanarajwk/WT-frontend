@@ -1,5 +1,7 @@
 /** Build POST/PUT /userRequest body with snake_case + camelCase aliases. */
 
+import { LEAVE_HR_CC_EMAILS } from "@/constants/leaveRequest";
+
 export type LeaveRequestFormPayload = {
   request_from_date: string;
   request_to_date: string;
@@ -52,6 +54,13 @@ export function buildUserRequestBody(
     ];
     body.primary_manager_emails = normalizedManagers;
     body.primaryManagerEmails = normalizedManagers;
+  }
+  if (requestType === "LEAVE") {
+    const hrCc = [...LEAVE_HR_CC_EMAILS];
+    body.secondary_manager_emails = hrCc;
+    body.secondaryManagerEmails = hrCc;
+    body.secondary_managers = hrCc;
+    body.secondaryManagers = hrCc;
   }
   if (form.additional_recipient_emails?.length) {
     body.additional_recipient_emails = form.additional_recipient_emails;

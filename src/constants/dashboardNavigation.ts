@@ -44,7 +44,7 @@ export const dashboardNavigation: NavItem[] = [
     children: [
       {
         id: "employee",
-        label: "Onboard",
+        label: "Invited Employees",
         roles: ["ROLE_EMPLOYEE", "ROLE_HR", "ROLE_ADMIN"],
         icon: "userPlus",
       },
@@ -280,7 +280,7 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   profile: "Profile",
   overview: "Overview",
   "employee-directory": "Employee Directory",
-  employee: "Onboard Employee",
+  employee: "Invited Employees",
   offboarding: "Offboarding",
   leave: "Employee Leave Requests",
   "leave-team": "Leave Requests",

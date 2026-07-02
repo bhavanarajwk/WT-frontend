@@ -1,5 +1,5 @@
-import { OverviewPageClient } from "@/components/dashboard/overview/OverviewPageClient";
+import { LazyOverviewPageClient } from "@/components/dashboard/lazyPages";
 
 export default function DashboardOverviewPage() {
-  return <OverviewPageClient />;
+  return <LazyOverviewPageClient />;
 }

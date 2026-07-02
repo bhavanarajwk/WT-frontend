@@ -18,7 +18,6 @@ import {
   useTrainingTrainers,
 } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
-import { AttendancePageClient } from "@/components/learning-development/AttendancePageClient";
 import { EmployeeTrainingMyMarks } from "@/components/learning-development/EmployeeTrainingMyMarks";
 import { ScoresPageClient } from "@/components/learning-development/ScoresPageClient";
 import { TrainingStatusControl } from "@/components/learning-development/TrainingStatusControl";
@@ -50,7 +49,6 @@ const HR_TABS = [
   { id: "participants", label: "Trainees" },
   { id: "materials", label: "Materials" },
   { id: "assessments", label: "Assessments" },
-  { id: "attendance", label: "Attendance" },
   { id: "scores", label: "Scores" },
 ] as const;
 
@@ -577,7 +575,6 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         </section>
       ) : null}
 
-      {safeTab === "attendance" ? <AttendancePageClient fixedTrainingId={tid} /> : null}
       {safeTab === "scores" && hasHrAccess ? <ScoresPageClient fixedTrainingId={tid} /> : null}
       {safeTab === "scores" && !hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">

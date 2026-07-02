@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
+import { CONTENT_CARD_CLASS, INNER_PANEL_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { cn } from "@/lib/utils";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -845,7 +847,7 @@ export function CompOffPageClient({
     (!earnOnly && !forcedTab && canReviewTeam && (!canApplyCompOff || mainTab === "team"));
 
   const pageBody = (
-    <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
+    <section className={cn(embedded ? "space-y-4" : CONTENT_CARD_CLASS)}>
       {!embedded && canApplyCompOff && canReviewTeam ? (
         <PageTabs
           embedded
@@ -864,7 +866,7 @@ export function CompOffPageClient({
             {showMyCompOff ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4">
+                  <div className={INNER_PANEL_CLASS}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <h3 className="font-semibold text-sm">Comp-off balance</h3>
@@ -881,7 +883,7 @@ export function CompOffPageClient({
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4">
+                  <div className={INNER_PANEL_CLASS}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <h3 className="font-semibold text-sm">Next Expiry</h3>
@@ -897,7 +899,7 @@ export function CompOffPageClient({
                 </div>
 
                 {grants.length ? (
-                  <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4 space-y-2">
+                  <div className={cn(INNER_PANEL_CLASS, "space-y-2")}>
                     <h3 className="font-semibold text-sm">Credit Breakdown</h3>
                     <ScrollableTable maxHeightClass="max-h-48">
                       <WtTable>
@@ -931,7 +933,7 @@ export function CompOffPageClient({
                 ) : null}
 
                 <div className={`grid gap-4 ${earnOnly ? "lg:grid-cols-1" : "lg:grid-cols-2"}`}>
-                    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3">
+                    <div className={cn(INNER_PANEL_CLASS, "space-y-3")}>
                     <div>
                       <h3 className="font-semibold">Earn Credit</h3>
                     </div>
@@ -1002,9 +1004,7 @@ export function CompOffPageClient({
 
                   {!earnOnly ? (
                   <div
-                    className={`rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-3 ${
-                      !canUseCompOff ? "opacity-75" : ""
-                    }`}
+                    className={cn(INNER_PANEL_CLASS, "space-y-3", !canUseCompOff && "opacity-75")}
                   >
                     <div>
                       <h3 className="font-semibold">Use Comp-Off</h3>
@@ -1017,7 +1017,7 @@ export function CompOffPageClient({
                   ) : null}
                 </div>
 
-                <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
+                <div className={INNER_PANEL_CLASS}>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold">{earnOnly ? "My earn requests" : "My requests"}</h3>
                     <div className="flex items-end gap-2">
@@ -1216,7 +1216,7 @@ export function CompOffPageClient({
                 </div>
               </div>
             ) : showTeamReview ? (
-              <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+              <div className={cn(INNER_PANEL_CLASS, "space-y-4")}>
                 <div className="flex flex-wrap items-end gap-3">
                   {!useParentTeamDates ? (
                     <>

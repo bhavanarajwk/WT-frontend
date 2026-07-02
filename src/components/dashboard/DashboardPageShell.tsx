@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { PAGE_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { cn } from "@/lib/utils";
 
 export function DashboardPageShell({
   children,
@@ -8,6 +10,14 @@ export function DashboardPageShell({
   className?: string;
 }) {
   return (
-    <main className={`min-h-0 flex-1 space-y-4 bg-wt-page-bg p-4 sm:p-6 ${className}`.trim()}>{children}</main>
+    <main
+      className={cn(
+        "min-h-0 w-full min-w-0 flex-1 bg-wt-page-bg p-3 sm:p-4 md:p-6",
+        PAGE_STACK_CLASS,
+        className
+      )}
+    >
+      {children}
+    </main>
   );
 }
