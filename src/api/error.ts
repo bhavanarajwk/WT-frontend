@@ -1,3 +1,5 @@
+import { parsePydanticValidationPayload } from "@/utils/userFriendlyApiError";
+
 export interface ApiErrorPayload {
   detail?: unknown;
   message?: unknown;
@@ -50,6 +52,8 @@ export function parseApiErrorMessage(
   const body = payload as ApiErrorPayload;
 
   if (Array.isArray(body.detail)) {
+    const friendly = parsePydanticValidationPayload(body.detail);
+    if (friendly) return friendly;
     for (const item of body.detail) {
       if (item && typeof item === "object" && "msg" in item) {
         const msg = String((item as { msg?: unknown }).msg ?? "").trim();

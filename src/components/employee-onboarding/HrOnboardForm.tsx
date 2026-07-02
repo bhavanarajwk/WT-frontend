@@ -11,6 +11,7 @@ import { CARD_FORM_GRID_CLASS, CARD_FORM_ACTIONS_CLASS } from "@/components/dash
 import { FormGridSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
+  bandDisplayLabel,
   bandSelectOptionsForUserType,
   bandsForDepartment,
   resolveInternBandId,
@@ -122,6 +123,14 @@ export function HrOnboardForm({
     () => bandSelectOptionsForUserType(bands, form.department, form.user_type, internBandId),
     [bands, form.department, form.user_type, internBandId]
   );
+
+  const internBandLabel = useMemo(() => {
+    if (form.user_type !== "INTERN" || form.band_id <= 0) return "";
+    const selected = bandOptions.find((option) => option.value === String(form.band_id));
+    if (selected?.label) return selected.label;
+    const row = bands.find((band) => Number(band.id) === form.band_id);
+    return row ? bandDisplayLabel(row) : `Band ${form.band_id}`;
+  }, [bandOptions, bands, form.band_id, form.user_type]);
 
   const departmentBands = useMemo(
     () => bandsForDepartment(bands, form.department),
@@ -273,7 +282,7 @@ export function HrOnboardForm({
           label="Employee ID"
           required
           value={form.emp_id}
-          onChange={(v) => setForm((p) => ({ ...p, emp_id: v }))}
+          onChange={(v) => setForm((p) => ({ ...p, emp_id: v.replace(/[^A-Za-z0-9]/g, "") }))}
         />
         <InputField
           label="Work Email"
@@ -320,27 +329,38 @@ export function HrOnboardForm({
           }
         />
         {form.user_type !== "CONSULTANT" ? (
-          <DropdownSelectField
-            label="Band"
-            required
-            placeholder={
-              !form.department.trim()
-                ? "Select Department First"
-                : bandOptions.length
-                  ? "Select"
-                  : "No Bands Available"
-            }
-            value={form.band_id ? String(form.band_id) : ""}
-            disabled={form.user_type === "INTERN" || !form.department.trim() || !bandOptions.length}
-            options={bandOptions}
-            onChange={(v) =>
-              setForm((p) => ({
-                ...p,
-                band_id: Number(v) || 0,
-                role: "",
-              }))
-            }
-          />
+          form.user_type === "INTERN" ? (
+            <InputField
+              label="Band"
+              required
+              value={form.department.trim() && form.band_id > 0 ? internBandLabel : ""}
+              placeholder={!form.department.trim() ? "Select Department First" : "Loading Band…"}
+              disabled
+              onChange={() => {}}
+            />
+          ) : (
+            <DropdownSelectField
+              label="Band"
+              required
+              placeholder={
+                !form.department.trim()
+                  ? "Select Department First"
+                  : bandOptions.length
+                    ? "Select"
+                    : "No Bands Available"
+              }
+              value={form.band_id ? String(form.band_id) : ""}
+              disabled={!form.department.trim() || !bandOptions.length}
+              options={bandOptions}
+              onChange={(v) =>
+                setForm((p) => ({
+                  ...p,
+                  band_id: Number(v) || 0,
+                  role: "",
+                }))
+              }
+            />
+          )
         ) : null}
         <DropdownSelectField
           label="Designation"
@@ -413,7 +433,7 @@ export function HrOnboardForm({
               label="Internship Duration (Months)"
               required
               value={form.internship_duration}
-              onChange={(v) => setForm((p) => ({ ...p, internship_duration: v }))}
+              onChange={(v) => setForm((p) => ({ ...p, internship_duration: v.replace(/\D/g, "") }))}
             />
           </>
         ) : (
